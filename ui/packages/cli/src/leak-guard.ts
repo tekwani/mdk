@@ -9,7 +9,7 @@
  */
 
 /** Default forbidden patterns. The private repo slug must never be published. */
-export const DEFAULT_FORBIDDEN_PATTERNS = ['mdk']
+export const DEFAULT_FORBIDDEN_PATTERNS = ['mdk-prv']
 
 export type LeakHit = {
   /** Relative path of the offending file within the dataset. */
