@@ -82,7 +82,7 @@ export type DocsBuildOptions = {
   includeInternal?: boolean
   /** Path to a cli-manifest.json to embed as cli.json. Auto-resolved if omitted. */
   cliManifestPath?: string
-  /** Forbidden substrings for the leak guard (defaults to `['mdk']`). */
+  /** Forbidden substrings for the leak guard (defaults to `['mdk-prv']`). */
   forbiddenPatterns?: string[]
   /** Fixed ISO timestamp (tests); defaults to now. */
   now?: string

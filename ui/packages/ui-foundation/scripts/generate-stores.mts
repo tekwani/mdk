@@ -120,7 +120,7 @@ const normaliseWhitespace = (s: string): string => s.replace(/\s+/g, " ").trim()
  *
  * When ts-morph resolves a type without an explicit annotation,
  * `getReturnType().getText()` can emit absolute filesystem paths like:
- *   import("/Users/dev/mdk/ui/packages/...").TypeName
+ *   import("/Users/dev/mdk-prv/ui/packages/...").TypeName
  *
  * This function removes those import paths, leaving just the type name.
  *
