@@ -1047,7 +1047,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           working-directory: ${{ steps.scope.outputs.install-dir }}
 
+      # audit-ci needs a lockfile in cwd to detect the package manager. Root
+      # npm-workspace members no longer have their own (deleted in favor of
+      # one root package-lock.json) and are audited once, for the whole
+      # workspace, by security_audit_workspace_root instead - this step only
+      # runs for the genuinely standalone dir (backend/core), which still has
+      # its own lockfile.
       - name: Security audit (npm)
+        if: steps.scope.outputs.install-dir == matrix.dir
         run: |
           set +e
           npm audit signatures 2>&1
@@ -1063,7 +1070,8 @@ jobs:
           # Only emit a per-package summary block when the audit found
           # something; a clean PR should not produce a wall of PASS tables.
           if [ $MODERATE_EXIT -ne 0 ] || [ $HIGH_EXIT -ne 0 ]; then
-            AUD_JSON="${RUNNER_TEMP:-/tmp}/npm-audit-${{ matrix.dir }}.json"
+            SLUG="$(echo '${{ matrix.dir }}' | tr '/' '-')"
+            AUD_JSON="${RUNNER_TEMP:-/tmp}/npm-audit-${SLUG}.json"
             npm audit --json > "${AUD_JSON}" 2>/dev/null || true
             {
               echo "## Security Audit — Core (\`${{ matrix.dir }}\`)"
@@ -1107,7 +1115,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           working-directory: ${{ steps.scope.outputs.install-dir }}
 
+      # audit-ci needs a lockfile in cwd to detect the package manager. Root
+      # npm-workspace members no longer have their own (deleted in favor of
+      # one root package-lock.json) and are audited once, for the whole
+      # workspace, by security_audit_workspace_root instead - this step only
+      # runs for the genuinely standalone dir (backend/workers), which still
+      # has its own lockfile.
       - name: Security audit (npm)
+        if: steps.scope.outputs.install-dir == matrix.dir
         run: |
           set +e
           npm audit signatures 2>&1
@@ -1123,10 +1138,62 @@ jobs:
           # Only emit a per-package summary block when the audit found
           # something; a clean PR should not produce a wall of PASS tables.
           if [ $MODERATE_EXIT -ne 0 ] || [ $HIGH_EXIT -ne 0 ]; then
-            AUD_JSON="${RUNNER_TEMP:-/tmp}/npm-audit-${{ matrix.dir }}.json"
+            SLUG="$(echo '${{ matrix.dir }}' | tr '/' '-')"
+            AUD_JSON="${RUNNER_TEMP:-/tmp}/npm-audit-${SLUG}.json"
             npm audit --json > "${AUD_JSON}" 2>/dev/null || true
             {
               echo "## Security Audit — Workers (\`${{ matrix.dir }}\`)"
+              echo ""
+              echo "| Signatures | Moderate | High/Critical (audit-ci) |"
+              echo "|---|---|---|"
+              echo "| ${SIGNATURES_STATUS} | ${MODERATE_STATUS} | ${HIGH_STATUS} |"
+            } >> "$GITHUB_STEP_SUMMARY"
+            bash "${GITHUB_WORKSPACE}/.github/scripts/github-summary-npm-audit-high-critical.sh" "${AUD_JSON}" >> "$GITHUB_STEP_SUMMARY" || true
+          fi
+          [ $HIGH_EXIT -eq 0 ]
+
+  security_audit_workspace_root:
+    name: 🔐 Security Audit (workspace root)
+    if: github.event_name == 'pull_request' && (needs.detect-target.outputs.run_core == 'true' || needs.detect-target.outputs.run_workers == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [detect-target, setup-workspace-root]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - uses: ./.github/actions/node-restore-cache
+        with:
+          cache-key: ${{ needs.setup-workspace-root.outputs.cache-key }}
+          node-version: ${{ env.NODE_VERSION }}
+          working-directory: "."
+
+      # Covers every backend/core/* and backend/workers/* workspace member in
+      # one pass (they all share the root package-lock.json), instead of
+      # auditing the same root lockfile redundantly once per matrix leg in
+      # security_audit_core/security_audit_workers.
+      - name: Security audit (npm)
+        run: |
+          set +e
+          npm audit signatures 2>&1
+          SIGNATURES_EXIT=$?
+          npm audit --audit-level=moderate 2>&1
+          MODERATE_EXIT=$?
+          npm exec --yes -- audit-ci@7 --config "${GITHUB_WORKSPACE}/.github/scripts/audit-ci.jsonc" 2>&1
+          HIGH_EXIT=$?
+          set -e
+          [ $SIGNATURES_EXIT -eq 0 ] && SIGNATURES_STATUS="PASS" || SIGNATURES_STATUS="WARN"
+          [ $MODERATE_EXIT -eq 0 ] && MODERATE_STATUS="PASS" || MODERATE_STATUS="WARN"
+          [ $HIGH_EXIT -eq 0 ] && HIGH_STATUS="PASS" || HIGH_STATUS="WARN"
+          # Only emit a summary block when the audit found something; a clean
+          # PR should not produce a wall of PASS tables.
+          if [ $MODERATE_EXIT -ne 0 ] || [ $HIGH_EXIT -ne 0 ]; then
+            AUD_JSON="${RUNNER_TEMP:-/tmp}/npm-audit-workspace-root.json"
+            npm audit --json > "${AUD_JSON}" 2>/dev/null || true
+            {
+              echo "## Security Audit — Workspace (backend/core/*, backend/workers/*)"
               echo ""
               echo "| Signatures | Moderate | High/Critical (audit-ci) |"
               echo "|---|---|---|"
@@ -1147,6 +1214,7 @@ jobs:
       - security_audit_ui
       - security_audit_core
       - security_audit_workers
+      - security_audit_workspace_root
       - setup-ui
       - lint-ui
       - typecheck-ui
