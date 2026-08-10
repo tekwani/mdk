@@ -14,7 +14,7 @@
     "(^|/)coverage/",
     "^https://github\\.com/tetherto/mdk/blob/main/",
     "^https://github\\.com/tetherto/mdk-docs",
-    "^https://github\\.com/tetherto/mdk-prv",
+    "^https://github\\.com/tetherto/mdk",
     "workers/miners/[^/]+/examples/?$",
     "workers/[^/]+/base/?$",
     "docs/reference/release-notes/?$",
@@ -32,7 +32,7 @@
   "_skip_notes": {
     "^https://console\\.cloud\\.google\\.com": "requires authentication — 401 responses are expected. Mirrors the same entry in mdk-docs excluded-url-prefixes.json; the two repos have separate link-check configs, so a URL allowlisted there is still checked here.",
     "^https://github\\.com/tetherto/mdk-docs": "false positive: private repo — 404s to the unauthenticated CI crawler (valid for humans with access)",
-    "^https://github\\.com/tetherto/mdk-prv": "false positive: private repo — 404s to the unauthenticated CI crawler (valid for humans with access)",
+    "^https://github\\.com/tetherto/mdk": "false positive: private repo — 404s to the unauthenticated CI crawler (valid for humans with access)",
     "examples/full-site/plugins/site/?$": "false positive: linkinator cannot resolve a bare directory path with no README.md or index file",
     "examples/site-backend/plugins/site/?$": "false positive: linkinator cannot resolve a bare directory path with no README.md or index file",
     "backend/core/plugins/telemetry/controllers/?$": "false positive: linkinator cannot resolve a bare directory path with no README.md or index file",

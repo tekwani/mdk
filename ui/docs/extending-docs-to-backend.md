@@ -87,7 +87,7 @@ Rules that make it work with the pipeline:
    pipeline diffs manifests to report what changed; non-determinism creates
    noise and false "changed" flags.
 2. **Public surface only.** Never emit anything private. The CLI runs a **leak
-   guard** that aborts the whole build if forbidden strings (e.g. `mdk-prv`)
+   guard** that aborts the whole build if forbidden strings (e.g. `mdk`)
    appear in the output.
 3. **Self-describing records.** Each record carries everything a page needs —
    name, category, description, signatures, and a `file` pointer — so the

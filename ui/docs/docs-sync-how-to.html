@@ -295,8 +295,8 @@
       </p>
       <p class="lede" style="margin-top:-6px">
         <strong>Everything here runs in the docs folder, <code>mdk-docs</code>.</strong>
-        It reads your code from the <code>mdk-prv</code> folder next to it, but you never
-        run doc commands inside <code>mdk-prv</code>.
+        It reads your code from the <code>mdk</code> folder next to it, but you never
+        run doc commands inside <code>mdk</code>.
       </p>
 
       <div class="console" role="img" aria-label="Terminal showing npm run docs:generate and its output">
@@ -328,7 +328,7 @@
         </p>
         <pre>sources:
   local:
-    <b>localPathToRepo</b>: /path/to/your/mdk-prv   <span style="color:#837a6c"># your code checkout</span></pre>
+    <b>localPathToRepo</b>: /path/to/your/mdk   <span style="color:#837a6c"># your code checkout</span></pre>
       </div>
     </section>
 
@@ -342,7 +342,7 @@
         upstream — otherwise the docs will quietly describe stale code.
       </p>
       <div class="note">
-        <p class="tight">In your <code>mdk-prv</code> folder, get the newest code:</p>
+        <p class="tight">In your <code>mdk</code> folder, get the newest code:</p>
         <pre>git checkout develop
 git pull upstream develop   <span style="color:#837a6c"># upstream = the original tetherto repo</span></pre>
         <p class="tight" style="margin-top:12px">
@@ -443,7 +443,7 @@ git pull upstream develop   <span style="color:#837a6c"># upstream = the origina
       <p>
         Generated pages are built from the MDK source code, so edits made directly
         on them are overwritten next run. To change what a generated page says,
-        edit the source in the <code>mdk-prv</code> repo, then run
+        edit the source in the <code>mdk</code> repo, then run
         <code>npm&nbsp;run&nbsp;docs:generate</code> again — your change flows through.
       </p>
       <div class="note">

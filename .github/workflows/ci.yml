@@ -1,4 +1,4 @@
-# MDK private monorepo (mdk-prv): backend/core/*, backend/workers/**, ui (all npm).
+# MDK private monorepo (mdk): backend/core/*, backend/workers/**, ui (all npm).
 # Aligned with MiningOS CI Checks: per-package lockfile check, node cache actions, parallel jobs, PR audits.
 name: CI Checks
 
@@ -1093,7 +1093,7 @@ jobs:
             esac
           }
           {
-            echo "## CI Summary (mdk-prv monorepo)"
+            echo "## CI Summary (mdk monorepo)"
             echo ""
             echo "**Selection:** ${REASON} (ui=${RUN_UI} core=${RUN_CORE} workers=${RUN_WORKERS} examples=${RUN_EXAMPLES})"
             echo ""

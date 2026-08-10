@@ -24,7 +24,7 @@ unrecognized hosts by default.
 comment on every host explaining which doc/link put it there. Source it once from your shell profile:
 
 ```bash
-[ -f "/absolute/path/to/mdk-prv/scripts/sfw-env.sh" ] && source "/absolute/path/to/mdk-prv/scripts/sfw-env.sh"
+[ -f "/absolute/path/to/mdk/scripts/sfw-env.sh" ] && source "/absolute/path/to/mdk/scripts/sfw-env.sh"
 ```
 
 This only allowlists these specific, already-known-good hosts — it does not set `SFW_UNKNOWN_HOST_ACTION`, so `sfw`

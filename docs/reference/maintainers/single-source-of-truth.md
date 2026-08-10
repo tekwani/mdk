@@ -35,7 +35,7 @@ Authoring conventions for the comment-driven hints that travel with Markdown in 
 
 This file is the source-of-truth for that vocabulary. Two consumers read it:
 
-- The `check:port-signals` lint gate (see [`ia.md`](ia.md#qa-gates)) — runs in mdk-prv pre-commit / CI and warns when a non-anchor link definition has no routing comment.
+- The `check:port-signals` lint gate (see [`ia.md`](ia.md#qa-gates)) — runs in mdk pre-commit / CI and warns when a non-anchor link definition has no routing comment.
 - The port-sync transforms in the downstream fumadocs build — rewrite link targets and convert GFM alerts to `<Callout>` JSX on port.
 
 Authoring rule: add the appropriate comment beside each cross-reference or alert. Authors do not need to read this file to write user-facing prose; the only time you need it is when adding a new `[slug]: …` definition or callout block.
@@ -52,7 +52,7 @@ Reference-style link definitions in `## Links` blocks (or anywhere in Markdown) 
 | `<!-- mdk-monorepo: <note> -->` | Internal-only flag (e.g. temp link awaiting a code/README destination); pipeline ignores entirely |
 | _(no comment) on `[slug]: #anchor`_ | In-page anchor — preserve verbatim alongside the parent page-to-page mapping |
 
-A non-anchor link definition with **no signal at all** is a pipeline error: the slug has no routing rule. The `check:port-signals` lint gate catches this in mdk-prv before it reaches the port-sync.
+A non-anchor link definition with **no signal at all** is a pipeline error: the slug has no routing rule. The `check:port-signals` lint gate catches this in mdk before it reaches the port-sync.
 
 A definition may carry **multiple comment lines** (e.g. one `docs@tether.io:` and one `mdk-monorepo:`) — each is read independently.
 
@@ -102,9 +102,9 @@ In-page anchor (uncommented by design):
 
 ### GFM alert → fumadocs `<Callout>`
 
-GitHub renders `> [!TYPE]` blockquote alerts natively; fumadocs uses `<Callout type="…">` JSX. Source files in mdk-prv use GFM so they read correctly on GitHub; the port-sync maps:
+GitHub renders `> [!TYPE]` blockquote alerts natively; fumadocs uses `<Callout type="…">` JSX. Source files in mdk use GFM so they read correctly on GitHub; the port-sync maps:
 
-| GFM source (mdk-prv) | Fumadocs output (tether.io) |
+| GFM source (mdk) | Fumadocs output (tether.io) |
 |---|---|
 | `> [!NOTE]`      | `<Callout type="info">`    |
 | `> [!TIP]`       | `<Callout type="idea">`    |

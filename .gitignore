@@ -25,7 +25,7 @@ config/*.json
 
 # Backend + repo-root runtime output. ANCHORED: the bare `status` / `store` /
 # `tmp` patterns previously matched UI source dirs of the same name and swallowed
-# them (the mdk-prv#13 regression). MDK runtime root is repo-root/tmp (MDK_ROOT).
+# them. MDK runtime root is repo-root/tmp (MDK_ROOT).
 /tmp/
 /status/
 /store/

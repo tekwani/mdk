@@ -137,7 +137,7 @@ missing tags during integration audits and request the JSDoc be added.
 ### `check:port-signals`
 
 Lints `docs/**/*.md` and warns when a non-anchor reference-style link definition has no adjacent `<!-- docs@tether.io: … -->` (or `<!-- mdk-monorepo: … -->`) 
-HTML comment per the vocabulary in [`single-source-of-truth.md`](single-source-of-truth.md). Catches missing routing hints in mdk-prv pre-commit / CI before they reach the 
+HTML comment per the vocabulary in [`single-source-of-truth.md`](single-source-of-truth.md). Catches missing routing hints in mdk pre-commit / CI before they reach the 
 downstream port-sync transforms. Soft warning, not a hard gate — adding a new slug should never block on the docs pipeline being ready.
 
 **Why it matters:** every cross-reference in the user-facing pages needs a port-time disposition (rewrite to upstream, preserve URL, drop on port, 

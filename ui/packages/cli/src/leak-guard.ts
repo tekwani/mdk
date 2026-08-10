@@ -1,7 +1,7 @@
 /**
  * Leak guard for generated docs data.
  *
- * The private monorepo's repo name (e.g. `mdk-prv`) must never reach the
+ * The private monorepo's repo name (e.g. `mdk`) must never reach the
  * public docs site. Before `docs:build` writes anything, every text file it
  * is about to emit is scanned for forbidden substrings; any hit aborts the
  * whole run so nothing leaks. Mirrors the docs-repo's own
@@ -9,7 +9,7 @@
  */
 
 /** Default forbidden patterns. The private repo slug must never be published. */
-export const DEFAULT_FORBIDDEN_PATTERNS = ['mdk-prv']
+export const DEFAULT_FORBIDDEN_PATTERNS = ['mdk']
 
 export type LeakHit = {
   /** Relative path of the offending file within the dataset. */
