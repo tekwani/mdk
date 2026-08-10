@@ -135,7 +135,7 @@ This wraps [`scripts/check-example-paths.mjs`](../../../scripts/check-example-pa
 - `_skip_notes` — mandatory sibling object, one entry per `skipFiles`/`skipPaths` pattern, explaining why. The checker refuses to run if any skip entry lacks a note. An unexplained skip is a silent false negative waiting to happen — the same lesson the linkinator skip list already enforces by convention; here it's enforced by the script itself.
 - Placeholders are dropped automatically, not via the skip list: any candidate token immediately followed by `<`, `>`, `*`, `{`, `}`, or `…` (for example `examples/run-<scenario>.js` or `` examples/run-*.js ``) is treated as unresolved template text, not a real path.
 
-**CI wiring** — [`.github/workflows/example-paths.yml`](../../../.github/workflows/example-paths.yml). Nightly only, deliberately unlike `link-check.yml`'s nightly-plus-PR split: the `example-paths` job (`schedule` + `workflow_dispatch`) runs `npm run check:example-paths`, and on failure opens or (if one is already open) comments on a tracking issue labelled `example-paths`, then exits non-zero so the run shows red. There is no PR gate — this check is not wired into the PR path.
+**CI wiring** — not wired today. Runs locally on demand via `npm run check:example-paths`; a nightly-only workflow (`schedule` + `workflow_dispatch`, no PR gate, mirroring the intended shape of `link-check.yml`'s nightly job — open-or-comment on a tracking issue labelled `example-paths`, then exit non-zero) is a follow-on.
 
 ## 🚧 Spelling — Vale
 
