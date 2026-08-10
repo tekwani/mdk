@@ -1,0 +1,49 @@
+name: Resolve core package install scope
+description: >
+  Decide whether a backend/core package directory must be installed/cached at
+  the repo root (root npm workspace members, which resolve sibling
+  @tetherto/mdk-* deps via semver ranges rather than file: links and 404 the
+  registry if installed in isolation) or in its own directory (standalone
+  packages with their own package-lock.json, e.g. backend/core itself).
+
+inputs:
+  dir:
+    description: Package directory relative to repo root (e.g. backend/core/gateway)
+    required: true
+
+outputs:
+  install-dir:
+    description: "'.' if dir is a root npm workspace member, otherwise dir itself"
+    value: ${{ steps.resolve.outputs.install-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve install/cache directory
+      id: resolve
+      shell: bash
+      env:
+        DIR: ${{ inputs.dir }}
+      run: |
+        set -euo pipefail
+        if node -e '
+          const fs = require("fs")
+          const path = require("path")
+          const pkg = JSON.parse(fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, "package.json"), "utf8"))
+          let ws = pkg.workspaces || []
+          if (!Array.isArray(ws)) ws = ws.packages || []
+          const norm = (s) => String(s).replace(/\/+$/, "")
+          const dir = norm(process.env.DIR)
+          const member = ws.some((w) => {
+            w = norm(w)
+            if (w === dir) return true
+            if (w.endsWith("/**")) { const b = w.slice(0, -3); return dir === b || dir.startsWith(b + "/") }
+            if (w.endsWith("/*"))  { const b = w.slice(0, -2); return dir.startsWith(b + "/") && !dir.slice(b.length + 1).includes("/") }
+            return false
+          })
+          process.exit(member ? 0 : 1)
+        '; then
+          echo "install-dir=." >> "$GITHUB_OUTPUT"
+        else
+          echo "install-dir=${DIR}" >> "$GITHUB_OUTPUT"
+        fi

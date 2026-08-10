@@ -555,8 +555,21 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Resolve install scope
+        id: scope
+        uses: ./.github/actions/core-workspace-scope
+        with:
+          dir: ${{ matrix.dir }}
+
+      # Root npm-workspace members (client, gateway, kernel, mcp, mdk,
+      # mdk-worker, plugins) resolve sibling @tetherto/mdk-* deps via semver
+      # ranges, not file: links, so installing them here in isolation would
+      # 404 against the registry for those unpublished packages. They are
+      # installed once, from the repo root, by setup-core-workspace instead;
+      # this step only runs for genuinely standalone dirs (backend/core).
       - name: Install dependencies and cache node_modules
         id: setup-deps
+        if: steps.scope.outputs.install-dir == matrix.dir
         uses: ./.github/actions/node-setup-cache
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -579,13 +592,36 @@ jobs:
             exit 1
           )
 
+  setup-core-workspace:
+    name: 📦 Setup Core (workspace root)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [detect-target]
+    if: needs.detect-target.outputs.run_core == 'true'
+    outputs:
+      cache-key: ${{ steps.setup-deps.outputs.cache-key }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
+      # Mirrors backend/core/install-packages.sh's run_root_install: workspace
+      # member packages must be installed once from the repo root, which
+      # hoists and links @tetherto/mdk-* siblings together, instead of once
+      # per matrix leg (which would redundantly reinstall the whole
+      # workspace 7x and, before this fix, 404'd for gateway).
+      - name: Install dependencies and cache node_modules
+        id: setup-deps
+        uses: ./.github/actions/node-setup-cache
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          working-directory: "."
 
   lint-core:
     name: ✨ Lint Core (${{ matrix.dir }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [detect-target, list-core, setup-core]
+    needs: [detect-target, list-core, setup-core, setup-core-workspace]
     if: needs.detect-target.outputs.run_core == 'true'
     strategy:
       fail-fast: false
@@ -598,18 +634,23 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Resolve install scope
+        id: scope
+        uses: ./.github/actions/core-workspace-scope
+        with:
+          dir: ${{ matrix.dir }}
       - uses: ./.github/actions/node-restore-cache
         with:
-          cache-key: ${{ needs.setup-core.outputs.cache-key }}
+          cache-key: ${{ steps.scope.outputs.install-dir == '.' && needs.setup-core-workspace.outputs.cache-key || needs.setup-core.outputs.cache-key }}
           node-version: ${{ env.NODE_VERSION }}
-          working-directory: ${{ matrix.dir }}
+          working-directory: ${{ steps.scope.outputs.install-dir }}
       - run: npm run lint --if-present
 
   typecheck-core:
     name: 🔎 Typecheck Core (${{ matrix.dir }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [detect-target, list-core, setup-core]
+    needs: [detect-target, list-core, setup-core, setup-core-workspace]
     if: needs.detect-target.outputs.run_core == 'true'
     strategy:
       fail-fast: false
@@ -622,18 +663,23 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Resolve install scope
+        id: scope
+        uses: ./.github/actions/core-workspace-scope
+        with:
+          dir: ${{ matrix.dir }}
       - uses: ./.github/actions/node-restore-cache
         with:
-          cache-key: ${{ needs.setup-core.outputs.cache-key }}
+          cache-key: ${{ steps.scope.outputs.install-dir == '.' && needs.setup-core-workspace.outputs.cache-key || needs.setup-core.outputs.cache-key }}
           node-version: ${{ env.NODE_VERSION }}
-          working-directory: ${{ matrix.dir }}
+          working-directory: ${{ steps.scope.outputs.install-dir }}
       - run: npm run typecheck --if-present
 
   test-core:
     name: 🧪 Test Core (${{ matrix.dir }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [detect-target, list-core, setup-core]
+    needs: [detect-target, list-core, setup-core, setup-core-workspace]
     if: needs.detect-target.outputs.run_core == 'true'
     strategy:
       fail-fast: false
@@ -646,39 +692,37 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Resolve install scope
+        id: scope
+        uses: ./.github/actions/core-workspace-scope
+        with:
+          dir: ${{ matrix.dir }}
       - uses: ./.github/actions/node-restore-cache
         with:
-          cache-key: ${{ needs.setup-core.outputs.cache-key }}
+          cache-key: ${{ steps.scope.outputs.install-dir == '.' && needs.setup-core-workspace.outputs.cache-key || needs.setup-core.outputs.cache-key }}
           node-version: ${{ env.NODE_VERSION }}
-          working-directory: ${{ matrix.dir }}
-      - name: Install cross-package dependencies
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: |
-          # Core packages use relative requires into sibling core packages
-          # (e.g. mdk -> kernel) and into backend/workers/** (base, lib,
-          # http.node.wrk, containers). Each test runner only restores the
-          # matrix package's node_modules, so the reachable sibling packages
-          # must be installed here too.
-          find backend/core backend/workers -name package.json \
-            -not -path '*/node_modules/*' -not -path '*/examples/*' \
-            | xargs -I{} dirname {} \
-            | grep -v "^${{ matrix.dir }}$" \
-            | while read -r dir; do
-                echo "Installing deps: $dir"
-                if [ -f "$dir/package-lock.json" ]; then
-                  (cd "$dir" && npm ci --ignore-scripts --no-audit --no-fund)
-                else
-                  (cd "$dir" && npm install --ignore-scripts --no-audit --no-fund)
-                fi
-              done
+          working-directory: ${{ steps.scope.outputs.install-dir }}
+      # Core packages use relative/sibling requires (e.g. mdk -> kernel) and
+      # into backend/workers/**. Every backend/core and backend/workers
+      # package is a root npm-workspace member, so the workspace-root
+      # node_modules restored above already contains every sibling except
+      # when this leg IS the standalone backend/core dir (its own restore
+      # above only fetched backend/core/node_modules) - fetch the shared
+      # root node_modules too in that one case.
+      - name: Restore workspace root node_modules (cross-package siblings)
+        if: steps.scope.outputs.install-dir != '.'
+        uses: ./.github/actions/node-restore-cache
+        with:
+          cache-key: ${{ needs.setup-core-workspace.outputs.cache-key }}
+          node-version: ${{ env.NODE_VERSION }}
+          working-directory: "."
       - run: npm run test:coverage --if-present || npm test --if-present
 
   build-core:
     name: 🏗️ Build Core (${{ matrix.dir }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [detect-target, list-core, setup-core]
+    needs: [detect-target, list-core, setup-core, setup-core-workspace]
     if: needs.detect-target.outputs.run_core == 'true' && needs.list-core.outputs.buildable_dirs != '[]'
     strategy:
       fail-fast: false
@@ -691,11 +735,16 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Resolve install scope
+        id: scope
+        uses: ./.github/actions/core-workspace-scope
+        with:
+          dir: ${{ matrix.dir }}
       - uses: ./.github/actions/node-restore-cache
         with:
-          cache-key: ${{ needs.setup-core.outputs.cache-key }}
+          cache-key: ${{ steps.scope.outputs.install-dir == '.' && needs.setup-core-workspace.outputs.cache-key || needs.setup-core.outputs.cache-key }}
           node-version: ${{ env.NODE_VERSION }}
-          working-directory: ${{ matrix.dir }}
+          working-directory: ${{ steps.scope.outputs.install-dir }}
       - run: npm run build
 
   setup-workers:
@@ -929,7 +978,7 @@ jobs:
     if: github.event_name == 'pull_request' && needs.detect-target.outputs.run_core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [detect-target, list-core, setup-core]
+    needs: [detect-target, list-core, setup-core, setup-core-workspace]
     strategy:
       fail-fast: false
       matrix:
@@ -943,11 +992,17 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
+      - name: Resolve install scope
+        id: scope
+        uses: ./.github/actions/core-workspace-scope
+        with:
+          dir: ${{ matrix.dir }}
+
       - uses: ./.github/actions/node-restore-cache
         with:
-          cache-key: ${{ needs.setup-core.outputs.cache-key }}
+          cache-key: ${{ steps.scope.outputs.install-dir == '.' && needs.setup-core-workspace.outputs.cache-key || needs.setup-core.outputs.cache-key }}
           node-version: ${{ env.NODE_VERSION }}
-          working-directory: ${{ matrix.dir }}
+          working-directory: ${{ steps.scope.outputs.install-dir }}
 
       - name: Security audit (npm)
         run: |
@@ -1051,6 +1106,7 @@ jobs:
       - build-ui
       - list-core
       - setup-core
+      - setup-core-workspace
       - lint-core
       - typecheck-core
       - test-core
