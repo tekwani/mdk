@@ -1,7 +1,5 @@
 'use strict'
 
-const { authCheck } = require('./server/lib/authCheck')
-const { capCheck } = require('./server/lib/capCheck')
 const { cachedRoute } = require('./server/lib/cachedRoute')
 const { send200 } = require('./server/lib/send200')
 
@@ -21,15 +19,6 @@ function buildFastifyRoutes (plugin, ctx) {
 
     if (route.schema) {
       fastifyRoute.schema = route.schema
-    }
-
-    if (route.auth) {
-      fastifyRoute.onRequest = async (req, rep) => {
-        await authCheck(ctx, req, rep)
-        if (route.permissions && route.permissions.length) {
-          await capCheck(ctx, req, rep, route.permissions)
-        }
-      }
     }
 
     const cacheFields = route.cache

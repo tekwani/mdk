@@ -1,163 +1,222 @@
-# Changelog: mdk-0.5.0
+# Changelog: mdk-0.6.0
 
-> For a high-level introduction, see the [release notes](./docs/reference/release-notes/0.5.0-release.md).
+> For a high-level introduction, see the [release notes](./docs/reference/release-notes/0.6.0-release.md).
 
-## v0.5.0
+## v0.6.0
 
-- Completes the control-plane **rename**: **ORK → Kernel** and **App Node → Gateway**, across backend, UI, examples, and docs (breaking)
-- **Retires the IPC transport** — HRPC is now the only client transport, with a zero-config Kernel **key-file** bootstrap (breaking)
-- Extracts the Worker runtime into a standalone **`@tetherto/mdk-worker`** package and migrates every worker onto the `WorkerRuntime` plugin model, deleting the legacy `base/`/`ThingManager` packages (breaking)
-- Renames the UI foundation package **`@tetherto/mdk-ui-core` → `@tetherto/mdk-ui-foundation`** and restructures `@tetherto/mdk-react-devkit` into **`primitives`/`domain`** layers (breaking)
-- Renames every worker package to a uniform **`@tetherto/mdk-worker-*`** scheme, and removes the microbt and electricity workers (breaking)
-- Adds **paginated, searchable** pools and containers listings
-- Ships a **third-party Worker developer guide**, a docs-generation pipeline, a full-site **dashboard + MCP server** example, and a large **test-coverage** push
+- Reduces the **Gateway to a thin plugin host**: The entire built-in HTTP API (auth/OAuth2, WebSocket, alerts, users, audit log, and ~20 route/handler/schema modules) is deleted, and routes now come only from plugins (breaking)
+- Replaces the mock-control-service package with **`@tetherto/mdk-mcp`**, an MCP server that exposes MDK data to agents as declarative tools (breaking)
+- Ships **`@tetherto/mdk-skill`**, an Agent Skills bundle versioned against the MDK release line
+- Turns the UI shell template into a **runnable example** and slims `mdk-ui create` to a bare backbone whose feature pages are added on demand (breaking)
+- Consolidates the examples around a new **`examples/mvp-site`** single-container site, and makes the repo root an **npm workspaces** monorepo
+- Adds **versioned Whatsminer API protocol handlers** (v2/v3) and a `site-monitor` Gateway plugin
+- Moves every UI surface from the discontinued `react-router-dom` shim to **`react-router` v8**, clearing a high-severity advisory that no override could resolve (breaking for scaffolded apps)
 
 ## Breaking changes
 
-### ORK renamed to Kernel
+### Gateway reduced to a plugin host — built-in HTTP API removed
 
-The orchestration runtime called **ORK** is now the **Kernel** throughout the codebase, matching the docs and protocol terminology.
+`@tetherto/mdk-gateway` no longer ships an application API of its own. Every route module, handler, schema, and supporting library behind the old `workers/lib/server/` tree is deleted; the worker now boots the httpd facility, registers plugins, and serves whatever those plugins declare. What went away:
 
-- `backend/core/ork/` → `backend/core/kernel/`; package `@tetherto/mdk-ork` → **`@tetherto/mdk-kernel`**
-- Internal module `lib/ork.manager.js` → `lib/kernel.manager.js`; class `ORKManager` → `KernelManager`
-- The UI nomenclature was swept in lockstep (`ork` → `kernel`) across `@tetherto/mdk-ui-foundation`, `@tetherto/mdk-react-adapter`, and `@tetherto/mdk-react-devkit`; the JSDoc capability tag `@orkCapability` / `ork-capabilities` → `@kernelCapability` / `kernel-capabilities`
+| Area | Removed |
+|---|---|
+| Auth / identity | `lib/auth.js`, `lib/users.js`, `lib/server/lib/authCheck.js`, `capCheck.js`, the `svc-facs-auth` + two `svc-facs-httpd-oauth2` facilities, the `auth` sqlite facility, and the periodic `cleanupTokens` interval |
+| Realtime | `@fastify/websocket` registration, `routes/ws.routes.js`, `lib/alerts.js` and the 5-second `broadcastAlerts` loop |
+| Data / state | `lib/globalData.js` and the `global-data` hyperbee, `lib/dcs.utils.js`, `lib/metrics.utils.js`, `lib/period.utils.js`, `lib/server/lib/queryUtils.js`, `routeHelpers.js` |
+| Audit | `lib/server/lib/auditLogger.js` and the optional `audit.logger.json` config |
+| Routes / handlers | `actions`, `alerts`, `auth`, `configs`, `coolingSystem`, `devices`, `energySystem`, `explorer`, `finance`, `global`, `groups`, `logs`, `metrics`, `miners`, `pools`, `settings`, `site`, `site-monitor`, `things`, `users`, `ws` — plus every `schemas/*.js` |
 
-**Not affected**: the MDK protocol action names are unchanged — only doc comments moved from "ORK"/"App Node" to "Kernel"/"Gateway". Envelope string values (`identity.request`, `command.request`, `worker.list`, …) are identical, so a 0.4.x peer still speaks the same wire protocol.
+The `_pluginServices` object handed to plugins lost `authLib`; it now exposes only `dataProxy`, `mdkClient`, and `conf`. The example config files `config/facs/auth.config.json.example`, `config/facs/httpd-oauth2.config.json.example`, and `config/audit.logger.json.example` are gone.
 
-**Action required**: replace imports of `@tetherto/mdk-ork` with `@tetherto/mdk-kernel` and path references to `backend/core/ork` with `backend/core/kernel`.
+Dependencies dropped from the package: `@fastify/websocket`, `@bitfinex/bfx-facs-db-sqlite`, `@bitfinex/bfx-facs-http`, `@bitfinex/bfx-facs-interval`, `@bitfinex/lib-js-util-base`, `@tetherto/hp-svc-facs-store`, `@tetherto/svc-facs-auth`, `@tetherto/svc-facs-httpd-oauth2`, `mingo`, and the `@tetherto/mdk` self-dependency. `@tetherto/svc-facs-httpd` moved **v1.0.0 → v2.0.0**.
 
-### App Node renamed to Gateway
+**Action required**: anything that called a built-in Gateway endpoint must now supply it as a plugin. The three default plugins the worker registers are `telemetry`, `site-hashrate`, and the new `site-monitor`; register your own with `extraPluginDirs`.
 
-- `backend/core/app-node/` → `backend/core/gateway/`; package `@tetherto/mdk-app-node` → **`@tetherto/mdk-gateway`**
-- The bootstrap export **`startAppNode()` → `startGateway()`** (`backend/core/mdk`)
-- The client envelope `sender`/`requesterId` value `'app-node'` → `'gateway'`
-- `@tetherto/mdk-plugins` is now described as "MDK Gateway Plugins" (was "MDK App Node Plugins")
+**Note on `@tetherto/mdk-plugin-auth`**: the plugin still ships inside `@tetherto/mdk-plugins`, but the Gateway no longer auto-registers it, and its `permissions`/`token` controllers read `services.authLib` — which the Gateway no longer provides. Treat the bundled auth plugin as unwired in 0.6.0 and bring your own identity layer.
 
-**Action required**: rename `startAppNode` call sites to `startGateway`, and update the `@tetherto/mdk-app-node` dependency to `@tetherto/mdk-gateway`.
+### `startGateway()` auth options removed
 
-### IPC transport removed — HRPC only
+In `@tetherto/mdk`, the Gateway bootstrap no longer knows about authentication:
 
-The Unix-socket IPC transport is gone; HRPC (RPC listener) is the sole client transport.
+- `opts.noAuth`, `opts.auth`, and `opts.httpdOauth2` are **removed** (as is the internal no-auth OAuth2 stub used to satisfy facility validation)
+- `auth.config.json` and `httpd-oauth2.config.json` are no longer materialised into the run directory — the config mapping is now just `httpd`, `net`, `store`, and `logging`
+- `ctx.noauth` is no longer set on the worker context
 
-- **Client**: `backend/core/client/lib/ipc-client.js` deleted; `createMdkClient` no longer accepts `opts.ipc`; `_createTransport` now throws `ERR_MDK_CLIENT_TRANSPORT_REQUIRED` when neither `hrpc` nor `transport` is supplied
-- **Kernel**: `IPCListener` and its `KernelManager` lifecycle wiring removed, along with the `listeners.ipc` option on `createKernel`
-- **Zero-config bootstrap replacement**: `getKernel` now writes the Kernel's HRPC public key (hex) to a **key file** — `DEFAULT_KEY_FILE` = `<tmpdir>/mdk/.kernel-key` — after start, so out-of-process clients connect without any hand-passed key. `startGateway` resolves the key from that file (order documented); `opts.keyFile` (`string | boolean`) overrides, and `keyFile: false` disables it. New error `ERR_KERNEL_KEY_FILE_NOT_FOUND`.
+`startKernel()` is now a thin alias for `getKernel()` rather than a second, divergent bootstrap path.
 
-### `@tetherto/mdk-ui-core` renamed to `@tetherto/mdk-ui-foundation`
+### `@tetherto/mdk-mock-control-service` removed
 
-The core UI data/state package is now published as **`@tetherto/mdk-ui-foundation`** (`ui/packages/ui-core/` → `ui/packages/ui-foundation/`). Update the dependency name and imports; the API surface is unchanged by the rename itself.
+The standalone mock-control-service package is gone. Its `mock-control-agent.js` now lives in `@tetherto/mdk-worker-mock` (`backend/workers/mock/mock-control-agent.js`), and the nine per-worker `mock/mock-control-agent.js` copies (antspace, bitdeer, f2pool, antminer, avalon, whatsminer, abb, satec, schneider, seneca) were deleted in favour of that single shared implementation. The package's `routes.js` and its HTTP agent integration test were dropped with it.
 
-### `@tetherto/mdk-react-devkit` layer restructure and export-map changes (`core`/`foundation` → `primitives`/`domain`)
+**Action required**: import the mock control agent from `@tetherto/mdk-worker-mock` and drop any dependency on `@tetherto/mdk-mock-control-service`.
 
-The devkit source layers were renamed — `src/core/` → **`src/primitives/`** (alias `@core` → `@primitives`), `src/foundation/` → **`src/domain/`** (alias `@foundation` → `@domain`), and the inner `components/domain/` → `components/composite/`. This moved **193 component `USAGE.md`** files and their sources; update any deep imports into `@tetherto/mdk-react-devkit/src/...` accordingly.
+### UI shell template moved out of the CLI and slimmed to a backbone
 
-The package `exports` map changed:
+The `mdk-ui-shell` template is no longer a scaffold-only tree inside `@tetherto/mdk-ui-cli`. It now lives at **`examples/mdk-ui-shell-template/`** as a real Vite app you can `npm run dev` in place, and the CLI's build step copies it into `dist/templates/mdk-ui-shell-template` (filtering local artifacts like `node_modules`, `dist`, `.env`, `package-lock.json`, and renaming `.gitignore` → `_gitignore`, which `create` restores at scaffold time).
 
-- `"./core"` **removed** → use `"./primitives"`
-- `"./foundation"` and `"./feature"` **removed** (unused convenience exports); `"./domain"` retained but now resolves to `./dist/domain/index`
-- Stylesheet `"./styles-foundation.css"` **renamed to `"./styles-domain.css"`** (source `styles-foundation.scss` → `styles-domain.scss`). **Action required** for anyone who adopted the 0.4.0 core/foundation CSS split: rename the second import to `@tetherto/mdk-react-devkit/styles-domain.css`.
+`mdk-ui create` now produces a **bare backbone** — Google OAuth sign-in, the token lifecycle, and the app frame (header, user menu, sidebar) around a Home landing page — with no feature pages. The reference pages (Dashboard, Alerts, Pool Manager, Explorer, Site Overview) ship in the template under `_managed/pages/`, which `create` strips; they are restored individually with `mdk-ui add page <Name>`.
 
-### Registry & docs-data schema bumped to `2.0.0` (ORK → Kernel field rename)
+Template resolution changed from filesystem discovery to an explicit registry, because templates now span two source roots (the runnable `examples/` app and the bundled `packages/cli/templates/starter` scaffold) that only reunite under `dist/templates/` once published.
 
-`REGISTRY_SCHEMA_VERSION` (`1.4.0` → `2.0.0`) and `DOCS_DATA_SCHEMA_VERSION` (`1.3.0` → `2.0.0`) both moved, because the capability fields consumers read were renamed: `orkCapabilities` → `kernelCapabilities`, type `OrkCapability` → `KernelCapability`, the required JSDoc tag `@orkCapability` → `@kernelCapability`, and the index keys `componentsByOrkCapability`/`hooksByOrkCapability`/blueprint `byOrkCapability` → `…ByKernelCapability`. The `find`/`docs`/`blueprints` CLI commands emit the renamed field.
+**Action required**: expect a scaffolded app to contain no feature pages; add the ones you want with `mdk-ui add page`. Anyone reading templates out of the CLI package tree should read `dist/templates/<id>` instead.
 
-### Worker packages renamed to `@tetherto/mdk-worker-*`
+### Examples restructured
 
-Every worker package moved to a uniform scheme, e.g. `@tetherto/miner-antminer` → **`@tetherto/mdk-worker-antminer`**, `@tetherto/container-bitdeer` → **`@tetherto/mdk-worker-bitdeer`**, and the demo `@tetherto/sample-demo-worker` → **`@tetherto/mdk-worker-demo`** (also across antspace, avalon, whatsminer, f2pool, ocean, abb, satec, schneider, seneca).
-
-### Worker runtime extracted; legacy `base/` packages removed
-
-`WorkerRuntime` now ships in the new `@tetherto/mdk-worker` package (see Added), and every worker was migrated onto the `WorkerRuntime` plugin model (`plugin/` with `boot.js`, `index.js`, `mdk-contract.json`, `src/commands/*`, `src/telemetry/*`). The shared `base/` packages were deleted: `backend/workers/base/` (`ThingManager`, `thing.js`, `mdk-worker-adapter.js`, `lib/services/*`, `facs/*`, contract schema) and the per-family `miners/base`, `containers/base`, `power-meter/base`, `temperature/base`, `minerpools/base`. Consumers no longer import `ThingManager`, the family managers, or the device bases.
+- **`examples/e2e/` removed** — its UI became `examples/mvp-site/ui/`
+- **`examples/site-backend/` removed** — its site Gateway plugin became `examples/mvp-site/backend/gateway-plugins/site/` (controllers `command`, `history`, `overview`, plus `utils`)
+- **`examples/backend/` de-packaged** — every nested `package.json` under it is gone (containers, minerpools, miners, powermeters, sensors, site, site-single-process, mdk-e2e, mdk-plugin-e2e), taking the tree from 131 to 57 tracked files. The remaining examples are plain scripts run from the parent rather than installable packages, and the per-family device scripts were folded into per-vendor entry points (e.g. `containers/mdk.client.container.js` → `containers/antspace/index.js`, `miners/mdk.client.miner.js` → `miners/whatsminer/index.js`).
 
 ## Added
 
-### `@tetherto/mdk-worker` — Worker Runtime package
+### `@tetherto/mdk-mcp` — MCP server
 
-New package (`backend/core/mdk-worker/`, v0.1.0) — "hosts a Worker Plugin's devices behind one HRPC channel to the Kernel."
+New package at `backend/core/mcp/` exposing MDK data to agents over the Model Context Protocol.
 
-| Export / feature | Description |
+| Piece | Description |
 |---|---|
-| `WorkerRuntime` (`lib/worker-runtime.js`) | Hosts N same-type devices behind one HRPC channel; `getPublicKey()`, `getDeviceContext(deviceId)`; handlers invoked as `(ctx, params)` with `ctx = { deviceId, device, config }`, results wrapped in MDK protocol envelopes. Generalizes/replaces the former `MDKWorkerAdapter` (persistent seeds, single HRPC respond loop, DHT topic announce carried over; `ThingManager` delegation replaced by per-device handler dispatch). |
-| `loadPlugin` (`lib/plugin-loader.js`) | Plugin loader with eager handler loading. |
-| `service-builtins.js` | `telemetryBuiltin`, `commandBuiltin`, `mergeBuiltinCommands` — serves the legacy worker-infra surface (logs/count/config, pool `ext_data` queries, write-action approval) from injected `opts.services`. |
-| `mdk-contract.schema.json` | Formal JSON Schema (draft 2020-12) for the device-lib contract, re-homed with the runtime. |
-| `opts.allowEmptyDevices` | Opt-in zero-device boot for provisioning-first bootstrap; default still throws `ERR_DEVICES_REQUIRED`. |
+| `createMcpServer(root, port, client, pluginDirs)` (`server.js`) | Starts a `StreamableHTTPServerTransport` MCP server on `127.0.0.1:<port>`, answering `POST /mcp` only; validates `root`/`port` with `ERR_INVALID_MCP_ROOT` / `ERR_INVALID_MCP_PORT`, and installs SIGINT/SIGTERM shutdown that closes the MDK client first |
+| `loadPlugin` (`lib/plugin-loader.js`) | Loads `mcp-plugin.json` manifests and returns their `tools[]`; each tool declares `id`, `description`, `handler`, and an optional JSON-Schema `schema` that the SDK enforces before dispatch |
+| Tool handlers | Invoked as `(args, services)` with `services.mdkClient`, so a tool reaches the fleet through the ordinary MDK protocol client |
 
-Dependencies: `@hyperswarm/rpc` 3.5.0, `hyperdht` 6.32.0, `hyperswarm` 4.17.0, `debug` 4.4.1.
+A fresh server instance is constructed per request (stateless transport, no session id). Dependencies: `@modelcontextprotocol/sdk` ^1.29.0, `async` 3.2.6, `debug` 4.4.1. `examples/full-site/` gained an `mcp-client.js` driver alongside its updated `docs/mcp-server.md`.
 
-### Gateway — paginated, searchable listings
+### `@tetherto/mdk-skill` — MDK Developer Skill Suite
 
-- **Pools list pagination + search** (`server/handlers/pools.handlers.js`): `getPools` accepts `search`, `offset`, `limit`. `search` matches `name`/`pool`/`account` (case-insensitive); `total` counts the matched set before the page slice; `summary` still covers the full pool set. Response is `{ pools, summary, total }`. Schema adds `search` (string), `offset` (int ≥ 0), `limit` (int 1–100).
-- **Containers list server-side filter/sort/pagination** (`server/handlers/devices.handlers.js`): `getContainers` pushes tag + filter + search to `listThings`, takes the global `total` from `getThingsCount`, then merges/sorts/slices (matching the miners handler).
+New package at `packages/mdk-skill/` — an Agent Skills (`SKILL.md`) bundle assembled from the monorepo's real artifacts and versioned to track the MDK release line. It is a copy-only assembler: each library owns its artifacts, and this package curates them into `dist/skills/` and installs them flat into `.cursor/skills/` or `.claude/skills/` (`npm run install:skills`; `assemble` also runs on `prepack`).
 
-### `@tetherto/mdk` — absorbed worker-infra services
+Five skills ship: `mdk` (with `architecture`, `glossary`, `package-index`, and `protocol` references), `mdk-device-worker` (contract-authoring, device-families, local-testing and worker-base-api references, an `mdk-contract.template.json` asset, plus `validate-contract.mjs` and `worker-smoke.mjs` scripts), `mdk-app-plugin`, `mdk-deployment`, and `mdk-ui-component`. A top-level `mdk-contract.schema.json` and a `sources.map.json` describing the copy graph are included.
 
-The former `mdk-utils` package was absorbed into `@tetherto/mdk`: new `lib/services/` (actions, alerts, comments, log-history, logs, pool, provisioning, settings, snaps, stats + `pool-utils/`), `lib/things/` device layer (thing, miner, container, powermeter, sensor + constants), `lib/templates/` (alerts, stats), `lib/worker-infra.js`, `lib/utils.js`, with extensive new unit coverage. New deps pulled in: `@bitfinex/bfx-facs-http`, `@bitfinex/bfx-facs-scheduler`, `@bitfinex/lib-js-util-base`, `@bitfinex/lib-js-util-promise`, `async` 3.2.6, `mingo` 6.5.6, `uuid` 14.0.0.
+### `site-monitor` Gateway plugin
 
-### Per-worker runtime plugins + contract-declared handlers
+New built-in plugin (`backend/core/plugins/site-monitor/`) — "site identity, feature configuration, and live per-device hashrate via the MDK protocol client" — registered by default alongside `telemetry` and `site-hashrate`.
 
-Each surviving worker gained a `plugin/` package (`boot.js`, `index.js`, `mdk-contract.json`, `src/commands/*`, `src/telemetry/*`) with matching integration + unit test suites — antminer, avalon, whatsminer (miners); antspace, bitdeer (containers); f2pool, ocean (minerpools); abb, satec, schneider (power-meter); seneca (temperature). Example: antminer telemetry (accepted/rejected shares, hashrate-avg, power, power-mode, efficiency, status, temperature, uptime, snap) and commands (reboot, set-led, set-power-mode, setup-pools). A `whatsminer/examples/run-runtime-parity.js` e2e runs the runtime against mock devices.
+| Route | Method + path | Description |
+|---|---|---|
+| `site.info` | `GET /auth/site` | Site name from the Gateway config (`common.json` `site`) |
+| `site.feature-config` | `GET /auth/featureConfig` | The `featureConfig` object from the Gateway config |
+| `site.hashrate` | `GET /site-monitor/hashrate` | Live per-device hashrate and power with site totals |
+
+All three are declared `auth: false` and `safety: "read-only"`.
+
+### Whatsminer versioned API protocol handlers
+
+`@tetherto/mdk-worker-whatsminer` gained a protocol layer at `lib/protocols/` that adapts to the device's API generation instead of assuming one wire format.
+
+- `ApiHandlerFactory` resolves a handler from any version string by **major** version (`'2.2.2'` → the v2 handler), with `normalizeVersion`, `getSupportedVersions`, `getHandlerClass`, `getDefaultPort`, and `isVersionSupported` helpers; an unknown major throws `ERR_UNSUPPORTED_API_VERSION`.
+- Two handlers over a shared `wm-api-base`: **v2** (canonical `2.0.5`, port `4028`, auth command `get_token`) and **v3** (canonical `3.0.3`, port `4433`, auth command `get.device.info`), with a `COMMAND_MAP_V3` translating v2 underscore commands to v3 dot notation. v2 remains the default.
+- Five new unit suites cover the factory, constants, base handler, and both version handlers
+
+### UI — container detail, system info, and clickable table rows
+
+- **`ContainerDetail`** (`@tetherto/mdk-react-devkit`, `domain/features/container-detail/`) — the presentational page shell every container tab mounts into: a back link, the container name, and a per-model tab strip. The page owns routing and the active tab and supplies the body as `children`; a `ContainerDetailPlaceholder` covers not-yet-built tabs. Exported from `domain/features`, with `USAGE.md`, an example, and specs. A matching `container-detail-page.tsx` was added to the catalog app.
+- **`useSystemInfo`** (`@tetherto/mdk-react-adapter`) — composes `GET /auth/site`, `GET /auth/userinfo`, and `GET /auth/featureConfig` into one page-ready `SystemInfo` payload (`site`, `email`, `roles`, `featureCount`) with a single `refetch`. Exported with its `SystemInfo` and `UseSystemInfoResult` types.
+- **`DataTable` row clicks** — new `onRowClick` on the `DataTable` primitive, threaded through `DeviceExplorer` and `DeviceExplorerTable`. Rows become `role="button"`, focusable, and activatable with Enter/Space; clicks originating inside a `button`, `a`, `input`, `label`, `[role="checkbox"]`, or anything marked `data-no-row-click` are ignored, so selection checkboxes and expand toggles keep working.
+- **Hashrate helpers** — `getHashrateString` and `getHashrateUnit` are now exported from the devkit `domain` entry point
+- **Header stat boxes** — `HeaderHashrateBox` gained `fractionDigits` prop (default `3`) for controlling decimal precision.
+
+### `examples/mvp-site`
+
+A new minimal single-container site demo: Kernel, Gateway, a Whatsminer worker, an Ocean pool worker, a SATEC powermeter worker, and the MDK React UI, with an MCP server via `@tetherto/mdk-mcp`. Devices are seeded from a gitignored `config/devices.json` (keyed by `miners` / `powermeters`, copied from the checked-in `.example`), each mock device getting its own port. Ships PM2 deployment under `deploy/`, a `setup-config.js` generator, `start.js`, unit tests, and its own UI workspace with pool setup, dynamic hashrate units, and site hashrate history.
 
 ### Documentation
 
-- **Worker developer guides**: `docs/guides/workers/build-a-worker.md` (build a third-party Worker end-to-end, from your own repo) and `docs/tutorials/quickstart/build-a-dashboard.md` (one Worker + one Gateway route + one static page, no build step).
-- **HRPC**: `examples/backend/inspect-over-hrpc.md` (inspect MDK over HRPC with `hp-rpc-cli`); the IPC transport docs were replaced with the HRPC key-file flow across the top-level README and core/worker READMEs.
-- **MCP**: `examples/full-site/docs/mcp-server.md` documents a full-site MCP server that connects to the Kernel directly over HRPC (no Gateway) and exposes registry/telemetry/command tools over HTTP.
-- **New stack/reference pages**: `docs/concepts/stack/kernel.md` and `stack/gateway.md` (replacing the ORK/app-node pages); `docs/reference/glossary.md` (replacing `docs/concepts/terminology.md`), with an HRPC section.
-- **Docs-generation pipeline**: `mdk-ui docs:generate` with package-grouped versioned reference nav (`ui/packages/cli`), documented in `ui/docs/extending-docs-to-backend.md` and a rewritten `ui/docs/docs-sync-how-to.html`.
-
-### Examples
-
-- **full-site dashboard + MCP**: a new `DashboardPage.tsx` and supporting UI (`AppSidebar`, `ContainerGrid`, `Containers`/`Control`/`Monitoring`/`Pools` pages, chart components), plus an MCP server (`backend/proc/mcp-server.js`, `.mcp.json`) and new dep `@modelcontextprotocol/sdk ^1.29.0`.
-- **`examples/site-backend/`** (new) — boots every worker family as its own OS process against mock hardware, coordinated by a Kernel and exposed via the Gateway HTTP API; runnable under PM2 or Docker (Dockerfile, docker-compose, PM2 ecosystem).
-- **`examples/backend/mdk-plugin-e2e/`** (new) — plugin-authoring e2e: `WorkerRuntime` hosting mock devices + Kernel + Gateway Plugin aggregation.
-- **`examples/backend/demo-worker-caller/index.js`** (new) — a single-file "caller" showing how a host constructs `WorkerRuntime` around the shipped demo-worker plugin and runs a telemetry sampler loop.
-- **`examples/backend/kernel/`** (new) and per-family example test packages (`@tetherto/mdk-backend-*-examples`) with a shared `examples/backend/utils/test-harness.js` (`runAutoExit`).
+- **Container worker guides** (new): `docs/guides/containers/index.md`, `run-antspace-worker.md`, and `run-bitdeer-worker.md`
+- **New reference pages**: `docs/reference/kernel/modules.md` and `docs/reference/protocol/messages.md`
+- Refreshed worker/deployment/gateway guides, the get-started and quickstart tutorials, `docs/concepts/security-boundaries.md`, `docs/concepts/stack/workers.md`, and the glossary to match the plugin-host Gateway and the new example layout
 
 ### CI / tooling
 
-- A new **`examples` CI pipeline** (`.github/workflows/ci.yml`): `list-examples`, `setup-examples`, and `test-examples` matrix jobs discovering every `examples/**/package.json`, plus an "Examples" row in the summary (no coverage threshold enforced for examples).
-- **`.mailmap`** (new) — maps contributor commit emails to non-routable `example.com` placeholders for this public repo (no history rewrite).
+- **`.github/scripts/workspace-context.sh`** resolves, per package directory, whether the authoritative install is a single root `npm ci` (workspace member) or an in-place install (standalone package such as `ui`, `backend/core/plugins`, or the example UIs), and prints the install dir, cache slug, and `node_modules` path the cache actions consume. Members share one `workspace-root` cache slug keyed on the root lockfile, which fixes members failing to link dev bins (e.g. `standard`) under a partial single-workspace install.
+- **`.github/actions/test-with-coverage`** (new) enforces the ≥80% per-package coverage gate; the `mdk` package is sharded across parallel runners (fast unit vs. the slow actions-flow integration suites) with a `coverage-mdk` job merging shard coverage before gating.
+- Changes under `.github/scripts/` are now classified as CI-infra and run every suite
 
 ## Changed
 
-- **full-site realigned to the "11-family" site**: description now "3 miner families + 2 containers + 3 powermeters + 2 sensors + 2 pools over the RPC listener"; test expectations moved from 12 families/13 workers to the current 11 after the wm-v3 demo family and microbt containers were removed. The seed was made effective under the Worker runtime (unique-id default `pos`, restart-and-wait for registry visibility), taking e2e to 14/14.
-- **CI worker dependency install** rewritten to install shared core deps (`backend/core/{kernel,client,mdk,mdk-worker}`, `backend/workers/mock`, `backend/core/mock-control-service`) instead of the deleted `base/` packages.
-- **Nomenclature** propagated through examples and CI: `proc/ork.js` → `kernel.js`, `proc/app-node.js` → `gateway.js`; `ui-core` → `ui-foundation` in CI and issue templates.
-- **Information-architecture restructure** in docs: `how-to/` collapsed into `guides/` (deployment, gateway, miners); `docs/concepts/stack` files renamed; `terminology.md` → `reference/glossary.md`.
-- All release-line `package.json` versions across `backend/core`, `backend/workers`, `ui/packages`, and `examples/` synced to `0.5.0`; independently-versioned newcomers (`@tetherto/mdk-worker`, the demo/sample workers, the mock, and two examples) keep their own `0.1.0`/`0.0.1` versions.
+- **The repo root is now an npm workspaces monorepo.** Root `package.json` declares 21 workspace members — `backend/core/{client,gateway,kernel,mdk,mdk-worker,mcp,plugins}`, every `backend/workers/*` package, and `examples/mvp-site` — plus a root `overrides` block. `ui/`, `backend/core/plugins`, and the example UI apps stay standalone. Install workspace members with one `npm ci` at the root, not per package.
+- **Gateway internal dependencies moved from `file:` links to registry ranges** — `@tetherto/mdk-client` and `@tetherto/mdk-plugins` are now `^0.6.0` rather than `file:../client` / `file:../plugins`. `examples/mvp-site` likewise consumes `@tetherto/mdk-*` at `^0.6.0`.
+- **Managed pages gained Dashboard and hidden-page support.** `Dashboard` (hashrate + consumption charts, active incidents, mining pools) is now a managed page restorable with `mdk-ui add page Dashboard`. `navIcon`/`navEntry` became optional so deep-link-only pages can be managed without a sidebar entry, and `add`/`remove page` skip nav patching for them.
+- **Mock initial states and utilities reworked** across antspace (default + immersion), bitdeer (D40), f2pool, ocean, whatsminer (M56S), and the shared `base.mock.js`, with new unit suites for `base.mock`, device mocks, miner mocks, and a `cli-mock` fixture set
+- **Dependency bumps**: `fastify` 5.8.5 → 5.10.0 and `@fastify/static` 9.1.3 → 10.1.2 (Gateway + root overrides); `@tetherto/svc-facs-httpd` v1.0.0 → v2.0.0; `aedes` 1.0.2 → 1.1.1; `mingo` 6.4.6 → 6.4.15; `svgo` ^3.0.0 → ^3.3.4. The router move is covered under Security — `react-router-dom` is replaced outright, not bumped.
+- **Doc generators now extract TypeScript types** via a shared `ui/scripts/ts-morph-utils.mts`, used by the react-adapter hook generator, the devkit registry generator and its `registry-types`, and the ui-foundation store generator
+- All package versions across `backend/core`, `backend/workers`, `ui/`, `examples/`, and `packages/mdk-skill` are synced to **`0.6.0`**, including `examples/mdk-ui-shell-template`, which moves off its `0.0.0` scaffold default onto the shared release line
 
 ## Removed
 
-- **microbt container workers** — the entire `backend/workers/containers/microbt/` tree, plus its catalogue/manifest/supported-hardware/mock-runner entries and the mdk constants/bootstrap references.
-- **electricity power-meter worker** (`backend/workers/power-meter/electricity/`).
-- All worker **`base/` packages** (`ThingManager`, device bases, family managers) after the runtime migration.
-- Client **`ipc-client.js`**, Kernel **`IPCListener`**, and the Gateway IPC transport.
-- The **`mdk-utils`** package (absorbed into `@tetherto/mdk`).
-- Deleted docs: `docs/concepts/terminology.md`, `stack/ork.md`, `stack/app-node.md`, `docs/how-to/**` (moved to `guides/`), `backend/core/ork/README.md` + `docs/phase-bootstrap-api.md`, `backend/workers/docs/orchestrator.md`.
+- The Gateway's entire built-in HTTP API surface — see Breaking changes for the module-by-module list, plus the `ws` integration test and the ~40 unit suites covering the deleted routes, handlers, and libraries
+- **`@tetherto/mdk-mock-control-service`**, and the nine duplicated per-worker `mock/mock-control-agent.js` copies
+- **`examples/e2e/`** and **`examples/site-backend/`**, and every nested `package.json` under `examples/backend/`
+- The **`mdk-ui-shell` template tree** inside `@tetherto/mdk-ui-cli` (relocated to `examples/mdk-ui-shell-template/`), including the template's `_meta.json` and its `constants/dashboard.ts` / `constants/routes.ts`
+- The **`generate:shell`** script from `ui/package.json`, and the `!apps/mdk-ui-shell` workspace exclusion — the shell is no longer generated into `ui/apps/`
+- The Gateway's **`test:ws`** npm script
+
+## Security
+
+### UI — Header stat box prop renames
+
+**`HeaderHashrateBox` and `HeaderMinersBox` props renamed** from MOS terminology to App terminology:
+
+- `HeaderHashrateBox`:
+  - `mosPhs` → `appPhs`
+  - `mosLabel` → `appLabel` (default changed from `'MOS'` to `'APP'`)
+  
+- `HeaderMinersBox`:
+  - `mosTotal` → `appTotal`  
+  - `mosLabel` → `appLabel` (default changed from `'MOS'` to `'APP'`)
+
+**Action required**: Update all `HeaderHashrateBox` and `HeaderMinersBox` usage to use the new prop names. The functionality is identical; only the prop names have changed.
+
+**Migration example**:
+```tsx
+// Before (0.5.x)
+<HeaderHashrateBox mosPhs={1234.5} mosLabel="MOS" />
+<HeaderMinersBox mosTotal={50} mosLabel="MOS" />
+
+// After (0.6.0)
+<HeaderHashrateBox appPhs={1234.5} appLabel="APP" />
+<HeaderMinersBox appTotal={50} appLabel="APP" />
+```
+
+### `react-router-dom` replaced by `react-router` v8 (breaking for scaffolded apps)
+
+`react-router-dom@7` is affected by GHSA-qwww-vcr4-c8h2 (high), and the fix exists only in `react-router@8.3.0` — a release that discontinued the `react-router-dom` package entirely (its last version, `7.18.1`, hard-pins `react-router: 7.18.1`, so no override can resolve it). Every UI surface therefore moved off the shim:
+
+| Package | Before | After |
+|---|---|---|
+| `ui/apps/catalog` | `react-router-dom@^7.13.0` | `react-router@^8.3.0` |
+| `examples/mdk-ui-shell-template` | `react-router-dom@^7.13.0` | `react-router@^8.3.0` |
+| `examples/mvp-site/ui` | `react-router-dom@^7.18.1` | `react-router@^8.3.0` |
+| `examples/full-site/ui` | `react-router-dom@^7.18.1` | `react-router@^8.3.0` |
+
+26 files changed their import specifier from `react-router-dom` to `react-router`; no router API changed, since v7's `react-router-dom` was already a re-export of `react-router` and every symbol in use (`createBrowserRouter`, `RouterProvider`, `HashRouter`, `Navigate`, `Route`, `Routes`, `Link`, `Outlet`, `useNavigate`, `useParams`, `useSearchParams`, `useLocation`) is exported unchanged by 8.3.0.
+
+**Action required** for anyone with an app scaffolded from an earlier shell template: replace the `react-router-dom` dependency with `react-router@^8.3.0` and rewrite the import specifier. Note `react-router@8` raises its peers to `react`/`react-dom` `>= 19.2.7` and `engines.node` to `>= 22.22.0`.
+
+**Not affected**: `@tetherto/mdk-react-devkit`, `@tetherto/mdk-react-adapter`, and `@tetherto/mdk-ui-foundation` declare no router dependency — `RequireAuth` is router-agnostic by design. The bundled `templates/starter` scaffold stays on `react-router-dom@^6`, which neither advisory affects.
+
+### Dependency overrides and bumps
+
+- `ajv` `8.17.1` → **`8.20.0`** in `backend/workers` (direct devDependency), clearing GHSA-2g4f-4pwh-qvx6 (ReDoS via the `$data` option; affected `>= 7.0.0-alpha.0, < 8.18.0`).
+- `brace-expansion` forced to **`>= 5.0.8`** (GHSA-mh99-v99m-4gvg, DoS via unbounded expansion; the advisory marks every version `<= 5.0.7` vulnerable) via `overrides` in the repo root, `ui/`, `backend/core`, `backend/workers`, `examples/full-site`, and `examples/mdk-ui-shell-template`. This clears it wherever a modern `glob`/`minimatch` is present. It remains reachable through the dev-only `standard` → eslint@8 → minimatch@3 chain, which accepts only `brace-expansion@^1.1.7` and for which upstream published no patched 1.x — documented against the `audit-ci` allowlist entry rather than silently suppressed.
+- Removed a dead `@isaacs/brace-expansion` override pinned to `5.0.5`, **a version that was never published** (only 5.0.0 and 5.0.1 exist). It appeared in no lockfile, so it never resolved — but it would have failed any install that needed the package.
+
+The remaining advisory-clearing overrides, in `ui/package.json` and the root `overrides` block:
+
+| Override | Resolution |
+|---|---|
+| `brace-expansion` (`>=1.0.0 <1.1.13`, `>=2.0.0 <2.0.3`, `>=5.0.0 <5.0.7`) | all pinned to `>=5.0.7` |
+| `immutable` (`>=5.0.0 <5.1.8`) | `>=5.1.8` |
+| `js-yaml` (`>=4.0.0 <4.3.0`) | `>=4.3.0 <5.0.0` |
+| `linkify-it` (`<=5.0.1`) | `>=5.0.2 <6.0.0` |
+| `shell-quote` (`<1.9.0`) | `>=1.9.0` |
+| `ws` (`>=8.0.0 <=8.20.0`) | `>=8.20.1` |
+| `@hono/node-server` | `2.0.12` |
+| `svgo` | `^3.3.4` |
+
+One advisory was added to the `audit-ci` allowlist (`.github/scripts/audit-ci.jsonc`): `GHSA-mh99-v99m-4gvg`, with an inline rationale recording why no override or upgrade can reach it and what removing it would take. `GHSA-qwww-vcr4-c8h2` is **not** allowlisted — it is fixed outright by the `react-router` v8 move above.
 
 ## Fixed
 
-- **Containers list truncation / wrong total**: `getContainers` previously fetched only a tag-filtered page and re-filtered in memory (offset:0/limit:0), so user filters saw a truncated set and `total` was the page length; now uses a server-side query + global `getThingsCount`.
-- **MQTT mock determinism** (`backend/workers/mock/transports/mqtt.transport.js`): `close()` now force-closes (`client.end(true)`) and runs an idempotent `_runCleanup()` directly rather than waiting on the `'end'` event (which may never fire when the broker is gone), preventing leaked publish intervals that held the event loop open.
-- **bitdeer MQTT broker per worker** (`containers/bitdeer/plugin/boot.js`): the shared module-level `svc-facs-mqtt` aedes broker meant the first worker's `stop()` killed every later worker's broker; boot now creates its own `Aedes` broker + `net` server per worker and closes both in `stop()`. `svc-facs-mqtt` dropped; `aedes 1.0.2` and `mqtt 5.15.2` promoted to direct deps. (An earlier lazy-`require` fix so bare requires can exit was superseded by this.)
-- **UI** — log the user out and redirect on session expiry (`@tetherto/mdk-ui-foundation`) (#180); abort in-flight requests on unmount; guard the power-adjustment insert against a missing PDU tab; carry device-action targeting fields through the voting payload; restore Op Centre factory exports dropped in a query-barrel refactor.
-- **full-site** — seed effective under the Worker runtime; local-discovery watch and example setup corrections.
-- **schneider** — corrected a "Terher" typo in the package author field.
-- Numerous documentation link repairs (404s flagged by the markdown link checker), including the stale worker-guide anchor fixed in the 0.5.0 changeset.
-
-### Tests
-
-A large coverage push lifted each flagged backend package above the 80% per-package gate. Highlights (before → after, statements/branches/functions/lines):
-
-| Package | Coverage | Added unit tests (selected) |
-|---|---|---|
-| bitdeer | 74% br → ~97% | D40 command handlers, `optimizeSocketCalls` PDU collapse, boot arg validation, alert templates |
-| antminer | 76% → ~99% | device getters/setters (injected fake fetch), error maps, DHCP/static conf, power modes, pools; mock router; plugin handlers |
-| whatsminer | 79% br → ~97% | write-action wrappers, AES-ECB token handshake + 135/136 retry paths, firmware header parsing, mock utils |
-| f2pool | 77% br → ~95% | mock router validation/error + auth-hook 401s, `fetchStats` fallbacks + cached-month refresh + rate-limit path |
-| abb | 52% fns → ~99% | B2X/M1M20/M4M20/REU615 `_readValues`/`_prepSnap` vs fake Modbus, per-channel telemetry incl. `?? 0` fallbacks, `ERR_MODEL_INVALID` |
-
-Plus `@tetherto/mdk-client` typed request-wrapper tests, new Kernel suites (`kernel-manager`, `actions-stress`, key-file integration), and `@tetherto/mdk-react-devkit` branch-coverage additions.
+- **Device actions were rejected with a 400.** `toVotingPayload` posted the staged `tags` and `crossThing` fields, which the `POST /auth/actions/voting` body schema does not recognise, and sent no `query` — so every device-targeted action failed its `required: ['query','action','params']` check. Targeting now reaches the backend solely through `query`, built from the staged tags as `{ tags: { $in: tags } }`; an action can opt out with `overrideQuery: false` to submit an explicit `query` as-is (pool assignment targets by device id, not tags). `PendingSubmissionAction` gained typed `overrideQuery` and `crossThing` fields documenting that both are client-only queue metadata and never posted.
+- **One bad pool account no longer breaks the whole Ocean stats cycle.** Unknown or inactive accounts return an error body with no `result`; `fetchStats` now wraps each account's earnings/hashrate/balance reads, raises `ERR_ACCOUNT_DATA_MISSING` when earnings or hashrate are absent, logs `ERR_STATS_FETCH <username>`, and continues to the next account instead of failing the entire fetch.
 
 > For previous releases, see the [changelog archive](./docs/reference/changelog-archive/2026-archive.md)

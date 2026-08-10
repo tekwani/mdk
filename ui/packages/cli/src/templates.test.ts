@@ -1,27 +1,19 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { findTemplate, getTemplatesRoot, listTemplates } from './templates.js'
-
-describe('getTemplatesRoot', () => {
-  it('returns a path that exists', () => {
-    const root = getTemplatesRoot()
-    expect(existsSync(root)).toBe(true)
-  })
-})
+import { findTemplate, listTemplates } from './templates.js'
 
 describe('listTemplates', () => {
-  it('returns at least one template', () => {
-    const templates = listTemplates()
-    expect(templates.length).toBeGreaterThan(0)
+  it('returns the registered templates', () => {
+    const ids = listTemplates().map((t) => t.id)
+    expect(ids).toContain('mdk-ui-shell')
+    expect(ids).toContain('starter')
   })
 
   it('every template has valid id, label, and description', () => {
-    const templates = listTemplates()
-    for (const t of templates) {
+    for (const t of listTemplates()) {
       expect(typeof t.id).toBe('string')
       expect(t.id.length).toBeGreaterThan(0)
       expect(typeof t.label).toBe('string')
@@ -30,51 +22,41 @@ describe('listTemplates', () => {
       expect(t.description.length).toBeGreaterThan(0)
     }
   })
+
+  it('is sorted by id and stable across calls', () => {
+    const first = listTemplates().map((t) => t.id)
+    const second = listTemplates().map((t) => t.id)
+    expect(second).toEqual(first)
+    expect(first).toEqual([...first].sort((a, b) => a.localeCompare(b)))
+  })
 })
 
 describe('findTemplate', () => {
-  it('resolves the "starter" template and the path exists on disk', () => {
+  it('resolves the bundled "starter" template to a dir on disk', () => {
     const template = findTemplate('starter')
     expect(template.meta.id).toBe('starter')
-    expect(typeof template.path).toBe('string')
     expect(existsSync(template.path)).toBe(true)
+  })
+
+  it('resolves the runnable "mdk-ui-shell" example template to a dir on disk', () => {
+    const template = findTemplate('mdk-ui-shell')
+    expect(template.meta.id).toBe('mdk-ui-shell')
+    expect(existsSync(template.path)).toBe(true)
+    // The shell is a real runnable app: a package.json (not a .tpl) and its
+    // on-demand demo pages live under _managed/.
+    expect(existsSync(join(template.path, 'package.json'))).toBe(true)
+    expect(existsSync(join(template.path, '_managed', 'pages'))).toBe(true)
+  })
+
+  it('every listed template resolves via findTemplate', () => {
+    for (const meta of listTemplates()) {
+      const resolved = findTemplate(meta.id)
+      expect(resolved.meta.id).toBe(meta.id)
+      expect(existsSync(resolved.path)).toBe(true)
+    }
   })
 
   it('throws with "not found" message for unknown template id', () => {
     expect(() => findTemplate('nonexistent-template-xyz')).toThrow(/not found/)
-  })
-})
-
-describe('readMeta error paths', () => {
-  // The internal readMeta() is exercised via listTemplates and findTemplate
-  // against a custom templates root. We can't override the constant root the
-  // module computes from import.meta.url, so we focus on the assertions that
-  // are reachable through the public API: invalid template ids.
-
-  let scratch: string
-  beforeEach(() => {
-    scratch = mkdtempSync(join(tmpdir(), 'mdk-templates-'))
-  })
-  afterEach(() => {
-    rmSync(scratch, { recursive: true, force: true })
-  })
-
-  it('listTemplates is sorted by id and stable across calls', () => {
-    const first = listTemplates().map((t) => t.id)
-    const second = listTemplates().map((t) => t.id)
-    expect(second).toEqual(first)
-    const sorted = [...first].sort((a, b) => a.localeCompare(b))
-    expect(first).toEqual(sorted)
-  })
-
-  it('every template directory is wired into findTemplate', () => {
-    for (const meta of listTemplates()) {
-      const resolved = findTemplate(meta.id)
-      expect(resolved.meta.id).toBe(meta.id)
-      // Touch scratch to keep the lint clean — we don't use the dir for these
-      // particular assertions because we can't redirect the module's root.
-      mkdirSync(join(scratch, meta.id), { recursive: true })
-      writeFileSync(join(scratch, meta.id, '_meta.json'), JSON.stringify(meta), 'utf8')
-    }
   })
 })

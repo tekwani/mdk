@@ -1,0 +1,20 @@
+{
+  "skipFiles": [
+    "docs/reference/changelog-archive/**",
+    "docs/reference/release-notes/**",
+    "CHANGELOG.md"
+  ],
+  "skipPaths": [
+    "examples/minimal-dashboard",
+    "examples/mvp-site/.site-data",
+    "examples/full-site/.mdk-data"
+  ],
+  "_skip_notes": {
+    "docs/reference/changelog-archive/**": "historical record: correctly names paths that existed at the time",
+    "docs/reference/release-notes/**": "historical record: same",
+    "CHANGELOG.md": "historical record: same",
+    "examples/minimal-dashboard": "tutorial output: docs/tutorials/build-a-dashboard.md builds this directory, it is not a prerequisite",
+    "examples/mvp-site/.site-data": "gitignored runtime state directory, created on first run",
+    "examples/full-site/.mdk-data": "gitignored runtime state directory (examples/full-site/.gitignore), created on first Kernel boot"
+  }
+}

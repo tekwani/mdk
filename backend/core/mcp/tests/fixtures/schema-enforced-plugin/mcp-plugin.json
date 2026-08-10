@@ -1,0 +1,8 @@
+{
+  "name": "@test/mcp-plugin-schema",
+  "version": "1.0.0",
+  "description": "fixture plugin for schema-enforcement tests",
+  "tools": [
+    { "id": "needs_arg", "handler": "./tools/needs-arg.js", "description": "requires an arg" }
+  ]
+}

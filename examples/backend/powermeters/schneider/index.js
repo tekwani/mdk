@@ -3,12 +3,9 @@
 const os = require('os')
 const path = require('path')
 
-// This example lives under examples/backend/powermeters/schneider/, so the repo
-// root is four levels up. Everything is required from backend/ — the canonical source tree.
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..')
-const { getKernel } = require(path.join(REPO_ROOT, 'backend', 'core', 'mdk'))
-const { startSchneiderWorker } = require(path.join(REPO_ROOT, 'backend', 'workers', 'power-meter', 'schneider'))
-const mockServer = require(path.join(REPO_ROOT, 'backend', 'workers', 'power-meter', 'schneider', 'mock', 'server'))
+const { getKernel } = require('@tetherto/mdk-core')
+const { startSchneiderWorker } = require('@tetherto/mdk-worker-schneider')
+const mockServer = require('@tetherto/mdk-worker-schneider/mock/server')
 
 const HOST = '127.0.0.1'
 const PORT = 5062

@@ -16,7 +16,8 @@ Deployment-specific requirements:
 
 - A Node.js service or script in your deployment that runs the MDK Worker and registers devices
 - A supported Whatsminer device reachable from the machine or container running the Worker
-- The miner API reachable over encrypted TCP, typically port `14028`
+- The miner API reachable over encrypted TCP: port `4028` for API v2 (the default) or `4433` for API v3; the
+  Worker auto-detects the version from the port, or probes both if given a different port
 - The Whatsminer API password. The Worker negotiates a session token from it; there is no separate username
 
 <Steps>
@@ -31,7 +32,7 @@ Deployment-specific requirements:
 To support development, this repo ships a runnable example that boots a mock M56S Whatsminer, starts a Kernel, and starts the Worker (`startWhatsminerWorker`) against it:
 
 ```bash
-node examples/backend/miners/mdk.client.miner.js
+node examples/backend/miners/whatsminer/index.js
 ```
 
 It prints the Kernel HRPC key and the registered device ID, then stays running until Ctrl+C. To try another model, run that model's mock directly (`npm run mock <type>` from `backend/workers/miners/whatsminer`, or see [USAGE.md][whatsminer-usage]) and adapt the `model` option in your own boot script.
@@ -50,7 +51,11 @@ Use the Whatsminer Worker's [USAGE.md][whatsminer-usage] to confirm the `model` 
 
 #### 2.2 Register your miner
 
-Whatsminer devices use an encrypted TCP API on port 14028 with token-based authentication; the Worker negotiates a session token from the device password (there is no separate username). Add this code to the Node.js service or script that runs the MDK Worker in your deployment. The snippet shows the minimum boot call seeding one Whatsminer device; replace the example IP address and password with your miner's values:
+Whatsminer devices use an encrypted TCP API, port `4028` for API v2 (the default) or `4433` for API v3, with
+token-based authentication; the Worker negotiates a session token from the device password (there is no separate
+username) and auto-detects the API version from the port. Add this code to the Node.js service or script that
+runs the MDK Worker in your deployment. The snippet shows the minimum boot call seeding one Whatsminer device;
+replace the example IP address and password with your miner's values:
 
 ```js
 const { getKernel } = require('@tetherto/mdk')
@@ -64,7 +69,7 @@ const worker = await startWhatsminerWorker({
   storeDir: './store/whatsminer-rack-1',
   seedDevices: [{
     info: { container: 'site-1', serialNum: 'WM-001' },
-    opts: { address: '192.168.1.10', port: 14028, password: 'admin' }
+    opts: { address: '192.168.1.10', port: 4028, password: 'admin' }
   }]
 })
 await kernel.registerWorker(worker.runtime.getPublicKey())
@@ -83,7 +88,7 @@ await client.connect()
 await client.sendWorkerCommand('whatsminer-rack-1', null, 'registerThing', {
   id: 'WM-002',
   info: { container: 'site-1', serialNum: 'WM-002' },
-  opts: { address: '192.168.1.11', port: 14028, password: 'admin' }
+  opts: { address: '192.168.1.11', port: 4028, password: 'admin' }
 })
 ```
 
@@ -105,7 +110,7 @@ For the full `seedDevices`/`registerThing` option reference, the mock `createSer
 
 ## Troubleshooting
 
-The development example on this page uses `examples/backend/miners/mdk.client.miner.js`. A working run prints `Kernel HRPC key:` and `Device:`, then stays running until Ctrl+C.
+The development example on this page uses `examples/backend/miners/whatsminer/index.js`. A working run prints `Kernel HRPC key:` and `Device:`, then stays running until Ctrl+C.
 
 If the example does not print both values, or if its mock port is already in use, follow [miner troubleshooting][miner-troubleshooting].
 
@@ -128,8 +133,8 @@ If the example does not print both values, or if its mock port is already in use
 [install-pattern]: ../../../backend/workers/docs/install-pattern.md
 <!-- docs@tether.io: install-pattern → https://github.com/tetherto/mdk/blob/main/backend/workers/docs/install-pattern.md -->
 
-[get-started]: ../../tutorials/get-started/index.md
-<!-- docs@tether.io: get-started → tutorials/backend-stack -->
+[get-started]: ../../tutorials/run-a-site.md
+<!-- docs@tether.io: get-started → tutorials/run-a-site -->
 
 [deployment-topologies]: ../../concepts/deployment-topologies.md
 <!-- docs@tether.io: deployment-topologies → concepts/deployment-topologies -->

@@ -85,7 +85,7 @@ class BaseMock {
     const argv = this.parseCli()
     const things = argv.bulk ? JSON.parse(fs.readFileSync(argv.bulk)) : [argv]
     if (this.useControlAgent) {
-      const MockControlAgent = require('../../core/mock-control-service/mock-control-agent')
+      const MockControlAgent = require('./mock-control-agent')
       const agent = new MockControlAgent({ thgs: things, port: argv.mockControlPort })
       agent.init((thing) => this.create(thing))
     } else {

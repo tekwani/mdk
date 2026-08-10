@@ -24,9 +24,8 @@ next level of detail:
    commands rather than scanning the source.
 6. **Run the shell template end-to-end** —
    [`docs/AGENT_FIRST.md#run-the-mdk-ui-shell-template-end-to-end`](docs/AGENT_FIRST.md#run-the-mdk-ui-shell-template-end-to-end).
-   The `miningos-gateway` backend, Google OAuth setup, the Vite proxy, and
+   The in-repo `@tetherto/mdk-gateway` backend, Google OAuth setup, the Vite proxy, and
    common first-run errors. Read before suggesting `npm run dev` on a scaffold.
-   <!-- todo: update the miningos-gateway link -->
 
 ## Machine-readable artifacts
 

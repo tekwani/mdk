@@ -19,35 +19,43 @@ backend/core/install-packages.sh
 backend/workers/install-packages.sh
 ```
 
-See [Run the stack](../../../docs/tutorials/get-started/run.md) for the full clone-and-install walkthrough.
+The [run a mining site tutorial](../../../docs/tutorials/run-a-site.md) is the full clone-and-install walkthrough.
 
 ## Usage
 
 ```js
-const { getKernel, startWorker, startGateway, waitForDiscovery, shutdown } = require('@tetherto/mdk')
-const { WM_M56S } = require('@tetherto/mdk-worker-whatsminer')
+const { getKernel, startGateway, waitForDiscovery, shutdown } = require('@tetherto/mdk')
+const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
 
 // 1. Start Kernel
 const kernel = await getKernel()
 
-// 2. Start a Worker
-const { manager } = await startWorker(WM_M56S, { kernel })
-
-// 3. Register a device with the Worker
-await manager.registerThing({
-  info: { serialNum: 'WM-001' },
-  opts: { address: '192.168.1.10', port: 14028, password: 'admin' }
+// 2. Start a Worker: each Worker package ships its own boot function that
+//    constructs a WorkerRuntime internally (see @tetherto/mdk-worker)
+const { runtime } = await startWhatsminerWorker({
+  workerId: 'whatsminer-rack-1',
+  model: 'm56s',
+  storeDir: './data/whatsminer',
+  seedDevices: [{ id: 'WM-001', opts: { address: '192.168.1.10', port: 14028, password: 'admin' } }]
 })
+
+// 3. Register the Worker with Kernel (same-process mode, no DHT/local discovery needed)
+await kernel.registerWorker(runtime.getPublicKey())
 
 // 4. Wait for Kernel to discover and register the Worker
 await waitForDiscovery(kernel)
 
 // 5. Optionally start the HTTP API
-const server = await startGateway({ kernel, port: 3000, noAuth: true })
+const server = await startGateway({ kernel, port: 3000 })
 
 // In tests or scripts where SIGINT is not fired:
 // await shutdown(kernel)
 ```
+
+> [!NOTE]
+> - There is no single generic `startWorker(WorkerClass, opts)` entry point: every Worker package supplies its own
+> boot function that [builds a `WorkerRuntime` for its plugin](#start-a-worker). 
+> - [Worker deployment options](../../../docs/concepts/deployment-topologies.md) include same-process, local, and DHT.
 
 ## API
 
@@ -83,52 +91,40 @@ const kernel = await getKernel()
 Cadence options are flat on `getKernel()`. For nested `cadences` configuration, including `statePullMs`, use the 
 [`createKernel()` API](../kernel/README.md#createkernelopts--kernelmanager).
 
-### `startWorker(ManagerClass, opts?)` → `Promise<{ manager, adapter, store }>`
+### Start a Worker
 
-Start a device Worker and connect it to Kernel through DHT, local, or same-process discovery.
+There is no generic `startWorker(WorkerClass, opts)` export in this package. Each Worker package (e.g.
+`@tetherto/mdk-worker-whatsminer`) supplies its own boot function that constructs a
+[`WorkerRuntime`](../mdk-worker/lib/worker-runtime.js) internally and connects it to Kernel through [DHT, local, or
+same-process discovery](../../../docs/concepts/deployment-topologies.md). Every boot function accepts (`kernelTopic`, `discovery`, 
+or direct `kernel.registerWorker(runtime.getPublicKey())`).
 
 ```js
-const { manager, adapter } = await startWorker(WM_M56S, {
-  kernel,                              // KernelManager from getKernel()
-  rack: 'rack-1',                   // Rack ID (default: 'rack-1')
-  root: './data',                   // Data root
-  workerId: 'whatsminer-rack-1'     // Override Worker ID
+const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
+
+const { runtime, stop } = await startWhatsminerWorker({
+  workerId: 'whatsminer-rack-1',   // one runtime process = one workerId
+  model: 'm56s',
+  storeDir: './data/whatsminer',
+  kernelTopic: null,               // omit/null to register by key instead of a DHT topic
+  seedDevices: [{ id: 'WM-001', opts: { address: '192.168.1.10', port: 14028, password: 'admin' } }]
 })
+
+await kernel.registerWorker(runtime.getPublicKey()) // same-process discovery
 ```
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `opts.kernel` | `KernelManager` | Kernel instance; cleanup is auto-registered |
-| `opts.rack` | `string` | Rack/site identifier |
-| `opts.root` | `string` | Data root for Worker stores and config |
-| `opts.workerId` | `string` | Override Worker identity string |
-| `opts.discovery` | `object` | Discovery config: `{ mode: 'dht' \| 'local', dir? }` (default: DHT) |
-| `opts.orkTopic` | `string` | DHT topic to join (reads from topic file if absent) |
-| `opts.contract` | `object` | Override `mdk-contract.json` contents |
-| `opts.workerPackagePath` | `string` | Path to package containing `mdk-contract.json` |
-
-`opts.workerPackagePath` is auto-detected from `require.cache`; pass it explicitly only if detection fails — see [Troubleshooting](#workerpackagepath-auto-detection-fails).
-
-Returns:
-- `manager` — the `ManagerClass` instance (e.g. `WM_M56S`)
-- `adapter` — `MDKWorkerAdapter` — the Hyperswarm HRPC bridge
-- `store` — `StoreFacility` used by the adapter
-
-> [!NOTE]
-> `workerId` defaults to `manager.getThingType() + '-' + rack`. Two Workers of different `ManagerClass` types never conflict 
-> on the default `rack-1`. Two Workers of the **same** `ManagerClass` and rack share a store directory — intentional for 
-> horizontal scaling. Pass distinct `rack` values for independent same-type Workers.
+Returns vary by Worker package, but every boot function returns at least `{ runtime, stop }`: `runtime` is the
+`WorkerRuntime` instance (`getPublicKey()`, `getDeviceContext(deviceId)`); `stop()` tears the Worker down.
 
 ### `startGateway(opts?)` → `Promise<WrkServerHttp>`
 
-Start the Fastify-based HTTP/WebSocket server. Writes config files under `opts.root`, deep-merging any override objects 
+Start the Fastify-based HTTP server. Writes config files under `opts.root`, deep-merging any override objects 
 with the example defaults.
 
 ```js
 const server = await startGateway({
   kernel,
   port: 3000,
-  noAuth: true,            // skip OAuth2 (development)
   root: './data/gateway'
 })
 ```
@@ -138,13 +134,11 @@ const server = await startGateway({
 | `opts.root` | `string` | Config/data root (default: `os.tmpdir()/mdk/gateway`) |
 | `opts.port` | `number` | HTTP port (default: 3000) |
 | `opts.env` | `string` | Environment string (default: `'development'`) |
-| `opts.noAuth` | `boolean` | Skip OAuth2 plugins; use stub config |
 | `opts.kernel` | `KernelManager` | Kernel instance; Gateway stop is registered on cleanup. Its `getPublicKey()` also resolves the Kernel key |
 | `opts.kernelKey` | `string\|Buffer\|false` | Kernel HRPC listener public key (hex or Buffer); `false` to run without a Kernel connection (`mdkClient` stays `null`) |
 | `opts.keyFile` | `string` | Key file to resolve the Kernel key from (default: `DEFAULT_KEY_FILE`) |
 | `opts.bootstrap` | `array` | DHT bootstrap nodes threaded to the Gateway's Client (testnets) |
 | `opts.common` | `object` | Overrides for `common.json` |
-| `opts.auth` | `object` | Overrides for `auth.config.json` |
 | `opts.httpd` | `object` | Overrides for `httpd.config.json` |
 | `opts.store` | `object` | Overrides for `store.config.json` |
 | `opts.additionalRoutes` | `array` | Extra Fastify route definitions (raw escape hatch; prefer `extraPluginDirs`) |
@@ -185,7 +179,7 @@ Register a one-shot cleanup handler on `SIGINT` / `SIGTERM`. Returns the handler
 | `opts.signals` | `string[]` | Signals to listen for (default: `['SIGINT', 'SIGTERM']`) |
 | `opts.forceMs` | `number` | Force-exit timeout if cleanup hangs (default: 3000 ms) |
 
-> `getKernel()`, `startWorker()`, and `startGateway()` register their own `onShutdown`
+> `getKernel()`, `startGateway()`, and every Worker boot function register their own `onShutdown`
 > handlers internally. Call this only when you need to add teardown logic outside
 > a boot handle — for example, closing a database or flushing a log buffer.
 
@@ -214,22 +208,32 @@ const { DEFAULT_TOPIC_FILE, DEFAULT_KEY_FILE } = require('@tetherto/mdk')
 The typical pattern for running everything in one process during development:
 
 ```js
-const { getKernel, startWorker, startGateway, waitForDiscovery } = require('@tetherto/mdk')
-const { WM_M56S } = require('@tetherto/mdk-worker-whatsminer')
-const { AM_S19XP } = require('@tetherto/mdk-worker-antminer')
+const { getKernel, startGateway, waitForDiscovery } = require('@tetherto/mdk')
+const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
+const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
 
 async function main () {
   const kernel = await getKernel()
 
-  const { manager: wm } = await startWorker(WM_M56S, { kernel })
-  await wm.registerThing({ info: { serialNum: 'WM-001' }, opts: { address: '192.168.1.10', port: 14028, password: 'admin' } })
+  const { runtime: wm } = await startWhatsminerWorker({
+    workerId: 'whatsminer-rack-1',
+    model: 'm56s',
+    storeDir: './data/whatsminer',
+    seedDevices: [{ id: 'WM-001', opts: { address: '192.168.1.10', port: 14028, password: 'admin' } }]
+  })
+  await kernel.registerWorker(wm.getPublicKey())
 
-  const { manager: am } = await startWorker(AM_S19XP, { kernel })
-  await am.registerThing({ info: { serialNum: 'AM-001' }, opts: { address: '192.168.1.20', port: 4028 } })
+  const { runtime: am } = await startAntminerWorker({
+    workerId: 'antminer-rack-1',
+    model: 's19xp',
+    storeDir: './data/antminer',
+    seedDevices: [{ id: 'AM-001', opts: { address: '192.168.1.20', port: 4028 } }]
+  })
+  await kernel.registerWorker(am.getPublicKey())
 
   await waitForDiscovery(kernel)
 
-  await startGateway({ kernel, port: 3000, noAuth: true })
+  await startGateway({ kernel, port: 3000 })
   console.log('MDK running at http://localhost:3000')
 }
 
@@ -238,9 +242,9 @@ main()
 
 ## Config management
 
-`startWorker()` and `startGateway()` copy example config files into `opts.root/config/` on first run. After that, the files 
-are left untouched so your edits survive restarts. Pass override objects to `startGateway()` to programmatically set specific values 
-without editing files.
+`startGateway()` and each Worker's boot function copy example config files into their `opts.root/config/` (or `storeDir`) on first run.
+After that, the files are left untouched so your edits survive restarts. Pass override objects to `startGateway()` to programmatically
+set specific values without editing files.
 
 Config file precedence:
 1. Existing file on disk (your edits are authoritative).
@@ -251,56 +255,19 @@ Config file precedence:
 
 ```
 mdk/
-├── index.js          # `getKernel`, `startWorker`, `startGateway`, `waitForDiscovery`
+├── index.js          # `getKernel`, `startGateway`, `waitForDiscovery`
 ├── services.js       # `startServices` — facility bootstrap helpers
+├── lib/
+│   └── local-discovery.js # `keysDir`, `publishWorkerKey`: the `discovery: { mode: 'local' }` helpers
 └── utils/
     ├── constants.js  # MDK_STORE and other well-known names
     └── initialize.js # Service initialization helpers
 ```
-
-## Troubleshooting
-
-### `workerPackagePath` auto-detection fails
-
-`startWorker` locates `mdk-contract.json` by walking `require.cache` from the `ManagerClass` module up to six parent directories. This fails 
-when the class is re-exported through an intermediary module — the cache entry points to the intermediary, not the Worker package root. Pass 
-`opts.workerPackagePath` explicitly to skip auto-detection:
-
-```js
-const WM_PKG = require.resolve('@tetherto/miner-whatsminer/mdk-contract.json').replace('/mdk-contract.json', '')
-const { manager } = await startWorker(WM_M56S, { kernel, workerPackagePath: WM_PKG })
-```
-
-### Migrating from the explicit bootstrap API
-
-Pre-`getKernel()` code required manually generating a topic and passing it to both `startWorker` and `startKernel`, as well as supplying `wtype` 
-and `workerPackagePath` explicitly:
-
-```js
-// Before
-const TOPIC = crypto.randomBytes(32).toString('hex')
-const WM_PKG = path.join(__dirname, '../workers/whatsminer')
-
-const { manager } = await startWorker(WM_M56S, {
-  rack: 'rack-1', root: ROOT, orkTopic: TOPIC,
-  wtype: 'wrk-miner-wm', workerPackagePath: WM_PKG
-})
-const kernel = await startKernel({ root: ROOT, discovery: { topic: TOPIC }, loadConf: () => {} })
-```
-
-```js
-// After
-const kernel = await getKernel()
-const { manager } = await startWorker(WM_M56S, { kernel })
-```
-
-`getKernel()` handles topic file, key file, and SIGINT registration. `startWorker` derives `wtype` from the `ManagerClass` prototype and locates 
-`workerPackagePath` automatically.
 
 ## Next steps
 
 - [Run the Gateway](../../../docs/guides/gateway/run.md): programmatic and standalone startup, auth configuration, and HRPC key setup
 - [Add hardware devices](../../../docs/concepts/stack/workers.md): understand how Workers register devices and expose them to Kernel
 - [Add custom routes with plugins](../../../docs/guides/gateway/plugins.md): extend the Gateway via `extraPluginDirs`
-- [See the backend site example](../../../examples/backend/site/README.md): multi-Worker, multi-device setup in a separate-process topology
+- [See the full-site example](../../../examples/full-site/README.md): multi-Worker, multi-device setup in a separate-process topology
 - [Understand the the full MDK layer model](../../../docs/concepts/architecture.md)

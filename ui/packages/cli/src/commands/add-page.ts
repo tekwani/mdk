@@ -11,7 +11,7 @@ import {
   type RegistryComponent,
 } from '../registry-loader.js'
 import { findRoutesFile, ROUTES_END_MARKER } from '../routes-file.js'
-import { getTemplatesRoot } from '../templates.js'
+import { findTemplate } from '../templates.js'
 import { placeholderFor, toPascalCase } from '../utils.js'
 
 // Re-exported for the legacy `import { ROUTES_CANDIDATES } from './add-page.js'`
@@ -195,7 +195,7 @@ const addManagedPage = (
   opts: AddPageOptions,
   out: (line: string) => void,
 ): { writtenPath: string } => {
-  const sourcePath = join(getTemplatesRoot(), page.templateId, page.templatePagePath)
+  const sourcePath = join(findTemplate(page.templateId).path, page.templatePagePath)
   if (!existsSync(sourcePath)) {
     throw new Error(`Managed page template not found: ${sourcePath}`)
   }
@@ -213,7 +213,8 @@ const addManagedPage = (
   out(`✓ Wrote ${targetPath} (managed page: ${page.name})`)
 
   patchManagedRoute(opts.cwd, page, out)
-  patchNavIcon(opts.cwd, page, out)
+  // Hidden, deep-link-only pages carry no nav icon — skip nav patching.
+  if (page.navEntry) patchNavIcon(opts.cwd, page, out)
 
   return { writtenPath: targetPath }
 }

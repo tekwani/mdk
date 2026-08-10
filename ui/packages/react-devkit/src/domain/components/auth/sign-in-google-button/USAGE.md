@@ -24,9 +24,10 @@ session store.
 
 - Uses `window.location.href` (full-page navigation) rather than client-side
   routing so the OAuth callback URL is treated as an external load.
-- The backend must register the FE callback URL under the Google OAuth
-  client. For local dev with `miningos-gateway`, that's
-  `http://localhost:3000/oauth/google/callback` plus `callbackUriUI` =
+- The backend side is an identity plugin you supply — MDK ships no OAuth
+  implementation. It serves the `/oauth/google` start endpoint this button
+  navigates to, and redirects back to the frontend with `?authToken=<jwt>`.
+  For local dev that is typically a callback of
+  `http://localhost:3000/oauth/google/callback` returning to
   `http://localhost:3030`.
 
-<!-- todo update miningos-gateway -->

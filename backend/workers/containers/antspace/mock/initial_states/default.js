@@ -1,7 +1,7 @@
 'use strict'
 
 const { cleanup } = require('./stateUtils')
-const { getRandomPower, createFaultFields, createMinerInfoEntries } = require('./utils')
+const { createFaultFields, createMinerInfoEntries, minerInfoTotals, distributionBoxPowers } = require('./utils')
 
 module.exports = (ctx) => {
   const faultFieldNames = [
@@ -25,6 +25,9 @@ module.exports = (ctx) => {
     'cooling_tower_liquid_level_low'
   ]
 
+  const { minerNum, totalHashrate } = minerInfoTotals(ctx)
+  const [box1Power, box2Power] = distributionBoxPowers(ctx)
+
   const state = {
     disconnect: false,
     // Start in a running state so AntspaceHydro._getStatus() returns RUNNING.
@@ -46,8 +49,8 @@ module.exports = (ctx) => {
     antbox_internal_temp: 39,
     supply_liquid_flow: 29,
     antbox_internal_humidity: 54,
-    distribution_box1_power: getRandomPower(),
-    distribution_box2_power: getRandomPower(),
+    distribution_box1_power: box1Power,
+    distribution_box2_power: box2Power,
     longitude_direction: 0,
     longitude: 0,
     latitude_direction: 0,
@@ -55,8 +58,8 @@ module.exports = (ctx) => {
     supply_liquid_set_temp: 35,
     pid_mode: false,
     minerInfo: {
-      miner_num: 120,
-      total_hashrate: 12665.544871159516,
+      miner_num: minerNum,
+      total_hashrate: totalHashrate,
       pcb_max_temp: 98,
       chip_max_temp: 98,
       chip_temp_mean: 0,

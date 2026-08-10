@@ -1,7 +1,7 @@
 import { Spinner } from '@tetherto/mdk-react-devkit/primitives'
 import { lazy, Suspense } from 'react'
 import type { JSX } from 'react'
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter } from 'react-router'
 import App from './App'
 import { AlertExample } from './examples/alert-example'
 import { ListViewFilterExample } from './examples/list-view-filter-example/list-view-filter-example'
@@ -266,6 +266,12 @@ const ExplorerPage = lazy(() =>
   import('./pages/explorer-page').then((module) => ({ default: module.ExplorerPage })),
 )
 
+const ContainerDetailPage = lazy(() =>
+  import('./pages/container-detail-page').then((module) => ({
+    default: module.ContainerDetailPage,
+  })),
+)
+
 const SettingsDemoPage = lazy(() =>
   import('./pages/settings/settings-demo').then((module) => ({ default: module.SettingsDemoPage })),
 )
@@ -526,6 +532,7 @@ export const router = createBrowserRouter(
         { path: 'pool-details-popover', element: withSuspense(PoolDetailsPopoverPage) },
         { path: 'device-explorer', element: withSuspense(DeviceExplorerPage) },
         { path: 'explorer-list-detail', element: withSuspense(ExplorerPage) },
+        { path: 'container-detail', element: withSuspense(ContainerDetailPage) },
         { path: 'bitdeer-container', element: withSuspense(BitdeerPage) },
         { path: 'bitmain-container', element: withSuspense(BitmainPage) },
         {

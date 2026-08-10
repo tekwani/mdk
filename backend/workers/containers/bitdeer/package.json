@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-worker-bitdeer",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "MiniContainer Bitdeer",
   "keywords": [
     "tether"
@@ -23,7 +23,7 @@
     "@bitfinex/lib-js-util-base": "git+https://github.com/bitfinexcom/lib-js-util-base.git",
     "@bitfinex/lib-js-util-promise": "git+https://github.com/bitfinexcom/lib-js-util-promise.git",
     "@bitfinex/lib-js-util-task-queue": "git+https://github.com/bitfinexcom/lib-js-util-task-queue.git",
-    "aedes": "1.0.2",
+    "aedes": "1.1.1",
     "mqtt": "5.15.2"
   },
   "devDependencies": {
@@ -32,6 +32,7 @@
     "yargs": "17.7.2"
   },
   "overrides": {
-    "uuid": "14.0.0"
+    "uuid": "14.0.0",
+    "brace-expansion": "5.0.9"
   }
 }

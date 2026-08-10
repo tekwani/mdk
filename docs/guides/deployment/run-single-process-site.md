@@ -26,7 +26,7 @@ Use the **single-process** site example when you want Kernel, the Gateway, and W
 Follow the [single-process site example][single-example]:
 
 - Start with its [prerequisites][single-example-prerequisites]
-- Use the example [quickstart][single-example-quickstart]
+- Use the example [quick smoke test and full run][single-example-quickstart]
 
 ## Next steps
 
@@ -45,11 +45,11 @@ Follow the [single-process site example][single-example]:
 [miner-guide]: ../miners/index.md
 <!-- docs@tether.io: miner-how-to → guides/miners -->
 
-[single-example]: ../../../examples/backend/site-single-process/README.md
-<!-- docs@tether.io: single-example → https://github.com/tetherto/mdk/tree/main/examples/backend/site-single-process -->
+[single-example]: ../../../examples/full-site/README.md
+<!-- docs@tether.io: single-example → https://github.com/tetherto/mdk/tree/main/examples/full-site -->
 
-[single-example-prerequisites]: ../../../examples/backend/site-single-process/README.md#prerequisites
-<!-- docs@tether.io: single-example-prerequisites → https://github.com/tetherto/mdk/tree/main/examples/backend/site-single-process#prerequisites -->
+[single-example-prerequisites]: ../../../examples/full-site/README.md#prerequisites
+<!-- docs@tether.io: single-example-prerequisites → https://github.com/tetherto/mdk/tree/main/examples/full-site#prerequisites -->
 
-[single-example-quickstart]: ../../../examples/backend/site-single-process/README.md#quickstart
-<!-- docs@tether.io: single-example-quickstart → https://github.com/tetherto/mdk/tree/main/examples/backend/site-single-process#quickstart -->
+[single-example-quickstart]: ../../../examples/full-site/README.md#quick-smoke-test-recommended-first-run
+<!-- docs@tether.io: single-example-quickstart → https://github.com/tetherto/mdk/tree/main/examples/full-site#quick-smoke-test-recommended-first-run -->

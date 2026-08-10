@@ -1,6 +1,6 @@
 'use strict'
 
-const { getRandomPower } = require('./../utils')
+const { phasePowersKw } = require('./../utils')
 const { MAPPINGS, DEVICE_TYPE_MAP } = require('../../lib/utils/constants')
 
 function generatePDU (type) {
@@ -24,10 +24,11 @@ function generatePDU (type) {
 
 module.exports = function (ctx) {
   function getInitialState () {
+    const [powerA, powerB, powerC] = phasePowersKw(ctx)
     const powerData = {
-      PowerA: getRandomPower(),
-      PowerB: getRandomPower(),
-      PowerC: getRandomPower()
+      PowerA: powerA,
+      PowerB: powerB,
+      PowerC: powerC
     }
 
     powerData.TotalPower = (powerData.PowerA + powerData.PowerB + powerData.PowerC).toFixed(1)

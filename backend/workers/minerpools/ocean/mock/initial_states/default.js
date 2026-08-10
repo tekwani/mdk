@@ -3,17 +3,24 @@
 const { generateMockBlocks, generateMockWorkers, generateMockTransactions } = require('./utils')
 
 module.exports = function (CTX) {
+  const workersState = generateMockWorkers('test', CTX && CTX.workerCount)
+  const workerNames = Object.keys(workersState.workers)
+  // Aggregate hashrate from the actual generated workers so `hashrate.workers`
+  // and the pool totals agree with each other (and scale with the real fleet
+  // size when CTX.workerCount is threaded in from the site's --miners flag).
+  const totalHashrate = workerNames.reduce((sum, name) => sum + workersState.workers[name][0].hashrate_60s, 0)
+
   const state = {
     blocks: generateMockBlocks(10),
-    workers: generateMockWorkers('test'),
+    workers: workersState,
     transactions: generateMockTransactions('test', Date.now() - 7 * 24 * 60 * 60 * 1000, Date.now()),
     hashrate: {
-      hashrate_1m: 100000000000000,
-      hashrate_5m: 100000000000000,
-      hashrate_30m: 100000000000000,
-      hashrate_1h: 100000000000000,
-      hashrate_1d: 100000000000000,
-      workers: 50
+      hashrate_1m: totalHashrate,
+      hashrate_5m: totalHashrate,
+      hashrate_30m: totalHashrate,
+      hashrate_1h: totalHashrate,
+      hashrate_1d: totalHashrate,
+      workers: workerNames.length
     }
   }
 

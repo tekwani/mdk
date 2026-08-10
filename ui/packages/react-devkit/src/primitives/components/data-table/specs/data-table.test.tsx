@@ -127,6 +127,53 @@ describe('dataTable with row selection', () => {
   })
 })
 
+describe('dataTable with onRowClick', () => {
+  it('makes body rows interactive and fires onRowClick with the row data', () => {
+    const onRowClick = vi.fn()
+    const { container } = render(
+      <DataTable data={sampleData} columns={basicColumns} onRowClick={onRowClick} />,
+    )
+
+    const rows = container.querySelectorAll('.mdk-table__body-row--clickable')
+    expect(rows.length).toBe(sampleData.length)
+    expect(rows[0]).toHaveAttribute('role', 'button')
+
+    fireEvent.click(screen.getByText('Beta'))
+    expect(onRowClick).toHaveBeenCalledWith(sampleData[1])
+  })
+
+  it('does not fire onRowClick when the selection checkbox is clicked', () => {
+    const onRowClick = vi.fn()
+    render(
+      <DataTable
+        data={sampleData}
+        columns={basicColumns}
+        enableRowSelection
+        onRowClick={onRowClick}
+      />,
+    )
+
+    fireEvent.click(screen.getAllByRole('checkbox')[1]!)
+    expect(onRowClick).not.toHaveBeenCalled()
+  })
+
+  it('activates a row via the Enter key', () => {
+    const onRowClick = vi.fn()
+    const { container } = render(
+      <DataTable data={sampleData} columns={basicColumns} onRowClick={onRowClick} />,
+    )
+
+    fireEvent.keyDown(container.querySelector('.mdk-table__body-row--clickable')!, { key: 'Enter' })
+    expect(onRowClick).toHaveBeenCalledWith(sampleData[0])
+  })
+
+  it('leaves rows non-interactive when onRowClick is absent', () => {
+    const { container } = render(<DataTable data={sampleData} columns={basicColumns} />)
+
+    expect(container.querySelector('.mdk-table__body-row--clickable')).toBeNull()
+  })
+})
+
 describe('dataTable with pagination', () => {
   const manyRows: Row[] = Array.from({ length: 15 }, (_, i) => ({
     id: String(i + 1),

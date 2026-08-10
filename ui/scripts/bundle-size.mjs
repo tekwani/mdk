@@ -85,7 +85,6 @@ const CATEGORY = {
   'packages/ui-foundation': 'treeshake',
   'packages/cli': 'not-shipped',
   'apps/catalog': 'not-shipped',
-  'apps/mdk-ui-shell': 'not-shipped',
 }
 
 const getStatus = (pkg) => {

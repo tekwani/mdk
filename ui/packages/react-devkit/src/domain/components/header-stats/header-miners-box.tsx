@@ -1,5 +1,6 @@
 import { cn, MinersStatIcon } from '@primitives'
 import type { JSX, ReactNode } from 'react'
+import { WEBAPP_SHORT_NAME } from '../../constants'
 
 const fmt = (value: number | undefined): string =>
   typeof value === 'number' ? value.toLocaleString('en-US') : '—'
@@ -15,20 +16,22 @@ export type HeaderMinersBoxProps = {
   error?: number
   /** Miners offline (the small red count). */
   offline?: number
-  /** Optional MOS-side meta line — total miners reporting to MOS. */
-  mosTotal?: number
+  /** Optional app-side meta line — total miners reporting to the app. */
+  appTotal?: number
   /** Optional pool-side meta — total miners as reported by upstream pools. */
   poolTotal?: number
   /** Optional pool-side online count (green). */
   poolOnline?: number
   /** Optional pool-side mismatch count (red). */
   poolMismatch?: number
+  /** Label for the app-side row — defaults to `APP` (`WEBAPP_SHORT_NAME`). */
+  appLabel?: string
   className?: string
 }
 
 /**
  * Two-row miner-count cell for the dashboard's header strip. Top row carries
- * the MOS-side `online / error / offline` breakdown; the bottom row shows the
+ * the app-side `online / error / offline` breakdown; the bottom row shows the
  * pool-side equivalent. Numbers fall back to `—` when undefined.
  *
  * @category dashboard
@@ -42,10 +45,11 @@ export const HeaderMinersBox = ({
   online,
   error,
   offline,
-  mosTotal,
+  appTotal,
   poolTotal,
   poolOnline,
   poolMismatch,
+  appLabel = WEBAPP_SHORT_NAME,
   className,
 }: HeaderMinersBoxProps): JSX.Element => (
   <div className={cn('mdk-header-stat-box', className)}>
@@ -53,7 +57,7 @@ export const HeaderMinersBox = ({
     <div className="mdk-header-stat-box__body">
       <div className="mdk-header-stat-box__row">
         <span className="mdk-header-stat-box__label">Miners</span>
-        <span className="mdk-header-stat-box__muted">MOS ({fmt(mosTotal)})</span>
+        <span className="mdk-header-stat-box__muted">{appLabel} ({fmt(appTotal)})</span>
         <span className="mdk-header-stat-box__success">{fmt(online)}</span>
         <span className="mdk-header-stat-box__warning">{fmt(error)}</span>
         <span className="mdk-header-stat-box__danger">{fmt(offline)}</span>

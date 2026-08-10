@@ -5,8 +5,8 @@ One Kernel, one HTTP gateway, and four Antminer Workers — S19 XP, S19 XP Hydro
 all in a single Node.js process. Each Worker is backed by a **mock** Antminer device, so the whole
 site comes up on `localhost` and is immediately curl-able.
 
-This is the Antminer-specific counterpart of the brand-agnostic
-[`examples/backend/site-single-process`](../../site-single-process/README.md). If
+This is the Antminer-specific counterpart of the brand-agnostic, single-process
+[`examples/full-site`](../../../full-site/README.md) (`node start.js`). If
 you're new to MDK, start there for the orchestration mechanics; this example layers the **mock
 device + registration** half on top so the API actually returns miners.
 
@@ -38,10 +38,10 @@ flowchart LR
   Index --> Init[initialize]
   Index --> Kernel[getKernel]
   Index --> Gateway[startGateway :3000]
-  Index --> W1[startWorker S19XP]
-  Index --> W2[startWorker S19XPH]
-  Index --> W3[startWorker S21]
-  Index --> W4[startWorker S21PRO]
+  Index --> W1[startAntminerWorker S19XP]
+  Index --> W2[startAntminerWorker S19XPH]
+  Index --> W3[startAntminerWorker S21]
+  Index --> W4[startAntminerWorker S21PRO]
 
   subgraph proc [Single Node.js process]
     Init
@@ -130,25 +130,17 @@ OK — Antminer site is live and serving telemetry over the MDK Protocol.
 
 ## Hitting the HTTP API with curl
 
-The config ships `"noAuth": true` to make `/auth/*` curl-able without a JWT
-(**dev only; never enable beyond localhost**). What works today:
+The HTTP API is curl-able with no token, because the Gateway authenticates nothing
+(**never expose this beyond localhost**):
 
 ```bash
-curl http://localhost:3000/auth/site          # ✅ {"site":"SITE_NAME"}
+curl http://localhost:3000/auth/site               # {"site":"SITE_NAME"}
+curl http://localhost:3000/site-monitor/hashrate   # per-device hashrate/power via the MDK Protocol
 ```
 
-> **Heads-up — the device data routes are not wired up yet.** `/auth/list-things`, `/auth/miners`
-> and `/auth/permissions` do **not** return data in this build:
->
-> - The gateway's data proxy still calls legacy per-method Kernel RPCs (`listThings`, `listRacks`,
->   …), but the MDK Kernel exposes a single MDK-Protocol `mdk` method dispatched by action
->   (`worker.list`, `telemetry.pull`, …) — so those calls return `UNKNOWN_METHOD`.
-> - In `noAuth` mode the gateway skips building `authLib`, so the permission-gated routes throw.
->
-> Both are **gateway ↔ Kernel integration work tracked under the parent task "MDK integration of
-> Workers"** — out of scope for this sample. Until that lands, use `verify.js` above to exercise
-> the live devices over the MDK Protocol. This example will gain working `/auth/miners` curls for
-> free once the parent integration is merged.
+`/site-monitor/hashrate` aggregates over `worker.list` + `telemetry.pull`, so it reflects the same
+live device data `verify.js` prints. (The legacy per-method data routes — `/auth/list-things`,
+`/auth/miners` — never worked against the MDK Kernel and have been removed.)
 
 ## Configuration reference
 
@@ -158,7 +150,6 @@ curl http://localhost:3000/auth/site          # ✅ {"site":"SITE_NAME"}
 |---|---|
 | `mode` | Must be `"single-process"`. |
 | `env` | `"development"` or `"production"` (default `development`). |
-| `noAuth` | `true` disables JWT auth on `/auth/*`. Dev only. |
 | `services[]` | Ordered list — `kernel` **must come first**, then `gateway`, then Workers. |
 
 Each Worker entry:
@@ -186,13 +177,13 @@ The `mock` block:
 
 For each `worker` service, `index.js`:
 
-1. `resolveManagerClass(worker, type)` → loads the manager from `backend/workers/miners/antminer`.
-2. `startWorker(ManagerClass, { kernel, rack, ... })` → boots the Worker and joins the Kernel's DHT topic.
-3. `startMock(svc)` → binds the Antminer mock on `mock.port` (kept in `mockHandles` for cleanup).
-4. `manager.registerThing({ info, opts })` → registers the mock as a device on that Worker.
+1. `startMock(svc)` → binds the Antminer mock on `mock.port` (kept in `mockHandles` for cleanup).
+2. `startAntminerWorker({ workerId, model, storeDir, seedDevices, ... })` → boots the Worker (via `WorkerRuntime`),
+   seeding the mock as a registered device.
+3. `kernel.registerWorker(handle.runtime.getPublicKey())` → registers the Worker with Kernel (same-process mode).
 
-One device per Worker keeps every mock on `127.0.0.1` without tripping the duplicate-IP guard in
-`MinerManager` (validation is per-manager, so distinct Workers may reuse the loopback address).
+One device per Worker keeps every mock on `127.0.0.1` without tripping the duplicate-IP guard (validation is
+per-Worker, so distinct Workers may reuse the loopback address).
 
 ## Directory layout
 
@@ -241,6 +232,7 @@ storage can't tolerate one Corestore nested under another in the same process.
 
 | Path | Purpose |
 |---|---|
-| [`backend/core/mdk`](../../../../backend/core/mdk/index.js) | `initialize()`, `getKernel()`, `startGateway()`, `startWorker()`. |
+| [`backend/core/mdk`](../../../../backend/core/mdk/index.js) | `initialize()`, `getKernel()`, `startGateway()`. |
+| [`@tetherto/mdk-worker-antminer`](../../../../backend/workers/miners/antminer/index.js) | `startAntminerWorker()`: boots the Worker via `WorkerRuntime`. |
 | [`backend/workers/miners/antminer`](../../../../backend/workers/miners/antminer/README.md) | Antminer managers, mock server, `mdk-contract.json`, `USAGE.md`. |
-| [`examples/backend/site-single-process`](../../site-single-process/README.md) | Brand-agnostic single-process site this example builds on. |
+| [`examples/full-site`](../../../full-site/README.md) | Brand-agnostic single-process site this example builds on. |

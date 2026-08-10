@@ -3,12 +3,9 @@
 const os = require('os')
 const path = require('path')
 
-// This example lives under examples/backend/containers/bitdeer/, so the repo root
-// is four levels up. Everything is required from backend/ — the canonical source tree.
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..')
-const { getKernel } = require(path.join(REPO_ROOT, 'backend', 'core', 'mdk'))
-const { startBitdeerWorker } = require(path.join(REPO_ROOT, 'backend', 'workers', 'containers', 'bitdeer'))
-const mockServer = require(path.join(REPO_ROOT, 'backend', 'workers', 'containers', 'bitdeer', 'mock', 'server'))
+const { getKernel } = require('@tetherto/mdk-core')
+const { startBitdeerWorker } = require('@tetherto/mdk-worker-bitdeer')
+const mockServer = require('@tetherto/mdk-worker-bitdeer/mock/server')
 
 const HOST = '127.0.0.1'
 // The Bitdeer worker embeds its MQTT broker on DEFAULT_MQTT_PORT (10883); the mock
@@ -18,7 +15,7 @@ const TYPE = 'd40_m56'
 const CONTAINER_ID = 'C024_D40'
 const BASE_DIR = path.join(os.tmpdir(), 'mdk-site-bitdeer')
 const KERNEL_ROOT = path.join(BASE_DIR, 'kernel')
-const BITDEER_DIR = path.join(REPO_ROOT, 'backend', 'workers', 'containers', 'bitdeer')
+const BITDEER_DIR = path.dirname(require.resolve('@tetherto/mdk-worker-bitdeer/package.json'))
 
 const main = async () => {
   // HRPC only — this example is inspected with hp-rpc-cli.

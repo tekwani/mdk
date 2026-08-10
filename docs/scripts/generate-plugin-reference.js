@@ -3,8 +3,11 @@
 // Generates the default-plugin route tables in backend/core/plugins/README.md.
 //
 // Source of truth: each default plugin's mdk-plugin.json (backend/core/plugins/*/mdk-plugin.json).
-// Per route, the table is derived from http.method, http.path, auth, and description — so the
+// Per route, the table is derived from http.method, http.path, and description — so the
 // published route list cannot drift from the manifests.
+//
+// The manifest "auth" and "permissions" fields are deliberately NOT published: no code reads them,
+// so printing them as Required/Optional advertises protection the Gateway does not apply.
 //
 // Only the default plugins shipped in this directory are generated. Plugins mounted at runtime
 // via startGateway({ extraPluginDirs }) live outside the repo and document their own routes.
@@ -38,18 +41,24 @@ function cell (value) {
   return String(value == null ? '' : value).replace(/\\/g, '\\\\').replace(/\|/g, '\\|')
 }
 
+// House style: table cells carry no terminal full stop. Manifest descriptions are written as
+// sentences, so drop only the final one — internal stops (multi-sentence descriptions, and
+// dotted identifiers like telemetry.pull) are left alone.
+function describe (value) {
+  return cell(value).trimEnd().replace(/\.$/, '')
+}
+
 function pluginSection (plugin) {
   const manifest = JSON.parse(fs.readFileSync(plugin.manifestPath, 'utf8'))
   const routes = Array.isArray(manifest.routes) ? manifest.routes : []
 
   let out = `### \`${plugin.dir}\`\n\n`
-  out += '| Method | Path | Auth | Description |\n'
-  out += '| --- | --- | --- | --- |\n'
+  out += '| Method | Path | Description |\n'
+  out += '| --- | --- | --- |\n'
   for (const route of routes) {
     const method = (route.http && route.http.method) || route.method || ''
     const routePath = (route.http && route.http.path) || route.path || ''
-    const auth = route.auth ? 'Required' : 'Optional'
-    out += `| \`${cell(method)}\` | \`${cell(routePath)}\` | ${auth} | ${cell(route.description)} |\n`
+    out += `| \`${cell(method)}\` | \`${cell(routePath)}\` | ${describe(route.description)} |\n`
   }
   return out
 }

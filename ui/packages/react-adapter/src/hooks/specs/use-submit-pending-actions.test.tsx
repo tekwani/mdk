@@ -51,6 +51,7 @@ describe('useSubmitPendingActions', () => {
     actionsStore.getState().setAddPendingSubmissionAction({
       action: 'setupPools',
       query: { id: { $in: ['d1'] } },
+      overrideQuery: false,
       params: [{ poolConfigId: 'p1', configType: 'pool' }],
     })
 
@@ -70,9 +71,11 @@ describe('useSubmitPendingActions', () => {
     expect(firstUrl).toBe('http://api/auth/actions/voting')
     expect((firstInit as RequestInit).method).toBe('POST')
     const firstBody = JSON.parse((firstInit as RequestInit).body as string)
+    // No tags and no explicit opt-out -> the empty-tags query the gateway requires.
     expect(firstBody).toEqual({
       action: 'registerConfig',
       params: [{ type: 'pool', data: { poolConfigName: 'X' } }],
+      query: { tags: { $in: [] } },
     })
     expect(firstBody).not.toHaveProperty('id')
 

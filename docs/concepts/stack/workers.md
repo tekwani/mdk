@@ -40,7 +40,7 @@ stand-in for whichever boot function your Worker package exports.
 | --- | --- | --- |
 | **DHT** | The Worker's host process passes `kernelTopic` to `WorkerRuntime`; Kernel listens on the same topic and connects automatically | [Production microservices][multi-how-to], Workers on separate hosts or networks |
 | **Local** | The Worker's host process publishes the runtime's RPC key to a shared directory; Kernel watches the directory: no DHT needed | All components on one machine, restricted outbound networking |
-| **Same-process** | The Worker's host process calls `kernel.registerWorker(runtime.getPublicKey())` directly: no network lookup | [Getting started][get-started-run], [single-process sites][single-how-to] |
+| **Same-process** | The Worker's host process calls `kernel.registerWorker(runtime.getPublicKey())` directly: no network lookup | [Run a mining site][get-started-run], [single-process sites][single-how-to] |
 
 > [!NOTE]
 > Discovery is a startup concern only — it determines how Kernel obtains the Worker's RPC public key, nothing more. Once connected,
@@ -64,7 +64,7 @@ const worker = await startYourWorker({ kernelTopic: '<32-byte-hex>', ...opts })
 > The Worker must join the topic before Kernel starts listening. Start the Worker process first, then start Kernel.
 > `waitForDiscovery()` polls the registry until discovered Workers reach `READY` state.
 
-The DHT pattern is demonstrated end-to-end in [`dht-worker.js`][dht-worker] and [`dht-kernel.js`][dht-kernel].
+The DHT pattern is demonstrated end-to-end by the [full-site example][full-site-local-discovery]'s `up --discovery dht`.
 
 ### Local mode
 
@@ -125,7 +125,7 @@ Two behaviors differ from DHT and local mode:
   owns its lifecycle in every mode. Push the Worker's `stop()` onto Kernel's `_cleanup` queue yourself if Kernel shutdown should cascade
   to it (see [`bootWorker`][full-site-local-discovery] for the pattern), or manage it directly in your own shutdown handler
 
-Use the same-process mode for the [get-started tutorial][get-started-run] and [single-process deployments][single-how-to].
+Use the same-process mode for the [run a mining site tutorial][get-started-run] and [single-process deployments][single-how-to].
 For multi-process, use DHT or local mode instead.
 
 ## Capability contract
@@ -200,8 +200,8 @@ for the full migration history and the optional built-in services surface.
 [approval-gated-writes]: ../control-plane.md#approval-gated-writes
 <!-- docs@tether.io: approval-gated-writes → concepts/control-plane#approval-gated-writes -->
 
-[get-started-run]: ../../tutorials/get-started/run.md
-<!-- docs@tether.io: get-started-run → tutorials/backend-stack/run -->
+[get-started-run]: ../../tutorials/run-a-site.md
+<!-- docs@tether.io: get-started-run → tutorials/run-a-site -->
 
 [deployment-topologies-connection]: ../deployment-topologies.md#connection-model
 <!-- docs@tether.io: deployment-topologies-connection → concepts/deployment-topologies#connection-model -->
@@ -211,12 +211,6 @@ for the full migration history and the optional built-in services surface.
 
 [multi-how-to]: ../../guides/deployment/run-microservices-site.md
 <!-- docs@tether.io: multi-how-to → guides/deployment/run-microservices-site -->
-
-[dht-worker]: ../../../examples/backend/mdk-e2e/dht-worker.js
-<!-- docs@tether.io: dht-worker → https://github.com/tetherto/mdk/blob/main/examples/backend/mdk-e2e/dht-worker.js -->
-
-[dht-kernel]: ../../../examples/backend/mdk-e2e/dht-kernel.js
-<!-- docs@tether.io: dht-kernel → https://github.com/tetherto/mdk/blob/main/examples/backend/mdk-e2e/dht-kernel.js -->
 
 [local-discovery-impl]: ../../../backend/core/mdk/lib/local-discovery.js
 <!-- docs@tether.io: no parity link -->

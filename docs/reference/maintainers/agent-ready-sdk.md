@@ -73,7 +73,7 @@ backend/workers/miners/whatsminer/
 - Operational notes that don't fit in the schema (firmware caveats, mock setup, links to vendor docs).
 - **Do not** restate `capabilities.telemetry` / `commands` / `health` — those are already in `mdk-contract.json` and the docs catalogue reads them from there.
 
-Cross-references in `USAGE.md` carry the comment vocabulary defined in [`port-signals.md`](port-signals.md) — reference-style link definitions get a `<!-- docs@tether.io: … -->` or `<!-- mdk-monorepo: … -->` adjacent comment so the port-sync to tether.io knows how to handle each target. `check:port-signals` warns on missing routing hints.
+Cross-references in `USAGE.md` carry the comment vocabulary defined in [`single-source-of-truth.md`](single-source-of-truth.md) — reference-style link definitions get a `<!-- docs@tether.io: … -->` or `<!-- mdk-monorepo: … -->` adjacent comment so the port-sync to tether.io knows how to handle each target. `check:port-signals` warns on missing routing hints.
 
 ### Examples convention
 

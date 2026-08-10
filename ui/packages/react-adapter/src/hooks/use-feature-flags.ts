@@ -28,6 +28,14 @@ const EMPTY_FLAGS: FeatureConfigResponse = {}
  * is single-site only — multi-site keys the backend may return are
  * deliberately not surfaced.
  *
+ * @remarks
+ * The `/auth/featureConfig` endpoint is illustrative. MDK does not ship built-in
+ * endpoints — create your own via a
+ * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) matching
+ * your Worker/business logic. See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference.
+ *
  * @category op-centre
  */
 export const useFeatureFlags = (options: UseFeatureFlagsOptions = {}): UseFeatureFlagsResult => {

@@ -50,6 +50,112 @@ describe('runCreate', () => {
     expect(existsSync(join(appPath, '_meta.json'))).toBe(false)
   })
 
+  it('scaffolds the mdk-ui-shell template as a backbone + System Info example (no managed pages, no _managed dir)', () => {
+    const { appPath } = runCreate({
+      appName: 'bare-shell',
+      template: 'mdk-ui-shell',
+      cwd: tempDir,
+      install: false,
+      out: noop,
+    })
+
+    // Backbone pages are present…
+    expect(existsSync(join(appPath, 'src/pages/Home.tsx'))).toBe(true)
+    expect(existsSync(join(appPath, 'src/pages/SignIn.tsx'))).toBe(true)
+    expect(existsSync(join(appPath, 'src/pages/NotFound.tsx'))).toBe(true)
+
+    // …plus the single baked-in System Info example (a deletable reference for
+    // wiring an API-backed page) and its presentational panel…
+    expect(existsSync(join(appPath, 'src/pages/SystemInfo.tsx'))).toBe(true)
+    expect(existsSync(join(appPath, 'src/components/SystemInfoPanel.tsx'))).toBe(true)
+
+    // The runnable template ships a real .gitignore; it survives scaffolding.
+    expect(existsSync(join(appPath, '.gitignore'))).toBe(true)
+
+    // …but no feature/managed pages, and the CLI-only source dir is stripped.
+    expect(existsSync(join(appPath, '_managed'))).toBe(false)
+    expect(existsSync(join(appPath, 'src/pages/Dashboard.tsx'))).toBe(false)
+    expect(existsSync(join(appPath, 'src/pages/PoolManager.tsx'))).toBe(false)
+    expect(existsSync(join(appPath, 'src/pages/Alerts.tsx'))).toBe(false)
+
+    // The route registry ships only the System Info example — no managed entries.
+    const routes = readFileSync(join(appPath, 'src/routes.ts'), 'utf8')
+    expect(routes).toMatch(/mdk:routes-end/)
+    expect(routes).toMatch(/import\('\.\/pages\/SystemInfo'\)/)
+    expect(routes).not.toMatch(/import\('\.\/pages\/(Dashboard|Alerts|PoolManager|SiteOverview|Explorer)'\)/)
+  })
+
+  it('rewrites the shell template file: links to published ranges for a standalone app', () => {
+    const { appPath } = runCreate({
+      appName: 'standalone-shell',
+      template: 'mdk-ui-shell',
+      cwd: tempDir,
+      install: false,
+      out: noop,
+    })
+
+    const pkg = JSON.parse(readFileSync(join(appPath, 'package.json'), 'utf8')) as {
+      name?: string
+      dependencies?: Record<string, string>
+    }
+    expect(pkg.name).toBe('standalone-shell')
+    const mdkDeps = Object.entries(pkg.dependencies ?? {}).filter(([name]) =>
+      name.startsWith('@tetherto/'),
+    )
+    expect(mdkDeps.length).toBeGreaterThan(0)
+    for (const [, value] of mdkDeps) {
+      // No local file: link leaks into a published-style standalone app…
+      expect(value).not.toMatch(/^file:/)
+      // …every MDK dep is a resolvable range/tag.
+      expect(value === 'latest' || /^\^?\d/.test(value)).toBe(true)
+    }
+  })
+
+  it('wires the shell template file: links to the workspace protocol inside the monorepo', () => {
+    mkdirSync(join(tempDir, 'packages', 'ui-foundation'), { recursive: true })
+    writeFileSync(
+      join(tempDir, 'packages', 'ui-foundation', 'package.json'),
+      JSON.stringify({ name: '@tetherto/mdk-ui-foundation' }),
+      'utf8',
+    )
+
+    const { appPath } = runCreate({
+      appName: 'monorepo-shell',
+      template: 'mdk-ui-shell',
+      cwd: tempDir,
+      install: false,
+      out: noop,
+    })
+
+    const pkg = JSON.parse(readFileSync(join(appPath, 'package.json'), 'utf8')) as {
+      name?: string
+      dependencies?: Record<string, string>
+    }
+    expect(pkg.name).toBe('monorepo-shell')
+    const mdkDeps = Object.entries(pkg.dependencies ?? {}).filter(([name]) =>
+      name.startsWith('@tetherto/'),
+    )
+    expect(mdkDeps.length).toBeGreaterThan(0)
+    for (const [, value] of mdkDeps) {
+      expect(value).toBe('*')
+    }
+  })
+
+  it('injects the app name into the shell APP_NAME display constant', () => {
+    const { appPath } = runCreate({
+      appName: 'my-named-app',
+      template: 'mdk-ui-shell',
+      cwd: tempDir,
+      install: false,
+      out: noop,
+    })
+
+    const env = readFileSync(join(appPath, 'src/constants/env.ts'), 'utf8')
+    expect(env).toMatch(/export const APP_NAME\s*=\s*['"]my-named-app['"]/)
+    // the template's default APP_NAME value is gone (comment mentions are fine)
+    expect(env).not.toMatch(/APP_NAME\s*=\s*['"]MDK UI Shell['"]/)
+  })
+
   it('substitutes {{appName}} in package.json', () => {
     const appName = 'my-substituted-app'
     const { appPath } = runCreate({
@@ -123,7 +229,7 @@ describe('runCreate', () => {
       name?: string
       dependencies?: Record<string, string>
     }
-    expect(pkg.name).toBe('@tetherto/monorepo-app')
+    expect(pkg.name).toBe('monorepo-app')
     const mdkDeps = Object.entries(pkg.dependencies ?? {}).filter(([name]) =>
       name.startsWith('@tetherto/'),
     )

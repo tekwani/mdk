@@ -69,7 +69,6 @@ All miner Workers support these commands (declared in `mdk-contract.json`):
 | `saveComment` | `text` | Add a device annotation |
 | `editComment` | `commentId, text` | Edit annotation |
 | `deleteComment` | `commentId` | Delete annotation |
-| `rackReboot` | — | Restart the Worker process |
 | `downloadLogs` | — | Download raw diagnostic logs |
 
 ## Health States

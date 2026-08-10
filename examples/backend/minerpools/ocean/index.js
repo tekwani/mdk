@@ -14,11 +14,8 @@ const config = fs.existsSync(LOCAL_CONFIG)
   ? require(LOCAL_CONFIG)
   : JSON.parse(fs.readFileSync(EXAMPLE_CONFIG, 'utf8'))
 
-// This example lives under examples/backend/minerpools/ocean/, so the repo root is
-// four levels up. Everything is required from backend/ — the canonical source tree.
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..')
-const { createServer } = require(path.join(REPO_ROOT, 'backend', 'workers', 'minerpools', 'ocean', 'mock', 'server'))
-const { OCEAN_POOL } = require(path.join(REPO_ROOT, 'backend', 'workers', 'minerpools', 'ocean'))
+const { createServer } = require('@tetherto/mdk-worker-ocean/mock/server')
+const { OCEAN_POOL } = require('@tetherto/mdk-worker-ocean')
 
 const EXAMPLE_TMP = path.join(os.tmpdir(), 'mdk-site-ocean')
 const STORE_DIR = path.join(EXAMPLE_TMP, 'store')

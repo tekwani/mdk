@@ -1,7 +1,7 @@
 # MDK ABB Power Meter Example
 
 A small, self-contained **ABB B23** power-meter example you can clone and run with **no real
-hardware**. It starts a mock ABB meter, brings up an Kernel, registers the meter as a thing, and stays
+hardware**. It starts a mock ABB meter, brings up a Kernel, registers the meter as a thing, and stays
 running. It prints a ready-to-paste `hp-rpc-cli` command for pulling the meter's live telemetry over
 HRPC.
 
@@ -12,7 +12,7 @@ the power-meter counterpart of
 
 ## What it demonstrates
 
-- Bringing up an Kernel and one ABB power-meter Worker in a single process.
+- Bringing up a Kernel and one ABB power-meter Worker in a single process.
 - Starting a **mock** ABB meter (Modbus TCP) and **registering** it as a thing.
 - Pulling live telemetry (voltage, current, active/reactive power) through the Kernel over HRPC — no hardware.
 
@@ -47,8 +47,8 @@ other actions, and troubleshooting.
 `index.js`:
 
 1. Starts the mock ABB meter (`backend/workers/power-meter/abb/mock/server`).
-2. Brings up an Kernel (HRPC only) pinned to its own store root (`$TMPDIR/mdk-site-abb/kernel/`).
-3. `startWorker(ABB_B23, { kernel })` and `manager.registerThing({ info, opts })`.
+2. Brings up a Kernel (HRPC only) pinned to its own store root (`$TMPDIR/mdk-site-abb/kernel/`).
+3. `startAbbWorker({ workerId, storeDir, seedDevices })`, then `kernel.registerWorker(worker.runtime.getPublicKey())`.
 4. Prints an `hp-rpc-cli` command and stays running until `Ctrl+C`, which tears down the Worker and
    Kernel (the mock exits with the process).
 
@@ -83,4 +83,3 @@ $TMPDIR/mdk-site-abb/kernel/         # Kernel Corestore
 | Path | Purpose |
 |---|---|
 | [`backend/workers/power-meter/abb`](../../../../backend/workers/power-meter/abb/README.md) | ABB `ABB_B23` (+B24/M1M20/M4M20/REU615) managers, mock server, `mdk-contract.json`. |
-| [`examples/backend/powermeters/mdk.client.powermeter.js`](../mdk.client.powermeter.js) | The minimal single-file version of this example. |

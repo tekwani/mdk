@@ -1,6 +1,17 @@
 'use strict'
 
 const { useTelemetry } = require('../lib')
+const { POWER_MULTIPLIER, ENG_LO, RAW_HI } = require('../../lib/utils/constants')
+
+// Encode a target watt reading into the raw register real_import_power_kw
+// decodes with (SatecPowerMeter._prepInstantaneousValues): the register's
+// engineering range is ±108.68 MW, so this only has ~21.7 kW of resolution —
+// fine for matching a real site's scale, coarse for a small demo fleet, but
+// still far closer than the fixed multi-MW placeholder it replaces.
+function powerToRawRegister (watts) {
+  const raw = Math.round((watts / 1000 - ENG_LO) / POWER_MULTIPLIER)
+  return Math.max(0, Math.min(RAW_HI, raw))
+}
 
 module.exports = function (ctx) {
   const { sendTelemetryRequest, sendTelemetryResponse } = useTelemetry(ctx)
@@ -74,7 +85,7 @@ module.exports = function (ctx) {
       offset: 4
     },
     276: {
-      value: 6034,
+      value: ctx.powerW != null ? powerToRawRegister(ctx.powerW) : 6034,
       signed: true,
       name: 'real_import_power_kw',
       buffer: buffer272To278,

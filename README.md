@@ -1,6 +1,6 @@
 # MDK
 
-[![Release](https://img.shields.io/github/v/release/tetherto/mdk?display_name=tag&style=flat-square)](https://github.com/tetherto/mdk/releases/tag/v0.5.0)
+[![Release](https://img.shields.io/github/v/release/tetherto/mdk?display_name=tag&style=flat-square)](https://github.com/tetherto/mdk/releases/tag/v0.6.0)
 [![CI](https://img.shields.io/github/actions/workflow/status/tetherto/mdk/ci.yml?branch=main&label=CI&style=flat-square&logo=github)](https://github.com/tetherto/mdk/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/tetherto/mdk/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/tetherto/mdk/actions/workflows/github-code-scanning/codeql)
 [![Documentation](https://img.shields.io/badge/docs-mdk.tether.io-2ea44f?style=flat-square)](https://docs.mdk.tether.io)
@@ -11,7 +11,7 @@
 
 MDK is under active development and is **not yet considered stable**. 
 
-Current release [v0.5.0](https://github.com/tetherto/mdk/releases/tag/v0.5.0). 
+Current release [v0.6.0](https://github.com/tetherto/mdk/releases/tag/v0.5.0). 
 
 ## Table of Contents
 
@@ -38,7 +38,7 @@ for operating bitcoin mining hardware, providing a modular and extensible founda
 
 The monorepo is organized into three development domains:
 
-- [core](backend/core/docs/README.md) — Kernel, Gateway, MDK SDK, MDK client, mock control service
+- [Core](backend/core/docs/README.md) — Kernel, Gateway, MCP server, MDK SDK, MDK client
 - [Workers](backend/workers/README.md) — protocol translators for data sources, e.g., miners, pools, power meters, sensors, containers
 - [UI toolkit](ui/README.md) — headless state and API contracts, React bindings, mining-domain components, and application scaffolding
 
@@ -62,7 +62,7 @@ distributed deployments](docs/concepts/deployment-topologies.md).
 
 ```
 Layer 4 — Browser UI          (Optional dashboard/app layer)
-        │  HTTP / WebSocket
+        │  HTTP (polling)
         ▼
 Layer 3 — Gateway            (Your Node.js server)
         │  HRPC (@hyperswarm/rpc)
@@ -103,7 +103,7 @@ available as a [`CHANGELOG.md`](CHANGELOG.md).
 ## Get started
 
 > [!NOTE]
-> [Try the demo](./docs/tutorials/quickstart/full-stack.md): run the full MDK stack: multiple configured Workers across a range of device families, 
+> [Try the demo](./docs/tutorials/run-a-site.md): run the full MDK stack: multiple configured Workers across a range of device families, 
 > their mock device servers, a Gateway HTTP API, and a React dashboard, all with one command
 
 MDK ships a backend SDK and an optional dashboarding layer. Find your lane:
@@ -114,27 +114,30 @@ MDK ships a backend SDK and an optional dashboarding layer. Find your lane:
 - **I'm an app developer building a React UI**: scaffold or add MDK to an existing app with the [UI toolkit and CLI](ui/README.md#getting-started)
 - **I'm an app developer building backend services or Gateway plugins**: run the [backend stack locally](examples/backend/README.md) or start with 
 the [Gateway API surfaces](docs/guides/gateway/index.md)
-- **I'm an app developer building a dashboard end to end**: follow [Build a dashboard](docs/tutorials/quickstart/build-a-dashboard.md)
+- **I'm an app developer building a dashboard end to end**: follow [Build a dashboard](docs/tutorials/build-a-dashboard.md)
 - **I'm building with AI**: how do I point an agent at MDK? Read the [agent entry points](docs/README.md#agent)
 
 ### Agents
 
-If you are an LLM being pointed at this repo? Read these three first:
+If you are an LLM being pointed at this repo, read these first:
 
+- [`packages/mdk-skill/README.md`](packages/mdk-skill/README.md): install Agent Skills so a coding agent (Cursor, Claude Code) is fluent in MDK conventions
+- [`backend/core/mcp/README.md`](backend/core/mcp/README.md): connect an agent to MDK over MCP
 - [`ui/AGENTS.md`](ui/AGENTS.md): contract overview and a quick recipe
 - [`ui/docs/AGENT_FIRST.md`](ui/docs/AGENT_FIRST.md): manifests, blueprints, registry
-- [`examples/backend/README.md`](examples/backend/README.md): runnable shapes of the backend
+- [`examples/backend/README.md`](examples/backend/README.md): catalogue of runnable example backends, each with a start command
 
 ## Build and develop
 
-The repo is federated: each domain keeps its own package manager, lock file, and install scripts, and a thin root `package.json`
-forwards commands to them. The root has no shared dependency graph, workspaces, or Turbo configuration.
+The repo root is a real npm workspace: every `backend/core/*` and `backend/workers/*` package, plus `examples/mvp-site`, is a
+workspace member, so a single `npm install` (or `npm ci`) at the root installs and links them all together. `ui/` stays a
+separate, nested npm workspace with its own `apps/*` + `packages/*` members; the root itself has no Turbo configuration.
 
 | Domain | Location | Tooling |
 | --- | --- | --- |
 | UI | [`ui/`](ui/README.md) | npm workspace (`apps/*` + `packages/*`) driven by Turbo |
-| Core (backend) | [`backend/core/`](backend/core/README.md) | independent per-process installs via `install-packages.sh` |
-| Workers (backend) | [`backend/workers/`](backend/workers/README.md) | independent per-process installs via `install-packages.sh` |
+| Core (backend) | [`backend/core/`](backend/core/README.md) | root npm workspace member, installed via `install-packages.sh` |
+| Workers (backend) | [`backend/workers/`](backend/workers/README.md) | root npm workspace member, installed via `install-packages.sh` |
 
 Run any task once from the repo root and it fans out to all three domains:
 
@@ -150,19 +153,20 @@ Each task also has per-domain variants when you only need one: `:ui`, `:core`, `
 `npm run ci` instead of `npm run setup` for clean, lockfile-faithful installs in CI, and `npm run clean` to tear down build artifacts and 
 installed dependencies.
 
-To run the supported Worker fleet with mock devices as separate PM2 or Docker
-processes, use [`examples/site-backend/`](examples/site-backend/README.md).
+To run the supported Worker fleet with mock devices as separate PM2-supervised
+processes, use [`examples/mvp-site/`](examples/mvp-site/README.md).
 
-> Note: `setup`/`ci` is the one-command installer; there is no root `install` script, so a plain `npm install` at the root installs nothing 
-> (the root has no dependencies of its own).
+> Note: `setup`/`ci` fans out per domain, but `backend/core` and `backend/workers` packages are root workspace members, so a
+> plain `npm install` (or `npm ci`) at the root installs and links them directly. `ui/` stays outside the root workspace and
+> needs its own `npm --prefix ui install`.
 
 ### Documentation
 
 Browse this repo's [documentation](docs/README.md) or the published end-user documentation [docs.mdk.tether.io](https://docs.mdk.tether.io/) which 
 consumes pages from this repo. 
 
-> Request updates to docs via [`docs-needed` issue](https://github.com/tetherto/mdk/issues/new?template=docs-needed.yml).
-> Update documentation in this repository directly via the [contribution flow](CONTRIBUTING.md).
+> - Request updates to docs via [`docs-needed` issue](https://github.com/tetherto/mdk/issues/new?template=docs-needed.yml)
+> - Update documentation in this repository directly via the [contribution flow](CONTRIBUTING.md)
 
 #### Support
 
@@ -182,4 +186,4 @@ MDK is released under [Apache License Version 2.0](LICENSE).
 
 ## Acknowledgments
 
-Built with contributions from the mining operations team.
+Built with contributions from the Mining Operations team.

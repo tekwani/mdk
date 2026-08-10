@@ -1,0 +1,43 @@
+{
+  "name": "@tetherto/mdk-plugin-full-site-mcp",
+  "version": "0.1.0",
+  "description": "Full-site example MCP tools: query and control workers/devices via the MDK protocol client over the RPC listener.",
+  "tools": [
+    {
+      "id": "get_status",
+      "handler": "./tools/get-status.js",
+      "description": "Get current status of all workers and device counts",
+      "safety": "read-only"
+    },
+    {
+      "id": "get_capabilities",
+      "handler": "./tools/get-capabilities.js",
+      "description": "Get the capabilities (command schema) for a device",
+      "safety": "read-only"
+    },
+    {
+      "id": "pull_telemetry",
+      "handler": "./tools/pull-telemetry.js",
+      "description": "Pull telemetry metrics for a device",
+      "safety": "read-only"
+    },
+    {
+      "id": "pull_state",
+      "handler": "./tools/pull-state.js",
+      "description": "Pull current state snapshot for a device",
+      "safety": "read-only"
+    },
+    {
+      "id": "get_supported_power_modes",
+      "handler": "./tools/get-supported-power-modes.js",
+      "description": "Get the supported power modes for a device",
+      "safety": "read-only"
+    },
+    {
+      "id": "send_command",
+      "handler": "./tools/send-command.js",
+      "description": "Send a command to a device (e.g. reboot, set_power_mode)",
+      "safety": "write"
+    }
+  ]
+}

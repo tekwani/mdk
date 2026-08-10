@@ -83,9 +83,41 @@ const createMinerInfoEntries = () => {
   return minerInfo
 }
 
+// Baseline rack: 120 miners, ~105.5 GH/s each. Scales to ctx.minerCount (the
+// number of things actually seeded into this container) so total_hashrate
+// stays consistent with a fleet sized by `--miners N` instead of always
+// reporting the same full-rack numbers.
+const BASELINE_MINER_NUM = 120
+const BASELINE_TOTAL_HASHRATE = 12665.544871159516
+const BASELINE_HASHRATE_PER_MINER = BASELINE_TOTAL_HASHRATE / BASELINE_MINER_NUM
+
+const minerInfoTotals = (ctx) => {
+  const minerNum = (ctx && ctx.minerCount) || BASELINE_MINER_NUM
+  return {
+    minerNum,
+    totalHashrate: minerNum * BASELINE_HASHRATE_PER_MINER
+  }
+}
+
+// Average draw of one modern air-cooled ASIC (Antminer S19XP / WhatsMiner
+// M56S land in this range). The two distribution boxes split the container's
+// total load, scaled to ctx.minerCount so power stays consistent with the
+// miners actually seeded instead of a flat placeholder that doesn't track
+// `--miners N` (mirrors minerInfoTotals's hashrate scaling above).
+const AVG_MINER_POWER_W = 3300
+
+const distributionBoxPowers = (ctx) => {
+  const minerNum = (ctx && ctx.minerCount) || BASELINE_MINER_NUM
+  const totalPowerW = minerNum * AVG_MINER_POWER_W
+  return [randomNumber(-0.02, 0.02), randomNumber(-0.02, 0.02)]
+    .map((jitter) => Math.round((totalPowerW / 2) * (1 + jitter) * 100) / 100)
+}
+
 module.exports = {
   getRandomPower,
   getRandomIP,
   createFaultFields,
-  createMinerInfoEntries
+  createMinerInfoEntries,
+  minerInfoTotals,
+  distributionBoxPowers
 }

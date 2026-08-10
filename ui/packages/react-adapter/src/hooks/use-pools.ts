@@ -25,6 +25,14 @@ export type UsePoolsResult = {
  * from `usePoolConfigsData` (`/auth/configs/pool`), which drives the editable
  * Pools list.
  *
+ * @remarks
+ * The `/auth/pools` endpoint is illustrative. MDK does not ship built-in
+ * endpoints — create your own via a
+ * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) matching
+ * your Worker/business logic. See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference.
+ *
  * @category dashboard
  */
 export const usePools = (options: UsePoolsOptions = {}): UsePoolsResult => {

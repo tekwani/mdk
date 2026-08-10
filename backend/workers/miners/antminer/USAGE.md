@@ -132,9 +132,9 @@ node examples/backend/miners/antminer/index.js
 ```
 
 It falls back to the committed `config/mdk.config.json.example` when no local `config/mdk.config.json` is present.
-This is the Antminer mirror of [`examples/backend/miners/mdk.client.miner.js`](../../../../examples/backend/miners/mdk.client.miner.js), which uses Whatsminer.
+This is the Antminer mirror of [`examples/backend/miners/whatsminer/index.js`](../../../../examples/backend/miners/whatsminer/index.js), which uses Whatsminer.
 
-These are the Antminer mirror of [`examples/backend/miners/mdk.client.miner.js`](../../../../examples/backend/miners/mdk.client.miner.js), which uses Whatsminer.
+These are the Antminer mirror of [`examples/backend/miners/whatsminer/index.js`](../../../../examples/backend/miners/whatsminer/index.js), which uses Whatsminer.
 
 ## Capabilities
 

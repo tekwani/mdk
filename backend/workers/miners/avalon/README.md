@@ -74,7 +74,6 @@ Avalon uses the native CGMiner TCP API on port 4028 (unauthenticated) and suppor
 | `saveComment` | `text` | Add annotation |
 | `editComment` | `commentId, text` | Edit annotation |
 | `deleteComment` | `commentId` | Delete annotation |
-| `rackReboot` | — | Restart Worker process |
 
 ## Health
 

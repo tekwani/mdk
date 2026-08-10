@@ -3,7 +3,7 @@ import {
   SITE_OVERVIEW_STATUSES,
 } from '@tetherto/mdk-react-devkit/domain'
 import type { JSX } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { DemoBlock } from '../../../components/demo-block'
 import { useDemoToast } from '../../../utils/use-demo-toast'
 

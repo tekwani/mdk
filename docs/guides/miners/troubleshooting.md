@@ -6,11 +6,11 @@ docs@tether_slug: guides/miners/troubleshooting
 
 ## Overview
 
-This page covers the mock/development examples used by the Antminer, Whatsminer, and Avalon miner guides. The examples start a bundled mock miner, start an Kernel, register one device, print the identifiers you need, and keep running until you stop them.
+This page covers the mock/development examples used by the Antminer, Whatsminer, and Avalon miner guides. The examples start a bundled mock miner, start a Kernel, register one device, print the identifiers you need, and keep running until you stop them.
 
 ## Expected output
 
-A working example prints an Kernel key and a registered device ID:
+A working example prints a Kernel key and a registered device ID:
 
 ```text
 Kernel HRPC key: <hex key>
@@ -43,7 +43,8 @@ The cross-worker manifest also records the expected mock type and default port f
 Real devices use their native APIs:
 
 - Antminer: HTTP, usually port `80`, with digest-auth credentials.
-- Whatsminer: encrypted TCP, usually port `14028`, with the API password.
+- Whatsminer: encrypted TCP, port `4028` for API v2 (the default) or `4433` for API v3 (auto-detected from the
+  port), with the API password.
 - Avalon: CGMiner TCP API, usually port `4028`, with no username or password.
 
 Before registering a real miner, confirm the miner is reachable from the machine or container running the Worker.

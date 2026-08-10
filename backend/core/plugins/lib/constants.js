@@ -105,9 +105,6 @@ const ENDPOINTS = {
   WORKER_CONFIG: '/auth/worker-config',
   THING_CONFIG: '/auth/thing-config',
 
-  // WebSocket endpoint
-  WEBSOCKET: '/ws',
-
   // Finance endpoints
   FINANCE_ENERGY_BALANCE: '/auth/finance/energy-balance',
   FINANCE_EBITDA: '/auth/finance/ebitda',

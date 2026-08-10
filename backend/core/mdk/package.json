@@ -1,6 +1,6 @@
 {
-  "name": "@tetherto/mdk",
-  "version": "0.5.0",
+  "name": "@tetherto/mdk-core",
+  "version": "0.6.0",
   "description": "MDK bootstrap utilities and worker-infra services — kernel/gateway lifecycle plus injectable log/comment/alert/stats/settings/provisioning services for runtime-hosted workers",
   "main": "index.js",
   "keywords": [
@@ -37,5 +37,8 @@
     "brittle": "3.18.0",
     "hyperdht": "^6.32.0",
     "standard": "17.1.0"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }

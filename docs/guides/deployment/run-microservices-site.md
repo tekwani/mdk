@@ -1,6 +1,6 @@
 ---
 title: Run a microservices site
-description: Start an MDK site as supervised Gateway and Worker services with PM2 or Docker.
+description: Start an MDK site as Kernel, Gateway, and Worker processes supervised by the example's own process manager
 docs@tether_slug: guides/deployment/run-microservices-site
 notes: in mdk detailed operational changes are kept in package docs to prevent drift from the runnable source
 ---
@@ -23,16 +23,11 @@ Use the **microservices** site example when you want the Gateway and Workers to 
 
 ## Run the example
 
-> [!NOTE]
-> The `examples/backend/site/` example starts only the Gateway and Worker processes — Kernel must run
-> separately. For a self-contained example that starts every service including Kernel, use
-> [`examples/site-backend/`][site-backend-example] instead.
-
-Follow the [microservices site example][microservices-example]:
+Follow the [microservices site example][microservices-example], whose [interactive CLI][microservices-example-cli] starts Kernel, Gateway, and 
+each Worker as its own OS process, with per-process logs and status:
 
 - Start with the [prerequisites][microservices-example-prerequisites]
-- Use the [PM2 steps][microservices-example-pm2] for local process supervision on one host
-- Use the [Docker steps][microservices-example-docker] when you want containerized services or Compose-managed startup
+- Bring up every component as a separate process with the [`cli.js` process manager][microservices-example-cli]
 
 ## Next steps
 
@@ -51,17 +46,11 @@ Follow the [microservices site example][microservices-example]:
 [miner-how-to]: ../miners/index.md
 <!-- docs@tether.io: miner-how-to → guides/miners -->
 
-[microservices-example]: ../../../examples/backend/site/README.md
-<!-- docs@tether.io: microservices-example → https://github.com/tetherto/mdk/tree/main/examples/backend/site -->
+[microservices-example]: ../../../examples/full-site/README.md
+<!-- docs@tether.io: microservices-example → https://github.com/tetherto/mdk/tree/main/examples/full-site -->
 
-[microservices-example-prerequisites]: ../../../examples/backend/site/README.md#prerequisites
-<!-- docs@tether.io: microservices-example-prerequisites → https://github.com/tetherto/mdk/tree/main/examples/backend/site#prerequisites -->
+[microservices-example-prerequisites]: ../../../examples/full-site/README.md#prerequisites
+<!-- docs@tether.io: microservices-example-prerequisites → https://github.com/tetherto/mdk/tree/main/examples/full-site#prerequisites -->
 
-[microservices-example-pm2]: ../../../examples/backend/site/README.md#pm2
-<!-- docs@tether.io: microservices-example-pm2 → https://github.com/tetherto/mdk/tree/main/examples/backend/site#pm2 -->
-
-[microservices-example-docker]: ../../../examples/backend/site/README.md#docker
-<!-- docs@tether.io: microservices-example-docker → https://github.com/tetherto/mdk/tree/main/examples/backend/site#docker -->
-
-[site-backend-example]: ../../../examples/site-backend/README.md
-<!-- docs@tether.io: site-backend-example → https://github.com/tetherto/mdk/tree/main/examples/site-backend -->
+[microservices-example-cli]: ../../../examples/full-site/README.md#interactive-cli--process-manager-node-clijs
+<!-- docs@tether.io: microservices-example-cli → https://github.com/tetherto/mdk/tree/main/examples/full-site#interactive-cli--process-manager-node-clijs -->

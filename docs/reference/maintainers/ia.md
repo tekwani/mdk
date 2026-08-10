@@ -42,7 +42,7 @@ ui/<pkg>/src/.../<component>/
 | Location | Owns |
 |----------|------|
 | [`docs/`](../../README.md) | Role-based router ([`README.md`](../../README.md)) and end-user-facing SoT content (`concepts/`) |
-| [`docs/reference/maintainers/`](README.md) | Docs maintainer plumbing: this file, [`agent-ready-sdk.md`](agent-ready-sdk.md), [`tag-vocab.yaml`](tag-vocab.yaml), [`port-signals.md`](port-signals.md), [`worker-runtime-legacy-services.md`](worker-runtime-legacy-services.md), and the hand-maintained [`integrations/`](integrations/index.md) catalogue (lives here, not at `docs/integrations/`, until [`check:integrations-fresh`](#checkintegrations-fresh) keeps it honest) |
+| [`docs/reference/maintainers/`](README.md) | Docs maintainer plumbing: this file, [`agent-ready-sdk.md`](agent-ready-sdk.md), [`tag-vocab.yaml`](tag-vocab.yaml), [`single-source-of-truth.md`](single-source-of-truth.md), [`worker-runtime-legacy-services.md`](worker-runtime-legacy-services.md), and the hand-maintained [`integrations/`](integrations/index.md) catalogue (lives here, not at `docs/integrations/`, until [`check:integrations-fresh`](#checkintegrations-fresh) keeps it honest) |
 | [`backend/core/docs/`](../../../backend/core/docs/README.md) | Core workspace conventions (`mdk`, `client`, `kernel`, `gateway`, …) |
 | [`ui/`](../../../ui/README.md) | UI workspace conventions for react-devkit, adapter, ui-foundation, cli |
 | [`backend/workers/docs/`](../../../backend/workers/docs/architecture.md) | Workers workspace conventions (Worker lifecycle, install pattern, taxonomy) |
@@ -137,7 +137,7 @@ missing tags during integration audits and request the JSDoc be added.
 ### `check:port-signals`
 
 Lints `docs/**/*.md` and warns when a non-anchor reference-style link definition has no adjacent `<!-- docs@tether.io: … -->` (or `<!-- mdk-monorepo: … -->`) 
-HTML comment per the vocabulary in [`port-signals.md`](port-signals.md). Catches missing routing hints in mdk-prv pre-commit / CI before they reach the 
+HTML comment per the vocabulary in [`single-source-of-truth.md`](single-source-of-truth.md). Catches missing routing hints in mdk-prv pre-commit / CI before they reach the 
 downstream port-sync transforms. Soft warning, not a hard gate — adding a new slug should never block on the docs pipeline being ready.
 
 **Why it matters:** every cross-reference in the user-facing pages needs a port-time disposition (rewrite to upstream, preserve URL, drop on port, 
@@ -213,9 +213,9 @@ remains documented by example and the loader is the authoritative validator.
 ### `check:tutorial-commands-fresh`
 
 Drift detector for hardwired command lists in tutorial prose. Specifically, the full command reference in 
-[`docs/tutorials/get-started/cli.md`](../../tutorials/get-started/cli.md) is a verbatim copy of the `help` block in 
-[`examples/backend/mdk-e2e/client.js`](../../../examples/backend/mdk-e2e/client.js) (lines 132–153). A CI script that 
-runs `echo -e 'help\nquit' | node examples/backend/mdk-e2e/client.js` and diffs the output against the hardwired block in the 
+[`docs/tutorials/run-a-site.md`](../../tutorials/run-a-site.md) carries a curated subset of the `HELP` block in 
+[`examples/full-site/cli/commands/index.js`](../../../examples/full-site/cli/commands/index.js) (lines 18–32). A CI script that 
+runs `echo -e 'help\nexit' | node examples/full-site/cli.js` and diffs the output against the hardwired block in the 
 tutorial would catch drift whenever a command is added, removed, or renamed.
 
 **Why it matters:** the command list is collapsed inside a `<details>` block and easy to miss during review. A new command 

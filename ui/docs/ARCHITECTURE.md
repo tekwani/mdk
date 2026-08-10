@@ -210,7 +210,8 @@ actionsStore.getState().setAddPendingSubmissionAction({ action: "noop" });
   `useVoteOnAction`, `useCancelAction`, `usePendingActions`,
   `useLiveActions` — connect UI to the Gateway `/auth/actions*`
   voting/approval pipeline; `toVotingPayload` (in `action-write-utils.ts`)
-  carries `tags` / `crossThing` through while stripping client-only fields
+  derives targeting solely from `query` (built from `tags`), stripping
+  `tags` / `crossThing` and every other client-only field
 - Op Centre read hooks (`@category op-centre`): `useExplorerList`,
   `useThingDetail`, `useRackLayout`, `useCabinetGroups`, `useSite`,
   `useFeatureFlags`, `usePduLayout`, `useContainerSettings`,

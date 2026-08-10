@@ -2,7 +2,9 @@
 
 Telemetry aggregation library. Provides a set of composable statistical operations that device Workers use to compute time-bucketed metrics (hashrate averages, power totals, group counts, etc.).
 
-This is an internal package used by `ThingManager` in `backend/workers/base/`. It is not published separately.
+This is an internal package used by `@tetherto/mdk-core`'s `StatsService`
+([`lib/services/stats.service.js`](../mdk/lib/services/stats.service.js)) and by each Worker plugin's `lib/templates/stats.js`, for example
+[the Antminer plugin's](../../workers/miners/antminer/lib/templates/stats.js). It is not published separately.
 
 ## Usage
 

@@ -128,8 +128,8 @@ If the example does not print both values, or if its mock port is already in use
 [install-pattern]: ../../../backend/workers/docs/install-pattern.md
 <!-- docs@tether.io: install-pattern → https://github.com/tetherto/mdk/blob/main/backend/workers/docs/install-pattern.md -->
 
-[get-started]: ../../tutorials/get-started/index.md
-<!-- docs@tether.io: get-started → tutorials/backend-stack -->
+[get-started]: ../../tutorials/run-a-site.md
+<!-- docs@tether.io: get-started → tutorials/run-a-site -->
 
 [deployment-topologies]: ../../concepts/deployment-topologies.md
 <!-- docs@tether.io: deployment-topologies → concepts/deployment-topologies -->

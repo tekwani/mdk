@@ -1,0 +1,34 @@
+{
+  "$comment": "Source -> dist/skills/ artifact mapping, applied in order by assemble.mjs (later entries layer onto earlier copies). Skills are flat siblings — clients discover <skills-dir>/<name>/SKILL.md one level deep. Regenerate with `node packages/mdk-skill/src/assemble.mjs`; never hand-edit dist/.",
+  "entries": [
+    {
+      "source": "packages/mdk-skill/src/skills",
+      "dest": ".",
+      "note": "Hand-authored suite content: router, mdk-device-worker, three stub skills."
+    },
+    {
+      "source": "packages/mdk-skill/src/mdk-contract.schema.json",
+      "dest": "mdk/references/mdk-contract.schema.json",
+      "note": "Schema owned here — derived from backend/core/mdk-worker/mdk-contract.schema.json; deltas documented in its $comment."
+    },
+    {
+      "source": "packages/mdk-skill/src/mdk-contract.schema.json",
+      "dest": "mdk-device-worker/references/mdk-contract.schema.json",
+      "note": "Second copy so the device-worker skill is self-contained when installed alone; same source, cannot drift apart."
+    },
+    {
+      "source": "backend/workers/samples/demo-worker",
+      "dest": "mdk-device-worker/assets/worker-template",
+      "exclude": [
+        "node_modules",
+        "package-lock.json"
+      ],
+      "note": "Verbatim copy of the shipped sample so the template cannot drift."
+    },
+    {
+      "source": "packages/mdk-skill/src/worker-template-extras/smoke.config.js",
+      "dest": "mdk-device-worker/assets/worker-template/smoke.config.js",
+      "note": "Smoke-harness glue layered onto the template copy."
+    }
+  ]
+}

@@ -50,7 +50,7 @@ graph TB
         Devices["<b>Physical devices</b><br/>• Miners<br/>• Containers<br/>• Sensors"]
     end
 
-    UI -->|"HTTP / WebSocket"| WebApp
+    UI -->|"HTTP (polling)"| WebApp
     AI -->|"MCP Protocol"| MCPServer
     WebApp -->|"MDK Protocol via @tetherto/mdk-client / HRPC"| Kernel
     MCPServer -->|"MDK Protocol via @tetherto/mdk-client / HRPC"| Kernel
@@ -163,29 +163,37 @@ It is the essential glue between the kernel and any consumer layer developers ch
 The same transport serves remote server-to-server production and same-host development alike — for the local zero-config case,
 the kernel publishes its key to a well-known key file that clients read at startup.
 - **Major language support**: `@tetherto/mdk-client` is intended to support all major languages (Node.js, Python, Go, and others), allowing
-developers to dispatch commands, subscribe to live streams, or pull status snapshots from any stack.
+developers to dispatch commands or pull status snapshots from any stack.
 
 ## Gateway
 
-The [Gateway][gateway-package] wraps `@tetherto/mdk-client` — the MDK protocol connector to Kernel — to add an authenticated
-HTTP, WebSocket, and MCP interface on top. Consumers that need those capabilities connect through the Gateway.
+The [Gateway][gateway-package] wraps `@tetherto/mdk-client` — the MDK protocol connector to Kernel — to add an
+HTTP interface on top. Consumers that need those capabilities connect through the Gateway. Agents can reach MDK over MCP through
+the standalone [`@tetherto/mdk-mcp`][mcp-readme] package.
 
-The supported development path is the [MDK App Toolkit][app-toolkit], which ships backend middleware (JWT auth, RBAC, and command
-proxying), frontend tools, and an `mdk-plugin.json`-based plugin system for declarative HTTP route extensions
-([plugin guide][gateway-plugins]).
+The supported development path is the [MDK App Toolkit][app-toolkit], which ships backend middleware (command proxying and
+request-level caching), frontend tools, and an `mdk-plugin.json`-based plugin system for declarative HTTP route extensions
+([plugin guide][gateway-plugins]). Authenticating callers is not part of that middleware: it is work each plugin controller does,
+using an identity layer you supply.
 
 For the full developer model — extension patterns, data access, auth design, and Kernel connection — read the [Gateway concept page][gateway-concept].
 
 ## AI agents and the MCP server
 
-The supported application path connects AI agents through an **MCP endpoint** on the Gateway. This keeps agents inside the same
-security envelope as other consumers: they are authenticated clients subject to the same JWT validation, rate limits, and RBAC
-as a human user. This is intentional because Kernel does not perform user-level [authentication][authentication-section].
+The supported application path connects AI agents through an **MCP endpoint** on the Gateway. Agents sit in the same security
+envelope as every other consumer, because the Gateway does not distinguish them from a human caller: whatever checks a controller
+performs apply equally to both, and a route with no checks is open to both. Establishing that envelope is your work, since Kernel
+performs no user-level [authentication][authentication-section] and neither does the Gateway.
 
 What makes the integration distinctive is **[runtime tool derivation][agent-ready-contract]**. The tools exposed to an agent (for example,
 `get_device_telemetry` or `reboot_device`) are not hardcoded; they are parsed at runtime from each registered Worker's
 [`mdk-contract.json`][capability-contract-section]. When a new device type joins the network, the agent gains
 the ability to query and control it without any change to the Gateway.
+
+> [!WARNING]
+> The MCP server's only built-in protection is its bind address: it listens on `127.0.0.1` and answers `POST /mcp`. Anything that can reach that
+> port can drive the fleet, so an agent's tool calls carry whatever authority the loopback interface grants. Exposing the port beyond localhost
+> means putting your own authentication in front of it.
 
 ## End-to-end data flows
 
@@ -207,15 +215,15 @@ sequenceDiagram
     User->>AI: "Keep the fleet healthy."
 
     Note over AI,Kernel: Step 1: Fleet discovery (read)
-    AI->>Node: Call MCP tool get_fleet_alerts (token auth)
-    Node->>Node: Validate agent token and RBAC
+    AI->>Node: Call MCP tool get_fleet_alerts
+    Node->>Node: Your validation, if the tool handler implements any
     Node->>Kernel: HRPC query (via @tetherto/mdk-client)
     Kernel-->>Node: Metrics
     Node-->>AI: Tool result (wm002 is overheating)
 
     Note over AI,Kernel: Step 2: Execution (write)
     AI->>Node: Call MCP tool reboot_device (deviceId wm002)
-    Node->>Node: Validate token and device:write RBAC
+    Node->>Node: Your validation, if the tool handler implements any
     Node->>Kernel: dispatch generic protocol message
     Kernel->>Kernel: Resolve deviceId
     Kernel->>Worker: command.request (HRPC)
@@ -350,7 +358,7 @@ the responses before returning them to the UI or Agent.
 ## Next steps
 
 - Understand the [Kernel][kernel-concept] — what it owns, the pull-only model, and transports
-- Understand the [Gateway][gateway-concept] — authentication, RBAC, plugins, and Kernel connection
+- Understand the [Gateway][gateway-concept] — auth design, plugins, and Kernel connection
 - Understand [Workers][workers-concept] — discovery model, capability contract, and adding hardware
 - Understand the [control plane][control-plane] — how Gateway, Kernel, and Workers communicate and which layer owns each responsibility
 - Choose a [deployment topology][deployment-topologies] — single-process, local, or distributed
@@ -403,6 +411,9 @@ the responses before returning them to the UI or Agent.
 
 [gateway-plugins]: ../guides/gateway/plugins.md
 <!-- docs@tether.io: gateway-plugins → guides/gateway/plugins -->
+
+[mcp-readme]: ../../backend/core/mcp/README.md
+<!-- docs@tether.io: mcp-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->
 
 [control-plane]: control-plane.md
 <!-- docs@tether.io: control-plane → concepts/control-plane -->

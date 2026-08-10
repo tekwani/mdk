@@ -18,7 +18,7 @@ user to wherever they were redirected from.
 ## Example
 
 ```tsx
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router'
 import { RequireAuth, consumeLastVisitedPath } from '@tetherto/mdk-react-devkit'
 
 const Router = () => (

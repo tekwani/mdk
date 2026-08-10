@@ -268,7 +268,7 @@ test('buildFastifyRoutes - no onRequest when auth is false', (t) => {
   t.pass()
 })
 
-test('buildFastifyRoutes - has onRequest when auth is true', (t) => {
+test('buildFastifyRoutes - no onRequest even when auth is true (auth flags are ignored)', (t) => {
   const dir = path.join(FIXTURES_DIR, 'with-auth')
   writeFixture(dir, {
     'mdk-plugin.json': {
@@ -280,10 +280,10 @@ test('buildFastifyRoutes - has onRequest when auth is true', (t) => {
   })
 
   const plugin = loadPlugin(dir)
-  const mockCtx = { noAuth: true, conf: {}, lru_30s: { get: () => undefined, set: () => {} }, queuedRequests: new Map() }
+  const mockCtx = { conf: {}, lru_30s: { get: () => undefined, set: () => {} }, queuedRequests: new Map() }
   const routes = buildFastifyRoutes(plugin, mockCtx)
 
-  t.is(typeof routes[0].onRequest, 'function', 'should have onRequest when auth is true')
+  t.absent(routes[0].onRequest, 'adapter never attaches onRequest')
   t.pass()
 })
 

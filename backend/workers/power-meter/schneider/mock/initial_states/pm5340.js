@@ -3,11 +3,20 @@
 
 const { getRandomPower } = require('../lib')
 
-module.exports = function () {
+// PM5340PowerMeter reads active_power_total_w as a kW float (×1000 for W) —
+// when the site threads a target watt reading in, split it evenly across the
+// 3 phases so the total scales with the actual fleet instead of always
+// reporting a fixed multi-MW industrial-site placeholder.
+function phasePowerKw (ctx) {
+  if (ctx && ctx.powerW != null) return ctx.powerW / 1000 / 3
+  return getRandomPower()
+}
+
+module.exports = function (ctx = {}) {
   const active_power = {
-    active_power_a_w: getRandomPower(),
-    active_power_b_w: getRandomPower(),
-    active_power_c_w: getRandomPower()
+    active_power_a_w: phasePowerKw(ctx),
+    active_power_b_w: phasePowerKw(ctx),
+    active_power_c_w: phasePowerKw(ctx)
   }
 
   active_power.active_power_total_w = active_power.active_power_a_w + active_power.active_power_b_w + active_power.active_power_c_w
@@ -82,9 +91,9 @@ module.exports = function () {
   const getInitialState = () => {
     // Dynamically update active_power
     const active_power = {
-      active_power_a_w: getRandomPower(),
-      active_power_b_w: getRandomPower(),
-      active_power_c_w: getRandomPower()
+      active_power_a_w: phasePowerKw(ctx),
+      active_power_b_w: phasePowerKw(ctx),
+      active_power_c_w: phasePowerKw(ctx)
     }
     active_power.active_power_total_w = active_power.active_power_a_w + active_power.active_power_b_w + active_power.active_power_c_w
 

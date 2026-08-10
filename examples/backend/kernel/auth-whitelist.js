@@ -23,10 +23,10 @@
 
 const path = require('path')
 const os = require('os')
-const DHT = require('../../../backend/core/kernel/node_modules/hyperdht')
-const { getKernel, waitForDiscovery } = require('../../../backend/core/mdk')
-const { startWhatsminerWorker } = require('../../../backend/workers/miners/whatsminer')
-const wmMock = require('../../../backend/workers/miners/whatsminer/mock/server')
+const DHT = require('hyperdht')
+const { getKernel, waitForDiscovery } = require('@tetherto/mdk-core')
+const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
+const wmMock = require('@tetherto/mdk-worker-whatsminer/mock/server')
 
 const MOCK_PORT = 14032
 

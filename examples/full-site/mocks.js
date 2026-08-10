@@ -40,6 +40,11 @@ const PORTS = {
 
 const HOST = '127.0.0.1'
 
+// Typical draw of one modern hydro/immersion ASIC (Whatsminer M56S / Antminer
+// S19XP / Avalon A1346 all land in this range) — used to size the site
+// powermeter mocks off the actual fleet instead of a fixed placeholder.
+const AVG_MINER_POWER_W = 3400
+
 function _close (handle) {
   if (!handle) return
   const fn = handle.exit || handle.stop || handle.close
@@ -85,12 +90,23 @@ function startMocks ({ minerCount }) {
   }
   debug('started %d avalon mocks on %d..%d', minerCount, PORTS.AVALON_BASE, PORTS.AVALON_BASE + minerCount - 1)
 
-  handles.push(antspaceMock.createServer({ host: HOST, port: PORTS.ANTSPACE, type: 'hk3' }))
-  handles.push(abbMock.createServer({ host: HOST, port: PORTS.POWERMETER, type: 'b23' }))
-  handles.push(satecMock.createServer({ host: HOST, port: PORTS.SATEC_POWERMETER, type: 'pm180' }))
-  handles.push(schneiderMock.createServer({ host: HOST, port: PORTS.SCHNEIDER_POWERMETER, type: 'pm5340' }))
-  handles.push(oceanMock.createServer({ host: HOST, port: PORTS.POOL }))
-  handles.push(f2poolMock.createServer({ host: HOST, port: PORTS.F2POOL, usernames: 'sample-f2pool-account' }))
+  // Antspace racks the whatsminer + antminer families (see site.js); the pools
+  // see the whole site (all 3 miner families) — sizing both off minerCount
+  // keeps the container/pool mock numbers proportional to the actual fleet
+  // instead of always reporting a fixed full-rack/full-site demo size.
+  const antspaceMinerCount = minerCount * 2
+  const siteMinerCount = minerCount * 3
+  // overview.js sums every powermeter tagged pos:'site' (all 3, see site.js),
+  // so split one realistic site total evenly across them rather than letting
+  // each report its own independent (and far larger) placeholder demo scale.
+  const sitePowerW = siteMinerCount * AVG_MINER_POWER_W
+  const perMeterPowerW = sitePowerW / 3
+  handles.push(antspaceMock.createServer({ host: HOST, port: PORTS.ANTSPACE, type: 'hk3', minerCount: antspaceMinerCount }))
+  handles.push(abbMock.createServer({ host: HOST, port: PORTS.POWERMETER, type: 'b23', powerW: perMeterPowerW }))
+  handles.push(satecMock.createServer({ host: HOST, port: PORTS.SATEC_POWERMETER, type: 'pm180', powerW: perMeterPowerW }))
+  handles.push(schneiderMock.createServer({ host: HOST, port: PORTS.SCHNEIDER_POWERMETER, type: 'pm5340', powerW: perMeterPowerW }))
+  handles.push(oceanMock.createServer({ host: HOST, port: PORTS.POOL, workerCount: siteMinerCount }))
+  handles.push(f2poolMock.createServer({ host: HOST, port: PORTS.F2POOL, usernames: 'sample-f2pool-account', workerCount: siteMinerCount }))
   for (let i = 0; i < 2; i++) {
     handles.push(senecaMock.createServer({ host: HOST, port: PORTS.SENSOR_BASE + i, type: 'seneca' }))
   }

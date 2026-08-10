@@ -1,7 +1,7 @@
 'use strict'
 
 const { cleanup } = require('./stateUtils')
-const { getRandomPower, createFaultFields, createMinerInfoEntries } = require('./utils')
+const { getRandomPower, createFaultFields, createMinerInfoEntries, minerInfoTotals } = require('./utils')
 
 module.exports = function (ctx) {
   const faultFieldNames = [
@@ -26,6 +26,8 @@ module.exports = function (ctx) {
     'lever_high',
     'lever_low'
   ]
+
+  const { minerNum, totalHashrate } = minerInfoTotals(ctx)
 
   const state = {
     protocol_version: 5,
@@ -83,8 +85,8 @@ module.exports = function (ctx) {
     open2: 0,
     power_distribution: 7.6733,
     minerInfo: {
-      miner_num: 120,
-      total_hashrate: 12665.544871159516,
+      miner_num: minerNum,
+      total_hashrate: totalHashrate,
       pcb_max_temp: 98,
       chip_max_temp: 98,
       chip_temp_mean: 0,

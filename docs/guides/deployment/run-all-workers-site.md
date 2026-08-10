@@ -29,10 +29,8 @@ This example runs a microservices topology. Use this when:
 Follow the [site example][site-backend-example]:
 
 - Start with the [prerequisites][site-backend-prerequisites]
-- Choose your launch method:
-    - Use [PM2][site-backend-pm2] for local process supervision on one host
-    - Use [Docker][site-backend-docker] when you want containerized services or Compose-managed startup
-- [Verify][site-backend-verify] the fleet is up with a single `curl`
+- Use [PM2][site-backend-pm2] for local process supervision on one host
+- [Verify][site-backend-verify] the fleet is up
 
 ## Next steps
 
@@ -53,20 +51,17 @@ Follow the [site example][site-backend-example]:
 [plugins]: ../gateway/plugins.md
 <!-- docs@tether.io: plugins → guides/gateway/plugins -->
 
-[site-backend-example]: ../../../examples/site-backend/README.md
-<!-- docs@tether.io: site-backend-example → https://github.com/tetherto/mdk/tree/main/examples/site-backend -->
+[site-backend-example]: ../../../examples/mvp-site/README.md
+<!-- docs@tether.io: site-backend-example → https://github.com/tetherto/mdk/tree/main/examples/mvp-site -->
 
-[site-backend-prerequisites]: ../../../examples/site-backend/README.md#prerequisites
-<!-- docs@tether.io: site-backend-prerequisites → https://github.com/tetherto/mdk/tree/main/examples/site-backend#prerequisites -->
+[site-backend-prerequisites]: ../../../examples/mvp-site/README.md#prerequisites
+<!-- docs@tether.io: site-backend-prerequisites → https://github.com/tetherto/mdk/tree/main/examples/mvp-site#prerequisites -->
 
-[site-backend-pm2]: ../../../examples/site-backend/README.md#run-with-pm2-one-host-multiple-processes
-<!-- docs@tether.io: site-backend-pm2 → https://github.com/tetherto/mdk/tree/main/examples/site-backend#run-with-pm2-one-host-multiple-processes -->
+[site-backend-pm2]: ../../../examples/mvp-site/README.md#run
+<!-- docs@tether.io: site-backend-pm2 → https://github.com/tetherto/mdk/tree/main/examples/mvp-site#run -->
 
-[site-backend-docker]: ../../../examples/site-backend/README.md#run-with-docker-one-container-per-process
-<!-- docs@tether.io: site-backend-docker → https://github.com/tetherto/mdk/tree/main/examples/site-backend#run-with-docker-one-container-per-process -->
-
-[site-backend-verify]: ../../../examples/site-backend/README.md#verify
-<!-- docs@tether.io: site-backend-verify → https://github.com/tetherto/mdk/tree/main/examples/site-backend#verify -->
+[site-backend-verify]: ../../../examples/mvp-site/README.md#run
+<!-- docs@tether.io: site-backend-verify → https://github.com/tetherto/mdk/tree/main/examples/mvp-site#run -->
 
 [mdk-functions]: ../../../backend/core/mdk/README.md
 <!-- docs@tether.io: mdk-functions → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/README.md -->
@@ -81,3 +76,4 @@ Follow the [site example][site-backend-example]:
 <!-- docs@tether.io: gateway-concept → concepts/stack/gateway -->
 
 [build-a-worker]: ../workers/build-a-worker.md
+<!-- docs@tether.io: build-a-worker → guides/workers/build-a-worker -->

@@ -10,7 +10,7 @@ import { patchNavIcon, unpatchNavIcon } from './nav.js'
 const PAGE: ManagedPage = {
   name: 'PoolManager',
   templateId: 'mdk-ui-shell',
-  templatePagePath: 'src/pages/PoolManager.tsx',
+  templatePagePath: '_managed/pages/PoolManager.tsx',
   routeEntry: "{ path: '/pool-manager', label: 'Pool Manager', page: () => import('./pages/PoolManager') },",
   routePath: '/pool-manager',
   navIcon: 'PoolManagerNavIcon',

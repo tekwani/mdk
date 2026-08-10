@@ -1,0 +1,202 @@
+# Container Detail — remaining tab tasks (Asana-ready)
+
+Follow-on to the container-detail **basement** (shell + routing + back-nav). These
+are the tab bodies that mount into the `ContainerDetail` shell, written so a
+junior dev can pick one up cold. Companion: `operational-centre-sprint.md` /
+`operational-centre-pages.md`.
+
+---
+
+## Definition of Done — applies to EVERY task below
+
+**Main goal:** the tab works in the **generated shell app** against **real
+MiningOS backend data** — not mocks, not hardcoded values.
+
+**Two required side-effects — the task isn't done without them:**
+
+1. **Catalog demo** — the components are demoable in isolation in `apps/catalog`
+   (seeded **synthetic** data, `DemoPageHeader` + `DemoBlock`). No real
+   site/device names or emails — run the `mdk-security-check` skill before any PR.
+2. **Clean layered extraction — zero tech debt lands in MDK.** Each piece goes in
+   its correct package:
+   - **`ui-foundation`** — anything touching the API/raw data: query + param
+     builders, tag strings (`t-*`), field lists, types, pure helpers. **No React.**
+   - **`react-adapter`** — the hook that fetches **and shapes** data into
+     ready-to-render props (units, formatting, latest-sample). All
+     `useQuery`/`useMutation` live here.
+   - **`react-devkit`** — **presentational** components only: shaped props in,
+     markup out. **No `fetch`/`useQuery`, no unit math, no `t-*` strings, no
+     model-name `if`s in JSX.**
+   - **shell page** — thin glue: call the hook, pass output to the component,
+     mount into the `ContainerDetail` tab slot.
+
+**Refactoring rule:** you're porting from MOS (Ant Design + Redux +
+styled-components). **Translate, don't copy:** antd table → TanStack Table, Redux
+→ Zustand stores + TanStack hooks, styled-components → SCSS/BEM, Formik/Yup →
+React Hook Form + Zod. If you're pasting MOS logic into a component, stop — it
+belongs in a hook or `ui-foundation`. Can't fix a violation in scope? File a
+`techdebt` issue instead of shipping it.
+
+**Every task ships:** foundation unit tests + hook tests + component tests;
+`typecheck`/`lint`/`test` green; `check:agent-ready` clean for new devkit exports.
+
+**Reuse — the data layer is already built** (verified in-code): `useThingDetail`,
+`useContainerSnapshots`, `usePduLayout`, `usePduViewer`, `useDeviceAction`,
+`useVoteOnAction`, `useCancelAction`, `useThingComment`, `useDeviceAlarms`, the
+tab matrix (`getSupportedContainerTabs`), and building blocks (Settings ×4
+models, Charts, Heatmap primitive, socket cell, the `react-selecto` grid in
+pool-manager). Most tasks are **assembly + wiring + demo + refactor**, not new
+plumbing — check what exists first.
+
+---
+
+## M1 — Home tab
+
+- **Sees:** container summary — status/content box, controls box, stats group card
+  (temp/power/hashrate), and a table of connected miners.
+- **Port from:** the reference app's `src/Views/Container/Tabs/HomeTab/HomeTab.tsx`
+  (later tabs abbreviate this path as `.../Tabs/…`).
+- **Reuse:** `useThingDetail` + `useContainerSnapshots`; connected miners via the
+  existing list-things-by-container query.
+- **Lands:** any missing miners query → foundation; `useContainerHome(id)`
+  returning `{statusRows, controls, statsCard, connectedMiners}` → adapter;
+  presentational `HomeTab` (from existing content-box/stats-card/table) → devkit.
+- **Done:** real Bitdeer Home tab shows live status + real connected miners;
+  catalog demo seeded.
+
+## M2 — PDU Layout tab *(biggest — split read vs write)*
+
+- **Sees:** socket grid colour-coded by state; rubber-band **multi-select**;
+  socket + heatmap legends; zoom/pan; add/replace miner + change position via
+  **voting**.
+- **Port from:** `.../Tabs/PduTab/PduTab.tsx`.
+- **Reuse:** `usePduLayout` + `usePduViewer` done; socket cell + `react-selecto`
+  grid exist in pool-manager — **extract/generalise, don't rebuild**; writes via
+  `useDeviceAction`/`useVoteOnAction`/`useCancelAction`.
+- **Lands:** selection state → a slice in the Zustand `devicesStore` (not local
+  state other cards must read); grid/legends/dialogs presentational in devkit.
+- **Split:** M2a (commit) grid+legends+multi-select+zoom/pan read-only · M2b
+  (at-risk) add/replace dialog via voting · M2c (at-risk) position-change via
+  voting.
+- **Done:** real sockets render + select; each write creates a pending voting
+  action you can approve/cancel; catalog demo seeded.
+
+## M3 — Power Adjustment tab *(from scratch — no building block)*
+
+- **Sees:** power/limit controls for **Whatsminer** containers, applied via voting.
+- **Port from:** `.../Tabs/PowerAdjustmentTab/PowerAdjustmentTab.tsx` — **strip the
+  group-site branch (banned in MDK).**
+- **Reuse:** `useDeviceAction`/`useVoteOnAction`; form = React Hook Form + Zod.
+- **Lands:** payload builders + types → foundation; `usePowerAdjustment` →
+  adapter; presentational form → devkit.
+- **Done:** on a real M56, submit creates a pending voting action; tab absent for
+  non-Whatsminer models; catalog demo seeded.
+
+## M4 — Settings tab
+
+- **Sees:** per-model settings incl. **editable thresholds** saved via voting.
+- **Port from:** `.../Tabs/SettingsTab/SettingsTab.tsx`.
+- **Reuse:** the 4 per-model settings components exist. **Sneaky bit:** the
+  threshold `onSave` is **unwired** — wiring it to voting is the real work.
+- **Lands:** threshold payload builder/types → foundation; `useContainerSettings`
+  + save mutation → adapter; existing components stay presentational.
+- **Done:** editing+saving a threshold on a real container creates a pending
+  voting action; catalog demo per model seeded.
+
+## M5 — Charts tab
+
+- **Sees:** container time-series (hashrate/power/temp…), with a generic-builder
+  fallback for MicroBT/immersion.
+- **Port from:** `.../Tabs/ChartsTab/ChartsTab.tsx`.
+- **Reuse:** `LineChartCard` primitive + `container-charts-builder`; data from the
+  existing `tail-log` query.
+- **Lands:** the hook builds the `ChartCardData` payload in **adapter** (never
+  build datasets in the component/page — canonical anti-pattern); charts
+  presentational.
+- **Done:** real container charts render live; fallback covers models without a
+  custom set; catalog demo seeded.
+
+## M6 — Heatmap tab *(stretch — slips first)*
+
+- **Sees:** telemetry heatmap (e.g. temp across positions) + legend.
+- **Port from:** `.../Tabs/HeatmapTab/HeatmapTab.tsx`.
+- **Reuse:** Heatmap **primitive exists**; feed it `tail-log` telemetry.
+- **Lands:** `useContainerHeatmap` shapes telemetry into cell payload → adapter;
+  primitive presentational.
+- **Done:** real heatmap renders with correct legend; catalog demo seeded.
+
+## Alarm tab *(small — hydro/immersion only)*
+
+- **Sees:** active alarms (these models get Alarm instead of Power Adjustment).
+- **Port from:** `.../Tabs/AlarmTab/AlarmTab.tsx`.
+- **Reuse:** `useDeviceAlarms` done; `alarm-contents` component exists — mount per
+  matrix.
+- **Lands:** mostly assembly — hook → existing `alarm-contents` → tab slot.
+- **Done:** real hydro/immersion container shows live alarms; catalog demo seeded.
+
+## M7 — Container-widgets alerts logic *(Site Overview page, not a tab)*
+
+- **What:** real alarm tooltip + counts (replace raw `JSON.stringify`), wire card
+  alarm **badges** (populate `alarms`, not just `flash`), critical-alarm
+  beep/modal (consume `hasAnyCriticallyHigh`).
+- **Lands:** alarm shaping in the adapter hook; card presentational.
+- **Done:** real critical alarms drive badge + beep on Site Overview; catalog demo
+  seeded.
+
+---
+
+## How to generate & run the app to validate
+
+Two loops — the fast one while building, the real one to prove Definition of Done.
+
+### Loop A — Catalog (fast component loop; no backend)
+
+```bash
+cd ui
+npm run build      # once on a fresh worktree — packages ship prebuilt dist/
+npm run dev        # watches all packages + serves the catalog
+```
+
+Find your component's demo page; confirm it renders seeded synthetic data across
+states (loading / empty / error / populated).
+
+### Loop B — Generated shell app against the REAL backend (the main goal)
+
+> [!NOTE]
+> Incompatible from 0.6.0: `apps/mdk-ui-shell` and the `generate:shell` script below were
+> removed. The shell is now `examples/mdk-ui-shell-template`, a checked-in runnable app;
+> pages are added via `mdk-ui add page`, not regeneration.
+
+`apps/mdk-ui-shell` is a **generated artifact** — the template at
+`ui/packages/cli/templates/mdk-ui-shell/` is the source of truth. **Edit the
+template, then regenerate.** Never hand-edit the generated app (it's wiped on
+regen).
+
+```bash
+# 1. Backend — MiningOS gateway on :3000 (one-time), per the template README:
+git clone https://github.com/tetherto/miningos-gateway.git
+cd miningos-gateway && ./setup-config.sh
+#   paste a real Google OAuth client id + secret into
+#   config/facs/httpd-oauth2.config.json (h0.credentials.client.*),
+#   set h0.callbackUriUI = http://localhost:3030, add your Google email to h0.users
+npm install && npm start          # http://localhost:3000
+
+# 2. Regenerate + run the shell app (one command builds + regenerates):
+cd ui
+npm run generate:shell            # = build + rimraf apps/mdk-ui-shell + mdk-ui create mdk-ui-shell
+cd apps/mdk-ui-shell
+cp .env.example .env              # already points VITE at http://localhost:3000
+npm run dev                       # http://localhost:3030
+```
+
+**Drive the real flow** at `http://localhost:3030` → **Sign in with Google** →
+
+- Site Overview → click a container card → `/explorer/containers/<id>/home?backUrl=/site-overview`.
+- Explorer → click a container row → detail page with `backUrl=/explorer`.
+- Confirm the tab shows **live BE data**, tab switching preserves `backUrl`, Back
+  returns to origin.
+- Write tabs (PDU / Power Adjustment / Settings): perform an action → confirm a
+  **pending voting action** is created and vote/cancel works.
+
+**Before PR:** `npm run fullcheck` at `ui/` (build + lint + typecheck + format +
+agent-ready + coverage) and the `mdk-security-check` skill clean.

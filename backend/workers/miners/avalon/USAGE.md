@@ -119,7 +119,7 @@ Gateway, and starts the Worker, then stays running until Ctrl+C:
 node examples/backend/miners/avalon/index.js
 ```
 
-This is the Avalon mirror of [`examples/backend/miners/mdk.client.miner.js`](../../../../examples/backend/miners/mdk.client.miner.js), which uses Whatsminer.
+This is the Avalon mirror of [`examples/backend/miners/whatsminer/index.js`](../../../../examples/backend/miners/whatsminer/index.js), which uses Whatsminer.
 
 ## Capabilities
 

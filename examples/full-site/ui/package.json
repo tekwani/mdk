@@ -1,7 +1,7 @@
 {
   "name": "@tetherto/mdk-full-site-ui",
   "type": "module",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -16,7 +16,7 @@
     "@tetherto/mdk-ui-foundation": "file:../../../ui/packages/ui-foundation",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.18.1"
+    "react-router": "^8.3.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

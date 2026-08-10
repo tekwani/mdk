@@ -6,7 +6,6 @@
     {
       "id": "fleet.summary",
       "handler": "./controllers/fleet-summary.js",
-      "auth": true,
       "http": {
         "method": "GET",
         "path": "/api/fleet/summary",

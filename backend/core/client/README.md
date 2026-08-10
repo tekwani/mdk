@@ -295,5 +295,5 @@ client/
 - [Run Kernel and the Gateway](../../../docs/guides/gateway/run.md) — Kernel must be running before `client.connect()` can succeed
 - [Understand how the Gateway wraps `mdk-client` and what it adds](../../../docs/concepts/stack/gateway.md)
 - [Understand the MDK Protocol and Kernel's role as the kernel](../../../docs/concepts/architecture.md)
-- [Backend site example](../../../examples/backend/site/README.md) — see `createMdkClient` used end-to-end with Kernel and Workers
+- [Full-site example](../../../examples/full-site/README.md) — see `createMdkClient` used end-to-end with Kernel and Workers
 - [`startGateway()` option reference](../mdk/README.md) — if you are wiring `mdk-client` into a custom Gateway

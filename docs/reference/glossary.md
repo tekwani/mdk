@@ -20,6 +20,7 @@ This section explains the terms you need to familiarize yourself with, using an 
 | **Worker** | A device-family translator. Speaks the MDK Protocol upward to Kernel and the vendor's native API downward to one device family (one miner brand, one container type, one pool API). | [`backend/workers/docs/install-pattern.md`][worker-install] |
 | **Manager class** | The JavaScript class a Worker exports, one per supported device model. Instances drive a single rack of devices. | e.g. `AM_S19XP`, `AM_S21` in [`backend/workers/miners/antminer/index.js`][antminer-worker] |
 | **Thing** | One registered device instance. Created by calling `manager.registerThing({ info, opts })`. Identified by a generated `deviceId`. | runtime, in `manager.mem.things` |
+| **MCP** (Model Context Protocol) | The protocol AI agents use to discover and call tools. MDK's server is a standalone package — a separate process from the Gateway, not a Gateway plugin. | [`backend/core/mcp/`][mcp-package] |
 
 ### How they compose, for an Antminer rack
 
@@ -87,17 +88,17 @@ machine it routes locally over the local network interface; the application code
 
 ## Next steps
 
-- You are ready to run the example in [Run the stack][run-stack]
+- You are ready to run the example in [Run a mining site end to end][run-stack]
 - Learn more about:
-    - Multi-process discovery across machines: [Worker discovery][worker-discovery]
-    - Gateway implementation details (HTTP routing, JWT auth, RBAC) — see [`backend/core/gateway/worker.js`][gateway-package]
-    - Building your own Worker for a new device family: see [`backend/workers/docs/install-pattern.md`][worker-install]
-    - Per-device contract details (telemetry units, command shapes, error codes): those live in each Worker's `mdk-contract.json`, e.g. [`backend/workers/miners/antminer/mdk-contract.json`][antminer-contract]
+  - Multi-process discovery across machines: [Worker discovery][worker-discovery]
+  - Gateway implementation details, including HTTP routing and plugin registration: [`backend/core/gateway/worker.js`][gateway-package]
+  - Building your own Worker for a new device family: see [`backend/workers/docs/install-pattern.md`][worker-install]
+  - Per-device contract details (telemetry units, command shapes, error codes): those live in each Worker's `mdk-contract.json`, e.g. [`backend/workers/miners/antminer/plugin/mdk-contract.json`][antminer-contract]
 
 ## Links
 
-[run-stack]: ../tutorials/get-started/run.md
-<!-- docs@tether.io: run-stack → tutorials/backend-stack/run -->
+[run-stack]: ../tutorials/run-a-site.md
+<!-- docs@tether.io: run-stack → tutorials/run-a-site -->
 
 [architecture-scaling]: ../concepts/architecture.md#scaling
 <!-- docs@tether.io: architecture-scaling → concepts/architecture#scaling -->
@@ -107,6 +108,9 @@ machine it routes locally over the local network interface; the application code
 
 [gateway-package]: ../../backend/core/gateway/worker.js
 <!-- docs@tether.io: gateway-package → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/worker.js -->
+
+[mcp-package]: ../../backend/core/mcp/README.md
+<!-- docs@tether.io: mcp-package → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->
 
 [worker-install]: ../../backend/workers/docs/install-pattern.md
 <!-- docs@tether.io: worker-install → https://github.com/tetherto/mdk/blob/main/backend/workers/docs/install-pattern.md -->

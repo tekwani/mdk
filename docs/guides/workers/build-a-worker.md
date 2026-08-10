@@ -31,7 +31,7 @@ security boundaries that the deliberately small sample does not implement.
 
 ## What you get
 
-```
+```text
 your-worker-repo/
   package.json
   index.js                     # exports { plugin } — the Worker Plugin, nothing more
@@ -673,6 +673,14 @@ test("reboot enforces concurrency and cooldown after every attempt", async (t) =
 });
 ```
 
+> [!TIP]
+> The example imports each handler module directly by path. `demo-worker`'s own [test file][demo-worker-plugin-test]
+> instead calls the exported `loadPlugin(plugin)` from [`mdk-worker-index`][mdk-worker-index]:
+> `loadPlugin(plugin).handlers.telemetry.get('hashrate_rt')` returns the same handler function without needing its
+> file path, and `loadPlugin` runs the same validation `WorkerRuntime` runs at boot, catching duplicate names, missing
+> handler files, and non-function exports before a runtime deploy would. `loadPlugin(plugin).publishedContract`
+> returns the contract with every `handler` path stripped, the same shape Kernel receives.
+
 Cover at minimum: a telemetry handler reading a live value from the mock, a command reaching the mock and returning a
 result, required/type/range/enum validation, concurrent-command rejection, cooldown after successful and failed
 attempts, `connect()` throwing when the mock is unreachable, a firmware-side error surfacing with your contract's
@@ -783,6 +791,9 @@ Understand the end-user experience of controlling and monitoring your device via
 [demo-worker-plugin-test]: ../../../backend/workers/samples/demo-worker/tests/unit/plugin.test.js
 <!-- docs@tether.io: demo-worker-plugin-test → https://github.com/tetherto/mdk/blob/main/backend/workers/samples/demo-worker/tests/unit/plugin.test.js -->
 
+[mdk-worker-index]: ../../../backend/core/mdk-worker/index.js
+<!-- docs@tether.io: mdk-worker-index → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/index.js -->
+
 [agent-ready-sdk]: ../../reference/maintainers/agent-ready-sdk.md
 <!-- docs@tether.io: no parity link -->
 
@@ -792,8 +803,8 @@ Understand the end-user experience of controlling and monitoring your device via
 [test-a-worker]: test-a-worker.md
 <!-- docs@tether.io: test-a-worker → guides/workers/test-a-worker -->
 
-[minimal-dashboard]: ../../tutorials/quickstart/build-a-dashboard.md
-<!-- docs@tether.io: minimal-dashboard → tutorials/quickstart/build-a-dashboard -->
+[minimal-dashboard]: ../../tutorials/build-a-dashboard.md
+<!-- docs@tether.io: minimal-dashboard → tutorials/build-a-dashboard -->
 
 [full-site]: ../../../examples/full-site/README.md
 <!-- docs@tether.io: full-site → https://github.com/tetherto/mdk/blob/main/examples/full-site/README.md -->

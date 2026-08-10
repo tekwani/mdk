@@ -5,16 +5,15 @@ Use this page to route to the docs you need.
 ## Getting started options
 
 - [Connect your own hardware](guides/workers/build-a-worker.md)
-- [Quickstart: run the full stack demo](./tutorials/quickstart/full-stack.md)
-- [Quickstart: build a dashboard](./tutorials/quickstart/build-a-dashboard.md)
-- [Build your mental model in three rungs — observe, interact, build](tutorials/get-started/index.md)
+- [Quickstart: run a mining site end to end](./tutorials/run-a-site.md)
+- [Quickstart: build a dashboard](./tutorials/build-a-dashboard.md)
 - [Pick your role](#pick-your-role)
 
 ## Domains
 
 The monorepo is organized into three development domains:
 
-- [core](../backend/core/docs/README.md) — Kernel, Gateway, MDK SDK, MDK client, mock control service
+- [core](../backend/core/docs/README.md) — Kernel, Gateway, MCP server, MDK SDK, MDK client
 - [Workers](../backend/workers/README.md) — protocol translators for data sources, e.g., miners, pools, power meters, sensors, containers
 - [UI toolkit](../ui/README.md) — headless state and API contracts, React bindings, mining-domain components, and application scaffolding
 
@@ -37,7 +36,7 @@ Start with the product, then the stack, then run something.
 | What MDK is and why it exists | [`concepts/about.md`](concepts/about.md) |
 | How the pieces fit together | [`concepts/architecture.md`](concepts/architecture.md) |
 | The vocabulary you need (Kernel, Worker, manager, thing, mock) | [`reference/glossary.md`](reference/glossary.md) |
-| Connect Kernel to a device and climb the ladder | [`tutorials/get-started/`](tutorials/get-started/index.md) |
+| Run a complete site end to end | [`tutorials/run-a-site.md`](tutorials/run-a-site.md) |
 | How Gateway, Kernel, and Workers communicate | [`concepts/control-plane.md`](concepts/control-plane.md) |
 
 ### Agent
@@ -49,6 +48,8 @@ You are an LLM consuming MDK at runtime.
 | Worker runtime contracts (machine-readable) | `backend/workers/<family>/<provider>/mdk-contract.json` |
 | UI component registry (machine-readable) | `ui/<pkg>/dist/registry.json` (when shipping) |
 | Per-workspace agent-ready entry points | [`../backend/workers/docs/AGENT_READY.md`](../backend/workers/docs/AGENT_READY.md), [`../backend/core/docs/AGENT_READY.md`](../backend/core/docs/AGENT_READY.md), [`../ui/AGENTS.md`](../ui/AGENTS.md) |
+| Connect an AI agent to MDK over MCP | [`../backend/core/mcp/README.md`](../backend/core/mcp/README.md) |
+| Install Agent Skills for your coding agent (Cursor, Claude Code) | [`../packages/mdk-skill/README.md`](../packages/mdk-skill/README.md) |
 
 ### Engineer
 
@@ -68,18 +69,18 @@ scripts, and Gateway extensions. Your starting point depends on which you're bui
 
 | Topic | Where |
 | --- | --- |
-| Get started — first runnable example | [`tutorials/get-started/`](tutorials/get-started/index.md) |
+| Get started: first runnable example | [`tutorials/run-a-site.md`](tutorials/run-a-site.md) |
 | Deployment: connect Workers to a Gateway, run a site | [`guides/deployment/`](guides/deployment/index.md), and the [deployment topology concept](concepts/deployment-topologies.md) |
 | Worker runtime contracts (telemetry, commands, health, errors) | `backend/workers/<family>/<provider>/mdk-contract.json` + `USAGE.md` + `examples/` |
 | Build a Worker and author its contract | [`guides/workers/build-a-worker.md`](guides/workers/build-a-worker.md) |
 | Workers (lifecycle, install pattern) | [`../backend/workers/docs/install-pattern.md`](../backend/workers/docs/install-pattern.md) |
-| Runnable site examples | [`examples/backend/site/`](../examples/backend/site/README.md), [`examples/backend/site-single-process/`](../examples/backend/site-single-process/README.md), [`examples/e2e/`](../examples/e2e/README.md), [`examples/full-site/`](../examples/full-site/README.md) |
+| Runnable site examples | [`examples/full-site/`](../examples/full-site/README.md) |
 
 **React / UI developer** — building browser-based operator UIs on top of MDK
 
 | Topic | Where |
 | --- | --- |
-| Build a dashboard end to end | [`tutorials/quickstart/build-a-dashboard.md`](tutorials/quickstart/build-a-dashboard.md) |
+| Build a dashboard end to end | [`tutorials/build-a-dashboard.md`](tutorials/build-a-dashboard.md) |
 | UI toolkit overview | [`../ui/README.md`](../ui/README.md) |
 | React adapter: stores, hooks, and the `<MdkProvider>` | [`../ui/packages/react-adapter/README.md`](../ui/packages/react-adapter/README.md) |
 | Pre-built UI components and blueprints | [`../ui/packages/react-devkit/README.md`](../ui/packages/react-devkit/README.md) |
@@ -89,13 +90,16 @@ scripts, and Gateway extensions. Your starting point depends on which you're bui
 
 | Topic | Where |
 | --- | --- |
-| Gateway API surfaces (HTTP, WebSocket, MCP) and how to extend them | [`guides/gateway/`](guides/gateway/index.md) |
+| Gateway HTTP API surface and how to extend it | [`guides/gateway/`](guides/gateway/index.md) |
 | Build a Gateway plugin | [`guides/gateway/plugins.md`](guides/gateway/plugins.md) |
 | Call Kernel directly from a Node.js service or script | [`../backend/core/client/README.md`](../backend/core/client/README.md) |
 | Start Kernel and Workers in your app | [`../backend/core/mdk/README.md`](../backend/core/mdk/README.md) |
 | Core SDK and bootstrap utilities | [`../backend/core/docs/README.md`](../backend/core/docs/README.md) |
 | Integrate new hardware (Workers) | [`guides/workers/build-a-worker.md`](guides/workers/build-a-worker.md), then the [install pattern](../backend/workers/docs/install-pattern.md) |
 | Worker runtime contracts (telemetry, commands, health, errors) | `backend/workers/<family>/<provider>/mdk-contract.json` + `USAGE.md` + `examples/` |
+| Run a container Worker | [`guides/containers/`](guides/containers/index.md) |
+| MDK Protocol envelope, action catalogue, and command targeting | [`reference/protocol/messages.md`](reference/protocol/messages.md) |
+| Kernel's internal modules (Dispatcher, CSM, Registry, and more) | [`reference/kernel/modules.md`](reference/kernel/modules.md) |
 
 ### Docs maintainer
 

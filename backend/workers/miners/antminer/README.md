@@ -86,7 +86,6 @@ Antminer uses the **CGMiner-derived HTTP API** with **Digest authentication** fo
 | `saveComment` | `text` | Add annotation |
 | `editComment` | `commentId, text` | Edit annotation |
 | `deleteComment` | `commentId` | Delete annotation |
-| `rackReboot` | — | Restart Worker process |
 | `downloadLogs` | — | Fetch hardware logs |
 
 ## Health

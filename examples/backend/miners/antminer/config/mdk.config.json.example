@@ -1,6 +1,5 @@
 {
   "mode": "single-process",
-  "noAuth": true,
   "env": "development",
   "services": [
     {

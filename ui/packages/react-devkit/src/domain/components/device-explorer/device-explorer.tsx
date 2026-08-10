@@ -70,6 +70,7 @@ export const DeviceExplorer = ({
   className,
   renderAction,
   getFormattedDate,
+  onRowClick,
 }: DeviceExplorerProps): JSX.Element => {
   const [selections, setSelections] = useControllableState<DataTableRowSelectionState>({
     prop: selectedDevices,
@@ -115,6 +116,7 @@ export const DeviceExplorer = ({
         getFormattedDate={getFormattedDate}
         sorting={sorting}
         onSortingChange={setSorting}
+        onRowClick={onRowClick}
       />
     </div>
   )

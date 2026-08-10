@@ -3,9 +3,9 @@
 const os = require('os')
 const path = require('path')
 const fs = require('fs')
-const WorkerRuntime = require('../../../backend/core/mdk-worker/lib/worker-runtime')
-const { plugin, openDb } = require('../../../backend/workers/samples/demo-worker')
-const demoMock = require('../../../backend/workers/samples/demo-worker/mock/server')
+const WorkerRuntime = require('@tetherto/mdk-worker/lib/worker-runtime')
+const { plugin, openDb } = require('@tetherto/mdk-worker-demo')
+const demoMock = require('@tetherto/mdk-worker-demo/mock/server')
 
 // This is the "caller": the demo-worker package ships only a Worker Plugin
 // ({ contract, dir, connect }) and its own SQLite helper — it never touches

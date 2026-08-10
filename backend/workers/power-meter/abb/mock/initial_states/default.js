@@ -2,7 +2,7 @@
 
 const { strToAsciiBuffer, cleanup } = require('../lib')
 
-module.exports = function () {
+module.exports = function (ctx = {}) {
   const state = {}
 
   const buffer1 = Buffer.alloc(4096 * 4)
@@ -29,6 +29,16 @@ module.exports = function () {
   buffer5.writeUInt16BE(123, 5720)
   for (let i = 0; i < 14; i++) {
     buffer5.writeUInt16BE(123, 5722 + i * 2)
+  }
+
+  // B2XPowerMeter._prepSnap reads active_power_total_w as an Int32BE (×0.01)
+  // at byte offset 40 of the 30-register window whose logical start is
+  // register 23297 — but the wire-level Modbus address is 0-based (23296),
+  // landing this field at buffer5 offset 5672 (the first slot the placeholder
+  // loop above already fills). Override it with a real reading when the site
+  // threads one in, so site.powerW scales with the actual fleet.
+  if (ctx.powerW != null) {
+    buffer5.writeInt32BE(Math.round(ctx.powerW / 0.01), 5672)
   }
 
   buffer8.writeUInt32BE(1234, 0x900 * 2)

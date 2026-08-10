@@ -1,5 +1,6 @@
 import { cn, HashrateStatIcon } from '@primitives'
 import type { JSX, ReactNode } from 'react'
+import { WEBAPP_SHORT_NAME } from '../../constants'
 
 const fmt = (value: number | undefined, fractionDigits = 3): string =>
   typeof value === 'number'
@@ -11,17 +12,21 @@ const fmt = (value: number | undefined, fractionDigits = 3): string =>
 
 export type HeaderHashrateBoxProps = {
   icon?: ReactNode
-  /** MOS-side aggregate hashrate in PH/s. */
-  mosPhs?: number
+  /** App-side aggregate hashrate in PH/s. */
+  appPhs?: number
   /** Pool-side aggregate hashrate in PH/s. */
   poolPhs?: number
   /** Hashrate unit label — defaults to `PH/s`. */
   unit?: string
+  /** Decimal places shown for both values — defaults to `3`. */
+  fractionDigits?: number
+  /** Label for the app-side row — defaults to `APP` (`WEBAPP_SHORT_NAME`). */
+  appLabel?: string
   className?: string
 }
 
 /**
- * Two-row hashrate cell for the dashboard's header strip. Shows the MOS-side
+ * Two-row hashrate cell for the dashboard's header strip. Shows the app-side
  * and pool-side aggregate hashrate side by side. Values fall back to `—`
  * when undefined.
  *
@@ -32,9 +37,11 @@ export type HeaderHashrateBoxProps = {
  */
 export const HeaderHashrateBox = ({
   icon,
-  mosPhs,
+  appPhs,
   poolPhs,
   unit = 'PH/s',
+  fractionDigits = 3,
+  appLabel = WEBAPP_SHORT_NAME,
   className,
 }: HeaderHashrateBoxProps): JSX.Element => (
   <div className={cn('mdk-header-stat-box', className)}>
@@ -42,13 +49,13 @@ export const HeaderHashrateBox = ({
     <div className="mdk-header-stat-box__body">
       <div className="mdk-header-stat-box__row">
         <span className="mdk-header-stat-box__label">Hashrate</span>
-        <span className="mdk-header-stat-box__muted">MOS</span>
-        <span className="mdk-header-stat-box__value">{fmt(mosPhs)}</span>
+        <span className="mdk-header-stat-box__muted">{appLabel}</span>
+        <span className="mdk-header-stat-box__value">{fmt(appPhs, fractionDigits)}</span>
         <span className="mdk-header-stat-box__unit">{unit}</span>
       </div>
       <div className="mdk-header-stat-box__row">
         <span className="mdk-header-stat-box__muted">Pool</span>
-        <span className="mdk-header-stat-box__value">{fmt(poolPhs)}</span>
+        <span className="mdk-header-stat-box__value">{fmt(poolPhs, fractionDigits)}</span>
         <span className="mdk-header-stat-box__unit">{unit}</span>
       </div>
     </div>

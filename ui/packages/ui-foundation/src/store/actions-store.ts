@@ -1,10 +1,22 @@
 import { createStore, type StateCreator } from 'zustand/vanilla'
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware'
+import type { DeviceActionCrossThing } from '../utils/device-actions'
 
 export type PendingSubmissionAction = {
   id: number
   action?: string
+  /** Target device-id / container tags. Client-side only — converted into the
+   *  backend `query` at submit (see `toVotingPayload`); never posted raw. */
   tags?: string[]
+  /** Opt out of the tag→query conversion so a staged explicit `query` is used
+   *  as-is (pool assignment targets by device id, not tags). Defaults to on. */
+  overrideQuery?: boolean
+  /** Cross-thing fan-out annotation. Client-side queue metadata only; the
+   *  backend derives fan-out from `query`, so this is never posted. */
+  crossThing?: DeviceActionCrossThing
+  // `query`, `params` and `rackType` intentionally stay on the index signature:
+  // consumers (e.g. the devkit pending-actions describer) view them through
+  // their own narrower shapes, so a widened declaration here would clash.
   [key: string]: unknown
 }
 

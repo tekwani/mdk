@@ -53,11 +53,11 @@ function fakeClient (overrides = {}) {
   }
 }
 
-// Capture tool handlers registered via server.tool() without the McpServer HTTP stack.
+// Capture tool handlers registered via server.registerTool() without the McpServer HTTP stack.
 function captureTools (client) {
   const tools = {}
   const mockServer = {
-    tool (name, _description, _schema, handler) {
+    registerTool (name, _config, handler) {
       tools[name] = handler
     }
   }
@@ -204,14 +204,28 @@ test('send_command forwards client errors', async (t) => {
 })
 
 // ---------------------------------------------------------------------------
-// registerTools: all six tools are registered
+// registerTools: all thirteen tools are registered
 // ---------------------------------------------------------------------------
 
-test('registerTools registers exactly six tools', (t) => {
+test('registerTools registers exactly thirteen tools', (t) => {
   const names = []
-  const mockServer = { tool (name) { names.push(name) } }
+  const mockServer = { registerTool (name) { names.push(name) } }
   registerTools(mockServer, fakeClient())
-  t.alike(names.sort(), ['get_capabilities', 'get_status', 'get_supported_power_modes', 'pull_state', 'pull_telemetry', 'send_command'])
+  t.alike(names.sort(), [
+    'act_device',
+    'count_devices',
+    'get_capabilities',
+    'get_device',
+    'get_site_overview',
+    'get_status',
+    'get_supported_power_modes',
+    'list_devices',
+    'pull_state',
+    'pull_telemetry',
+    'rank_devices',
+    'send_command',
+    'summarize_site'
+  ])
 })
 
 // ---------------------------------------------------------------------------

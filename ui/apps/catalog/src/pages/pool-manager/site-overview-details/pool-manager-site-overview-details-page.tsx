@@ -1,7 +1,7 @@
 import { UNITS } from '@tetherto/mdk-react-devkit/primitives'
 import { PoolManagerSiteOverviewDetails } from '@tetherto/mdk-react-devkit/domain'
 import type { JSX } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'react-router'
 import { DemoPageHeader } from '../../../components/demo-page-header'
 import { useDemoToast } from '../../../utils/use-demo-toast'
 

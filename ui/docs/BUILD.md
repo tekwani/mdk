@@ -197,23 +197,21 @@ All root scripts proxy to Turborepo, which fans out across workspaces.
 | `npm run size`         | Bundle-size report via `scripts/bundle-size.mjs`        |
 | `npm run size:consumer`| Tree-shake check — simulates a consumer bundle to catch accidental side-effect imports (`scripts/treeshake-check.mjs`) |
 | `npm run size:check`   | Full size audit: `build` + `size` + `size:consumer`     |
-| `npm run generate:shell` | Regenerate `apps/mdk-ui-shell` from the CLI template (`rimraf` + `mdk-ui create`) |
 | `npm run clean`        | Remove `dist/` and `node_modules/` across workspaces    |
 
-> **`generate:shell` runs the _built_ CLI** (`node packages/cli/dist/bin.js`),
-> not the TypeScript source. If you've edited the CLI (`packages/cli/src/**`)
-> **or the template** (`packages/cli/templates/mdk-ui-shell/**`), rebuild the
-> CLI first or you'll scaffold from a stale `dist/`:
+> **The `mdk-ui-shell` template is a runnable app.** It lives at
+> `examples/mdk-ui-shell-template/` and is both the CLI's scaffolding source and a real
+> Vite app you can run in place — no regeneration step:
 >
 > ```bash
-> npm run build --workspace @tetherto/mdk-ui-cli   # recompile + copy templates
-> npm run generate:shell                            # regenerate apps/mdk-ui-shell
+> npm run build                                    # build the MDK packages (once)
+> cd examples/mdk-ui-shell-template && npm install && npm run dev
 > ```
 >
-> `apps/mdk-ui-shell` is git-ignored generated output — the template under
-> `packages/cli/templates/mdk-ui-shell/` is the source of truth. After
-> regenerating, verify the result: `typecheck` + `lint` + `build` on the
-> `@tetherto/mdk-ui-shell` workspace.
+> `mdk-ui create` reads that same directory and fills in the app-specific gaps
+> (package name, dependency protocol, `.gitignore`), so editing the example is
+> editing the template. The build step (`copy-templates.mjs`) copies it into the
+> published CLI's `dist/templates/`.
 
 ## Per-package scripts
 

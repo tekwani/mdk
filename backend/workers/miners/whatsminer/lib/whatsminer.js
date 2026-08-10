@@ -4,15 +4,15 @@ const { Miner, constants } = require('../../../../core/mdk')
 const async = require('async')
 const net = require('node:net')
 const CryptoJS = require('crypto-js')
-const md5 = require('./utils/md5.js')
 const hex2a = require('./utils/hex2a.js')
 const readFirmware = require('./utils/firmware.js')
-const { getErrorMsg, getAPICodeMsg } = require('./utils/index.js')
+const { getErrorMsg } = require('./utils/index.js')
 const {
   MINOR_ERROR_CODES_M56S_M30_SET,
   MINOR_ERROR_CODES_M53_SET,
   MINER_COOLING_TYPE_MAP
 } = require('./utils/constants.js')
+const { ApiHandlerFactory, API_VERSIONS } = require('./protocols')
 const { STATUS, POWER_MODE } = constants
 
 function isResOK (res) {
@@ -20,7 +20,7 @@ function isResOK (res) {
 }
 
 class Whatsminer extends Miner {
-  constructor ({ socketer, ...opts }) {
+  constructor ({ socketer, apiVersion, ...opts }) {
     super(opts)
 
     this.rpc = socketer.rpc({
@@ -35,8 +35,66 @@ class Whatsminer extends Miner {
       delay: this.conf.delay || 50
     })
 
+    this.apiVersion = apiVersion || null
+    this.protocolHandler = null
+    this._initPromise = null
     this._cachedPrevHashrate = null
     this.cachedShares = { accepted: 0, rejected: 0, stale: 0 }
+  }
+
+  async init () {
+    if (!this.apiVersion) {
+      this.apiVersion = await this._detectApiVersion()
+    }
+
+    this.protocolHandler = ApiHandlerFactory.create(this.apiVersion, {
+      rpc: this.rpc,
+      password: this.opts.password,
+      debugError: this.debugError.bind(this)
+    })
+  }
+
+  // Handler creation is lazy so an unreachable miner keeps surfacing
+  // per-request errors instead of failing at connect time.
+  _ensureHandler () {
+    if (!this._initPromise) {
+      this._initPromise = this.init()
+    }
+    return this._initPromise
+  }
+
+  async _detectApiVersion () {
+    if (this.opts.port === 4433) {
+      return API_VERSIONS.V3
+    }
+    if (this.opts.port === 4028) {
+      return API_VERSIONS.V2
+    }
+
+    const detectors = [
+      { version: API_VERSIONS.V2, cmd: 'get_token' },
+      { version: API_VERSIONS.V3, cmd: 'get.device.info' }
+    ]
+
+    for (const { version, cmd } of detectors) {
+      try {
+        const res = await this._execCommand(cmd)
+        if (res && !res.error && res.Msg) {
+          return version
+        }
+      } catch (e) {
+        this.debugError('Version detection failed for %s: %s', version, e.message)
+      }
+    }
+
+    this.debugError('API version detection failed, defaulting to V2')
+    return API_VERSIONS.V2
+  }
+
+  async _execCommand (command) {
+    const cmd = { cmd: command }
+    const response = await this.rpc.request(JSON.stringify(cmd))
+    return JSON.parse(response)
   }
 
   async close () {
@@ -44,31 +102,27 @@ class Whatsminer extends Miner {
   }
 
   async _getToken () {
-    const res = await this._requestReadEndpoint('get_token')
-
-    // check error code for the new firmware update v#20230911.12
-    if (res?.Code === 136) {
-      throw new Error('ERR_TOKEN_FETCH_IP_LIMIT')
-    }
-
-    const key = md5.crypt(this.opts.password, res.Msg.salt)
-    const arr = key.split('$')
-    const sign = md5.crypt(arr[arr.length - 1] + res.Msg.time, res.Msg.newsalt)
-    const tmp = sign.split('$')
-    const token = `${res.Msg.time},${res.Msg.newsalt},` + tmp[tmp.length - 1]
-    return {
-      token,
-      sign: tmp[tmp.length - 1],
-      key: arr[arr.length - 1]
-    }
+    await this._ensureHandler()
+    return this.protocolHandler.authenticate()
   }
 
   async _refreshToken () {
+    await this._ensureHandler()
     try {
-      this.token = await this._getToken()
+      await this.protocolHandler.refreshToken()
     } catch (e) {
       this.debugError('_refreshToken error', e)
       throw e
+    }
+  }
+
+  get token () {
+    return this.protocolHandler?.getTokenInfo()
+  }
+
+  set token (value) {
+    if (value === undefined && this.protocolHandler) {
+      this.protocolHandler.clearToken()
     }
   }
 
@@ -111,86 +165,35 @@ class Whatsminer extends Miner {
   }
 
   async _requestReadEndpoint (command, additionalParams = {}) {
-    const cmd = {
-      cmd: command,
-      ...additionalParams
+    await this._ensureHandler()
+    const cmd = this.protocolHandler.transformCommand(command)
+    const params = { ...additionalParams }
+    const statusParam = this.protocolHandler.getStatusParam(command)
+    if (statusParam) {
+      params.param = statusParam
     }
-    this.debugError(`Sending command ${JSON.stringify(cmd)}`)
-    try {
-      const res = await this._requestMiner(cmd)
-      this.debugError(`Received response ${JSON.stringify(res)}`)
-      return res
-    } catch (error) {
-      this.debugError(error)
-      throw new Error('ERR_READ_FAILED')
-    }
+
+    const res = await this.protocolHandler.requestRead(cmd, params)
+    this.updateLastSeen()
+    return this.protocolHandler.parseResponse(res, command)
   }
 
   async _requestWriteEndpoint (command, additionalParams = {}, json = true) {
-    let retry = 0
-    let err = null
-
-    while (retry < 3) {
-      try {
-        if (this.token === undefined) {
-          await this._refreshToken()
-        }
-        const { sign, key } = this.token
-        const cmd = JSON.stringify({
-          token: sign,
-          cmd: command,
-          ...additionalParams
-        })
-        this.debugError(`Sending command ${cmd}`)
-        const data = CryptoJS.AES.encrypt(cmd, CryptoJS.SHA256(key), { mode: CryptoJS.mode.ECB }).toString()
-        const encCmd = {
-          enc: 1,
-          data
-        }
-
-        const res = await this._requestMiner(encCmd, json)
-
-        // cases when we only need to write to miner,and there is no response, for e.g: reboot
-        if (res.length === 0) {
-          return null
-        }
-        if (!res.enc) {
-          this.debugError(`Received response ${JSON.stringify(res)}`)
-          throw new Error(getAPICodeMsg(res))
-        }
-
-        const decrypted = CryptoJS.AES.decrypt(res.enc, CryptoJS.SHA256(key), { mode: CryptoJS.mode.ECB }).toString()
-        const response = JSON.parse(hex2a(decrypted))
-        if (response.Code === 135) {
-          // Retry with fresh token
-          this.token = undefined
-          retry++
-          continue
-        }
-        this.debugError(`Received response ${JSON.stringify(response)}`)
-        return response
-      } catch (e) {
-        err = e
-        this.token = undefined
-        retry++
-      }
-    }
-
-    if (err) {
-      this.debugError('write_err', err)
-      throw err
-    }
-    return null
+    await this._ensureHandler()
+    const cmd = this.protocolHandler.transformCommand(command)
+    const res = await this.protocolHandler.requestWrite(cmd, additionalParams, json)
+    this.updateLastSeen()
+    return res ? this.protocolHandler.parseResponse(res, command) : null
   }
 
   async _requestWriteFirmwareEndpoint (filename) {
     if (this.token === undefined) {
       await this._refreshToken()
     }
-    const { sign, key } = this.token
+    const { sign, key } = this.protocolHandler.getTokenInfo()
     const cmd = JSON.stringify({
       token: sign,
-      cmd: 'update_firmware'
+      cmd: this.protocolHandler.transformCommand('update_firmware')
     })
     const data = CryptoJS.AES.encrypt(cmd, CryptoJS.SHA256(key), { mode: CryptoJS.mode.ECB }).toString()
     const encCmd = JSON.stringify({
@@ -227,12 +230,18 @@ class Whatsminer extends Miner {
       whatsminer: {
         api: res.Msg.api_ver,
         firmware: res.Msg.fw_ver
-      }
+      },
+      apiVersion: this.apiVersion
     }
   }
 
   async getMinerStats () {
     const res = await this._requestReadEndpoint('summary')
+
+    if (!res?.SUMMARY?.[0]) {
+      throw new Error(`ERR_MINER_STATS_FAILED: ${res?.Msg || 'Unknown error'} (Code: ${res?.Code || 0})`)
+    }
+
     const processedStats = {
       elapsed: res.SUMMARY[0].Elapsed,
       mhs_av: res.SUMMARY[0]['MHS av'],

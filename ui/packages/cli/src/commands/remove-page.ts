@@ -71,5 +71,6 @@ export const runRemovePage = (opts: RemovePageOptions): void => {
   const routePath = managed?.routePath ?? `/${pagePascal.replace(/Page$/, '').toLowerCase()}`
   unpatchRoutesFile(opts.cwd, routePath, out)
 
-  if (managed) unpatchNavIcon(opts.cwd, managed, out)
+  // Hidden, deep-link-only managed pages carry no nav icon — nothing to unpatch.
+  if (managed?.navEntry) unpatchNavIcon(opts.cwd, managed, out)
 }

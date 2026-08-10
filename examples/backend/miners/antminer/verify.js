@@ -17,8 +17,7 @@ const fs = require('fs')
 const path = require('path')
 const { setTimeout: sleep } = require('timers/promises')
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..')
-const { createMdkClient } = require(path.join(REPO_ROOT, 'backend', 'core', 'client'))
+const { createMdkClient } = require('@tetherto/mdk-client')
 
 const KEY_FILE = path.join(os.tmpdir(), 'mdk-site-antminer', 'kernel', '.kernel-key')
 

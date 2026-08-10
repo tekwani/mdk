@@ -1,0 +1,74 @@
+{
+  "name": "@tetherto/mdk-plugin-site-monitor",
+  "version": "0.1.0",
+  "description": "Built-in plugin: site identity, feature configuration, and live per-device hashrate via the MDK protocol client.",
+  "routes": [
+    {
+      "id": "site.info",
+      "handler": "./controllers/site.js",
+      "auth": false,
+      "http": {
+        "method": "GET",
+        "path": "/auth/site",
+        "responses": {
+          "200": {
+            "description": "Site identity from the gateway configuration.",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "site": { "type": "string" } } } } }
+          }
+        }
+      },
+      "description": "Returns the site name from the gateway config (common.json `site`).",
+      "safety": "read-only"
+    },
+    {
+      "id": "site.feature-config",
+      "handler": "./controllers/feature-config.js",
+      "auth": false,
+      "http": {
+        "method": "GET",
+        "path": "/auth/featureConfig",
+        "responses": {
+          "200": {
+            "description": "Feature configuration from the gateway configuration.",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      },
+      "description": "Returns the featureConfig object from the gateway config (common.json `featureConfig`).",
+      "safety": "read-only"
+    },
+    {
+      "id": "site.hashrate",
+      "handler": "./controllers/hashrate.js",
+      "auth": false,
+      "http": {
+        "method": "GET",
+        "path": "/site-monitor/hashrate",
+        "responses": {
+          "200": {
+            "description": "Live per-device hashrate and power with site totals.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totalHashrateMhs": { "type": "number" },
+                    "totalPowerW": { "type": "number" },
+                    "deviceCount": { "type": "integer" },
+                    "devices": { "type": "array" },
+                    "ts": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "MDK client not connected to a Kernel." }
+        }
+      },
+      "description": "Pulls metrics telemetry from every READY worker's devices via the MDK protocol and returns per-device hashrate/power plus site totals.",
+      "constraints": ["Requires the MDK client to be connected to a Kernel instance."],
+      "errors": ["ERR_KERNEL_CLIENT_NOT_CONNECTED"],
+      "safety": "read-only"
+    }
+  ]
+}

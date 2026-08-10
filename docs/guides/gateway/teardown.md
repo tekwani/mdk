@@ -6,9 +6,9 @@ docs@tether_slug: guides/gateway/teardown
 
 ## Overview
 
-MDK registers graceful shutdown handlers automatically when you start services with `getKernel()`, `startWorker()`, or `startGateway()`. 
-For most deployments, `SIGINT` (Ctrl+C) triggers a clean teardown with no extra code. This guide covers the three situations where 
-you need to think about teardown explicitly:
+MDK registers graceful shutdown handlers automatically when you start services with `getKernel()`, a Worker boot function, or
+`startGateway()`. For most deployments, `SIGINT` (Ctrl+C) triggers a clean teardown with no extra code. This guide covers the three
+situations where you need to think about teardown explicitly:
 
 - [Automatic teardown](#automatic-teardown-with-getkernel)
 - [Explicit teardown](#explicit-teardown-in-tests-or-scripted-runs)
@@ -25,21 +25,27 @@ you need to think about teardown explicitly:
 
 ### Automatic teardown with `getKernel()`
 
-`getKernel()` registers `SIGINT`/`SIGTERM` handlers internally. Any Workers or Gateway instances started with `opts.kernel` are 
-chained into the cleanup sequence automatically — no extra code needed.
+`getKernel()` registers `SIGINT`/`SIGTERM` handlers internally. A Gateway started with `opts.kernel` is chained into the cleanup
+sequence automatically. Workers are **not** auto-chained: a Worker's boot function has no `opts.kernel`, so push its `stop()` onto
+`kernel._cleanup` yourself if you want Kernel shutdown to cascade to it:
 
 ```js
-const { getKernel, startWorker, startGateway } = require('@tetherto/mdk')
-const { WM_M56S } = require('@tetherto/mdk-worker-whatsminer')
+const { getKernel, startGateway } = require('@tetherto/mdk')
+const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
 
 const kernel = await getKernel()
-const { manager } = await startWorker(WM_M56S, { kernel })
-await startGateway({ kernel, port: 3000, noAuth: true })
 
-// Press Ctrl+C — MDK stops Gateway, Worker, then Kernel automatically.
+const { runtime, stop } = await startWhatsminerWorker({ workerId: 'whatsminer-rack-1', model: 'm56s', storeDir: './data/whatsminer' })
+await kernel.registerWorker(runtime.getPublicKey())
+kernel._cleanup.push(stop) // cascade Worker shutdown from Kernel
+
+await startGateway({ kernel, port: 3000 })
+
+// Press Ctrl+C: MDK stops Gateway, then the Worker, then Kernel.
 ```
 
-See [`getKernel` API reference][mdk-readme-getkernel].
+See [`getKernel` API reference][mdk-readme-getkernel] and the [Workers discovery model][workers-lifecycle] for the same-process
+lifecycle rules.
 
 </Step>
 
@@ -54,7 +60,7 @@ to drain the full cleanup chain. Pass the `kernel` object returned by `getKernel
 const { getKernel, startGateway, shutdown } = require('@tetherto/mdk')
 
 const kernel = await getKernel()
-await startGateway({ kernel, noAuth: true })
+await startGateway({ kernel })
 
 // … run assertions or perform work …
 
@@ -88,13 +94,14 @@ See [`onShutdown` API reference][mdk-readme-onshutdown].
 
 ## What just happened
 
-1. **Automatic chain**: `getKernel()`, `startWorker({ kernel })`, and `startGateway({ kernel })` wire themselves into `kernel._cleanup` so a single signal stops everything in order.
+1. **Automatic chain**: `getKernel()` and `startGateway({ kernel })` wire themselves into `kernel._cleanup` so a single signal stops
+   Kernel and Gateway in order; push a Worker's `stop()` onto `kernel._cleanup` yourself to fold it into the same chain.
 2. **Explicit drain**: `shutdown(kernel)` gives you the same ordered teardown on demand, without a signal.
 3. **Custom hooks**: `onShutdown(fn)` lets you attach cleanup logic outside the MDK object hierarchy.
 
 ## Next steps
 
-- Full API reference — [`@tetherto/mdk` README][mdk-readme]
+- [`@tetherto/mdk` README][mdk-readme]: full API reference
 - [Run the Gateway][run-gateway]
 
 [mdk-readme]: ../../../backend/core/mdk/README.md
@@ -111,6 +118,9 @@ See [`onShutdown` API reference][mdk-readme-onshutdown].
 
 [gateway-concept]: ../../concepts/stack/gateway.md
 <!-- docs@tether.io: gateway-concept → concepts/stack/gateway -->
+
+[workers-lifecycle]: ../../concepts/stack/workers.md#same-process-mode
+<!-- docs@tether.io: workers-lifecycle → concepts/stack/workers#same-process-mode -->
 
 [run-gateway]: run.md
 <!-- docs@tether.io: run-gateway → guides/gateway/run -->

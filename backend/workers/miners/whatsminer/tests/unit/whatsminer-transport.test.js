@@ -41,11 +41,12 @@ function encryptedFrame (data, key = TOKEN.key) {
   return JSON.stringify({ enc })
 }
 
-function stubToken (miner) {
+async function stubToken (miner) {
+  await miner._ensureHandler()
   let refreshes = 0
-  miner._refreshToken = async () => {
+  miner.protocolHandler.refreshToken = async () => {
     refreshes++
-    miner.token = { ...TOKEN }
+    miner.protocolHandler.token = { ...TOKEN }
   }
   return () => refreshes
 }
@@ -75,12 +76,11 @@ test('_requestReadEndpoint - wraps transport failures as ERR_READ_FAILED', async
 })
 
 test('_getToken - derives token from salt handshake', async (t) => {
-  const { miner } = makeWhatsminer()
-  miner._requestReadEndpoint = async (cmd) => {
-    t.is(cmd, 'get_token')
-    return { Code: 131, Msg: { time: '0000', salt: '5QAHiKMb', newsalt: 'kowEj187' } }
-  }
+  const { miner, requests } = makeWhatsminer([
+    JSON.stringify({ Code: 131, Msg: { time: '0000', salt: '5QAHiKMb', newsalt: 'kowEj187' } })
+  ])
   const token = await miner._getToken()
+  t.is(requests[0], '{"cmd":"get_token"}')
   t.ok(token.token.startsWith('0000,kowEj187,'))
   t.is(token.token, `0000,kowEj187,${token.sign}`)
   t.is(typeof token.key, 'string')
@@ -89,24 +89,25 @@ test('_getToken - derives token from salt handshake', async (t) => {
 })
 
 test('_getToken - throws on fetch limit code 136', async (t) => {
-  const { miner } = makeWhatsminer()
-  miner._requestReadEndpoint = async () => ({ Code: 136 })
+  const { miner } = makeWhatsminer([JSON.stringify({ Code: 136 })])
   await t.exception(miner._getToken(), /ERR_TOKEN_FETCH_IP_LIMIT/)
 })
 
 test('_refreshToken - caches token and rethrows failures', async (t) => {
-  const { miner } = makeWhatsminer()
-  miner._getToken = async () => ({ token: 't', sign: 's', key: 'k' })
+  const { miner } = makeWhatsminer([
+    JSON.stringify({ Code: 131, Msg: { time: '0000', salt: '5QAHiKMb', newsalt: 'kowEj187' } })
+  ])
   await miner._refreshToken()
-  t.alike(miner.token, { token: 't', sign: 's', key: 'k' })
+  t.ok(miner.token)
+  t.is(miner.token.token, `0000,kowEj187,${miner.token.sign}`)
 
-  miner._getToken = async () => { throw new Error('ERR_TOKEN_FETCH_IP_LIMIT') }
-  await t.exception(miner._refreshToken(), /ERR_TOKEN_FETCH_IP_LIMIT/)
+  // responses exhausted — the next handshake fails at the transport
+  await t.exception(miner._refreshToken(), /ERR_READ_FAILED/)
 })
 
 test('_requestWriteEndpoint - empty response resolves null', async (t) => {
   const { miner } = makeWhatsminer([''])
-  stubToken(miner)
+  await stubToken(miner)
   t.is(await miner._requestWriteEndpoint('reboot', { respbefore: 'true' }, false), null)
 })
 
@@ -116,8 +117,8 @@ test('_requestWriteEndpoint - unencrypted error response retries then throws', a
     JSON.stringify({ Code: 45, Msg: 'Permission denied' }),
     JSON.stringify({ Code: 45, Msg: 'Permission denied' })
   ])
-  const refreshes = stubToken(miner)
-  await t.exception(miner._requestWriteEndpoint('power_on'), /Permission denied/)
+  const refreshes = await stubToken(miner)
+  await t.exception(miner._requestWriteEndpoint('power_on'), /ERR_PERMISSION_DENIED/)
   t.is(refreshes(), 3)
   t.is(miner.token, undefined)
 })
@@ -127,7 +128,7 @@ test('_requestWriteEndpoint - retries on stale token code 135 then succeeds', as
     encryptedFrame({ Code: 135, Msg: 'check token err' }),
     encryptedFrame({ Code: 131, Msg: 'API command OK' })
   ])
-  const refreshes = stubToken(miner)
+  const refreshes = await stubToken(miner)
   const res = await miner._requestWriteEndpoint('power_on')
   t.is(res.Code, 131)
   t.is(refreshes(), 2)
@@ -139,13 +140,13 @@ test('_requestWriteEndpoint - exhausts retries on persistent code 135', async (t
     encryptedFrame({ Code: 135 }),
     encryptedFrame({ Code: 135 })
   ])
-  stubToken(miner)
+  await stubToken(miner)
   t.is(await miner._requestWriteEndpoint('power_on'), null)
 })
 
 test('_requestWriteFirmwareEndpoint - encrypts command and targets miner platform', async (t) => {
   const { miner } = makeWhatsminer()
-  stubToken(miner)
+  await stubToken(miner)
   miner.getVersion = async () => ({ chip: 'c', platform: 'H616', whatsminer: { api: '2', firmware: 'f' } })
   let captured = null
   miner._requestUpdateMiner = async (command, file, key, platform) => {

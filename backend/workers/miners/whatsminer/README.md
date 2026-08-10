@@ -39,7 +39,7 @@ const worker = await startWhatsminerWorker({
     },
     opts: {
       address: '192.168.1.10',
-      port: 14028,           // Whatsminer default API port
+      port: 4028,             // API v2 default (4433 for v3); omit to auto-detect
       password: 'admin'
     }
   }]
@@ -53,9 +53,23 @@ restart-required caveat.
 
 ## Protocol
 
-Whatsminer uses an encrypted TCP API on port 14028. The Worker handles token-based authentication (HMAC-SHA256 challenge-response). Uses the `@tetherto/svc-facs-tcp` facility for connection management.
+Whatsminer devices speak one of two API generations. The Worker auto-detects which:
 
-The API key and set key must be configured per device in `opts`. The Worker automatically negotiates the session token on each connection.
+| API version | Default port | Auth command |
+| --- | --- | --- |
+| v2 (default) | `4028` | `get_token` |
+| v3 | `4433` | `get.device.info` |
+
+`opts.port === 4028` or `4433` short-circuits detection to v2 or v3 respectively; any other port probes both
+auth commands and falls back to v2. Pass `opts.apiVersion` (e.g. `'3.0.3'`) to skip detection entirely.
+
+Callers always use v2-style command names (`get_miner_info`, underscore notation); against a v3 device the
+Worker translates them to v3's dot notation (`get.miner.info`) internally, and back-translates the response
+shape (`{code, when, msg, desc}` → the v2-compatible shape).
+
+Authentication differs by version: v2 uses a salted MD5-crypt challenge-response token; v3 generates a fresh
+SHA-256-derived token per command. Both encrypt write payloads with AES-256 (ECB mode, key derived from the
+device password).
 
 ## Telemetry
 
@@ -86,7 +100,6 @@ Live metrics collected on each poll cycle:
 | `setLED` | `enabled: boolean` | Physical LED blink |
 | `setupPools` | `pools: object` | Pool URL, worker, password |
 | `setPowerPct` | `pct: number (0–100)` | Fine-grained power control |
-| `rackReboot` | — | Restart the Worker process |
 | `downloadLogs` | — | Pull raw diagnostic logs from hardware |
 
 Plus the standard device management commands: `registerThing`, `updateThing`, `forgetThings`, `saveSettings`, `saveComment`, `editComment`, `deleteComment`.
@@ -108,7 +121,9 @@ Plus the standard device management commands: `registerThing`, `updateThing`, `f
 
 ## Development with Mock Server
 
-The package ships a mock TCP server that simulates the Whatsminer API:
+The package ships a mock TCP server that simulates the Whatsminer API v2 protocol. Examples bind it to `14028`
+rather than the real v2 default (`4028`) so it doesn't collide with the Avalon mock, which binds its own real
+default (`4028`); `examples/full-site` runs both simultaneously. Pick any free port for standalone use.
 
 ```js
 const wmMock = require('@tetherto/mdk-worker-whatsminer/mock/server')

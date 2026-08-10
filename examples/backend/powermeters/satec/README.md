@@ -1,7 +1,7 @@
 # MDK Satec Power Meter Example
 
 A small, self-contained **Satec PM180** power-meter example you can clone and run with **no real
-hardware**. It starts a mock Satec meter, brings up an Kernel, registers the meter as a thing, and stays
+hardware**. It starts a mock Satec meter, brings up a Kernel, registers the meter as a thing, and stays
 running. It prints a ready-to-paste `hp-rpc-cli` command for pulling the meter's live telemetry over
 HRPC.
 
@@ -10,7 +10,7 @@ the Satec counterpart of [`examples/backend/miners/antminer`](../../miners/antmi
 
 ## What it demonstrates
 
-- Bringing up an Kernel and one Satec power-meter Worker in a single process.
+- Bringing up a Kernel and one Satec power-meter Worker in a single process.
 - Starting a **mock** Satec meter (Modbus TCP) and **registering** it as a thing.
 - Pulling live telemetry (voltage, current, power) through the Kernel over HRPC — no hardware.
 
@@ -44,8 +44,8 @@ other actions, and troubleshooting.
 `index.js`:
 
 1. Starts the mock Satec meter (`backend/workers/power-meter/satec/mock/server`).
-2. Brings up an Kernel (HRPC only) pinned to its own store root (`$TMPDIR/mdk-site-satec/kernel/`).
-3. `startWorker(SATEC, { kernel })` and `manager.registerThing({ info, opts })`.
+2. Brings up a Kernel (HRPC only) pinned to its own store root (`$TMPDIR/mdk-site-satec/kernel/`).
+3. `startSatecWorker({ workerId, storeDir, seedDevices })`, then `kernel.registerWorker(worker.runtime.getPublicKey())`.
 4. Prints an `hp-rpc-cli` command and stays running until `Ctrl+C`, which tears down the Worker and
    Kernel (the mock exits with the process).
 
@@ -80,4 +80,3 @@ $TMPDIR/mdk-site-satec/kernel/        # Kernel Corestore
 | Path | Purpose |
 |---|---|
 | [`backend/workers/power-meter/satec`](../../../../backend/workers/power-meter/satec/README.md) | Satec `SATEC` manager, mock server, `mdk-contract.json`. |
-| [`examples/backend/powermeters/mdk.client.powermeter.js`](../mdk.client.powermeter.js) | The minimal single-file power-meter example (ABB B23). |

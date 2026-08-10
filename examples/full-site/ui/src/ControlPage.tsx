@@ -16,6 +16,7 @@ import {
   Typography,
 } from "@tetherto/mdk-react-devkit/primitives";
 
+import { MHS_PER_THS } from "./constants";
 import type { Miner } from "./types";
 
 const MINER_TABLE_COLUMNS: DataTableColumnDef<Miner, unknown>[] = [
@@ -30,7 +31,11 @@ const MINER_TABLE_COLUMNS: DataTableColumnDef<Miner, unknown>[] = [
     },
   },
   { accessorKey: "powerMode", header: "Power mode", cell: ({ getValue }) => (getValue<string | null>() ?? "—") },
-  { accessorKey: "hashrateMhs", header: "Hashrate (MH/s)", cell: ({ getValue }) => getValue<number>().toFixed(0) },
+  {
+    accessorKey: "hashrateMhs",
+    header: "Hashrate (TH/s)",
+    cell: ({ getValue }) => (getValue<number>() / MHS_PER_THS).toFixed(0),
+  },
   { accessorKey: "powerW", header: "Power (W)", cell: ({ getValue }) => getValue<number>().toFixed(0) },
   { accessorKey: "temperature", header: "Temp (°C)", cell: ({ getValue }) => getValue<number>().toFixed(1) },
 ];

@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-core-workers",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "description": "MDK Core Workers",
   "keywords": [
@@ -24,7 +24,10 @@
     "test:packages": "./test-packages.sh"
   },
   "devDependencies": {
-    "ajv": "8.17.1",
+    "ajv": "8.20.0",
     "standard": "17.1.0"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }

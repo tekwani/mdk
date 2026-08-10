@@ -3,12 +3,9 @@
 const os = require('os')
 const path = require('path')
 
-// This example lives under examples/backend/sensors/seneca/, so the repo root is
-// four levels up. Everything is required from backend/ — the canonical source tree.
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..')
-const { getKernel } = require(path.join(REPO_ROOT, 'backend', 'core', 'mdk'))
-const { startSenecaWorker } = require(path.join(REPO_ROOT, 'backend', 'workers', 'temperature', 'seneca'))
-const mockServer = require(path.join(REPO_ROOT, 'backend', 'workers', 'temperature', 'seneca', 'mock', 'server'))
+const { getKernel } = require('@tetherto/mdk-core')
+const { startSenecaWorker } = require('@tetherto/mdk-worker-seneca')
+const mockServer = require('@tetherto/mdk-worker-seneca/mock/server')
 
 const HOST = '127.0.0.1'
 const PORT = 5050

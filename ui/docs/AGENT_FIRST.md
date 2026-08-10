@@ -497,11 +497,17 @@ blueprints, docs) just makes it easier to navigate.
 
 End-to-end recipe for running the **MDK UI Shell** Operations Dashboard
 locally, against a local
-[`mdk-gateway`](https://github.com/tetherto/mdk-prv/blob/release/0.5.0/backend/core/gateway/package.json)
-backend. 
-The frontend is scaffolded with one CLI command; the backend
-needs a small amount of configuration up front (most importantly: a real
-Google OAuth client).
+[`mdk-gateway`](../../backend/core/gateway/README.md)
+backend, which ships in this repo at `backend/core/gateway`.
+The frontend is scaffolded with one CLI command.
+
+There are two ways to run it, with or without authentication:
+
+- **[Without sign-in](#run-it-without-sign-in)** — where to start. Two edits to
+  the scaffolded app and the dashboard loads against your Gateway.
+- **[With Google sign-in](#add-google-sign-in)** — needs your
+  [identity plugin](../../docs/guides/gateway/plugins.md) you write. Do this when you
+  need real sessions.
 
 > **Audience:** community developers evaluating MDK, contributors writing
 > demos, LLM agents bootstrapping a similar dashboard. If you're already
@@ -510,13 +516,9 @@ Google OAuth client).
 ## Shell setup — TL;DR
 
 ```bash
-# Backend (one-time setup)
-git clone https://github.com/tetherto/miningos-gateway.git
-cd miningos-gateway
+# Backend (one-time setup) — the Gateway ships in this repo
+cd backend/core/gateway
 ./setup-config.sh
-#   ↳ open config/facs/httpd-oauth2.config.json
-#     paste a Google OAuth client id + secret (see step 1 below).
-#     add your Google email to the `users` array.
 npm install
 npm start                          # http://localhost:3000
 
@@ -528,9 +530,59 @@ cp .env.example .env
 npm run dev                        # http://localhost:3030
 ```
 
-Open `http://localhost:3030`, click **Sign in with Google**.
+Open `http://localhost:3030` and the app redirects to `/signin`, because the
+shell is built around a session it has no way to obtain yet. Pick
+[Run it without sign-in](#run-it-without-sign-in) or
+[Add Google sign-in](#add-google-sign-in).
 
-## Step 1: Register a Google OAuth client
+## Auth in v0.6 — what ships
+
+The Gateway is a plugin host with no API of its own, and no built-in auth or
+OAuth2 facilities. That has two consequences here:
+
+- **No OAuth implementation ships.** Sign-in is a Gateway plugin you write.
+  `@tetherto/mdk-plugin-auth` is bundled but unwired, and it consumes a token
+  rather than issuing one.
+- **The Gateway does not validate tokens.** Plugin routes can declare
+  `"auth": true`, but nothing enforces it — routes never receive a
+  `services.authLib`. An unauthenticated frontend talks to it fine, which is
+  what makes [running it without sign-in](#run-it-without-sign-in) work.
+
+The frontend half is all present — `<SignInGoogleButton>`, `RequireAuth`,
+`useAuthToken`, `useTokenPolling`, `authStore`. It is waiting on a backend that
+completes the redirect contract described under
+[add Google sign-in](#add-google-sign-in).
+
+## Run it without sign-in
+
+`RequireAuth` renders its children only when `authStore` holds a token, so the
+shell needs one of two edits to run without one. Both are in files the template
+expects you to own:
+
+1. `src/main.tsx` — seed the store. The template already writes the token it
+   captures from the URL:
+
+   ```ts
+   const urlToken = extractAuthTokenFromUrl(window.location.search)
+   if (urlToken !== null && urlToken !== '') { authStore.getState().setToken(urlToken) }
+   ```
+
+   For local evaluation you can call `authStore.getState().setToken('local-dev')`
+   unconditionally instead. Any non-empty value satisfies the guard, and the
+   Gateway does not check it. Do not carry this past local evaluation — the value
+   is sent as a real `Authorization` header.
+
+2. `src/router.tsx` — or drop the `<RequireAuth>` wrapper entirely, so the
+   routes render without a session at all.
+
+The dashboard then loads against the Gateway. Write affordances (vote, submit,
+cancel, comment) may still be inert, since nothing has granted a permission set.
+
+## Add Google sign-in
+
+Two pieces: a Google OAuth client, and the identity plugin that uses it.
+
+### Step 1: Register a Google OAuth client
 
 The backend doesn't ship usable credentials by default. You need a fresh
 Google OAuth 2.0 client.
@@ -539,7 +591,9 @@ Google OAuth 2.0 client.
    the Google account you'll be testing with).
 2. **Create credentials** → **OAuth client ID**.
 3. Application type: **Web application**.
-4. **Authorised redirect URIs** — add:
+4. **Authorised redirect URIs** — add the callback URL your identity plugin
+   serves (step 2). The path is yours to choose; the conventional one, with
+   the Gateway on its default port, is:
    ```
    http://localhost:3000/oauth/google/callback
    ```
@@ -549,61 +603,39 @@ Google OAuth 2.0 client.
    **External** + **Testing**. Add your own email under "Test users" so
    you can sign in.
 
-You'll paste these into the backend's config in step 2.
+Step 2 hands these to your identity plugin.
 
-## Step 2: Configure and start the backend
+### Step 2: Supply the identity plugin
 
-```bash
-git clone https://github.com/tetherto/miningos-gateway.git
-cd miningos-gateway
-./setup-config.sh
-```
+MDK ships no OAuth implementation, so this is the part you write. Mount it with
+`startGateway({ extraPluginDirs: [...] })`; the
+[plugin authoring guide](../../docs/guides/gateway/plugins.md) covers the
+manifest and controller contract.
 
-The setup script copies `*.example.*` files into their real counterparts
-under `config/`. Now open
-`config/facs/httpd-oauth2.config.json` and update the `h0` block:
+The frontend only requires that plugin to honour two ends of a redirect:
 
-```jsonc
-{
-  "h0": {
-    "method": "google",
-    "credentials": {
-      "client": {
-        "id": "YOUR_GOOGLE_CLIENT_ID",      // ← from step 1
-        "secret": "YOUR_GOOGLE_CLIENT_SECRET" // ← from step 1
-      }
-    },
-    "startRedirectPath": "/oauth/google",
-    "callbackUri": "http://localhost:3000/oauth/google/callback",
-    "callbackUriUI": "http://localhost:3030", // ← matches the FE port
-    "users": [
-      {
-        "email": "you@example.com",            // ← the Google account you signed in with
-        "write": true,
-        "caps": ["m", "c", "mp", "p", "t", "e", "f", "r"]
-      }
-    ]
-  }
-}
-```
+- a **start endpoint** at `${VITE_OAUTH_BASE_URL}/oauth/google`, which
+  `<SignInGoogleButton>` navigates to;
+- a **return redirect** to the frontend carrying the token as
+  `?authToken=<jwt>` — `http://localhost:3030/?authToken=…` on the MDK UI
+  Shell default port. `useAuthToken` extracts it and `useTokenPolling`
+  refreshes it.
 
-Then install and run:
+Everything else — which provider, where the client id and secret live, who
+counts as an allowed user — is your plugin's business.
 
-```bash
-npm install
-npm start
-```
-
-The backend now serves on `http://localhost:3000`.
+Restart the Gateway with the plugin mounted. The template needs no change: it
+already captures the returned `?authToken=` into `authStore`, scrubs it from the
+address bar, and `useTokenPolling` refreshes it before expiry.
 
 > **No-CORS reality:** the backend has no CORS plugin. All API calls must
 > go through a same-origin proxy. The MDK UI Shell Vite config already
 > proxies `/auth`, `/oauth`, `/api`, and `/pub` to
 > `http://localhost:3000` — keep them aligned.
 
-## Step 3: Scaffold and start MDK UI Shell
+## Scaffold and start MDK UI Shell
 
-From a directory **outside** the backend repo:
+Needed for either path. From a directory **outside** the backend repo:
 
 ```bash
 # MDK CLI must be installed globally OR you're running from inside the
@@ -628,14 +660,14 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:3030`, click **Sign in with Google**, sign in with
-the account you added to the `users` array in step 2. You'll land back
-at `/?authToken=…`; the FE extracts the token, strips it from the URL,
-and shows the dashboard.
+Open `http://localhost:3030`. On the no-sign-in path the dashboard renders
+straight away. With sign-in wired, click **Sign in with Google** and use an
+account your identity plugin allows: you land back at `/?authToken=…`, the FE
+extracts the token, strips it from the URL, and shows the dashboard.
 
 ## Known limitation — no data without miners
 
-`miningos-gateway` is the **API surface**, not the data producer. It
+`@tetherto/mdk-gateway` is the **API surface**, not the data producer. It
 relays data from Kernel (orchestrator) clusters with real mining hardware.
 **Without that data flowing, the dashboard renders empty states.**
 
@@ -646,7 +678,7 @@ data" rather than synthesizing mock telemetry.
 If you need to exercise the charts:
 
 - Run the backend's integration test harness (see
-  `miningos-gateway/tests/integration/`) — it stubs Kernel clusters with
+  `backend/core/gateway/tests/integration/`) — it stubs Kernel clusters with
   mock data.
 - Or write a small fixture loader that POSTs telemetry into the backend's
   SQLite DB.
@@ -657,18 +689,18 @@ Both are out of scope for this guide and for the MDK UI Shell template.
 
 ### Sign-in redirect lands at the wrong port
 
-`callbackUriUI` in `httpd-oauth2.config.json` doesn't match the FE port.
-MDK UI Shell defaults to **3030** (see `vite.config.ts`). Either change
-one side to match the other.
+The redirect your identity plugin sends the token to doesn't match the FE port.
+MDK UI Shell defaults to **3030** (see `vite.config.ts`). Change one side to
+match the other.
 
 ### Every API request returns 401
 
 The backend issued a token but doesn't recognize it on subsequent calls.
 Common causes:
 
-1. Your Google email isn't in the `users` array.
-2. Backend's auth-cache TTL is < the FE polling interval — restart the
-   backend after editing the config.
+1. Your Google email isn't on your identity plugin's allowed-users list.
+2. The backend's auth-cache TTL is < the FE polling interval — restart the
+   backend after changing it.
 3. Token TTL is too short — the backend default is 300 s;
    `useTokenPolling` refreshes at 250 s so this should never happen on a
    healthy backend.
@@ -692,16 +724,15 @@ Inspect a chart query in the Network tab: it'll succeed with `[[]]`
 ## What lives where
 
 ```
-miningos-gateway                       # Backend (separate repo)
- └── /auth/...                          # All authenticated endpoints
- └── /oauth/google                      # OAuth start
- └── /oauth/google/callback             # OAuth callback → FE w/ ?authToken=
-
 mdk monorepo                            # This repo
- ├── packages/ui-foundation/                  # API contracts + mappers + Bearer fetch
- ├── packages/react-adapter/            # Data hooks + auth hooks
- ├── packages/react-devkit/             # Chart components + RequireAuth + dashboard widgets
- └── packages/cli/templates/mdk-ui-shell/   # The app template — what `create` produces
+ ├── backend/core/gateway/              # The Gateway — serves the routes below
+ │    ├── /auth/...                     # All authenticated endpoints
+ │    ├── /oauth/google                 # OAuth start
+ │    └── /oauth/google/callback        # OAuth callback → FE w/ ?authToken=
+ ├── ui/packages/ui-foundation/         # API contracts + mappers + Bearer fetch
+ ├── ui/packages/react-adapter/         # Data hooks + auth hooks
+ ├── ui/packages/react-devkit/          # Chart components + RequireAuth + dashboard widgets
+ └── examples/mdk-ui-shell-template/    # The runnable app template — what `create` produces
 
 your scaffolded app                     # What you cd into to run `npm run dev`
  ├── src/main.tsx                       # MdkProvider wiring

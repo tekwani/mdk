@@ -1,7 +1,7 @@
 import type { SidebarMenuItem } from '@tetherto/mdk-react-devkit/primitives'
 import { useMemo } from 'react'
 import type { JSX } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { COMPONENT_NAV, getCategoryStats, NAV_SECTION } from '../constants/navigation'
 import './home-page.scss'
 

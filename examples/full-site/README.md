@@ -308,6 +308,78 @@ over HRPC and exposes the site's device registry, telemetry, and command dispatc
 tools for AI agents. See [`docs/mcp-server.md`][mcp-server-docs] for setup, tools, and
 usage with Claude Desktop or the MCP SDK.
 
+## Troubleshooting
+
+### Kernel fails to start: `Invalid device file, was moved unsafely`
+
+**Symptom**: The CLI starts but `up` fails immediately with:
+
+```
+kernel exited (ERR_PROC_EXITED: kernel (code 1, signal null))
+Error: Invalid device file, was moved unsafely
+```
+
+**Cause**: The `.mdk-data` directory contains RocksDB files with embedded path metadata from a previous location. This happens when the repo is moved, copied, cloned to a new location, or when switching between multiple clones of the same repo.
+
+**Fix**: Remove the persisted state directory:
+
+```bash
+rm -rf .mdk-data
+```
+
+The Kernel recreates `.mdk-data` with correct path metadata on next boot. All devices and history are re-seeded.
+
+### Port conflicts
+
+**Symptom**: A component fails to start with `EADDRINUSE` or the Gateway/UI doesn't respond on the expected port.
+
+**Check**: Verify no other process is holding the required ports:
+
+```bash
+lsof -nP -iTCP:3007   # Gateway
+lsof -nP -iTCP:3040   # UI
+```
+
+Mock device ports are listed in [Ports used by the mock devices](#ports-used-by-the-mock-devices). If another example (e.g., `examples/mvp-site`) or a previous run left processes running, stop them first or use the env vars to move this example to different ports:
+
+**Fix**: Stop them manually or use the CLI:
+
+```bash
+node cli.js
+mdk> down
+mdk> exit
+```
+
+**Fix**: Assign different ports:
+
+```bash
+MDK_HTTP_PORT=3008 MDK_UI_PORT=3041 node start.js
+```
+
+### Stale processes after CLI crash or forced exit
+
+**Symptom**: `up` fails because a component is already running, or ports are held.
+
+**Check**: Look for orphaned Node.js processes:
+
+```bash
+ps aux | grep -E "node.*backend/proc" | grep -v grep
+```
+
+**Fix**: Stop them manually or use the CLI:
+
+```bash
+node cli.js
+mdk> down
+mdk> exit
+```
+
+If processes don't respond to `down`, kill them directly:
+
+```bash
+pkill -f "node.*backend/proc"
+```
+
 ## Links
 
 [mcp-server-docs]: docs/mcp-server.md

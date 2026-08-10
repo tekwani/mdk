@@ -2,7 +2,7 @@
 title: Gateway
 description: The Gateway as a development canvas — extension model, data access, auth design, and Kernel connection
 docs@tether_slug: concepts/stack/gateway
-todo: Gap — no dedicated RBAC how-to covering role assignment and available role strings
+todo: "Gap — no how-to for wiring an identity layer into plugin controllers. There are no MDK-defined roles or role strings to document; the only permission vocabulary the stack enforces is Kernel's device-family write perms (miner:w, container:w) read from authPerms"
 ---
 
 ## Overview
@@ -17,17 +17,16 @@ Read this before building [plugins][plugins-how-to], auth flows, or aggregation 
 
 ## What the Gateway owns
 
-The Gateway wraps [`@tetherto/mdk-client`][mdk-client] — the MDK protocol connector to Kernel — and adds an authenticated HTTP,
-WebSocket, and MCP interface on top. Consumers connect through the Gateway; using `@tetherto/mdk-client` without the Gateway
-is not supported by this monorepo.
+The Gateway wraps [`@tetherto/mdk-client`][mdk-client] — the MDK protocol connector to Kernel — and adds an HTTP
+interface on top. Consumers connect through the Gateway using `@tetherto/mdk-client`. Agents can reach MDK over MCP through the standalone [`@tetherto/mdk-mcp`][mcp-readme] package.
 
-The Gateway owns three concerns that Kernel deliberately **does not** handle:
+The Gateway owns concerns that Kernel deliberately **does not** handle:
 
-- Authentication and RBAC: JWT validation, session management, OAuth2 (Google and Microsoft built in), and role-based access before any request reaches Kernel
-- API surface: REST endpoints, WebSocket telemetry subscriptions, command dispatch, and the MCP endpoint for AI agents
+- The place where authentication belongs: user identity is a Gateway-tier concern: validating callers falls to your plugin controllers and the identity layer you supply
+- API surface: REST endpoints and command dispatch
 - Fleet aggregation: cross-Worker queries that compute site hashrate, average temperature, and cross-rack efficiency — resolved in controller code, not in Kernel
 
-[Kernel][kernel-concept] is a pass-through kernel. It routes commands to [Workers][workers-concept], collects telemetry, and maintains
+The [Kernel][kernel-concept] is a pass-through, routing commands to [Workers][workers-concept], collecting telemetry, and maintaining
 the device registry. Everything above the kernel — authentication, business logic, API surface — is owned by the caller:
 the Gateway (which wraps [`@tetherto/mdk-client`][mdk-client] internally) when using the toolkit.
 
@@ -40,8 +39,10 @@ The Gateway offers two ways to add routes, in order of preference.
 The recommended path. A plugin is a directory with an `mdk-plugin.json` manifest and one or more controller files.
 Pass the directory path to `startGateway()` via `extraPluginDirs`.
 
-Controllers receive a `services` bag on every request — `mdkClient`, `dataProxy`, `authLib`, and `conf` — with no protocol knowledge required.
-The [default plugins][plugins-readme-defaults] (`auth`, `telemetry`, `site-hashrate`) load the same way as any plugin you write.
+Controllers receive a `services` bag on every request — `mdkClient`, `dataProxy`, and `conf` — with no protocol knowledge required.
+The [default plugins][plugins-readme-defaults] (`telemetry`, `site-hashrate`, `site-monitor`) load automatically. An `auth` plugin ships beside them
+but the Gateway neither registers it nor provides the `services.authLib` its controllers expect, so mounting it does not yield working identity
+endpoints.
 
 The [plugin authoring guide][plugins-how-to] covers the build process end to end.
 The [plugin reference][plugins-readme] documents the manifest schema, controller contract, and loader errors.
@@ -54,7 +55,7 @@ and easier for a later maintainer to follow.
 
 ## Connect without the Gateway
 
-If your use case does not need the Gateway's HTTP surface, RBAC, or plugin system — for example, a background service that only
+If your use case does not need the Gateway's HTTP surface or plugin system, for example a background service that only
 dispatches commands — you can use [`@tetherto/mdk-client`][mdk-client] directly against Kernel without running the Gateway at all.
 This is the direct path. Such an approach is not directly supported by this monorepo, as most applications build on the Gateway.
 
@@ -73,22 +74,25 @@ operations that can fail if Kernel is unreachable. `dataProxy` reads from local 
 
 ## Authentication design
 
-The Gateway validates a JWT Bearer token before proxying any request to Kernel. By design, Kernel does not perform user-level authentication.
-The HRPC connection is an encrypted Noise channel, and [Kernel maintains an allowlist][kernel-transports]; pre v1.0 it is opt-in (the default
-`auth.whitelist` is empty and admits any caller), but when configured the Gateway's DHT public key must be added before the connection is accepted.
-Once the transport is established, Kernel trusts all messages from the Gateway without inspecting user identity.
+Neither tier authenticates a user. The Gateway serves whatever routes its plugins declare, to any caller, and Kernel does no user-level
+authentication by design. The HRPC connection is an encrypted Noise channel, and [Kernel maintains an allowlist][kernel-transports]; pre v1.0 it is
+opt-in (the default `auth.whitelist` is empty and admits any caller), but when configured the Gateway's DHT public key must be added before the
+connection is accepted. Once the transport is established, Kernel trusts all messages from the Gateway without inspecting user identity.
 
-User authentication and RBAC are entirely the Gateway's responsibility. RBAC is enforced at the route level via the `permissions` 
-field in `mdk-plugin.json`. Routes with `"auth": false` are public — no JWT is required. Routes with `"auth": true` but no `permissions` 
-array are accessible to any authenticated user.
-[A `permissions` array][plugins-permissions] restricts access further to users with matching roles.
+User authentication and RBAC belong to the application **you build** on the Gateway. A route is reachable by anyone unless its controller
+validates the token and checks permissions itself, so [protecting a route is controller work][plugins-auth]. The `"auth"` and `"permissions"` fields
+in `mdk-plugin.json` have no reader and trigger no enforcement.
+
+Kernel does check one thing on the write path: `ActionManager` and `ActionCaller` require the device-family write permission (`miner:w`,
+`container:w`) in the `authPerms` array your controller passes with each action, and reject the action with `ERR_ACTION_DENIED` without it.
 
 ## Kernel connection
 
 The Gateway is the **active** side of this connection — it dials Kernel. [Kernel][kernel-concept] is the passive listener; it does not
 initiate contact with the Gateway.
 
-The connection is [Hyperswarm RPC (HRPC)][hrpc-glossary] — an encrypted peer-to-peer transport addressed by Kernel's public key. What varies is how the Gateway obtains that key:
+The connection is [Hyperswarm RPC (HRPC)][hrpc-glossary] — an encrypted peer-to-peer transport addressed by Kernel's public key. What varies is how 
+the Gateway obtains that key:
 
 - **Same host (zero-config default)**: Kernel publishes its HRPC public key to a well-known key file (`<tmpdir>/mdk/.kernel-key`)
   on start; the Gateway reads it from there automatically when no key is passed
@@ -127,6 +131,7 @@ The connection is [Hyperswarm RPC (HRPC)][hrpc-glossary] — an encrypted peer-t
 [plugins-readme]: ../../../backend/core/plugins/README.md
 <!-- docs@tether.io: plugins-readme → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md -->
 
+
 [run-how-to]: ../../guides/gateway/run.md
 <!-- docs@tether.io: run-how-to → guides/gateway/run -->
 
@@ -142,11 +147,14 @@ The connection is [Hyperswarm RPC (HRPC)][hrpc-glossary] — an encrypted peer-t
 [plugins-readme-defaults]: ../../../backend/core/plugins/README.md#default-plugins
 <!-- docs@tether.io: plugins-readme-defaults → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#default-plugins -->
 
-[plugins-permissions]: ../../guides/gateway/plugins.md#auth-permissions-and-caching
-<!-- docs@tether.io: plugins-permissions → guides/gateway/plugins#auth-permissions-and-caching -->
+[plugins-auth]: ../../guides/gateway/plugins.md#auth-and-permissions
+<!-- docs@tether.io: plugins-auth → guides/gateway/plugins#auth-and-permissions -->
 
 [app-toolkit]: app-toolkit.md
 <!-- docs@tether.io: app-toolkit → concepts/stack/app-toolkit -->
 
 [hrpc-glossary]: ../../reference/glossary.md#hyperswarm-rpc
 <!-- docs@tether.io: hrpc-glossary → reference/glossary#hyperswarm-rpc -->
+
+[mcp-readme]: ../../../backend/core/mcp/README.md
+<!-- docs@tether.io: mcp-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->

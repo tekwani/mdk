@@ -1,0 +1,71 @@
+{
+  "root": ".site-data",
+  "host": "127.0.0.1",
+  "discovery": "local",
+  "worker": {
+    "id": "whatsminer-m56s-telemetry-flow",
+    "model": "m56s",
+    "allowDuplicateIPs": true,
+    "pools": [
+      { "url": "stratum+tcp://btc.example-pool.com:3333", "worker_name": "account.worker", "worker_password": "x" }
+    ],
+    "thing": {
+      "collectSnapsItvMs": 30000,
+      "storeSnapItvMs": 30000
+    }
+  },
+  "mocks": {
+    "type": "m56s",
+    "portBase": 14031,
+    "defaultPassword": "admin"
+  },
+  "ocean": {
+    "worker": {
+      "id": "ocean-pool-worker",
+      "rack": "site-1",
+      "tickMs": 10000
+    },
+    "pool": {
+      "apiUrl": "http://127.0.0.1:8010",
+      "accounts": ["sample-ocean-account"]
+    },
+    "mock": {
+      "port": 8010
+    }
+  },
+  "satec": {
+    "worker": {
+      "id": "satec-powermeter-worker",
+      "model": "pm180",
+      "allowDuplicateIPs": true,
+      "thing": {
+        "collectSnapsItvMs": 5000,
+        "storeSnapItvMs": 5000,
+        "collectSnapTimeoutMs": 15000,
+        "logKeepCount": 5
+      }
+    },
+    "mocks": {
+      "portBase": 15020,
+      "powerW": 17000
+    }
+  },
+  "gateway": {
+    "port": 3000,
+    "host": "0.0.0.0",
+    "pluginDirs": ["backend/gateway-plugins/site"],
+    "staticRootPath": "ui/dist"
+  },
+  "mcp": {
+    "port": 3100,
+    "pluginDirs": ["backend/mcp-plugins/site"]
+  },
+  "pm2": {
+    "script": "deploy/run-process.js",
+    "exec_mode": "fork",
+    "instances": 1,
+    "autorestart": true,
+    "restart_delay": 2000,
+    "roles": ["mocks", "mocks-ocean", "mocks-satec", "kernel", "worker", "worker-ocean", "worker-satec", "gateway", "mcp"]
+  }
+}

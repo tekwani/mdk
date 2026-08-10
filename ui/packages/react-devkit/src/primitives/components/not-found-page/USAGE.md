@@ -15,7 +15,7 @@ A full-page 404 "not found" screen with a customizable title, message, and optio
 
 ```tsx
 import { NotFoundPage } from "@tetherto/mdk-react-devkit"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router"
 
 const navigate = useNavigate()
 

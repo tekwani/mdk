@@ -20,7 +20,7 @@ Write actions queue into the actions draft store; submission stays gated behind 
 
 ```tsx
 import { DEVICE_EXPLORER_DEVICE_TYPE, ExplorerDetail } from "@tetherto/mdk-react-devkit";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 const navigate = useNavigate();
 

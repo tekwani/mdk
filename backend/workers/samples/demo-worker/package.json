@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-worker-demo",
-  "version": "0.1.0",
+  "version": "0.6.0",
   "description": "Third-party plugin-authoring demo Worker Plugin with its own SQLite persistence — hosted on WorkerRuntime by a caller (see examples/backend/demo-worker-caller), never depends on WorkerRuntime itself",
   "keywords": [
     "tether"
@@ -23,5 +23,8 @@
   "devDependencies": {
     "brittle": "3.16.3",
     "standard": "17.1.2"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }

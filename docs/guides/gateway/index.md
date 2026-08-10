@@ -6,7 +6,7 @@ docs@tether_slug: guides/gateway
 
 ## Overview
 
-The Gateway wraps [`@tetherto/mdk-client`][mdk-client-readme] to deliver an authenticated HTTP, WebSocket, and MCP interface for your frontend and AI agents. These guides cover how to run it and extend it with the plugin system.
+The Gateway wraps [`@tetherto/mdk-client`][mdk-client-readme] to deliver an HTTP interface for your frontend. These guides cover how to run it and extend it with the plugin system. Agents can reach MDK over MCP through the standalone [`@tetherto/mdk-mcp`][mcp-readme] package.
 
 > [!NOTE]
 > If Gateway, Kernel, or plugin are unfamiliar, read [terminology][terminology] first. For the full developer model — extension, data access,
@@ -55,3 +55,6 @@ The Gateway wraps [`@tetherto/mdk-client`][mdk-client-readme] to deliver an auth
 
 [write-actions]: write-actions.md
 <!-- docs@tether.io: write-actions → guides/gateway/write-actions -->
+
+[mcp-readme]: ../../../backend/core/mcp/README.md
+<!-- docs@tether.io: mcp-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->

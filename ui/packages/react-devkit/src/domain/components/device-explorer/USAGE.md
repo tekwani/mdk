@@ -5,22 +5,23 @@ miners or cabinets. Designed to be controlled by URL state in the host app.
 
 ## Props
 
-| Prop                       | Type                                            | Required | Default | Description                                  |
-| -------------------------- | ----------------------------------------------- | -------- | ------- | -------------------------------------------- |
-| `deviceType`               | `DeviceExplorerDeviceType`                      | yes      | —       | Active device-type tab.                      |
-| `onDeviceTypeChange`       | `(deviceType: DeviceExplorerDeviceType) => void` | yes     | —       | Setter for the device type.                  |
-| `data`                     | `Device[]`                                      | yes      | —       | Rows.                                        |
-| `filters`                  | `LocalFilters`                                  | no       | —       | Controlled filter values.                    |
-| `onFiltersChange`          | `(filters: LocalFilters) => void`               | yes      | —       | Setter for filters.                          |
-| `filterOptions`            | `DeviceExplorerToolbarProps["filterOptions"]`   | yes      | —       | Filter category definitions.                 |
-| `searchOptions`            | `DeviceExplorerToolbarProps["searchOptions"]`   | yes      | —       | Searchable column definitions.               |
-| `searchTags`               | `string[]`                                      | yes      | —       | Active search-tag chips.                     |
-| `onSearchTagsChange`       | `(tags: string[]) => void`                      | yes      | —       | Setter for search tags.                      |
-| `selectedDevices`          | `DataTableRowSelectionState`                    | no       | —       | Controlled row-selection state.              |
-| `onSelectedDevicesChange`  | `(selections: DataTableRowSelectionState) => void` | no    | —       | Setter for row selection.                    |
-| `renderAction`             | `(row) => React.ReactNode`                      | no       | —       | Renderer for the per-row action cell.        |
-| `getFormattedDate`         | `(ts: number \| string) => string`              | yes      | —       | Date formatter from the host's timezone setup. |
-| `className`                | `string`                                        | no       | —       | Additional class names.                      |
+| Prop                       | Type                                               | Required | Default | Description                                                                                                              |
+| -------------------------- | -------------------------------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `deviceType`               | `DeviceExplorerDeviceType`                         | Yes      | —       | Active device-type tab                                                                                                   |
+| `onDeviceTypeChange`       | `(deviceType: DeviceExplorerDeviceType) => void`   | Yes      | —       | Setter for the device type                                                                                               |
+| `data`                     | `Device[]`                                         | Yes      | —       | Rows                                                                                                                     |
+| `filters`                  | `LocalFilters`                                     | No       | —       | Controlled filter values                                                                                                 |
+| `onFiltersChange`          | `(filters: LocalFilters) => void`                  | Yes      | —       | Setter for filters                                                                                                       |
+| `filterOptions`            | `DeviceExplorerToolbarProps["filterOptions"]`      | Yes      | —       | Filter category definitions                                                                                              |
+| `searchOptions`            | `DeviceExplorerToolbarProps["searchOptions"]`      | Yes      | —       | Searchable column definitions                                                                                            |
+| `searchTags`               | `string[]`                                         | Yes      | —       | Active search-tag chips                                                                                                  |
+| `onSearchTagsChange`       | `(tags: string[]) => void`                         | Yes      | —       | Setter for search tags                                                                                                   |
+| `selectedDevices`          | `DataTableRowSelectionState`                       | No       | —       | Controlled row-selection state                                                                                           |
+| `onSelectedDevicesChange`  | `(selections: DataTableRowSelectionState) => void` | No       | —       | Setter for row selection                                                                                                 |
+| `renderAction`             | `(row) => React.ReactNode`                         | No       | —       | Renderer for the per-row action cell                                                                                     |
+| `getFormattedDate`         | `(ts: number \| string) => string`                 | Yes      | —       | Date formatter from the host's timezone setup                                                                            |
+| `onRowClick`               | `(device: DeviceExplorerDeviceData) => void`       | No       | —       | Makes rows interactive (click/Enter/Space); see the `DataTable` USAGE.md for the click-target exclusions this inherits   |
+| `className`                | `string`                                           | No       | —       | Additional class names                                                                                                   |
 
 ## Minimal example
 

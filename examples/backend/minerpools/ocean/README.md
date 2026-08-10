@@ -8,22 +8,24 @@ blocks). It then stays running so `verify.js` can re-query the same mock.
 ## Why this one is standalone (no Kernel / gateway)
 
 The miner and container examples (e.g. [`examples/backend/miners/antminer`](../../miners/antminer/README.md))
-bring up an Kernel + gateway and register devices as **things**. **Minerpools are different** and are
-**not yet wired into the Kernel/MDK thing model:**
+bring up a Kernel + gateway and boot their Worker via `WorkerRuntime`. `@tetherto/mdk-worker-ocean` does now
+ship a Kernel-integrated boot function, `startOceanPoolWorker`, documented in the
+[worker package README](../../../../backend/workers/minerpools/README.md). This particular example predates
+that and still drives the manager directly, for a minimal demo with no Kernel/gateway dependency:
 
-- `OceanMinerpoolManager` extends `MinerpoolManager` (an `EventEmitter`), **not** `ThingManager`. It
-  has no `registerThing`, no `mem.things`, no `getThingType`.
+- `OceanMinerpoolManager` extends [`PoolService`](../../../../backend/core/mdk/lib/services/pool.service.js)
+  from `@tetherto/mdk-core`. It has no `registerThing`, no `mem.things`, no `getThingType`: pool workers are
+  not devices in the Worker Plugin sense.
 - It's **config-driven**: the pool accounts and API URL come from `{ ocean: { accounts, apiUrl } }`
   at construction, and data is pulled with `fetchStats` / `fetchWorkers` / `fetchTransactions` /
   `fetchBlocks`.
-- `startWorker()` constructs every manager with an empty conf and `MDKWorkerAdapter` is hard-wired to
-  the `ThingManager` API (`mem.things`, `listThings`, `collectThingSnap`), so a minerpool can't be
-  started under the Kernel today.
 
-So this example drives the pool manager **directly**, exactly as it runs inside a Worker process.
-Wiring minerpools into the Kernel (conf injection in `startWorker` + a minerpool path in the adapter)
-is the **"MDK integration"** half of the parent task and is tracked separately. Once that lands, this
-example can grow an Kernel + `verify`-over-HRPC flow like the miner examples.
+So this example drives the pool manager **directly**, without a Kernel or gateway, exactly as
+`startOceanPoolWorker` does internally. See the [worker package README][ocean-readme] for the Kernel-integrated
+boot path, and [`examples/backend/miners/antminer`](../../miners/antminer/README.md) for a full Kernel +
+gateway + `verify`-over-HRPC flow.
+
+[ocean-readme]: ../../../../backend/workers/minerpools/ocean/README.md
 
 ## What it demonstrates
 
@@ -153,5 +155,4 @@ $TMPDIR/mdk-site-ocean/store/     # the pool's Hyperbee store
 | Path | Purpose |
 |---|---|
 | [`backend/workers/minerpools/ocean`](../../../../backend/workers/minerpools/ocean/README.md) | Ocean `OCEAN_POOL` manager, mock server, `mdk-contract.json`. |
-| [`examples/backend/minerpools/mdk.client.ocean.js`](../mdk.client.ocean.js) | The minimal single-file version of this example. |
-| [`examples/backend/miners/antminer`](../../miners/antminer/README.md) | An Kernel-integrated example (for comparison — what minerpools will look like once integrated). |
+| [`examples/backend/miners/antminer`](../../miners/antminer/README.md) | A Kernel-integrated example (for comparison — what minerpools will look like once integrated). |

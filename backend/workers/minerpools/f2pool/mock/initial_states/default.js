@@ -3,7 +3,7 @@
 const { cloneDeep } = require('@bitfinex/lib-js-util-base')
 const { generateRandomizedDataWorkers, getRandomHashrateInfo, getRandomBalanceInfo } = require('./utils')
 
-module.exports = function () {
+module.exports = function (CTX) {
   const state = {
     balance_info: getRandomBalanceInfo(),
     hashrate_info: {
@@ -14,7 +14,7 @@ module.exports = function () {
       history: null,
       currency: ''
     },
-    workers_list: generateRandomizedDataWorkers(),
+    workers_list: generateRandomizedDataWorkers(CTX && CTX.workerCount),
     transactions_list: {},
     hashrate_history_cache: {}
   }

@@ -17,8 +17,9 @@ Use this page to understand which layer receives a request, which layer validate
 
 ## Responsibility boundaries
 
-**Gateway** owns the consumer-facing surface, including HTTP, WebSocket, MCP, plugins, authentication, and RBAC. Browser UIs and agents
-should enter MDK through the Gateway (they do not talk to Kernel directly).
+**Gateway** owns the consumer-facing surface, including HTTP and plugins. It is also where authentication belongs, though it implements none:
+that logic lives in the plugin controllers you write. Browser UIs and agents should enter MDK through the Gateway (they do not talk to Kernel
+directly). Agents can also reach MDK over MCP through the standalone [`@tetherto/mdk-mcp`][mcp-readme] package.
 
 **Kernel** owns coordination: Worker registry, telemetry routing, health checks, command dispatch, command state, and the
 write-action approval modules. Kernel trusts established callers; it does not validate user identity.
@@ -30,7 +31,7 @@ write calls for approval-gated actions, and execute final commands against devic
 
 The direction of each connection is intentional:
 
-- Consumers call the Gateway over HTTP, WebSocket, or MCP
+- Consumers call the Gateway over HTTP or MCP
 - The Gateway dials Kernel over [Hyperswarm RPC (HRPC)][hrpc-glossary] through `@tetherto/mdk-client`
 - Kernel discovers Workers, then initiates every Worker RPC
 - Workers never initiate upstream calls to Kernel or the Gateway
@@ -47,8 +48,8 @@ Kernel compares the caller's key with the allowlist. An empty allowlist admits a
 admits the approved callers. This transport-level check works the same way whether the processes share a host or
 when they communicate across a network.
 
-Transport identity is not user identity. The HRPC allowlist controls which backend processes may connect to Kernel; the
-Gateway separately validates JWTs and enforces RBAC for people, browser applications, and agents.
+Transport identity is not user identity. The HRPC allowlist controls which backend processes may connect to Kernel, and it says nothing about the
+person or agent behind a request. Establishing that is the job of the plugin controllers serving people, browser applications, and agents.
 
 ## Request paths
 
@@ -63,8 +64,8 @@ Gateway. Gateway controllers can combine live Kernel data with persisted local d
 
 ### Direct commands
 
-Direct commands are immediate writes that do not require approval. The Gateway validates the request and RBAC at the route layer,
-then sends a `command.request` to Kernel. Kernel resolves the owning Worker, validates the command against the Worker's capabilities,
+Direct commands are immediate writes that do not require approval. The plugin controller performs whatever validation you have written into it, then
+sends a `command.request` to Kernel. Kernel resolves the owning Worker, validates the command against the Worker's capabilities,
 and hands the command to the crash-recoverable command state machine.
 
 > [!NOTE]
@@ -91,9 +92,10 @@ flowchart TB
   actionCaller --> commandRequest
 ```
 
-The Gateway owns the `/auth/actions*` HTTP surface and checks route-level RBAC such as `actions:w`. Kernel owns
-`ActionManager`, `ActionCaller`, and target permission checks at the protocol layer. Those Kernel checks use the target
-Worker's device family, such as `miner:w` or `container:w`, before resolving or approving writes. Workers answer
+The Gateway may expose an HTTP actions surface through plugins. Any access control on that surface is written into the controllers, since the plugin
+runtime enforces none. Kernel owns `ActionManager`, `ActionCaller`, and target permission checks at the protocol layer. Those Kernel checks use the
+target Worker's device family, such as `miner:w` or `container:w`, read from the `authPerms` array the caller sends, before resolving or approving
+writes. Workers answer
 `write.calls.request` while Kernel resolves candidate writes, then execute the final `command.request` after the configured vote
 thresholds are met.
 
@@ -106,13 +108,14 @@ The write-action flow is reachable from two different layers depending on where 
 
 | Layer | Package | How you call it |
 |---|---|---|
-| React / UI | [`@tetherto/mdk-react-adapter`][react-adapter-readme] | Six hooks: `useSubmitSingleAction`, `useSubmitPendingActions`, `useVoteOnAction`, `useCancelAction`, `usePendingActions`, `useLiveActions` — call the Gateway `/auth/actions*` routes |
+| React / UI | [`@tetherto/mdk-react-adapter`][react-adapter-readme] | Six hooks: `useSubmitSingleAction`, `useSubmitPendingActions`, `useVoteOnAction`, `useCancelAction`, `usePendingActions`, `useLiveActions` — call Gateway HTTP routes (plugin-provided) |
 | Backend / Node.js | [`@tetherto/mdk-client`][client-readme] | Methods: `pushAction`, `pushActionsBatch`, `voteAction`, `cancelActionsBatch`, `getAction`, `getActionsBatch`, `queryActions` — send MDK Protocol envelopes directly to Kernel |
 
 > [!IMPORTANT]
-> The React hooks go through the Gateway, which enforces JWT validation and RBAC (`actions:w`) for every request. The `mdk-client`
-> methods connect directly to Kernel and bypass those user-level controls. The Kernel admits backend processes according to its HRPC
-> transport policy: an empty allowlist admits any HRPC caller, while a configured allowlist admits matching caller keys.
+> The React hooks go through the Gateway, so whatever validation your plugin controllers perform applies to them. The `mdk-client` methods connect
+> directly to Kernel and bypass that layer entirely. Neither path gets user-level control for free: the Gateway ships no authentication, and Kernel
+> admits backend processes according to its HRPC transport policy, where an empty allowlist admits any caller and a configured allowlist admits
+> matching caller keys.
 
 ## Next steps
 
@@ -143,6 +146,9 @@ The write-action flow is reachable from two different layers depending on where 
 
 [plugins-how-to]: ../guides/gateway/plugins.md
 <!-- docs@tether.io: plugins-how-to → guides/gateway/plugins -->
+
+[mcp-readme]: ../../backend/core/mcp/README.md
+<!-- docs@tether.io: mcp-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->
 
 [write-actions-how-to]: ../guides/gateway/write-actions.md
 <!-- docs@tether.io: write-actions-guides → guides/gateway/write-actions -->

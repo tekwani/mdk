@@ -42,18 +42,19 @@ mdk-ui create my-dashboard --template mdk-ui-shell
 
 ## Local setup (backend + frontend)
 
-The dashboard talks to [`mdk-gateway`](https://github.com/tetherto/mdk-prv/blob/release/0.5.0/backend/core/gateway/package.json)
-over the Vite dev proxy. Both sides must be running for sign-in to
-succeed.
+The dashboard talks to `@tetherto/mdk-gateway`, which ships in the MDK repo at
+`backend/core/gateway`, over the Vite dev proxy. Both sides must be running for
+sign-in to succeed.
 
 ```bash
-# 1. Backend (one-time setup — needs a Google OAuth client)
-git clone https://github.com/tetherto/miningos-gateway.git
-cd miningos-gateway
+# 1. Backend (one-time setup — needs a Google OAuth client).
+#    The Gateway ships in the MDK repo; run this from your MDK checkout.
+cd <mdk-repo>/backend/core/gateway
 ./setup-config.sh
-#   ↳ paste a Google OAuth client id + secret into
-#     config/facs/httpd-oauth2.config.json, then add your Google email
-#     under `h0.users`.
+#   ↳ Google sign-in needs an identity plugin, which MDK does not ship. Mount
+#     your own with startGateway({ extraPluginDirs: [...] }): serve
+#     /oauth/google and redirect back to the UI with ?authToken=<jwt>.
+#     See docs/guides/gateway/plugins.md in the MDK repo.
 npm install
 npm start                          # http://localhost:3000
 
@@ -64,9 +65,8 @@ npm install
 npm run dev                        # http://localhost:3030
 ```
 
-The full walkthrough — Google Cloud client creation, the
-`httpd-oauth2.config.json` edits, the Vite proxy routes, and common
-errors — lives in
+The full walkthrough — Google Cloud client creation, the identity plugin the
+sign-in flow needs, the Vite proxy routes, and common errors — lives in
 [`docs/AGENT_FIRST.md`](../../../docs/AGENT_FIRST.md).
 The scaffolded app's own `README.md` carries the same TL;DR.
 
@@ -133,8 +133,9 @@ export default function Dashboard() {
 ## Common variations
 
 - **Microsoft OAuth**: add a `SignInMicrosoftButton` foundation component
-  and a second `<button>` on the SignIn page. Backend needs the matching
-  `h1` block in `httpd-oauth2.config.json`.
+  and a second `<button>` on the SignIn page. Your identity plugin serves the
+  matching `/oauth/microsoft` start endpoint and returns the same
+  `?authToken=` redirect.
 - **Additional dashboards**: use the `mining-operations-dashboard`
   blueprint when you need pool + device explorer.
 - **No active alerts endpoint**: drop `<ActiveIncidentsCard>` entirely.

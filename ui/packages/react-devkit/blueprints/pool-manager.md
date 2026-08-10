@@ -65,7 +65,7 @@ import type {
   Device,
   PoolManagerView,
 } from "@tetherto/mdk-react-devkit";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router";
 
 const VALID_VIEWS = new Set<PoolManagerView>([
   "dashboard",
@@ -177,7 +177,7 @@ The write path mirrors the reference app's approval flow:
 - **Wire Site Detail data** — pass `onSiteSelect` to capture the opened unit id,
   then feed `siteDetailDataOptions` (e.g. the miners assigned to that container)
   and `isSiteDetailLoading` so Site Detail shows live data instead of a static
-  shell. See `templates/mdk-ui-shell/src/pages/PoolManager.tsx`.
+  shell. See `examples/mdk-ui-shell-template/_managed/pages/PoolManager.tsx`.
 - **Read-only operators** — the `ActionsSidebar` does not gate its buttons on
   client-side permission flags; authorization is enforced by the API. The write
   hooks (`useSubmitPendingActions`, `useVoteOnAction`, `useCancelAction`) still

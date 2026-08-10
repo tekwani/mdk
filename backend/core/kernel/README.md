@@ -12,8 +12,8 @@ The Kernel is **pull-only and passive** — it never pushes to your app. Callers
 (published to `<tmpdir>/mdk/.kernel-key` on start). For telemetry, the scheduler fans `telemetry.pull` out to ready Workers; on-demand queries route 
 to the owning Worker for a specific device.
 
-Kernel does **not** extend any Worker class. It is a standalone `EventEmitter`-based lib — the same pattern as
-`ThingManager` and `MinerManager` used by [device Workers](../../../docs/concepts/stack/workers.md).
+Kernel does **not** extend any Worker class. It is a standalone `EventEmitter`-based lib, independent of the
+[`WorkerRuntime`](../mdk-worker/lib/worker-runtime.js) class that hosts [device Workers](../../../docs/concepts/stack/workers.md).
 
 > [!TIP]
 > New to Kernel? Read the [Kernel concept page](../../../docs/concepts/stack/kernel.md) for the developer model: what Kernel owns, the pull-only 

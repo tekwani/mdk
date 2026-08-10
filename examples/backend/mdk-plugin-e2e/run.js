@@ -4,8 +4,8 @@ const path = require('path')
 const fs = require('fs')
 const os = require('os')
 const crypto = require('crypto')
-const { getKernel, startGateway, waitForDiscovery, shutdown } = require('../../../backend/core/mdk')
-const { WorkerRuntime } = require('../../../backend/core/mdk-worker')
+const { getKernel, startGateway, waitForDiscovery, shutdown } = require('@tetherto/mdk-core')
+const { WorkerRuntime } = require('@tetherto/mdk-worker')
 const SimMinerMock = require('./mock-device/device.mock')
 const plugin = require('./worker-plugin')
 
@@ -52,7 +52,6 @@ async function main () {
 
   await startGateway({
     kernel,
-    noAuth: true,
     port: HTTP_PORT,
     root: path.join(ROOT, 'gateway'),
     tmpdir: path.join(ROOT, 'gateway'),

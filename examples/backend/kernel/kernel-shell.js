@@ -24,12 +24,12 @@
 const os = require('os')
 const path = require('path')
 const crypto = require('crypto')
-const { createKernel } = require('../../../backend/core/kernel/index')
-const { waitForDiscovery } = require('../../../backend/core/mdk')
-const { startWhatsminerWorker } = require('../../../backend/workers/miners/whatsminer')
-const wmMock = require('../../../backend/workers/miners/whatsminer/mock/server')
+const { createKernel } = require('@tetherto/mdk-kernel')
+const { waitForDiscovery } = require('@tetherto/mdk-core')
+const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
+const wmMock = require('@tetherto/mdk-worker-whatsminer/mock/server')
 
-const MOCK_PORT = 14031
+const MOCK_PORT = 14033
 
 function e (action, payload, deviceId) {
   return JSON.stringify({

@@ -1,0 +1,12 @@
+{
+  "miners": [
+    {"info": { "serialNum": "WM-001", "container": "rack-1" }, "opts": { "address": "127.0.0.1", "port": null, "password": "admin" }},
+    {"info": { "serialNum": "WM-002", "container": "rack-1" }, "opts": { "address": "127.0.0.1", "port": null, "password": "admin" }},
+    {"info": { "serialNum": "WM-003", "container": "rack-1" }, "opts": { "address": "127.0.0.1", "port": null, "password": "admin" }},
+    {"info": { "serialNum": "WM-004", "container": "rack-1" }, "opts": { "address": "127.0.0.1", "port": null, "password": "admin" }},
+    {"info": { "serialNum": "WM-005", "container": "rack-1" }, "opts": { "address": "127.0.0.1", "port": null, "password": "admin" }}
+  ],
+  "powermeters": [
+    {"info": { "serialNum": "SATEC-001", "pos": "site" }, "opts": { "address": "127.0.0.1", "port": null, "unitId": 1 }}
+  ]
+}
