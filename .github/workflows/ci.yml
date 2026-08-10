@@ -1,4 +1,4 @@
-# MDK private monorepo (mdk): backend/core/*, backend/workers/**, ui (all npm).
+# MDK monorepo (mdk): backend/core/*, backend/workers/**, ui (all npm).
 # Aligned with MiningOS CI Checks: per-package lockfile check, node cache actions, parallel jobs, PR audits.
 name: CI Checks
 
@@ -283,6 +283,18 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Install dependencies and cache node_modules
         id: setup-deps
         uses: ./.github/actions/node-setup-cache
@@ -307,6 +319,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - uses: ./.github/actions/node-restore-cache
         with:
           cache-key: ${{ needs.setup-examples.outputs.cache-key }}
@@ -328,6 +352,18 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
 
       - name: Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -371,6 +407,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - uses: ./.github/actions/node-restore-cache
         with:
           cache-key: ${{ needs.setup-ui.outputs.cache-key }}
@@ -391,6 +439,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - uses: ./.github/actions/node-restore-cache
         with:
           cache-key: ${{ needs.setup-ui.outputs.cache-key }}
@@ -422,6 +482,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - uses: ./.github/actions/node-restore-cache
         with:
           cache-key: ${{ needs.setup-ui.outputs.cache-key }}
@@ -499,6 +571,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - uses: ./.github/actions/node-restore-cache
         with:
           cache-key: ${{ needs.setup-ui.outputs.cache-key }}
@@ -530,6 +614,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - uses: ./.github/actions/node-restore-cache
         with:
           cache-key: ${{ needs.setup-ui.outputs.cache-key }}
@@ -554,6 +650,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
 
       - name: Resolve install scope
         id: scope
@@ -619,6 +727,18 @@ jobs:
       # dep, silently skips linking dev bins like `standard` into that
       # member's own node_modules (npm defers bin-linking to the root once it
       # recognizes an ancestor workspace).
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Install dependencies and cache node_modules
         id: setup-deps
         uses: ./.github/actions/node-setup-cache
@@ -643,6 +763,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Resolve install scope
         id: scope
         uses: ./.github/actions/workspace-scope
@@ -672,6 +804,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Resolve install scope
         id: scope
         uses: ./.github/actions/workspace-scope
@@ -701,6 +845,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Resolve install scope
         id: scope
         uses: ./.github/actions/workspace-scope
@@ -744,6 +900,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Resolve install scope
         id: scope
         uses: ./.github/actions/workspace-scope
@@ -773,6 +941,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
 
       - name: Lockfile consistency check
         id: lockfile
@@ -830,6 +1010,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Resolve install scope
         id: scope
         uses: ./.github/actions/workspace-scope
@@ -859,6 +1051,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Resolve install scope
         id: scope
         uses: ./.github/actions/workspace-scope
@@ -888,6 +1092,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Resolve install scope
         id: scope
         uses: ./.github/actions/workspace-scope
@@ -931,6 +1147,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Resolve install scope
         id: scope
         uses: ./.github/actions/workspace-scope
@@ -957,6 +1185,18 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Dependency Review
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
@@ -980,6 +1220,18 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
 
       - uses: ./.github/actions/node-restore-cache
         with:
@@ -1034,6 +1286,18 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
 
       - name: Resolve install scope
         id: scope
@@ -1103,6 +1367,18 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
+
       - name: Resolve install scope
         id: scope
         uses: ./.github/actions/workspace-scope
@@ -1163,6 +1439,18 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+
+      - name: Restore trusted CI actions and scripts
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # PRs are untrusted. Local composite actions and CI helper scripts
+          # must come from the trusted base revision, not from the PR head.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git restore --source="$BASE_SHA" -- .github/actions .github/scripts
 
       - uses: ./.github/actions/node-restore-cache
         with:
