@@ -1,10 +1,12 @@
-name: Resolve core package install scope
+name: Resolve package install scope
 description: >
-  Decide whether a backend/core package directory must be installed/cached at
-  the repo root (root npm workspace members, which resolve sibling
-  @tetherto/mdk-* deps via semver ranges rather than file: links and 404 the
-  registry if installed in isolation) or in its own directory (standalone
-  packages with their own package-lock.json, e.g. backend/core itself).
+  Decide whether a backend/core or backend/workers package directory must be
+  installed/cached at the repo root (root npm workspace members - installing
+  them in isolation 404s fetching unpublished sibling @tetherto/mdk-* deps
+  AND, even for members with no such deps, npm's workspace-aware installer
+  skips linking dev bins like `standard` into the member's own node_modules)
+  or in its own directory (standalone packages with their own
+  package-lock.json, e.g. backend/core and backend/workers themselves).
 
 inputs:
   dir:
