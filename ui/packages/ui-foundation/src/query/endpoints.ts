@@ -9,6 +9,14 @@
  * verbs) compose from the base constant at the call site with the id
  * `encodeURIComponent`-escaped.
  *
+ * @remarks
+ * The `/auth/*` endpoints are illustrative. MDK does not ship built-in
+ * endpoints — create your own via a
+ * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) matching
+ * your Worker/business logic. See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference.
+ *
  * @category query
  */
 export const API_ENDPOINTS = {

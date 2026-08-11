@@ -29,9 +29,26 @@ const BACKEND_PACKAGES = [
 
 const SETUP_HINT = 'run "npm run setup" in examples/full-site once to install and build everything'
 
+// Backend packages are root npm workspaces — `npm install` hoists their deps
+// into the repo-root node_modules rather than a per-package node_modules, and
+// symlinks the package itself in there under its package name. So "installed"
+// means either a local node_modules (non-hoisted case) or a resolvable
+// workspace symlink pointing back at the package.
+function isBackendPkgInstalled (pkg) {
+  const pkgDir = path.join(REPO_ROOT, pkg)
+  if (fs.existsSync(path.join(pkgDir, 'node_modules'))) return true
+  try {
+    const { name } = require(path.join(pkgDir, 'package.json'))
+    const linked = require.resolve(path.join(name, 'package.json'), { paths: [REPO_ROOT] })
+    return fs.realpathSync(linked) === fs.realpathSync(path.join(pkgDir, 'package.json'))
+  } catch {
+    return false
+  }
+}
+
 function missingBackendDeps () {
   return BACKEND_PACKAGES
-    .filter((pkg) => !fs.existsSync(path.join(REPO_ROOT, pkg, 'node_modules')))
+    .filter((pkg) => !isBackendPkgInstalled(pkg))
     .map((pkg) => `${pkg} — not installed`)
 }
 

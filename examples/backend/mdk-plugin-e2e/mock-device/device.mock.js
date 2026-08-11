@@ -1,6 +1,6 @@
 'use strict'
 
-const { BaseMock, TcpTransport } = require('../../../../backend/workers/mock')
+const { BaseMock, TcpTransport } = require('@tetherto/mdk-worker-mock')
 
 // A standalone "vendor" miner simulator: newline-delimited JSON over TCP.
 // This is the device-side API the Worker Plugin translates against — it knows

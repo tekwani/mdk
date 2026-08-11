@@ -3,7 +3,7 @@ import '@tetherto/mdk-react-devkit/styles.css'
 import '@tetherto/mdk-react-devkit/styles-domain.css'
 import { MdkProvider } from '@tetherto/mdk-react-adapter'
 import ReactDOM from 'react-dom/client'
-import { RouterProvider } from 'react-router-dom'
+import { RouterProvider } from 'react-router'
 
 import { router } from './router'
 import './index.scss'

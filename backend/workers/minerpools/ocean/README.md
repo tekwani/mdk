@@ -50,6 +50,13 @@ await kernel.registerWorker(worker.runtime.getPublicKey())
 
 Uses the Ocean REST API over HTTPS. Authenticated with an API key in the request headers.
 
+## Multi-account resilience
+
+Each `conf.ocean.accounts` entry is polled independently. An unknown or inactive account
+returns an error body with no result; the Worker logs `ERR_STATS_FETCH <username>` and skips
+it (raising `ERR_ACCOUNT_DATA_MISSING` internally when earnings or hashrate are missing) rather
+than failing the whole stats cycle. Other accounts in the list still report normally.
+
 ## Health
 
 **States:** `OK`, `DEGRADED`, `OFFLINE`

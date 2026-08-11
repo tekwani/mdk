@@ -25,6 +25,7 @@ Every guide assumes:
 
 - Node.js >=24 (LTS)
 - npm >=11
+- Dependencies installed (`npm run setup` from the repo root)
 - Commands are run from the repo root
 - Outbound network access for Kernel discovery
 
@@ -49,7 +50,7 @@ For the deployment path:
 - Browse [supported hardware][supported-hardware]
 - New to the moving parts? Read [terminology][terminology] (Kernel, Worker, manager, thing, mock)
 - If an example does not start or a mock port is busy, use [troubleshooting][troubleshooting]
-- Drive the registered device from the CLI or dashboard: [Get started][get-started]
+- Drive the registered device from a dashboard: [run a mining site end to end][get-started]
 
 ## Links
 
@@ -77,5 +78,5 @@ For the deployment path:
 [troubleshooting]: troubleshooting.md
 <!-- docs@tether.io: troubleshooting → guides/miners/troubleshooting -->
 
-[get-started]: ../../tutorials/get-started/index.md
-<!-- docs@tether.io: get-started → tutorials/backend-stack -->
+[get-started]: ../../tutorials/run-a-site.md
+<!-- docs@tether.io: get-started → tutorials/run-a-site -->

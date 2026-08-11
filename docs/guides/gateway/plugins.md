@@ -17,12 +17,17 @@ you can mount additional plugins for your own site logic.
 
 MDK ships plugins that load automatically on Gateway startup:
 
-- The `auth` plugin serves identity and token endpoints under `/auth`
-- The `telemetry` plugin serves site metrics (hashrate, consumption, efficiency, temperature, and more) under `/auth/metrics`
+- The `telemetry` plugin serves site metrics (hashrate, consumption, efficiency, temperature, and more)
 - The `site-hashrate` plugin serves aggregated site hashrate history
+- The `site-monitor` plugin serves site configuration, feature flags, and live per-device hashrate
 
-The [plugin reference][plugins-readme] lists every default route, its method, and whether it needs a token — those tables are generated 
-from each plugin's `mdk-plugin.json`. Plugins you mount yourself are documented by their own manifests.
+> [!IMPORTANT]
+> The [`auth` plugin][auth-plugin-readme] (`@tetherto/mdk-plugin-auth`) ships in the same package but is not among them, and mounting it via
+> `extraPluginDirs` does not give you working identity endpoints: its controllers depend on a `services.authLib` and a populated `req._info` that the
+> Gateway does not provide. Supply your own identity layer.
+
+The [plugin reference][plugins-readme] lists every route each of these plugins serves, with its method, generated from the plugin's
+`mdk-plugin.json`. Plugins you mount yourself are documented by their own manifests.
 
 <Steps>
 
@@ -61,9 +66,12 @@ A plugin is a directory with two things: a manifest and controllers.
 [`mdk-plugin.json`][plugins-manifest] declares the plugin identity (`name`, `version`) and a `routes` array. Each route needs an `id`, a `handler` path, and an `http` 
 block with a `method` and `path`. Rather than copy a synthetic example, start from a real manifest and trim it:
 
-- [`examples/full-site/plugins/site/mdk-plugin.json`][full-site-manifest] — three routes including a `GET`, a `POST` with a `requestBody`, and 
-path parameters
-- [`backend/core/plugins/telemetry/mdk-plugin.json`][telemetry-manifest] — auth, caching, query parameters, and named-export handlers
+- [`examples/backend/mdk-plugin-e2e/gateway-plugin/mdk-plugin.json`][e2e-manifest]: one route, fully annotated with a response
+schema, `constraints`, `errors`, and `safety`. The easiest starting point, and [seeing a plugin serve your data][serve-an-endpoint]
+runs it end to end
+- [`examples/full-site/plugins/site/mdk-plugin.json`][full-site-manifest]: three routes including a `GET`, a `POST` with a
+`requestBody`, and path parameters
+- [`backend/core/plugins/telemetry/mdk-plugin.json`][telemetry-manifest]: auth, caching, query parameters, and named-export handlers
 
 Path parameters use `{param}` syntax — the loader normalises them to Fastify's `:param` format. For named exports use `"handler": 
 "./controllers/foo.js#namedExport"`. The [plugin reference][plugins-readme] explains what each field means and what the loader requires.
@@ -117,19 +125,12 @@ module.exports = async function command (req, services) {
 | --- | --- | --- |
 | `services.mdkClient` | `MdkClient` | Live reads and command dispatch — `sendCommand`, `pullTelemetry`, `getCapabilities`, `listWorkers` |
 | `services.dataProxy` | `DataProxy` | Historical and aggregated data from Worker tail-logs — `requestData`, `requestDataMap` |
-| `services.authLib` | `AuthLib` | JWT and session helpers (needed only for advanced auth flows) |
 | `services.conf` | `object` | Gateway runtime config |
 
 > [!IMPORTANT]
 > Always guard `services.mdkClient` — it is `null` when the Gateway starts without a live Kernel connection:
 > ```js
 > if (!services.mdkClient) throw new Error('ERR_MDK_CLIENT_UNAVAILABLE')
-> ```
->
-> Always guard `services.authLib` — it is `undefined` when the Gateway starts with `noAuth: true`. Any call to
-> `authLib.tokenHasPerms()` or `authLib.getTokenPerms()` throws `Cannot read properties of undefined` in `noAuth` mode:
-> ```js
-> if (!services.authLib) throw new Error('ERR_AUTH_LIB_UNAVAILABLE')
 > ```
 
 ### Read hardware data
@@ -178,23 +179,9 @@ if (result.status === 'FAILED') throw new Error(result.error)
 return { commandId: result.commandId, status: result.status }
 ```
 
-### Auth, permissions, and caching
+### Caching
 
-**Auth** — set `"auth": true` on a route to require a valid Bearer token. The adapter runs `authCheck` before the handler is called.
-
-**Permissions** — add a `"permissions"` array to enforce RBAC:
-
-```json
-{
-  "id": "site.miners.command",
-  "auth": true,
-  "permissions": ["actions:w"],
-  "handler": "./controllers/command.js",
-  "http": { "method": "POST", "path": "/site/miners/{deviceId}/command" }
-}
-```
-
-**Caching** — add a `"cache"` array of dot-path strings to enable request-level caching. The cache key is composed 
+Add a `"cache"` array of dot-path strings to a route to enable request-level caching. The cache key is composed 
 from the route ID and the resolved values of each path:
 
 ```json
@@ -205,7 +192,33 @@ from the route ID and the resolved values of each path:
 }
 ```
 
-Pass `?overwriteCache=true` to any cached route to bypass and refresh.
+Pass `?overwriteCache=true` to bypass and refresh.
+
+### Auth and permissions
+
+The Gateway applies no authentication of its own. Every route a plugin declares is served to any caller, so a route that needs protecting carries
+that logic in its own controller. Identity is yours to supply: the manifest `"auth"` and `"permissions"` fields have no reader and change nothing.
+
+Validate the token with your own identity layer and check it in the handler:
+
+```js
+const { validateToken } = require('../lib/my-identity-layer')
+
+module.exports = async function protectedRoute (req, services) {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  if (!token) throw new Error('ERR_UNAUTHORIZED')
+
+  const { permissions } = validateToken(token)
+  if (!permissions.includes('miner:w')) throw new Error('ERR_FORBIDDEN')
+
+  // Your route logic
+}
+```
+
+> [!IMPORTANT]
+> A controller cannot choose its status code. It receives `(req, services)` and never the Fastify reply, so a returned value goes out as `200` and a
+> thrown `ERR_`-prefixed error becomes `400 Bad Request` carrying that message. `ERR_UNAUTHORIZED` reaches the client as `400`, not `401`. A route that
+> needs true status control belongs in [raw Fastify routes][gateway-additional-routes] instead.
 
 ### Manifest validation errors
 
@@ -218,34 +231,6 @@ The plugin loader validates every manifest and handler at startup and throws if 
 | `ERR_PLUGIN_ROUTE_DUPLICATE_ID` | Two routes in the same manifest share the same `id` |
 | `ERR_PLUGIN_HANDLER_NOT_FOUND` | The `handler` file path does not exist or failed to load |
 | `ERR_PLUGIN_HANDLER_NOT_FUNCTION` | The handler file exports something other than a function |
-
-## Troubleshooting
-
-<details>
-<summary>Migrate from v0.2 to v0.3</summary>
-<div>
-
-In v0.3, `metricsRoutes` and `devicesRoutes` were removed from `backend/core/gateway/workers/lib/server/index.js`. The auth and telemetry endpoints they registered are now delivered by the default plugins, which load automatically — no action needed for those.
-
-If your v0.2 code patched or monkey-patched those registrations to inject custom logic:
-
-1. Create a plugin directory with an [`mdk-plugin.json`][plugins-manifest] and controller files for the routes you were injecting.
-2. Pass the directory to `startGateway()` via `extraPluginDirs`.
-
-```js
-// Before (v0.2 — no longer works)
-const server = require('@tetherto/mdk-gateway/workers/lib/server')
-server.metricsRoutes.push(myCustomRoute)
-
-// After (v0.3+)
-await startGateway({
-  kernel,
-  extraPluginDirs: [path.join(__dirname, 'plugins/my-metrics')]
-})
-```
-
-</div>
-</details>
 
 ## Next steps
 
@@ -261,11 +246,24 @@ await startGateway({
 [telemetry-controllers]: ../../../backend/core/plugins/telemetry/controllers
 <!-- docs@tether.io: telemetry-controllers → https://github.com/tetherto/mdk/tree/main/backend/core/plugins/telemetry/controllers -->
 
+[auth-plugin-readme]: ../../../backend/core/plugins/README.md#the-bundled-auth-plugin
+<!-- docs@tether.io: auth-plugin-readme → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#the-bundled-auth-plugin -->
+
+[gateway-additional-routes]: ../../../backend/core/gateway/README.md#raw-fastify-routes
+<!-- docs@tether.io: gateway-additional-routes → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#raw-fastify-routes -->
+
 [all-workers-guide]: ../deployment/run-all-workers-site.md
 <!-- docs@tether.io: all-workers-guide → guides/deployment/run-all-workers-site -->
 
 [full-site-plugin]: ../../../examples/full-site/plugins/site
 <!-- docs@tether.io: full-site-plugin → https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site -->
+
+[e2e-manifest]: ../../../examples/backend/mdk-plugin-e2e/gateway-plugin/mdk-plugin.json
+<!-- docs@tether.io: e2e-manifest → https://github.com/tetherto/mdk/blob/main/examples/backend/mdk-plugin-e2e/gateway-plugin/mdk-plugin.json -->
+
+[serve-an-endpoint]: ../../tutorials/serve-an-endpoint.md
+<!-- docs@tether.io: no parity link -->
+<!-- mdk-monorepo: routed page parked on the docs site; restore the slug rewrite when it is unparked -->
 
 [full-site-manifest]: ../../../examples/full-site/plugins/site/mdk-plugin.json
 <!-- docs@tether.io: full-site-manifest → https://github.com/tetherto/mdk/blob/main/examples/full-site/plugins/site/mdk-plugin.json -->
@@ -285,6 +283,10 @@ await startGateway({
 [gateway-readme]: ../../../backend/core/gateway/README.md
 <!-- docs@tether.io: gateway-readme → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md -->
 
-[minimal-dashboard]: ../../tutorials/quickstart/build-a-dashboard.md
+[minimal-dashboard]: ../../tutorials/build-a-dashboard.md
+<!-- docs@tether.io: minimal-dashboard → tutorials/build-a-dashboard -->
 [build-a-worker]: ../workers/build-a-worker.md
+<!-- docs@tether.io: build-a-worker → guides/workers/build-a-worker -->
+
 [mcp-server]: ../../../examples/full-site/docs/mcp-server.md
+<!-- docs@tether.io: mcp-server → https://github.com/tetherto/mdk/blob/main/examples/full-site/docs/mcp-server.md -->

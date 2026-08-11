@@ -65,6 +65,17 @@ export type LiveActionsData = {
  * Partitions results into the current user's actions vs others', and gates
  * `othersVoting` behind the `actions:w` permission.
  *
+ * @remarks
+ * **Prerequisite:** `/auth/actions` has no default Gateway provider; bring
+ * your own [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins)
+ * serving the voting/approval queue shape this hook expects (see the
+ * [write-actions guide](https://docs.tether.io/mdk/guides/gateway/write-actions)).
+ * This hook also calls `useCurrentUserEmail()` internally, which depends on
+ * `/auth/userinfo` (also no default provider) to partition `[mine, others]`;
+ * without it, every action is treated as "mine". See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference covering both routes.
+ *
  * @category dashboard
  */
 export const useLiveActions = (): LiveActionsData => {

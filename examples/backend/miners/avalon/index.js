@@ -4,9 +4,9 @@ const os = require('os')
 const path = require('path')
 const crypto = require('crypto')
 const { setTimeout: sleep } = require('timers/promises')
-const { getKernel, startGateway } = require('../../../../backend/core/mdk')
-const { startAvalonWorker } = require('../../../../backend/workers/miners/avalon')
-const avMockServer = require('../../../../backend/workers/miners/avalon/mock/server')
+const { getKernel, startGateway } = require('@tetherto/mdk-core')
+const { startAvalonWorker } = require('@tetherto/mdk-worker-avalon')
+const avMockServer = require('@tetherto/mdk-worker-avalon/mock/server')
 const mock = require('../../utils/mock')
 
 const BASE_DIR = path.join(os.tmpdir(), 'mdk-site-avalon')
@@ -14,7 +14,7 @@ const KERNEL_ROOT = path.join(BASE_DIR, 'kernel')
 
 const main = async () => {
   // Setup mock for the Avalon A1346 miner
-  await mock.run(avMockServer, '127.0.0.1', 14031, 'a1346')
+  await mock.run(avMockServer, '127.0.0.1', 14034, 'a1346')
   await sleep(500)
 
   // Initialize the Kernel
@@ -28,8 +28,7 @@ const main = async () => {
   // Start the server
   await startGateway({
     kernel,
-    port: 3000,
-    noAuth: true // Disable auth for brevity in this example.
+    port: 3000
   })
   console.log('MDK running at http://localhost:3000')
   await sleep(1000)
@@ -41,7 +40,7 @@ const main = async () => {
     storeDir: path.join(BASE_DIR, 'worker-store'),
     seedDevices: [{
       info: { container: 'av-1', serialNum: 'AV001' },
-      opts: { address: '127.0.0.1', port: 14031, password: 'admin' }
+      opts: { address: '127.0.0.1', port: 14034, password: 'admin' }
     }]
   })
   await kernel.registerWorker(worker.runtime.getPublicKey())

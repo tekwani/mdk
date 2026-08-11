@@ -27,7 +27,7 @@ export const AppHeaderPage = (): JSX.Element => {
 
       <DemoBlock
         title="Full dashboard composition"
-        description="Brand wordmark on the left, the Mining OS stats strip in the middle, action tiles on the right. This is exactly how the live mdk-ui-shell App.tsx wires its header."
+        description="Brand wordmark on the left, the reference app stats strip in the middle, action tiles on the right. This is exactly how the live mdk-ui-shell App.tsx wires its header."
       >
         <AppHeader
           sticky={false}
@@ -66,12 +66,12 @@ export const AppHeaderPage = (): JSX.Element => {
               online={602}
               error={43}
               offline={204}
-              mosTotal={216}
+              appTotal={216}
               poolTotal={205}
               poolOnline={334}
               poolMismatch={64}
             />
-            <HeaderHashrateBox mosPhs={78.275} poolPhs={78.275} />
+            <HeaderHashrateBox appPhs={78.275} poolPhs={78.275} />
             <HeaderConsumptionBox valueMw={22.489} />
             <HeaderEfficiencyBox valueWthS={34.52} />
           </HeaderStatsBar>

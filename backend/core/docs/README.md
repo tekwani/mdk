@@ -1,14 +1,15 @@
 ## MDK Core
 
-See the [architecture overview](../../../docs/concepts/architecture.md) to understand Core's part in the MDK. Core ships five packages:
+See the [architecture overview](../../../docs/concepts/architecture.md) to understand Core's part in the MDK. Core ships the following packages:
 
 | Package | What it does | Where |
 |---|---|---|
 | `@tetherto/mdk-kernel` | Kernel | [`backend/core/kernel/`](../kernel/index.js) |
 | `@tetherto/mdk-gateway` | Gateway Node.js server | [`backend/core/gateway/`](../gateway/worker.js) |
 | `@tetherto/mdk` | Bootstrap utilities and SDK entry | [`backend/core/mdk/`](../mdk/index.js) |
+| `@tetherto/mdk-worker` | Worker Runtime: hosts a Worker Plugin's devices behind one HRPC channel to Kernel | [`backend/core/mdk-worker/`](../mdk-worker/lib/worker-runtime.js) |
 | `@tetherto/mdk-client` | Client / protocol transport | [`backend/core/client/`](../client/index.js) |
-| `@tetherto/mdk-mock-control-service` | Mock vendor API service for tests | [`backend/core/mock-control-service/`](../mock-control-service/mock-control-agent.js) |
+| `@tetherto/mdk-mcp` | MCP server: exposes MDK data/actions to AI agents as tools | [`backend/core/mcp/`](../mcp/README.md) |
 
 Each is detailed below.
 
@@ -49,18 +50,24 @@ await client.getCapabilities(deviceId)
 
 ## MDK (`@tetherto/mdk`)
 
-Lives in [`backend/core/mdk/`](../mdk/index.js). Bootstrap utilities and the SDK entry point. Exposes [`startWorker(ManagerClass, opts)`](../mdk/index.js) and 
-the service bootstrap helpers used by every Worker and example.
+Lives in [`backend/core/mdk/`](../mdk/index.js). Bootstrap utilities and the SDK entry point. Exposes [`getKernel()`, `startGateway()`,
+and `waitForDiscovery()`](../mdk/index.js). Worker boot itself is per-package: each Worker exports its own boot function
+around [`WorkerRuntime`](../mdk-worker/lib/worker-runtime.js), and there is no single generic `startWorker`.
+
+## Worker runtime (`@tetherto/mdk-worker`)
+
+Lives in [`backend/core/mdk-worker/`](../mdk-worker/lib/worker-runtime.js). Hosts a Worker Plugin's devices behind one HRPC channel to
+Kernel. Every Worker package (miners, containers, power meters, …) constructs a `WorkerRuntime` from its own boot function.
 
 ## Client (`@tetherto/mdk-client`)
 
 Lives in [`backend/core/client/`](../client/index.js). The protocol client that encodes MDK Protocol envelopes and shuttles `ACTIONS.*` requests/responses over 
 HRPC (by the Kernel's public key). Gateways embed it to talk to Kernel.
 
-## Mock control service (`@tetherto/mdk-mock-control-service`)
+## MCP server (`@tetherto/mdk-mcp`)
 
-Lives in [`backend/core/mock-control-service/`](../mock-control-service/mock-control-agent.js). Fastify-based mock layer that stands in for real vendor APIs 
-during examples and tests. Key files: [`mock-control-agent.js`](../mock-control-service/mock-control-agent.js) and [`routes.js`](../mock-control-service/routes.js).
+Lives in [`backend/core/mcp/`](../mcp/README.md). A standalone MCP server — a separate process from the Gateway — that exposes MDK data and actions to 
+AI agents as declarative tools, using the same `@tetherto/mdk-client` connection to Kernel that the Gateway uses.
 
 ## Connection and deployment model
 
@@ -73,6 +80,7 @@ Package-specific APIs and configuration live with each package:
 - [Kernel architecture and configuration](../kernel/README.md)
 - [Gateway configuration and Kernel connection](../gateway/README.md)
 - [Bootstrap SDK](../mdk/README.md)
+- [Worker Runtime](../mdk-worker/lib/worker-runtime.js)
 - [Client API and HRPC transport](../client/README.md)
 
 ## Next steps

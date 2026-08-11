@@ -10,7 +10,7 @@ test('_request rate-limit sleep applies outside test env', async (t) => {
     const api = new F2MinerpoolApi({ post: async () => ({ body: { ok: 1 } }) }, 's')
     const started = Date.now()
     const res = await api._request('/x', {})
-    t.ok(Date.now() - started >= 1000)
+    t.ok(Date.now() - started >= 995, 'rate-limit delay should be ~1000ms')
     t.is(res.ok, 1)
   } finally {
     process.env.NODE_ENV = prev

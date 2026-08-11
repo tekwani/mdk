@@ -231,6 +231,7 @@ export const COMPONENT_NAV: SidebarMenuItem[] = [
                 label: 'Explorer',
                 items: [
                   { id: 'explorer-list-detail', label: 'List + Detail' },
+                  { id: 'container-detail', label: 'Container Detail' },
                   { id: 'device-explorer', label: 'Device Explorer' },
                   {
                     id: 'explorer-containers',

@@ -27,7 +27,9 @@ function randomNumber (min = 0, max = 1) {
 }
 
 function getRandomHashrate () {
-  return randomNumber(290000000, 300000000)
+  // GH/s (matches `rate_unit: 'GH/s'` in the summary/stats state and the
+  // rate_ideal ~257000 chain totals) — lib/antminer.js converts to MH/s (*1000).
+  return randomNumber(290000, 300000)
 }
 
 function getHashrate () {

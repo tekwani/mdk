@@ -43,7 +43,10 @@ type HookCategory =
   | "ui"
   | "external"
   | "auth"
-  | "dashboard";
+  | "dashboard"
+  | "op-centre"
+  | "alerts"
+  | "example";
 
 const TANSTACK_REEXPORTS: Record<string, string> = {
   useQuery: "Re-export of TanStack Query's `useQuery`. See @tanstack/react-query docs for full options.",
@@ -141,6 +144,9 @@ const extractCategory = (jsDocs: JsDocLike[]): HookEntry["category"] => {
           || value === "ui"
           || value === "auth"
           || value === "dashboard"
+          || value === "op-centre"
+          || value === "alerts"
+          || value === "example"
         ) {
           return value;
         }

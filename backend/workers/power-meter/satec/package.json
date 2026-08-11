@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-worker-satec",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "PowerMeter Satec",
   "keywords": [
     "tether"
@@ -30,5 +30,8 @@
     "modbus-stream": "0.46.0",
     "standard": "17.1.2",
     "yargs": "17.7.2"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }

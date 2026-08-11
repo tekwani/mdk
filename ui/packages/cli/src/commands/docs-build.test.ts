@@ -52,7 +52,7 @@ describe('runDocsBuild', () => {
     const meta = JSON.parse(readFileSync(join(outDir, 'meta.json'), 'utf8'))
     expect(meta.counts.components).toBe(result.dataset.components.length)
     expect(meta.counts.hooks).toBe(result.dataset.hooks.length)
-    expect(meta.generatedFrom.registrySchema).toBe('2.0.0')
+    expect(meta.generatedFrom.registrySchema).toBe('2.1.0')
     expect(existsSync(join(outDir, 'components.json'))).toBe(true)
     expect(existsSync(join(outDir, 'README.md'))).toBe(true)
   })

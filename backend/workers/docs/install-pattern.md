@@ -26,24 +26,30 @@ shapes, and supported models.
 
 ### As a library, in your own Node process
 
-The canonical SDK shape. You instantiate the manager class via [`startWorker`](../../core/mdk/index.js) from `@tetherto/mdk` and register devices 
-programmatically:
+The canonical SDK shape. There is no single generic `startWorker(WorkerClass, opts)`: each Worker package ships its own boot
+function that constructs a [`WorkerRuntime`](../../core/mdk-worker/lib/worker-runtime.js) and seeds devices from `opts.seedDevices`:
 
 ```js
-const { getKernel, startWorker } = require('@tetherto/mdk')
-const { AM_S19XP } = require('@tetherto/mdk-worker-antminer')
+const { getKernel } = require('@tetherto/mdk-core')
+const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
 
 const kernel = await getKernel()
-const { manager } = await startWorker(AM_S19XP, { kernel })
 
-await manager.registerThing({
-  info: { container: 'site-1', serialNum: 'AM-001' },
-  opts: { address: '127.0.0.1', port: 14021, username: 'root', password: 'root' }
+const { runtime } = await startAntminerWorker({
+  workerId: 'antminer-rack-1',
+  model: 's19xp',
+  storeDir: './data/antminer',
+  seedDevices: [{
+    id: 'AM-001',
+    opts: { address: '127.0.0.1', port: 14021, username: 'root', password: 'root' }
+  }]
 })
+
+await kernel.registerWorker(runtime.getPublicKey())
 ```
 
 This is what every example under [`examples/backend/README.md`](../../../examples/backend/README.md) does. The per-package `USAGE.md` documents which 
-manager class names a given Worker exports and what `opts` it needs.
+boot function a given Worker exports, its `model` values, and the `opts` it needs.
 
 ### Standalone via `worker.js`
 
@@ -91,9 +97,9 @@ The example files are checked in; the copied actives are gitignored, leaving roo
 
 | Worker | USAGE.md | examples | manifest entry |
 | --- | --- | --- | --- |
-| `miners/antminer` | [USAGE.md](../miners/antminer/USAGE.md) | [examples/](../miners/antminer/examples/) | [workers-manifest.yaml](workers-manifest.yaml) |
-| `miners/whatsminer` | [USAGE.md](../miners/whatsminer/USAGE.md) | [examples/](../miners/whatsminer/examples/)  | [workers-manifest.yaml](workers-manifest.yaml) |
-| `miners/avalon` | [USAGE.md](../miners/avalon/USAGE.md) | [examples/](../miners/avalon/examples/)| [workers-manifest.yaml](workers-manifest.yaml) |
+| `miners/antminer` | [USAGE.md](../miners/antminer/USAGE.md) | [repo example](../../../examples/backend/miners/antminer/README.md) | [workers-manifest.yaml](workers-manifest.yaml) |
+| `miners/whatsminer` | [USAGE.md](../miners/whatsminer/USAGE.md) | [repo example](../../../examples/backend/miners/whatsminer/index.js) | [workers-manifest.yaml](workers-manifest.yaml) |
+| `miners/avalon` | [USAGE.md](../miners/avalon/USAGE.md) | [repo example](../../../examples/backend/miners/avalon/README.md)| [workers-manifest.yaml](workers-manifest.yaml) |
 | containers, minerpools, power-meter, temperature | _Phase 3+_ | varies under `examples/backend/` | _Phase 3+_ |
 
 The full model coverage for every Worker (all families) is generated from the contracts: see [`docs/supported-hardware.md`](supported-hardware.md).
@@ -103,6 +109,6 @@ The full model coverage for every Worker (all families) is generated from the co
 - [`build-a-worker.md`](../../../docs/guides/workers/build-a-worker.md) — build your own Worker in a separate repo, for a new device family
 - [`backend/core/kernel/README.md`](../../core/kernel/README.md) — the Kernel side of the install picture
 - [`workers-manifest.yaml`](workers-manifest.yaml) — agent-readable manifest of variants + mock ports
-- [`docs/tutorials/get-started/run.md`](../../../docs/tutorials/get-started/run.md) — narrative onboarding that uses this pattern
+- [`docs/tutorials/run-a-site.md`](../../../docs/tutorials/run-a-site.md): narrative onboarding that uses this pattern
 - [`docs/reference/maintainers/agent-ready-sdk.md`](../../../docs/reference/maintainers/agent-ready-sdk.md) — the workspace-wide USAGE.md + examples 
 convention this page implements

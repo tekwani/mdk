@@ -1,0 +1,98 @@
+name: Test with coverage
+description: >-
+  Seed generated config (if the package ships setup-config.sh), run the package's
+  tests with coverage, and enforce a per-package coverage threshold. Shared by the
+  core and workers test jobs so the gate logic lives in one place.
+
+inputs:
+  working-directory:
+    description: Package directory to test (e.g. backend/core/ork).
+    required: true
+  min:
+    description: Minimum coverage % enforced on lines/statements/functions/branches.
+    required: false
+    default: "80"
+
+runs:
+  using: composite
+  steps:
+    - name: Seed generated test config (if the package ships setup-config.sh)
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        # Some packages (e.g. app-node) generate gitignored config from
+        # *.example via setup-config.sh; their integration tests require it.
+        if [ -f setup-config.sh ]; then bash setup-config.sh; else echo "no setup-config.sh"; fi
+
+    - name: Run tests with coverage
+      id: runtests
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        # Do NOT use `npm run test:coverage --if-present || npm test`.
+        # `npm run <script> --if-present` exits 0 when the script is ABSENT, so
+        # the `|| npm test` fallback never fires — the package's tests are then
+        # silently skipped. Check for the script explicitly instead.
+        REL="${PWD#"${GITHUB_WORKSPACE}/"}"
+        if node -e "process.exit((require('./package.json').scripts||{})['test:coverage']?0:1)"; then
+          npm run test:coverage
+        elif node -e "process.exit((require('./package.json').scripts||{})['test']?0:1)"; then
+          echo "::warning::${REL}: no test:coverage script; running 'npm test' without coverage"
+          npm test
+        else
+          echo "::warning::${REL}: no test or test:coverage script; nothing to run"
+        fi
+
+    - name: Enforce coverage threshold
+      id: gate
+      if: always()
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        MIN: ${{ inputs.min }}
+        RUN_OUTCOME: ${{ steps.runtests.outcome }}
+      run: |
+        set -uo pipefail
+        # Pinned so npx resolves from cache instead of re-fetching each run.
+        NYC="nyc@17.1.0"
+        REL="${PWD#"${GITHUB_WORKSPACE}/"}"
+        # Emit a machine-readable row (pkg, status, %s) for the coverage-summary
+        # job to aggregate per domain. Slug (unique per package) names the artifact.
+        echo "slug=$(echo "$REL" | tr '/' '-')" >> "$GITHUB_OUTPUT"
+        if [ ! -f coverage/coverage-final.json ]; then
+          # No coverage. Distinguish "tests failed" from "no tests/coverage" so a
+          # failure is never silently rendered as NO-REPORT in the summary.
+          if [ "$RUN_OUTCOME" = "failure" ]; then
+            echo "::error::${REL}: tests failed"
+            printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$REL" "TESTS-FAILED" "—" "—" "—" "—" > coverage-row.tsv
+            exit 1
+          fi
+          echo "::warning::${REL}: no coverage report (coverage-final.json); no test:coverage script / no tests"
+          printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$REL" "NO-REPORT" "—" "—" "—" "—" > coverage-row.tsv
+          exit 0
+        fi
+        set -e
+        rm -rf .nyc_output && mkdir -p .nyc_output
+        cp coverage/coverage-final.json .nyc_output/out.json
+        set +e
+        npx --yes "$NYC" check-coverage --lines="$MIN" --statements="$MIN" --functions="$MIN" --branches="$MIN"
+        EXIT=$?
+        set -e
+        REPORT="$(npx --yes "$NYC" report --reporter=text-summary 2>&1)"
+        echo "$REPORT"
+        STMT=$(echo "$REPORT" | sed -n 's/^Statements[^:]*: *\([0-9.]*\)%.*/\1/p'); [ -z "$STMT" ] && STMT="—"
+        BRANCH=$(echo "$REPORT" | sed -n 's/^Branches[^:]*: *\([0-9.]*\)%.*/\1/p'); [ -z "$BRANCH" ] && BRANCH="—"
+        FN=$(echo "$REPORT" | sed -n 's/^Functions[^:]*: *\([0-9.]*\)%.*/\1/p'); [ -z "$FN" ] && FN="—"
+        LINES=$(echo "$REPORT" | sed -n 's/^Lines[^:]*: *\([0-9.]*\)%.*/\1/p'); [ -z "$LINES" ] && LINES="—"
+        [ $EXIT -eq 0 ] && STATUS="PASS" || STATUS="FAIL"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$REL" "$STATUS" "$STMT" "$BRANCH" "$FN" "$LINES" > coverage-row.tsv
+        exit $EXIT
+
+    - name: Upload coverage row
+      if: always() && steps.gate.outputs.slug != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: covrow-${{ steps.gate.outputs.slug }}
+        path: ${{ inputs.working-directory }}/coverage-row.tsv
+        retention-days: 1
+        if-no-files-found: ignore

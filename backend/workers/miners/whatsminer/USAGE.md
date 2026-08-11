@@ -29,7 +29,7 @@ internal device-driver class used by `plugin.connect()` — most integrations ne
 
 ## Run a mock device
 
-The mock binds a TCP server that answers Whatsminer's native API (encrypted, token-authenticated) with canned data. The model `type` parameter controls which response set the mock serves (from `mock/initial_states/<type>/`).
+The mock binds a TCP server that answers Whatsminer's API v2 protocol (encrypted, token-authenticated) with canned data. The model `type` parameter controls which response set the mock serves (from `mock/initial_states/<type>/`). Examples below bind `14028` rather than the real v2 default (`4028`) so it doesn't collide with the Avalon mock, which binds its own real default (`4028`); `examples/full-site` runs both simultaneously. Pick any free port for standalone use.
 
 Standalone:
 
@@ -98,10 +98,12 @@ await kernel.registerWorker(worker.runtime.getPublicKey())
 | `seedDevices` | array | Optional | `{ id?, info, opts }` entries applied once, only when the store is empty. |
 
 Each `seedDevices`/`registerThing` entry's `opts` shape: `address` (string, required, device IP or hostname), `port`
-(number, required, real devices use 14028; mocks use the bound port), `password` (string, required, Whatsminer API
-password — the Worker negotiates a session token from it via HMAC-SHA256 challenge-response; there is no separate
-username). `info` is free-form metadata stored alongside the device; common fields read by the dashboard are
-`container`, `serialNum`, `macAddress`, `pos`, and `site`. Nothing in `info` affects Worker behavior.
+(number, required — `4028` selects API v2, `4433` selects API v3, any other value probes both and falls back to
+v2; mocks use the bound port), `apiVersion` (string, optional, e.g. `'3.0.3'`, skips auto-detection when set),
+`password` (string, required, Whatsminer API password; v2 and v3 each derive a session token from it
+differently; there is no separate username). `info` is free-form metadata stored alongside the device; common
+fields read by the dashboard are `container`, `serialNum`, `macAddress`, `pos`, and `site`. Nothing in `info`
+affects Worker behavior.
 
 To register a device with an already-running Worker instead of at boot, send the `registerThing` command over HRPC:
 
@@ -127,11 +129,11 @@ there is no hot-add. See
 
 | Purpose | Example | Run from |
 | --- | --- | --- |
-| Boot one mock M56S, start a Kernel and Worker, print the HRPC key and device ID, stay running until Ctrl+C | [`examples/backend/miners/mdk.client.miner.js`](../../../../examples/backend/miners/mdk.client.miner.js) | repo root |
+| Boot one mock M56S, start a Kernel and Worker, print the HRPC key and device ID, stay running until Ctrl+C | [`examples/backend/miners/whatsminer/index.js`](../../../../examples/backend/miners/whatsminer/index.js) | repo root |
 | End-to-end parity check exercising every legacy operator flow (metrics, commands, logs, stats, comments, settings, approval-gated actions, provisioning + restart) | [`examples/run-runtime-parity.js`](examples/run-runtime-parity.js) | this package |
 
 ```bash
-node examples/backend/miners/mdk.client.miner.js
+node examples/backend/miners/whatsminer/index.js
 # or, from this package:
 node backend/workers/miners/whatsminer/examples/run-runtime-parity.js
 ```

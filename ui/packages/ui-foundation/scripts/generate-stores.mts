@@ -22,6 +22,8 @@ import { fileURLToPath } from "node:url";
 
 import { Node, Project, type SourceFile, type Symbol as TsSymbol, type Type } from "ts-morph";
 
+import { summarizeInterfaceMembers } from "../../../scripts/ts-morph-utils.mts";
+
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(SCRIPT_DIR, "..");
 const SRC_ROOT = join(PACKAGE_ROOT, "src");
@@ -29,12 +31,13 @@ const STORE_INDEX = join(SRC_ROOT, "store", "index.ts");
 const QUERY_INDEX = join(SRC_ROOT, "query", "index.ts");
 const UTILS_INDEX = join(SRC_ROOT, "utils", "index.ts");
 const CONSTANTS_INDEX = join(SRC_ROOT, "constants", "index.ts");
+const TYPES_INDEX = join(SRC_ROOT, "types", "index.ts");
 const TSCONFIG_PATH = join(PACKAGE_ROOT, "tsconfig.json");
 const PACKAGE_JSON_PATH = join(PACKAGE_ROOT, "package.json");
 const DIST_DIR = join(PACKAGE_ROOT, "dist");
 const OUT_PATH = join(DIST_DIR, "stores.json");
 
-const MANIFEST_VERSION = "1.1.0";
+const MANIFEST_VERSION = "1.2.0";
 const DESCRIPTION_MAX_CHARS = 240;
 const TYPE_MAX_CHARS = 160;
 const SIGNATURE_MAX_CHARS = 200;
@@ -79,12 +82,24 @@ type UtilityEntry = {
   file: string;
 };
 
+type TypeEntry = {
+  name: string;
+  /** `type` for type aliases, `interface` for interfaces. */
+  kind: "type" | "interface";
+  /** The type definition body (truncated for large types). */
+  definition: string;
+  description: string;
+  category: string;
+  file: string;
+};
+
 type StoresManifest = {
   version: string;
   package: string;
   stores: StoreEntry[];
   queryHelpers: QueryHelperEntry[];
   utilities: UtilityEntry[];
+  types: TypeEntry[];
 };
 
 const readPackageMeta = (): { name: string } => {
@@ -99,6 +114,22 @@ const truncate = (text: string, max: number): string =>
   text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
 
 const normaliseWhitespace = (s: string): string => s.replace(/\s+/g, " ").trim();
+
+/**
+ * Strips resolved import paths from TypeScript type signatures.
+ *
+ * When ts-morph resolves a type without an explicit annotation,
+ * `getReturnType().getText()` can emit absolute filesystem paths like:
+ *   import("/Users/dev/mdk-prv/ui/packages/...").TypeName
+ *
+ * This function removes those import paths, leaving just the type name.
+ *
+ * @example
+ *   stripImportPaths('import("/path/to/file").User') // => 'User'
+ *   stripImportPaths('Promise<import("/path").Data>') // => 'Promise<Data>'
+ */
+const stripImportPaths = (text: string): string =>
+  text.replace(/import\([^)]+\)\.(\w+)/g, "$1");
 
 type JsDocLike = {
   getDescription: () => string;
@@ -177,9 +208,9 @@ const collectFieldsFromType = (
 
     let typeText: string;
     if (signatureFromCallable && Node.isPropertySignature(valueDecl)) {
-      typeText = valueDecl.getTypeNode()?.getText() ?? valueDecl.getType().getText();
+      typeText = stripImportPaths(valueDecl.getTypeNode()?.getText() ?? valueDecl.getType().getText());
     } else if (Node.isPropertySignature(valueDecl)) {
-      typeText = valueDecl.getTypeNode()?.getText() ?? valueDecl.getType().getText();
+      typeText = stripImportPaths(valueDecl.getTypeNode()?.getText() ?? valueDecl.getType().getText());
     } else {
       typeText = property.getValueDeclarationOrThrow().getType().getText();
     }
@@ -319,16 +350,18 @@ const collectQueryHelpers = (project: Project): QueryHelperEntry[] => {
       if (init && (Node.isArrowFunction(init) || Node.isFunctionExpression(init))) {
         const params = init.getParameters().map((p) => p.getText()).join(", ");
         const ret = init.getReturnTypeNode()?.getText() ?? init.getReturnType().getText();
-        signature = `(${params}) => ${ret}`;
+        // Strip any resolved import paths that might leak absolute filesystem locations
+        signature = stripImportPaths(`(${params}) => ${ret}`);
       } else {
         const typeNode = decl.getTypeNode();
-        if (typeNode) signature = typeNode.getText();
+        if (typeNode) signature = stripImportPaths(typeNode.getText());
         else continue;
       }
     } else if (Node.isFunctionDeclaration(decl)) {
       const params = decl.getParameters().map((p) => p.getText()).join(", ");
       const ret = decl.getReturnTypeNode()?.getText() ?? decl.getReturnType().getText();
-      signature = `(${params}) => ${ret}`;
+      // Strip any resolved import paths that might leak absolute filesystem locations
+      signature = stripImportPaths(`(${params}) => ${ret}`);
     }
 
     const docs = getJsDocsBubbling(decl);
@@ -376,17 +409,17 @@ const collectUtilities = (project: Project): UtilityEntry[] => {
         kind = "function";
         const params = decl.getParameters().map((p) => p.getText()).join(", ");
         const ret = decl.getReturnTypeNode()?.getText() ?? decl.getReturnType().getText();
-        signature = `(${params}) => ${ret}`;
+        signature = stripImportPaths(`(${params}) => ${ret}`);
       } else {
         const init = decl.getInitializer();
         if (init && (Node.isArrowFunction(init) || Node.isFunctionExpression(init))) {
           kind = "function";
           const params = init.getParameters().map((p) => p.getText()).join(", ");
           const ret = init.getReturnTypeNode()?.getText() ?? init.getReturnType().getText();
-          signature = `(${params}) => ${ret}`;
+          signature = stripImportPaths(`(${params}) => ${ret}`);
         } else {
           kind = "constant";
-          signature = decl.getTypeNode()?.getText() ?? decl.getType().getText();
+          signature = stripImportPaths(decl.getTypeNode()?.getText() ?? decl.getType().getText());
         }
       }
 
@@ -407,6 +440,80 @@ const collectUtilities = (project: Project): UtilityEntry[] => {
   return utilities;
 };
 
+/**
+ * Collect the public type aliases and interfaces exported from
+ * `src/types/index.ts` — the shared contracts consumers import for typing
+ * their components and hooks.
+ */
+const collectTypes = (project: Project): TypeEntry[] => {
+  if (!existsSync(TYPES_INDEX)) return [];
+
+  const entry = project.addSourceFileAtPath(TYPES_INDEX);
+  const types: TypeEntry[] = [];
+  const seen = new Set<string>();
+
+  // Walk re-exported source files to pick up types from sub-modules.
+  const sourceFiles: SourceFile[] = [entry];
+  for (const decl of entry.getExportDeclarations()) {
+    const target = decl.getModuleSpecifierSourceFile();
+    if (target && !sourceFiles.includes(target)) {
+      project.addSourceFileAtPath(target.getFilePath());
+      sourceFiles.push(target);
+    }
+  }
+
+  for (const source of sourceFiles) {
+    if (/\.test\.tsx?$/.test(source.getFilePath())) continue;
+    if (!source.getFilePath().startsWith(PACKAGE_ROOT)) continue;
+
+    // Collect type aliases.
+    for (const typeAlias of source.getTypeAliases()) {
+      if (!typeAlias.isExported()) continue;
+      const name = typeAlias.getName();
+      if (seen.has(name)) continue;
+      seen.add(name);
+
+      const docs = getJsDocsBubbling(typeAlias);
+      const typeNode = typeAlias.getTypeNode();
+      const definition = typeNode
+        ? truncate(normaliseWhitespace(typeNode.getText()), TYPE_MAX_CHARS)
+        : "";
+
+      types.push({
+        name,
+        kind: "type",
+        definition,
+        description: extractDescription(docs),
+        category: extractAnyCategory(docs, "general"),
+        file: toRelative(source.getFilePath()),
+      });
+    }
+
+    // Collect interfaces.
+    for (const iface of source.getInterfaces()) {
+      if (!iface.isExported()) continue;
+      const name = iface.getName();
+      if (seen.has(name)) continue;
+      seen.add(name);
+
+      const docs = getJsDocsBubbling(iface);
+      const definition = summarizeInterfaceMembers(iface, TYPE_MAX_CHARS);
+
+      types.push({
+        name,
+        kind: "interface",
+        definition,
+        description: extractDescription(docs),
+        category: extractAnyCategory(docs, "general"),
+        file: toRelative(source.getFilePath()),
+      });
+    }
+  }
+
+  types.sort((a, b) => a.name.localeCompare(b.name));
+  return types;
+};
+
 const main = (): void => {
   const project = new Project({
     tsConfigFilePath: TSCONFIG_PATH,
@@ -416,6 +523,7 @@ const main = (): void => {
   const stores = collectStores(project);
   const queryHelpers = collectQueryHelpers(project);
   const utilities = collectUtilities(project);
+  const types = collectTypes(project);
 
   const manifest: StoresManifest = {
     version: MANIFEST_VERSION,
@@ -423,6 +531,7 @@ const main = (): void => {
     stores,
     queryHelpers,
     utilities,
+    types,
   };
 
   if (!existsSync(DIST_DIR)) mkdirSync(DIST_DIR, { recursive: true });
@@ -430,7 +539,7 @@ const main = (): void => {
 
   console.log(
     `✓ stores.json: ${stores.length} store(s), ${queryHelpers.length} query helper(s), ` +
-      `${utilities.length} utilit(ies) → ${toRelative(OUT_PATH)}`,
+      `${utilities.length} utilit(ies), ${types.length} type(s) → ${toRelative(OUT_PATH)}`,
   );
 };
 

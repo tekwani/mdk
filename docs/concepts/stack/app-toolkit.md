@@ -17,27 +17,26 @@ Not every layer is required for every consumer type.
 
 MDK supports two primary consumer patterns:
 
-- **Human operator UI**: a frontend application connects to the Gateway's [REST][gateway-http-api] and
-  [WebSocket][gateway-websocket] APIs. The full three-layer toolkit applies — Gateway, plugin system, and frontend packages
-- **AI agent / headless consumer**: an AI agent connects to the Gateway's MCP endpoint and subscribes to telemetry feeds
-  directly. The frontend packages are not required; the Gateway and plugin system alone are sufficient
-
-> [!NOTE]
-> Status: MCP is in progress. The HTTP and WebSocket consumer paths are available today.
+- **Human operator UI**: a frontend application connects to the Gateway's [REST][gateway-http-api] API and polls it for
+  [live data][gateway-live-data]. The full three-layer toolkit applies — Gateway, plugin system, and frontend packages
+- **AI agent / headless consumer**: an AI agent connects via the standalone [`@tetherto/mdk-mcp`][mcp-readme] package. The frontend packages are not required
 
 ## Gateway layer
 
 `@tetherto/mdk-gateway` is the backend component of the toolkit. It wraps [`@tetherto/mdk-client`][mdk-client] — the Kernel protocol connector —
-and delivers an authenticated HTTP, WebSocket, and MCP interface for consumers that need those capabilities. Read the
-[Gateway concept page][gateway-concept] for the full developer model: extension patterns, data access, auth design, and Kernel connection.
+and delivers an HTTP interface for consumers that need those capabilities. Read the [Gateway concept page][gateway-concept] for the full
+developer model: extension patterns, data access, auth design, and Kernel connection.
 
 As a toolkit component, the Gateway provides out of the box:
 
-- Fastify-based HTTP server and WebSocket endpoint
-- JWT authentication, session management, and OAuth2 (Google and Microsoft)
-- RBAC enforcement at the route level
-- Command proxying and telemetry subscriptions to Kernel via `@tetherto/mdk-client`
-- MCP endpoint for AI agents
+- Fastify-based HTTP server
+- Declarative plugin loading, request-level caching, and manifest validation at startup
+- Command proxying and telemetry access to Kernel via `@tetherto/mdk-client`
+
+Agents can reach MDK over MCP through the standalone [`@tetherto/mdk-mcp`][mcp-readme] package.
+
+Authentication, session management, and RBAC are not included. [Identity is yours to supply][plugins-auth-state], invoked from the controllers that
+need it.
 
 > [!NOTE]
 > Using [`@tetherto/mdk-client`][mdk-client] without the Gateway runtime is technically possible — you write your own auth,
@@ -48,21 +47,13 @@ As a toolkit component, the Gateway provides out of the box:
 `@tetherto/mdk-plugins` is the extension mechanism. A plugin is a directory containing an [`mdk-plugin.json`][plugins-manifest] manifest and one or
 more controller files. The Gateway discovers and loads plugins from directories passed via [`extraPluginDirs`][plugins-mounting].
 
-The toolkit ships defaults plugins, e.g., `auth` (user authentication routes), `telemetry` (hashrate, efficiency, temperature
-metrics), and `site-hashrate` (aggregated site history). Any plugin you write loads identically.
-
-> [!TIP]
-> - [Plugin authoring guide][plugins-how-to] — build process, manifest schema, controller contract
-> - [Plugin reference][plugins-readme] — manifest schema, default routes, loader errors
+The toolkit auto-loads several [plugins][plugins-readme] and ships `auth` alongside, allowing you to 
+[provide your identity solution][plugins-auth-state]. Any [plugin you write][plugins-how-to] loads by the same mechanism.
 
 ## Frontend packages
 
-These packages are for the **human operator UI** pattern — the application layer that connects to the Gateway's REST and
-WebSocket APIs. If your consumer is an AI agent connecting via the MCP endpoint, this layer is not required.
-
-> [!NOTE]
-> Early versions of MDK ship three layered workspace packages within the monorepo. 
-> npm packages will be published as the tooling matures.
+These packages are for the **human operator UI** pattern — the application layer that connects to the Gateway's REST API and
+polls it for live data. If your consumer is an AI agent connecting via MCP, this layer is not required.
 
 Consuming applications add the workspace dependencies directly. Consuming the whole chain is the recommended path for operator UIs.
 
@@ -109,14 +100,14 @@ flowchart TD
     subgraph backend ["Gateway + plugins (server)"]
         direction TB
         PLUGINS["@tetherto/mdk-plugins (default + custom routes)"]
-        ROUTER["@tetherto/mdk-gateway (HTTP / WS / MCP)"]
+        ROUTER["@tetherto/mdk-gateway (HTTP / MCP)"]
         CLIENT["@tetherto/mdk-client (protocol connector)"]
 
         PLUGINS -->|registers routes into| ROUTER
         ROUTER -->|proxies to Kernel via| CLIENT
     end
 
-    UI_FOUNDATION <-->|"HTTP / WebSocket"| ROUTER
+    UI_FOUNDATION -->|"HTTP (polling)"| ROUTER
     CLIENT -->|"MDK Protocol"| Kernel["@tetherto/mdk-kernel (kernel)"]
 
     style frontend fill:#F7931A,stroke:#1A1A1A,color:#1A1A1A
@@ -140,14 +131,17 @@ flowchart TD
 [gateway-http-api]: ../../../backend/core/gateway/README.md#http-api-overview
 <!-- docs@tether.io: gateway-http-api → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#http-api-overview -->
 
-[gateway-websocket]: ../../../backend/core/gateway/README.md#websocket-subscriptions
-<!-- docs@tether.io: gateway-websocket → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#websocket-subscriptions -->
+[gateway-live-data]: ../../../backend/core/gateway/README.md#live-data
+<!-- docs@tether.io: gateway-live-data → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#live-data -->
 
 [plugins-readme]: ../../../backend/core/plugins/README.md
 <!-- docs@tether.io: plugins-readme → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md -->
 
 [plugins-manifest]: ../../../backend/core/plugins/README.md#manifest-format
 <!-- docs@tether.io: plugins-manifest → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#manifest-format -->
+
+[plugins-auth-state]: ../../guides/gateway/plugins.md#auth-and-permissions
+<!-- docs@tether.io: plugins-auth-state → guides/gateway/plugins#auth-and-permissions -->
 
 [plugins-mounting]: ../../../backend/core/plugins/README.md#mounting-plugins
 <!-- docs@tether.io: plugins-mounting → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#mounting-plugins -->
@@ -162,7 +156,7 @@ flowchart TD
 <!-- docs@tether.io: ui-foundation → https://github.com/tetherto/mdk/blob/main/ui/packages/ui-foundation/README.md -->
 
 [ui-foundation-ref]: ../../../ui/packages/ui-foundation/README.md
-<!-- docs@tether.io: ui-foundation-ref → reference/app-toolkit/ui-foundation -->
+<!-- docs@tether.io: ui-foundation-ref → reference/ui -->
 
 [react-adapter]: ../../../ui/packages/react-adapter/README.md
 <!-- docs@tether.io: react-adapter → https://github.com/tetherto/mdk/blob/main/ui/packages/react-adapter/README.md -->
@@ -172,3 +166,6 @@ flowchart TD
 
 [mdk-client]: ../../../backend/core/client/README.md
 <!-- docs@tether.io: mdk-client → https://github.com/tetherto/mdk/blob/main/backend/core/client/README.md -->
+
+[mcp-readme]: ../../../backend/core/mcp/README.md
+<!-- docs@tether.io: mcp-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->

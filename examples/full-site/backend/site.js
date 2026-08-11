@@ -150,14 +150,18 @@ function seedSenecaSensors () {
 }
 
 // Bitdeer mock is an MQTT client — start it after the worker's broker is up.
-function startBitdeerMock () {
+// minerCount is the avalon fleet size (the only family this container racks,
+// see seedAvalonMiners) so the container's reported power scales with
+// `--miners N` instead of always reporting the same placeholder.
+function startBitdeerMock (minerCount) {
   const bitdeerDir = path.join(WORKERS_SRC, 'containers', 'bitdeer')
   process.chdir(bitdeerDir)
   const handle = bitdeerMock.createServer({
     host: HOST,
     port: PORTS.BITDEER_MQTT,
     type: 'd40_a1346',
-    id: BITDEER_MQTT_ID
+    id: BITDEER_MQTT_ID,
+    minerCount: minerCount || DEFAULT_MINER_COUNT
   })
   debug('started bitdeer mock (MQTT client → %s:%d, id=%s)', HOST, PORTS.BITDEER_MQTT, BITDEER_MQTT_ID)
   return handle
@@ -277,7 +281,7 @@ async function bootWorker (spec, { kernel, kernelTopic, root, minerCount, mode =
     process.once('SIGTERM', stop)
   }
 
-  const mockHandle = spec.afterBoot ? spec.afterBoot() : null
+  const mockHandle = spec.afterBoot ? spec.afterBoot(minerCount) : null
 
   if (spec.pool) {
     // Scheduler-driven pool worker — no things to seed; just pace it.

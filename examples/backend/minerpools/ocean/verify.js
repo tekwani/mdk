@@ -25,8 +25,7 @@ const config = fs.existsSync(LOCAL_CONFIG)
   ? require(LOCAL_CONFIG)
   : JSON.parse(fs.readFileSync(EXAMPLE_CONFIG, 'utf8'))
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..')
-const { OCEAN_POOL } = require(path.join(REPO_ROOT, 'backend', 'workers', 'minerpools', 'ocean'))
+const { OCEAN_POOL } = require('@tetherto/mdk-worker-ocean')
 
 const ths = (hps) => (typeof hps === 'number' ? `${(hps / 1e12).toFixed(2)} TH/s` : 'n/a')
 

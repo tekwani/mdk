@@ -147,6 +147,14 @@ export type DataTableProps<I = unknown> = {
    * Get the row ID for a row. If not specified index is the default row ID.
    */
   getRowId?: (row: I, index: number, parent?: DataTableRow<I>) => string
+  /**
+   * Called when a body row is clicked. When set, rows become interactive
+   * (pointer cursor, `role="button"`, keyboard-activatable with Enter/Space).
+   * Clicks originating from an interactive control in the row (button, link,
+   * input, checkbox, or anything marked `data-no-row-click`) are ignored, so
+   * the selection checkbox and expand toggle keep working independently.
+   */
+  onRowClick?: (rowData: I) => void
 }
 
 const DEFAULT_PAGE_SIZE = 10
@@ -196,6 +204,7 @@ export const DataTable = <I = unknown,>({
   onExpandedRowsChange,
   renderExpandedContent,
   getRowId,
+  onRowClick,
 }: DataTableProps<I>): JSX.Element => {
   const [sorting, setSorting] = useControllableState<DataTableSortingState>({
     prop: providedSorting,
@@ -380,7 +389,11 @@ export const DataTable = <I = unknown,>({
           >
             {(hasData || loading) && <TableHeader table={tableBackend} />}
             {hasData && (
-              <TableBody table={tableBackend} renderExpandedContent={renderExpandedContent} />
+              <TableBody
+                table={tableBackend}
+                renderExpandedContent={renderExpandedContent}
+                onRowClick={onRowClick}
+              />
             )}
             {/* Initial load: shimmer rows shaped like real rows, so the table
               * keeps its final geometry and nothing jumps when data lands. */}

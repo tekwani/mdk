@@ -172,7 +172,7 @@ npx mdk-ui create my-dashboard --template mdk-ui-shell
 ```
 
 That template needs a local
-[`mdk-gateway`](https://github.com/tetherto/mdk-prv/blob/release/0.5.0/backend/core/gateway/package.json)
+[`mdk-gateway`](../backend/core/gateway/README.md)
 running on `http://localhost:3000` and a Google OAuth client. See
 [`docs/AGENT_FIRST.md`](docs/AGENT_FIRST.md#run-the-mdk-ui-shell-template-end-to-end)
 for the end-to-end recipe.

@@ -34,11 +34,11 @@ function generateMockBlocks (count = 10) {
   return blocks
 }
 
-function generateMockWorkers (username) {
+function generateMockWorkers (username, workerCount) {
   const workers = {}
-  const workerCount = 5 + Math.floor(randomNumber() * 10)
+  const count = workerCount != null ? workerCount : 5 + Math.floor(randomNumber() * 10)
 
-  for (let i = 0; i < workerCount; i++) {
+  for (let i = 0; i < count; i++) {
     const workerName = `${username}.worker${i + 1}`
     workers[workerName] = [{
       hashrate_60s: 100000000000000 + randomNumber() * 10000000000000,

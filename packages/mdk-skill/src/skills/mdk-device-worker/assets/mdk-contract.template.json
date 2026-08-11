@@ -1,0 +1,45 @@
+{
+  "metadata": {
+    "provider": "TODO-vendor-slug",
+    "deviceFamily": "TODO: miner | power-meter | sensor | container | minerpool",
+    "brand": "TODO-Brand",
+    "modelsSupported": ["TODO_MODEL"],
+    "overview": "TODO: what the worker controls, which vendor protocol it wraps, and any critical environmental constraint an AI operator must know."
+  },
+  "capabilities": {
+    "telemetry": [
+      {
+        "name": "temperature",
+        "unit": "C",
+        "type": "number",
+        "handler": "src/telemetry/temperature.js",
+        "description": "TODO: what this reads, plus semantic boundaries (e.g. 'If 0, device is booting')."
+      },
+      {
+        "name": "status_text",
+        "type": "string",
+        "handler": "src/telemetry/status-text.js",
+        "description": "TODO: enumerate the possible values and what each means."
+      }
+    ],
+    "commands": [
+      {
+        "name": "setSetpoint",
+        "description": "TODO: what this does physically.",
+        "constraints": "TODO: rate limits / approval requirements, or delete this field.",
+        "handler": "src/commands/set-setpoint.js",
+        "params": [
+          { "name": "value", "type": "number", "min": 0, "max": 100 }
+        ]
+      }
+    ],
+    "health": {
+      "supportedStates": ["OK", "OFFLINE"],
+      "alerts": [],
+      "troubleshooting": []
+    },
+    "errors": {
+      "ERR_DEVICE_CALL_FAILED": "The device API call failed or returned an error."
+    }
+  }
+}

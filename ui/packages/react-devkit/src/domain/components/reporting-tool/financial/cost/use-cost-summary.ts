@@ -31,6 +31,14 @@ export type UseCostSummaryOptions = UseFinancialDateRangeOptions & {
  * response shape to the same view-model primitives; this base hook stays
  * single-site to keep the input contract narrow.
  *
+ * @remarks
+ * The `/auth/finance/*` endpoint is illustrative. MDK does not ship built-in
+ * endpoints — create your own via a
+ * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) matching
+ * your Worker/business logic. See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference.
+ *
  * @category utilities
  * @domain financial-reporting
  * @kernelCapability financial-reporting

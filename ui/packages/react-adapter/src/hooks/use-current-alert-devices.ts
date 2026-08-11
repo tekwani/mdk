@@ -32,6 +32,14 @@ export type UseCurrentAlertDevicesOptions = {
  * `/auth/list-things`; this one requests a wider field set, so it uses a
  * distinct cache key.
  *
+ * @remarks
+ * The `/auth/list-things` endpoint is illustrative. MDK does not ship built-in
+ * endpoints — create your own via a
+ * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) matching
+ * your Worker/business logic. See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference.
+ *
  * @category alerts
  */
 export const useCurrentAlertDevices = (

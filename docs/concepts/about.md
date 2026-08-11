@@ -1,7 +1,7 @@
 ---
 title: About MDK
 description: Open, modular infrastructure for Bitcoin mining at any scale
-docs@tether_slug: concepts/about/
+docs@tether_slug: concepts/
 ---
 
 ## Introducing MDK
@@ -60,8 +60,8 @@ layer that sits on top of `@tetherto/mdk-kernel`. It ships in three parts:
 - **Frontend tools**: a headless state brain ([`@tetherto/mdk-ui-foundation`][ui-foundation]), framework adapters 
 ([`@tetherto/mdk-react-adapter`][react-get-started] for React today), and a production-tested React UI Kit 
 ([`@tetherto/mdk-react-devkit`][react-get-started]) for dashboards.
-- **Backend tools**: a plug-and-play library that drops into Fastify or Express to handle JWT auth, RBAC, and
- command proxying, with hooks for custom routes and aggregations.
+- **Backend tools**: a plug-and-play library that drops into Fastify or Express to handle command proxying and
+ request-level caching, with hooks for custom routes and aggregations.
 - **Plugins**: drop-in modules that pair a frontend tools widget with a backend tools route, so third parties 
 can ship whole features without forking the Gateway.
 
@@ -85,8 +85,8 @@ and act on device issues autonomously
 `@tetherto/mdk-kernel` is [the kernel][architecture-kernel]. [`@tetherto/mdk-client`][mdk-client] is the protocol connector every caller uses
 to reach it. Above those two layers, the supported development path builds in two levels:
 
-- **Gateway**: the [Gateway][gateway-concept] wraps `@tetherto/mdk-client` and adds [authentication][authentication],
-  [RBAC][rbac], fleet aggregation, and an HTTP/WebSocket/MCP interface. AI agents drive the fleet through its MCP endpoint
+- **Gateway**: the [Gateway][gateway-concept] wraps `@tetherto/mdk-client` and adds fleet aggregation, request-level caching, and an
+  HTTP interface. Authenticating callers is left to the plugin controllers you write. AI agents can drive the fleet through the standalone [`@tetherto/mdk-mcp`][mcp-readme] package
 - **MDK App Toolkit**: sits on top of the Gateway. Adds a plugin system for declarative route extensions and frontend
   packages ([`@tetherto/mdk-ui-foundation`][ui-foundation], React adapter, React UI kit) for teams building operator dashboards
 
@@ -173,16 +173,14 @@ Learn more about:
 <!-- mdk-monorepo: temp — ARCHITECTURE.md is a stub until ui/ is populated -->
 
 [ui-foundation]: ../../ui/packages/ui-foundation/README.md
-<!-- docs@tether.io: ui-foundation → reference/app-toolkit/ui-foundation -->
+<!-- docs@tether.io: ui-foundation → reference/ui -->
+
+[mcp-readme]: ../../backend/core/mcp/README.md
+<!-- docs@tether.io: mcp-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->
 
 [react-get-started]: ../../ui/README.md
-<!-- docs@tether.io: react-get-started → tutorials/ui/react -->
-
-[authentication]: ../../backend/core/gateway/README.md#security-model
-<!-- docs@tether.io: authentication → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#security-model -->
-
-[rbac]: ../../backend/core/gateway/README.md#security-model
-<!-- docs@tether.io: rbac → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#security-model -->
+<!-- docs@tether.io: no parity link -->
+<!-- mdk-monorepo: tutorials/ui/react parked on the docs site; restore the slug rewrite when it is unparked -->
 
 [mdk-stack]: architecture.md#mdk-stack
 <!-- docs@tether.io: mdk-stack → concepts/architecture#mdk-stack -->

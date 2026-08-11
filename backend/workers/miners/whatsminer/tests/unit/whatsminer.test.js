@@ -212,3 +212,115 @@ test('setLED - throws ERR_INVALID_ARG_TYPE for number', async (t) => {
   const miner = makeWhatsminer()
   await t.exception(miner.setLED(1), /ERR_INVALID_ARG_TYPE/)
 })
+
+// ─── modern v2 firmware (Msg-envelope reads) ──────────────────────────────────
+
+test('getMinerStats - parses modern v2 firmware Msg envelope', async (t) => {
+  const miner = makeWhatsminer()
+  miner.rpc.request = async () => JSON.stringify({
+    STATUS: 'S',
+    When: 1784817659,
+    Code: 131,
+    Msg: {
+      Elapsed: 238.35,
+      'MHS av': 347052288,
+      'MHS 1m': 346799104,
+      'MHS 15m': 347052288,
+      'HS RT': 346799104,
+      freq_avg: 353.52,
+      Power: 6199.66,
+      'Power Rate': 17.88,
+      'Env Temp': 37.625,
+      'Power Mode': 'Low',
+      'Factory GHS': 400332,
+      'Power Limit': 6251,
+      Uptime: 996
+    },
+    Description: ''
+  })
+
+  const stats = await miner.getMinerStats()
+  t.is(stats.elapsed, 238.35)
+  t.is(stats.mhs_av, 347052288)
+  t.is(stats.power, 6199.66)
+  t.is(stats.power_mode, 'Low')
+  t.is(stats.uptime, 996)
+})
+
+test('getMinerStats - parses legacy v2 SUMMARY response unchanged', async (t) => {
+  const miner = makeWhatsminer()
+  miner.rpc.request = async () => JSON.stringify({
+    STATUS: [{ STATUS: 'S', When: 1, Code: 11 }],
+    SUMMARY: [{ Elapsed: 100, 'MHS av': 295000000, Power: 3400 }],
+    id: 1
+  })
+
+  const stats = await miner.getMinerStats()
+  t.is(stats.elapsed, 100)
+  t.is(stats.mhs_av, 295000000)
+  t.is(stats.power, 3400)
+})
+
+test('getMinerStats - throws ERR_MINER_STATS_FAILED when summary missing', async (t) => {
+  const miner = makeWhatsminer()
+  miner.rpc.request = async () => JSON.stringify({ STATUS: 'E', Code: 14, Msg: 'invalid cmd' })
+  await t.exception(miner.getMinerStats(), /ERR_MINER_STATS_FAILED/)
+})
+
+test('getPools - parses modern v2 firmware Msg envelope', async (t) => {
+  const miner = makeWhatsminer()
+  miner.rpc.request = async () => JSON.stringify({
+    STATUS: 'S',
+    Code: 131,
+    Msg: [
+      { POOL: 1, URL: 'stratum+tcp://pool:3333', Status: 'Alive', User: 'acct.wm001', Accepted: 10, Rejected: 0, Stale: 0 }
+    ],
+    Description: ''
+  })
+
+  const pools = await miner.getPools()
+  t.is(pools.length, 1)
+  t.is(pools[0].url, 'stratum+tcp://pool:3333')
+  t.is(pools[0].user, 'acct.wm001')
+  t.is(pools[0].accepted, 10)
+})
+
+test('getDevices - parses modern v2 firmware Msg envelope', async (t) => {
+  const miner = makeWhatsminer()
+  miner.rpc.request = async () => JSON.stringify({
+    STATUS: 'S',
+    Code: 131,
+    Msg: [
+      { ASC: 0, Slot: 0, Temperature: 60, 'Chip Temp Max': 63.85, 'MHS av': 115684096 },
+      { ASC: 1, Slot: 1, Temperature: 61, 'Chip Temp Max': 62.1, 'MHS av': 115684096 }
+    ],
+    Description: ''
+  })
+
+  const devices = await miner.getDevices()
+  t.is(devices.length, 2)
+  t.is(devices[0].chip_temp_max, 63.85)
+  t.is(devices[1].slot, 1)
+})
+
+// ─── API version resolution ───────────────────────────────────────────────────
+
+test('init - resolves V2 handler from port 4028', async (t) => {
+  const miner = makeWhatsminer({ port: 4028 })
+  await miner.init()
+  t.is(miner.apiVersion, '2.0.5')
+  t.is(miner.protocolHandler.constructor.name, 'WMApiV2')
+})
+
+test('init - resolves V3 handler from port 4433', async (t) => {
+  const miner = makeWhatsminer({ port: 4433 })
+  await miner.init()
+  t.is(miner.apiVersion, '3.0.3')
+  t.is(miner.protocolHandler.constructor.name, 'WMApiV3')
+})
+
+test('init - honors explicit apiVersion over port', async (t) => {
+  const miner = makeWhatsminer({ port: 4028, apiVersion: '3.0.3' })
+  await miner.init()
+  t.is(miner.protocolHandler.constructor.name, 'WMApiV3')
+})

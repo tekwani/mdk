@@ -15,11 +15,8 @@ const config = fs.existsSync(LOCAL_CONFIG)
   ? require(LOCAL_CONFIG)
   : JSON.parse(fs.readFileSync(EXAMPLE_CONFIG, 'utf8'))
 
-// This example lives under examples/backend/miners/antminer/, so the repo root is
-// four levels up. Everything is required from backend/ — the canonical source tree.
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..')
-const { initialize, getKernel, startGateway, waitForDiscovery } = require(path.join(REPO_ROOT, 'backend', 'core', 'mdk'))
-const { startAntminerWorker } = require(path.join(REPO_ROOT, 'backend', 'workers', 'miners', 'antminer'))
+const { initialize, getKernel, startGateway, waitForDiscovery } = require('@tetherto/mdk-core')
+const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
 
 const EXAMPLE_TMP = path.join(os.tmpdir(), 'mdk-site-antminer')
 const KERNEL_ROOT = path.join(EXAMPLE_TMP, 'kernel')
@@ -36,7 +33,7 @@ const ANTMINER_MODEL = {
 
 // The Antminer mock speaks Bitmain's HTTP digest API. Start one per worker on
 // its own port; returns the mock handle so we can close it on shutdown.
-const amMock = require(path.join(REPO_ROOT, 'backend', 'workers', 'miners', 'antminer', 'mock', 'server'))
+const amMock = require('@tetherto/mdk-worker-antminer/mock/server')
 
 const startMock = (svc) => {
   const mockType = ANTMINER_MODEL[svc.type]
@@ -59,7 +56,6 @@ const main = async () => {
   }
 
   const env = config.env || 'development'
-  const noAuth = !!config.noAuth
   initialize()
 
   const kernelTopic = crypto.randomBytes(32).toString('hex')
@@ -130,13 +126,12 @@ const main = async () => {
 
       if (svc.kind === 'gateway') {
         if (!kernel) throw new Error('ERR_KERNEL_REQUIRED: declare an "kernel" service before gateway')
-        logger.log(`Starting gateway on port ${svc.port}${noAuth ? ' (noAuth)' : ''}`)
+        logger.log(`Starting gateway on port ${svc.port}`)
         const orkPubKey = kernel.getPublicKey()
         const orkPubKeyHex = Buffer.isBuffer(orkPubKey) ? orkPubKey.toString('hex') : orkPubKey
         const hnd = await startGateway({
           port: svc.port,
           env,
-          noAuth,
           root: GATEWAY_ROOT,
           kernelKey: orkPubKeyHex,
           common: {

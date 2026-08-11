@@ -7,7 +7,7 @@ immediately verifiable.
 
 ## What it demonstrates
 
-- Bringing up an Kernel + one Worker in one process.
+- Bringing up a Kernel + one Worker in one process.
 - Starting a **mock Avalon A1346 miner** and **registering** it as a thing.
 - Exposing the Kernel via an **HTTP gateway** at `http://localhost:3000`.
 - Live mock telemetry pulled through the Kernel over HTTP — no hardware.
@@ -32,7 +32,7 @@ flowchart LR
   Index[index.js]
   Index --> Kernel[getKernel]
   Index --> App[startGateway :3000]
-  Index --> W1[startWorker AV_A1346]
+  Index --> W1[startAvalonWorker AV_A1346]
 
   subgraph proc [Single Node.js process]
     Kernel
@@ -72,24 +72,27 @@ cleanly.
 ## Verifying it works
 
 Once the example is running, query the HTTP API exposed by the gateway (`http://localhost:3000`)
-directly. For example, to list Workers and pull telemetry for a device:
+directly. The hashrate endpoint lists every registered device with its live telemetry:
 
 ```bash
-curl http://localhost:3000/site-monitor/workers
-curl http://localhost:3000/site-monitor/devices/<device-id>/telemetry
+curl http://localhost:3000/site-monitor/hashrate
 ```
 
-A healthy response from the Workers endpoint looks like:
+A healthy response looks like:
 
 ```json
 {
-  "workers": [
+  "totalHashrateMhs": 294380000,
+  "totalPowerW": 3100,
+  "deviceCount": 1,
+  "devices": [
     {
-      "workerId": "AvalonMinerManagerA1346-...",
-      "state": "READY",
-      "healthState": "HEALTHY",
-      "deviceIds": ["<device-id>"]
+      "deviceId": "<device-id>",
+      "workerId": "avalon-a1346-demo",
+      "hashrateMhs": 294380000,
+      "powerW": 3100
     }
-  ]
+  ],
+  "ts": 1784738000000
 }
 ```

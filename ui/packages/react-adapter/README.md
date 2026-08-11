@@ -85,13 +85,37 @@ write-action approval path. Shared helpers live in `action-write-utils.ts`
 | `useLiveActions()`          | Query live actions every 5 s; partition into `[mine, others]` by submitter email and expose `canApprove` for `actions:w`, `admin`, `site_manager`, or `*` roles |
 | `useThingComment()`         | Add, edit, and delete Thing comments; invalidates `list-things` on every write                                        |
 
-`toVotingPayload()` in `action-write-utils.ts` allowlists only the backend-recognized fields when building the `POST /auth/actions/voting` body — it explicitly carries the device-action targeting fields `tags` and `crossThing` through while dropping every other client-only field (`codesList`, `poolName`, local queue `id`, …).
+`toVotingPayload()` in `action-write-utils.ts` allowlists only the backend-recognized fields (`query`, `action`, `params`, `rackType`) when building the `POST /auth/actions/voting` body. Targeting reaches the backend solely through `query`: it's built from the action's `tags` as `{ tags: { $in: tags } }`, unless the action opts out with `overrideQuery: false` and supplies its own `query` (pool assignment does this). Every other client-only field (`tags`, `crossThing`, `codesList`, `poolName`, local queue `id`, …) is dropped.
 
 Import from `@tetherto/mdk-react-adapter/hooks` or the package root barrel.
 
 > [!NOTE]
 > For the cross-layer architecture, read [approval-gated writes](../../../docs/concepts/control-plane.md#approval-gated-writes).
 > For implementation steps, read the [write-actions how-to](../../../docs/guides/gateway/write-actions.md).
+
+> [!IMPORTANT]
+> **Prerequisite:** `/auth/actions` has no default Gateway provider; bring your own
+> [Gateway plugin](../../../docs/guides/gateway/plugins.md) serving the voting/approval queue shape
+> these hooks expect. `useLiveActions()` also calls `useCurrentUserEmail()` internally
+> (`@category auth`, `GET /auth/userinfo`, also no default provider) to partition `[mine, others]`;
+> without it, every action is treated as "mine". See the
+> [full-site example](../../../examples/full-site/plugins/site) for a working reference covering
+> both routes.
+
+## Example hooks
+
+**`useSystemInfo()`**: Reference hook, not wired into any shipped page. Demonstrates the canonical
+MDK data-fetch pattern end to end: composes three read-only Gateway endpoints (`GET /auth/site`,
+`GET /auth/userinfo`, `GET /auth/featureConfig`) into one page-ready `SystemInfo` payload (`site`,
+`email`, `roles`, `featureCount`) with a single `refetch`. Tagged `@category example` in the
+machine-readable manifest.
+
+> [!IMPORTANT]
+> **Prerequisite:** `/auth/site` and `/auth/featureConfig` are served by the default `site-monitor`
+> Gateway plugin, but `/auth/userinfo` has no default provider: the bundled `@tetherto/mdk-plugin-auth`
+> ships unwired. Bring your own [Gateway plugin](../../../docs/guides/gateway/plugins.md) serving
+> that route, or `email`/`roles` stay `undefined`. See the
+> [full-site example](../../../examples/full-site/plugins/site) for a working reference.
 
 ## Machine-readable hook manifest
 

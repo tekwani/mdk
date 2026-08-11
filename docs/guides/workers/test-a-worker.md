@@ -14,7 +14,7 @@ test its integration. To seed devices and register with Kernel, host the plugin 
 may live in the Worker plugin package itself; a second npm package is **not required**. A separate host directory is
 recommended when independent plugin publication and plugin-only tests are useful:
 
-```
+```text
 your-worker-host/
   index.js                      # host module: WorkerRuntime, devices, lifecycle
   run-live.js                   # live Kernel registration and compatibility check
@@ -346,8 +346,8 @@ Understand the end-user experience of controlling and monitoring your device via
 [worker-runtime-legacy]: ../../reference/maintainers/worker-runtime-legacy-services.md
 <!-- docs@tether.io: worker-runtime-legacy → https://github.com/tetherto/mdk/blob/main/docs/reference/maintainers/worker-runtime-legacy-services.md -->
 
-[minimal-dashboard]: ../../tutorials/quickstart/build-a-dashboard.md
-<!-- docs@tether.io: minimal-dashboard → tutorials/quickstart/build-a-dashboard -->
+[minimal-dashboard]: ../../tutorials/build-a-dashboard.md
+<!-- docs@tether.io: minimal-dashboard → tutorials/build-a-dashboard -->
 
 [full-site]: ../../../examples/full-site/README.md
 <!-- docs@tether.io: full-site → https://github.com/tetherto/mdk/blob/main/examples/full-site/README.md -->

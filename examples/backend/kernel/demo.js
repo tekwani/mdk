@@ -21,13 +21,13 @@
  */
 
 const { WhatsminerWorker } = require('./whatsminer-worker/worker')
-const { WorkerRegistry } = require('../../../backend/core/kernel/lib/modules/worker-registry')
-const { CommandDispatcher } = require('../../../backend/core/kernel/lib/modules/command-dispatcher')
-const { CommandStateMachine } = require('../../../backend/core/kernel/lib/modules/command-state-machine')
-const { TelemetryCollector } = require('../../../backend/core/kernel/lib/modules/telemetry-collector')
-const { HealthMonitor } = require('../../../backend/core/kernel/lib/modules/health-monitor')
-const { ACTIONS, MESSAGE_TYPES } = require('../../../backend/core/kernel/lib/protocol/actions')
-const { build: buildEnvelope } = require('../../../backend/core/kernel/lib/protocol/envelope')
+const { WorkerRegistry } = require('@tetherto/mdk-kernel/lib/modules/worker-registry')
+const { CommandDispatcher } = require('@tetherto/mdk-kernel/lib/modules/command-dispatcher')
+const { CommandStateMachine } = require('@tetherto/mdk-kernel/lib/modules/command-state-machine')
+const { TelemetryCollector } = require('@tetherto/mdk-kernel/lib/modules/telemetry-collector')
+const { HealthMonitor } = require('@tetherto/mdk-kernel/lib/modules/health-monitor')
+const { ACTIONS, MESSAGE_TYPES } = require('@tetherto/mdk-kernel/lib/protocol/actions')
+const { build: buildEnvelope } = require('@tetherto/mdk-kernel/lib/protocol/envelope')
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 function log (section) {

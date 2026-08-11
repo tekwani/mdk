@@ -22,19 +22,31 @@ const PERMISSION_ERROR_MSG = 'This user role is not authorized to submit this ac
 
 /**
  * Project a staged queue action onto the exact `POST /auth/actions/voting`
- * body. Whitelists only the backend-recognised keys (`query`, `action`,
- * `params`, `rackType`, and the device-action targeting fields `tags` /
- * `crossThing`); the local queue `id` and every other client-only field
- * (`codesList`, `poolName`, …) is dropped so it never reaches the API.
+ * body. The backend body schema recognises only `query`, `action`, `params`
+ * and `rackType` (and `required: ['query','action','params']`); the local
+ * queue `id` and every client-only field (`tags`, `crossThing`, `codesList`,
+ * `poolName`, …) is dropped so it never reaches the API.
+ *
+ * Targeting reaches the backend solely through `query`. A staged action holds
+ * its targets as `tags` (device ids / container tags); unless it opts out with
+ * `overrideQuery: false` (pool assignment stages an explicit `query`), the
+ * query is built from those tags as `{ tags: { $in: tags } }`. This mirrors
+ * the MOS submit path — device actions stage `tags` with no `query`, and
+ * without this conversion they would POST no `query` and be rejected with a
+ * 400.
  */
 export const toVotingPayload = (action: PendingSubmissionAction): VotingActionPayload => {
   const payload: VotingActionPayload = {}
-  if (action.query !== undefined) payload.query = action.query as Record<string, unknown>
   if (action.action !== undefined) payload.action = action.action
   if (action.params !== undefined) payload.params = action.params as VotingActionPayload['params']
   if (action.rackType !== undefined) payload.rackType = action.rackType as string
-  if (action.tags !== undefined) payload.tags = action.tags
-  if (action.crossThing !== undefined) payload.crossThing = action.crossThing
+
+  if (action.overrideQuery === false && action.query !== undefined) {
+    payload.query = action.query as Record<string, unknown>
+  } else {
+    payload.query = { tags: { $in: action.tags ?? [] } }
+  }
+
   return payload
 }
 

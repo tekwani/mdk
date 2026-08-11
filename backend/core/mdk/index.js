@@ -97,26 +97,6 @@ function _writeConfigWithOverride (examplePath, destPath, overrides) {
   fs.writeFileSync(destPath, JSON.stringify(_deepMerge(base, overrides), null, 2), 'utf8')
 }
 
-// Minimal oauth2 stub used in noAuth mode — facilities must pass method validation in _start
-const _NOAUTH_OAUTH2_STUB = {
-  h0: {
-    method: 'google',
-    credentials: { client: { id: 'stub', secret: 'stub' } },
-    startRedirectPath: '/oauth/google',
-    callbackUri: 'http://localhost:3000/oauth/google/callback',
-    callbackUriUI: 'http://localhost:3000',
-    users: []
-  },
-  h1: {
-    method: 'microsoft',
-    credentials: { client: { id: 'stub', secret: 'stub' }, tenant: '' },
-    startRedirectPath: '/oauth/microsoft',
-    callbackUri: 'http://localhost:3000/oauth/microsoft/callback',
-    callbackUriUI: 'http://localhost:3000',
-    users: []
-  }
-}
-
 /**
  * Start the Kernel (Orchestration Kernel).
  *
@@ -198,21 +178,7 @@ async function getKernel (opts = {}) {
  * Prefer `getKernel()` for new code.
  */
 async function startKernel (opts = {}) {
-  const root = opts.root || defaultRoot
-  const storeDir = opts.storeDir || path.join(root, MDK_STORE, 'kernel-db')
-  _ensureDirs(storeDir)
-
-  const conf = { kernel: {} }
-  conf.kernel.hrpc = opts.hrpc === false ? false : (opts.hrpc || { whitelist: [] })
-  if (opts.discovery) conf.kernel.discovery = opts.discovery
-  if (opts.telemetryPullMs) conf.kernel.telemetryPullMs = opts.telemetryPullMs
-  if (opts.healthPingMs) conf.kernel.healthPingMs = opts.healthPingMs
-
-  const kernel = new KernelManager(conf, { storeDir, root, loadConf: opts.loadConf || undefined })
-  await kernel.init()
-  await kernel.start()
-  if (opts.keyFile) _writeKernelKeyFile(kernel, opts.keyFile)
-  return kernel
+  return await getKernel(opts)
 }
 
 /**
@@ -229,7 +195,6 @@ async function startKernel (opts = {}) {
  * @param {string}  [opts.env]           - Environment string (default: 'development')
  * @param {string}  [opts.tmpdir]        - Isolate the corestore under this dir instead of a
  *                                         CWD-relative path (defaults to root when env==='test')
- * @param {boolean} [opts.noAuth]        - Skip OAuth plugins; write stub oauth2 config (default: false)
  * @param {object}  [opts.kernel]           - Kernel instance; cleanup is registered on opts.kernel._cleanup
  * @param {*}       [opts.kernelKey]        - Kernel HRPC listener public key (hex/Buffer); `false` to run
  *                                            without a Kernel connection. Default: resolved from opts.kernel,
@@ -238,9 +203,7 @@ async function startKernel (opts = {}) {
  * @param {Array}   [opts.bootstrap]     - DHT bootstrap nodes for the Client (testnets)
  * @param {Array}   [opts.extraPluginDirs] - Extra plugin package dirs to load + register at boot
  * @param {object}  [opts.common]        - Overrides for common.json
- * @param {object}  [opts.auth]          - Overrides for auth.config.json
  * @param {object}  [opts.httpd]         - Overrides for httpd.config.json
- * @param {object}  [opts.httpdOauth2]   - Overrides for httpd-oauth2.config.json
  * @param {object}  [opts.net]           - Overrides for net.config.json
  * @param {object}  [opts.store]         - Overrides for store.config.json
  * @param {object}  [opts.logging]       - Overrides for logging.config.json
@@ -271,17 +234,11 @@ async function startGateway (opts = {}) {
     opts.common || {}
   )
 
-  // oauth2: in noAuth mode with no explicit override, use a minimal stub so the
-  // svc-facs-httpd-oauth2 facility can start() without failing method validation.
-  const oauth2Overrides = opts.httpdOauth2 || (opts.noAuth ? _NOAUTH_OAUTH2_STUB : {})
-
   const facMappings = [
-    ['auth.config.json', opts.auth || {}],
     ['httpd.config.json', opts.httpd || {}],
     ['net.config.json', opts.net || {}],
     ['store.config.json', opts.store || {}],
-    ['logging.config.json', opts.logging || {}],
-    ['httpd-oauth2.config.json', oauth2Overrides]
+    ['logging.config.json', opts.logging || {}]
   ]
 
   for (const [filename, overrides] of facMappings) {
@@ -312,7 +269,6 @@ async function startGateway (opts = {}) {
   // hermetic under its own data dir.
   if (opts.tmpdir) ctx.tmpdir = opts.tmpdir
   else if (ctx.env === 'test') ctx.tmpdir = root
-  if (opts.noAuth) ctx.noauth = true
   if (opts.kernel) ctx.kernel = opts.kernel
   if (kernelKey) {
     ctx.kernelKey = kernelKey

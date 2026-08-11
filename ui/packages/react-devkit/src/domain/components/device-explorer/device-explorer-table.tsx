@@ -14,6 +14,8 @@ export type DeviceExplorerTableProps = {
   renderAction: (device: DeviceExplorerDeviceData) => React.ReactNode
   sorting: DataTableSortingState
   onSortingChange: (sorting: DataTableSortingState) => void
+  /** Called when a row is clicked (e.g. to open the device's detail page). */
+  onRowClick?: (device: DeviceExplorerDeviceData) => void
 }
 
 export const DeviceExplorerTable = ({
@@ -25,6 +27,7 @@ export const DeviceExplorerTable = ({
   renderAction,
   sorting,
   onSortingChange,
+  onRowClick,
 }: DeviceExplorerTableProps): JSX.Element => {
   const columns = getColumnConfig({
     getFormattedDate,
@@ -45,6 +48,7 @@ export const DeviceExplorerTable = ({
       wrapperClassName="mdk-device-explorer__table"
       sorting={sorting}
       onSortingChange={onSortingChange}
+      onRowClick={onRowClick}
     />
   )
 }

@@ -39,6 +39,14 @@ export type UseSiteMinerCountsOptions = {
  * Hits `/auth/list-things?status=1` with a tight projection (id, type,
  * last.status only) so the response stays small even on big sites.
  *
+ * @remarks
+ * The `/auth/list-things` endpoint is illustrative. MDK does not ship built-in
+ * endpoints — create your own via a
+ * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) matching
+ * your Worker/business logic. See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference.
+ *
  * @category dashboard
  */
 export const useSiteMinerCounts = (

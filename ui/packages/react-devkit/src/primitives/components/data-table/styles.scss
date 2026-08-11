@@ -183,6 +183,10 @@ $_prefix: mdk-table;
             background-color: transparent;
           }
 
+          &--clickable {
+            cursor: pointer;
+          }
+
           &--selected {
             background-color: var(--mdk-table-selected-row-bg);
 

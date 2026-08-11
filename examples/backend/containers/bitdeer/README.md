@@ -1,7 +1,7 @@
 # MDK Bitdeer Container Example
 
 A small, self-contained **Bitdeer D40** container example you can clone and run with **no real
-hardware**. It brings up an Kernel and one Bitdeer Worker, points a mock MQTT device at the Worker's
+hardware**. It brings up a Kernel and one Bitdeer Worker, points a mock MQTT device at the Worker's
 broker, and registers the container as a thing. It prints a ready-to-paste `hp-rpc-cli` command for
 pulling the container's live telemetry over HRPC.
 
@@ -10,7 +10,7 @@ Self-contained: everything for this example lives in this folder. It's the Bitde
 
 ## What it demonstrates
 
-- Bringing up an Kernel and one Bitdeer D40 (M56) container Worker in a single process.
+- Bringing up a Kernel and one Bitdeer D40 (M56) container Worker in a single process.
 - The Bitdeer **MQTT** model: the Worker hosts an embedded broker; a **mock** MQTT client publishes
   container telemetry to it.
 - Registering the container by `containerId` and pulling live telemetry over the MDK Protocol — no hardware.
@@ -87,4 +87,4 @@ $TMPDIR/mdk-site-bitdeer/kernel/     # Kernel Corestore
 | Path | Purpose |
 |---|---|
 | [`backend/workers/containers/bitdeer`](../../../../backend/workers/containers/bitdeer/README.md) | Bitdeer D40 managers, MQTT mock, `mdk-contract.json`. |
-| [`examples/backend/containers/mdk.client.container.js`](../mdk.client.container.js) | The minimal single-file container example (Antspace HK3). |
+| [`examples/backend/containers/antspace/index.js`](../antspace/index.js) | The minimal single-file container example (Antspace HK3). |

@@ -1,7 +1,7 @@
 # MDK Seneca Sensor Example
 
 A small, self-contained **Seneca** temperature-sensor example you can clone and run with **no real
-hardware**. It starts a mock Seneca sensor, brings up an Kernel, registers the sensor as a thing, and
+hardware**. It starts a mock Seneca sensor, brings up a Kernel, registers the sensor as a thing, and
 stays running. It prints a ready-to-paste `hp-rpc-cli` command for pulling the sensor's live
 telemetry over HRPC.
 
@@ -12,7 +12,7 @@ the temperature-sensor counterpart of
 
 ## What it demonstrates
 
-- Bringing up an Kernel and one Seneca Worker in a single process.
+- Bringing up a Kernel and one Seneca Worker in a single process.
 - Starting a **mock** Seneca sensor (Modbus TCP) and **registering** it as a thing.
 - Pulling live temperature telemetry through the Kernel over the MDK Protocol — no hardware.
 
@@ -46,8 +46,8 @@ other actions, and troubleshooting.
 `index.js`:
 
 1. Starts the mock Seneca sensor (`backend/workers/temperature/seneca/mock/server`).
-2. Brings up an Kernel (HRPC only) pinned to its own store root (`$TMPDIR/mdk-site-seneca/kernel/`).
-3. `startWorker(SENECA, { kernel })` and `manager.registerThing({ info, opts })`.
+2. Brings up a Kernel (HRPC only) pinned to its own store root (`$TMPDIR/mdk-site-seneca/kernel/`).
+3. `startSenecaWorker({ workerId, storeDir, seedDevices })`, then `kernel.registerWorker(worker.runtime.getPublicKey())`.
 4. Prints an `hp-rpc-cli` command and stays running until `Ctrl+C`, which tears down the Worker and
    Kernel (the mock exits with the process).
 
@@ -82,4 +82,3 @@ $TMPDIR/mdk-site-seneca/kernel/      # Kernel Corestore
 | Path | Purpose |
 |---|---|
 | [`backend/workers/temperature/seneca`](../../../../backend/workers/temperature/seneca/README.md) | Seneca `SENECA` manager, mock server, `mdk-contract.json`. |
-| [`examples/backend/sensors/mdk.client.sensor.js`](../mdk.client.sensor.js) | The minimal single-file version of this example. |

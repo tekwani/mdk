@@ -1,10 +1,13 @@
 /**
- * "Managed pages" are the fully-wired pages the `mdk-ui-shell` template ships
- * pre-seeded (Pool Manager, Alerts). Unlike a generic `add page <Component>`
- * — which scaffolds a placeholder/example from the registry — these resolve to
- * a canonical, hand-wired page file bundled with the CLI. `add page` copies
- * that file verbatim and registers both its route and its sidebar nav icon;
- * `remove page` deletes the file and unregisters both. The result is a
+ * "Managed pages" are the fully-wired demo pages the `mdk-ui-shell` template
+ * bundles under `_managed/pages/` (Dashboard, Pool Manager, Alerts, …). They
+ * are NOT scaffolded into a fresh app — `create` ships a bare backbone and
+ * strips `_managed/` — so they exist only as canonical sources the CLI can add
+ * on demand. Unlike a generic `add page <Component>` — which scaffolds a
+ * placeholder/example from the registry — these resolve to a canonical,
+ * hand-wired page file bundled with the CLI. `add page` copies that file
+ * verbatim into `src/pages/` and registers both its route and its sidebar nav
+ * icon; `remove page` deletes the file and unregisters both. The result is a
  * complete add/remove lifecycle (page + route + nav), per plan WS-G.
  */
 export type ManagedPage = {
@@ -18,21 +21,39 @@ export type ManagedPage = {
   routeEntry: string
   /** Nav path used to detect an already-registered route. */
   routePath: string
-  /** Devkit nav-icon component imported in `navigation.tsx`. */
-  navIcon: string
-  /** Canonical single-line `NAV_ICONS` entry (no indentation). */
-  navEntry: string
+  /**
+   * Devkit nav-icon component imported in `navigation.tsx`. Omit for hidden,
+   * deep-link-only pages that have no sidebar entry.
+   */
+  navIcon?: string
+  /**
+   * Canonical single-line `NAV_ICONS` entry (no indentation). Omit for hidden
+   * pages — `add`/`remove page` then skip all nav patching for this page.
+   */
+  navEntry?: string
 }
 
 /**
- * The canonical, fully-wired pages the `mdk-ui-shell` template ships and that
- * `add page` / `remove page` manage end-to-end (file + route + nav icon).
+ * The canonical, fully-wired demo pages the `mdk-ui-shell` template bundles and
+ * that `add page` / `remove page` manage end-to-end (file + route + nav icon).
  */
 export const MANAGED_PAGES: ManagedPage[] = [
   {
+    // The reference operations dashboard (hashrate + consumption charts, active
+    // incidents, mining pools). Was the template's default landing page before
+    // the shell was slimmed to a bare backbone; `add page Dashboard` restores it.
+    name: 'Dashboard',
+    templateId: 'mdk-ui-shell',
+    templatePagePath: '_managed/pages/Dashboard.tsx',
+    routeEntry: "{ path: '/dashboard', label: 'Dashboard', page: () => import('./pages/Dashboard') },",
+    routePath: '/dashboard',
+    navIcon: 'DashboardNavIcon',
+    navEntry: '[ROUTE_PATHS.DASHBOARD]: <DashboardNavIcon />,',
+  },
+  {
     name: 'PoolManager',
     templateId: 'mdk-ui-shell',
-    templatePagePath: 'src/pages/PoolManager.tsx',
+    templatePagePath: '_managed/pages/PoolManager.tsx',
     routeEntry:
       "{ path: '/pool-manager', label: 'Pool Manager', page: () => import('./pages/PoolManager') },",
     routePath: '/pool-manager',
@@ -44,7 +65,7 @@ export const MANAGED_PAGES: ManagedPage[] = [
   {
     name: 'Alerts',
     templateId: 'mdk-ui-shell',
-    templatePagePath: 'src/pages/Alerts.tsx',
+    templatePagePath: '_managed/pages/Alerts.tsx',
     routeEntry:
       "{ path: '/alerts', routePath: '/alerts/:uuid?', label: 'Alerts', page: () => import('./pages/Alerts') },",
     routePath: '/alerts',
@@ -54,7 +75,7 @@ export const MANAGED_PAGES: ManagedPage[] = [
   {
     name: 'SiteOverview',
     templateId: 'mdk-ui-shell',
-    templatePagePath: 'src/pages/SiteOverview.tsx',
+    templatePagePath: '_managed/pages/SiteOverview.tsx',
     routeEntry:
       "{ path: '/site-overview', label: 'Site Overview', page: () => import('./pages/SiteOverview') },",
     routePath: '/site-overview',
@@ -64,12 +85,23 @@ export const MANAGED_PAGES: ManagedPage[] = [
   {
     name: 'Explorer',
     templateId: 'mdk-ui-shell',
-    templatePagePath: 'src/pages/Explorer.tsx',
+    templatePagePath: '_managed/pages/Explorer.tsx',
     routeEntry:
       "{ path: '/explorer', label: 'Explorer', page: () => import('./pages/Explorer') },",
     routePath: '/explorer',
     navIcon: 'ExplorerNavIcon',
     navEntry: '[ROUTE_PATHS.EXPLORER]: <ExplorerNavIcon />,',
+  },
+  {
+    // Deep-link container detail page — reached from an Explorer row or a Site
+    // Overview card, never from the sidebar. Registered as a `hidden` route
+    // (no nav icon / no NAV_ICONS entry), so add/remove skip all nav patching.
+    name: 'ExplorerContainerDetail',
+    templateId: 'mdk-ui-shell',
+    templatePagePath: '_managed/pages/ExplorerContainerDetail.tsx',
+    routeEntry:
+      "{ path: '/explorer/containers', routePath: '/explorer/containers/:id/:tab?', label: 'Container Detail', hidden: true, page: () => import('./pages/ExplorerContainerDetail') },",
+    routePath: '/explorer/containers',
   },
 ]
 

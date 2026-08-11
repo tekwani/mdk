@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-kernel",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "MDK Kernel - Orchestration Kernel",
   "main": "index.js",
   "keywords": [
@@ -36,5 +36,8 @@
   "devDependencies": {
     "brittle": "3.18.0",
     "standard": "17.1.0"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }

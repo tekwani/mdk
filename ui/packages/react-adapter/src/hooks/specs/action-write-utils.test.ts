@@ -1,48 +1,76 @@
-import { buildRebootAction, buildSetPowerModeAction, POWER_MODE } from '@tetherto/mdk-ui-foundation'
+import {
+  buildRebootAction,
+  buildSetPowerModeAction,
+  POWER_MODE,
+} from '@tetherto/mdk-ui-foundation'
 import { describe, expect, it } from 'vitest'
 
 import { extractSubmitError, toVotingPayload } from '../action-write-utils'
 
 describe('toVotingPayload', () => {
-  it('keeps the backend-recognised fields and drops client-only ones', () => {
-    const payload = toVotingPayload({
-      id: 7,
-      action: 'registerConfig',
-      query: { tags: { $in: ['t-miner'] } },
-      params: [{ type: 'pool' }],
-      rackType: 'miner',
-      codesList: ['WM-M56S-0001'],
-      poolName: 'TestPool',
-    })
-
-    expect(payload).toEqual({
-      action: 'registerConfig',
-      query: { tags: { $in: ['t-miner'] } },
-      params: [{ type: 'pool' }],
-      rackType: 'miner',
-    })
-  })
-
-  it('carries device-action targeting fields (tags, crossThing) through to the API body', () => {
-    const submission = buildSetPowerModeAction(['id-miner-1'], POWER_MODE.SLEEP, {
+  it('builds the query from a device action\'s tags and drops queue-only fields', () => {
+    const submission = buildSetPowerModeAction(['id-miner-1', 'id-miner-2'], POWER_MODE.SLEEP, {
       type: 'container',
       params: { containers: ['bitdeer-1a'] },
     })
 
     const payload = toVotingPayload({ id: 1, ...submission })
 
+    // Targeting is expressed only through `query`; tags/crossThing/type never
+    // reach the API body (the gateway schema requires `query` and rejects the rest).
     expect(payload).toEqual({
       action: 'setPowerMode',
       params: ['sleep'],
+      query: { tags: { $in: ['id-miner-1', 'id-miner-2'] } },
+    })
+    expect('tags' in payload).toBe(false)
+    expect('crossThing' in payload).toBe(false)
+  })
+
+  it('keeps an explicit query when the action opts out with overrideQuery: false', () => {
+    const payload = toVotingPayload({
+      id: 2,
+      action: 'setupPools',
+      params: [{ type: 'pool' }],
+      query: { id: { $in: ['miner-1', 'miner-2'] } },
+      overrideQuery: false,
       tags: ['id-miner-1'],
-      crossThing: { type: 'container', params: { containers: ['bitdeer-1a'] } },
+      codesList: ['WM-M56S-0001'],
+      poolName: 'TestPool',
+    })
+
+    expect(payload).toEqual({
+      action: 'setupPools',
+      params: [{ type: 'pool' }],
+      query: { id: { $in: ['miner-1', 'miner-2'] } },
     })
   })
 
-  it('omits tags/crossThing when the staged action has none', () => {
-    const payload = toVotingPayload({ id: 2, ...buildRebootAction(['id-miner-2']) })
-    expect(payload.tags).toEqual(['id-miner-2'])
-    expect('crossThing' in payload).toBe(false)
+  it('emits an empty-tags query when the action has neither query nor tags', () => {
+    const payload = toVotingPayload({ id: 3, action: 'forgetThings', params: [{ rackId: 'r1' }] })
+
+    expect(payload.query).toEqual({ tags: { $in: [] } })
+  })
+
+  it('rebuilds the query from tags when overrideQuery is not explicitly false', () => {
+    const payload = toVotingPayload({ id: 4, ...buildRebootAction(['id-miner-2']) })
+
+    expect(payload.query).toEqual({ tags: { $in: ['id-miner-2'] } })
+    expect(payload.action).toBe('reboot')
+    expect('tags' in payload).toBe(false)
+  })
+
+  it('preserves rackType and drops the local queue id', () => {
+    const payload = toVotingPayload({
+      id: 9,
+      action: 'setPowerPct',
+      params: ['85'],
+      tags: ['id-miner-1'],
+      rackType: 'miner',
+    })
+
+    expect(payload.rackType).toBe('miner')
+    expect('id' in payload).toBe(false)
   })
 })
 

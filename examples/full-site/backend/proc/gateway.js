@@ -18,7 +18,6 @@ async function main () {
   const kernelKey = fs.readFileSync(kernelKeyFile, 'utf8').trim()
 
   await startGateway({
-    noAuth: true,
     kernelKey,
     extraPluginDirs: [path.join(__dirname, '..', '..', 'plugins', 'site')],
     port,

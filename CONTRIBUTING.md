@@ -23,10 +23,8 @@ Please follow the private disclosure instructions in [SECURITY.md][security].
 MDK is a monorepo with separate backend and frontend workspaces:
 
 - Backend:
-   - `backend/core/`: Backend services, container modules, and integration/unit tests (npm-based)
-   - `backend/workers/`: Protocol-translator worker packages (miners, miner-pools, power-meter, temperature, containers), 
-   per-worker mock servers, and 
-per-worker tests (npm-based)
+  - `backend/core/`: Backend services, container modules, and integration/unit tests (npm-based)
+  - `backend/workers/`: Protocol-translator worker packages (miners, miner-pools, power-meter, temperature, containers), per-worker mock servers, and per-worker tests (npm-based)
 - Frontend: `ui/`: Frontend packages, demo app, and shared UI foundation (npm + Turbo-based)
 
 Choose the backend or frontend workflow that matches the area you are contributing to.
@@ -81,7 +79,7 @@ git clone https://github.com/username/mdk.git
 cd mdk
 ```
 
-3. Add the upstream remote:
+1. Add the upstream remote:
 
 ```bash
 git remote add upstream https://github.com/tetherto/mdk.git
@@ -188,7 +186,7 @@ git checkout -b fix/timeout-handling
 
 ### Commit message template
 
-The repository ships a commit message template at [`.gitmessage`](.gitmessage) that pre-fills the
+The repository ships a commit message template at [`.gitmessage`][gitmessage] that pre-fills the
 commit editor with the expected format (type, summary, body, and Asana/Related PR references).
 Enable it once per clone:
 
@@ -303,7 +301,7 @@ MDK follows **Semantic Versioning**:
 - **PATCH** (`x.x.1`): backward-compatible bug fixes
 
 When the MDK team provides a release, they are cut from a `release/<version>` branch, verified in CI, 
-promoted to the public repo, then tagged. For the full release process and checklist, see [RELEASING.md](RELEASING.md).
+promoted to the public repo, then tagged. For the full release process and checklist, see [RELEASING.md][releasing].
 
 Happy contributing, and thanks for helping improve MDK! 🚀
 
@@ -323,3 +321,9 @@ Happy contributing, and thanks for helping improve MDK! 🚀
 
 [docs-needed-issue]: https://github.com/tetherto/mdk/issues/new?template=docs-needed.yml
 <!-- docs@tether.io: external link — preserve URL -->
+
+[releasing]: RELEASING.md
+<!-- docs@tether.io: releasing → https://github.com/tetherto/mdk/blob/main/RELEASING.md -->
+
+[gitmessage]: .gitmessage
+<!-- docs@tether.io: gitmessage → https://github.com/tetherto/mdk/blob/main/.gitmessage -->

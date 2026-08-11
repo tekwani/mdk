@@ -69,13 +69,14 @@ Kernel is the **passive listener** — the [caller always initiates the connecti
 
 Kernel deliberately excludes these concerns and delegates them to other layers:
 
-- **User authentication and RBAC**: JWT validation, session management, and role-based access are the Gateway's responsibility.
-  Kernel trusts all messages from any established [`@tetherto/mdk-client`][mdk-client] connection without inspecting user identity.
-  The Gateway is the only caller that enforces RBAC before reaching Kernel; using `@tetherto/mdk-client` without the Gateway
-  carries no access control layer
+- **User authentication**: Kernel trusts all messages from any established [`@tetherto/mdk-client`][mdk-client] connection without
+  inspecting user identity. Establishing that identity belongs to the tier above, but the Gateway supplies no mechanism for it either:
+  the checks live in the plugin controllers you write. Reaching Kernel through the Gateway is therefore no more access-controlled than
+  using `@tetherto/mdk-client` directly, unless your controllers make it so. Kernel's one exception is the write-action path, where it
+  requires the device-family permission (`miner:w`, `container:w`) in the `authPerms` array the caller sends
 - **Business logic and aggregation**: cross-Worker queries, fleet statistics, and site-level aggregation belong in Gateway
   controllers, not in the kernel
-- **UI and consumer interfaces**: Kernel has no HTTP surface. Consumers connect through the Gateway's REST, WebSocket, or MCP
+- **UI and consumer interfaces**: Kernel has no HTTP surface. Consumers connect through the Gateway's REST or MCP
   endpoints
 
 ## Next steps

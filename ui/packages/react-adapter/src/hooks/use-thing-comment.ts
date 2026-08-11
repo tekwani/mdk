@@ -35,6 +35,14 @@ export type UseThingCommentResult = {
  * (`comments` in the list-things projection), so every write invalidates
  * the `list-things` queries to refresh the detail panel and tables.
  *
+ * @remarks
+ * The `/auth/thing/comment` endpoint is illustrative. MDK does not ship built-in
+ * endpoints — create your own via a
+ * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) matching
+ * your Worker/business logic. See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference.
+ *
  * @category op-centre
  */
 export const useThingComment = (): UseThingCommentResult => {

@@ -1,0 +1,27 @@
+@use "@primitives/styles/mixins" as *;
+
+.mdk-container-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__back {
+    align-self: flex-start;
+  }
+
+  &__title {
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  &__panel {
+    min-width: 0;
+    width: 100%;
+  }
+}

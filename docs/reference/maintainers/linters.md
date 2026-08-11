@@ -5,7 +5,7 @@ Maintainer-facing inventory of the lint tooling that guards this monorepo's docu
 - 🚧 Project-specific IA gates 🚧 — five **proposed** gates defined in [`ia.md`](ia.md#qa-gates) (`check:contract`, `check:facets-fresh`, `check:agent-ready`, `check:port-signals`, `check:integrations-fresh`). **If adopted**, they would enforce the contract between code, the docs catalogue, and the port pipeline. None are wired today; engineering decides per-gate, and docs maintainers absorb the upkeep manually for any gate not adopted.
 - **General docs hygiene** — the rest of this file. Link verification, anchor validation, spelling. These guard the docs themselves, not the IA contract.
 
-## Link verification — linkinator
+## Nightly and PR diff link verification — linkinator
 
 To hand run ahead of the nightly, from the repo root:
 
@@ -13,7 +13,47 @@ To hand run ahead of the nightly, from the repo root:
 npm run link-check
 ```
 
-This wraps `linkinator --config linkinator.config.json "**/*.md"`, so the config is the single source of truth — fragment checking and every skip pattern live there, nothing is repeated on the command line. The nightly CI runs the same script. (Earlier docs showed a long `npx … --skip …` invocation; that was needed only because CLI `--skip` flags *replace* the config skip list rather than merging, forcing every pattern to be re-listed. Folding `node_modules` into the config removed the last reason to do that.)
+If your shell routes `npm` through Socket Firewall (`sfw`) and this hangs retrying every single file, that's `sfw` blocking
+`localhost` — linkinator serves the repo from an ephemeral local HTTP server (a new random port every run — `sfw` matches
+on hostname, so the port doesn't matter), then crawls every external URL it finds in the Markdown, and `sfw` blocks
+unrecognized hosts by default.
+
+[`scripts/sfw-env.sh`](../../../scripts/sfw-env.sh) holds the full allowlist as one `SFW_CUSTOM_REGISTRIES` export
+(comma-delimited `bypass:<host>` entries — see the
+[SFW configuration wiki](https://github.com/SocketDev/firewall-release/wiki/Configuration) for the full syntax), with a
+comment on every host explaining which doc/link put it there. Source it once from your shell profile:
+
+```bash
+[ -f "/absolute/path/to/mdk/scripts/sfw-env.sh" ] && source "/absolute/path/to/mdk/scripts/sfw-env.sh"
+```
+
+This only allowlists these specific, already-known-good hosts — it does not set `SFW_UNKNOWN_HOST_ACTION`, so `sfw`
+still blocks everywhere else by default. If `link-check` starts blocking a *new* host (a fresh doc links to a domain
+not in the file yet), add a `bypass:<host>` entry to `sfw-env.sh` rather than reaching for `SFW_UNKNOWN_HOST_ACTION=warn`
+— that flag silences the check for *every* unknown host, not just the one you're trying to unblock. Use it only as a
+scoped, one-off prefix while diagnosing which host is blocked, never persisted:
+
+```bash
+SFW_UNKNOWN_HOST_ACTION=warn npm run link-check   # scoped to this one command
+```
+
+**Why this isn't folded into `linkinator.config.json`.** Its `skip` list (below) tells linkinator to never check a
+URL at all — the request is never made. `sfw-env.sh` does the opposite: it lets a request through so linkinator's
+check can actually run and get a real answer. A host that needs `bypass` is, by definition, one we still want
+checked — merging the two lists would risk someone "allowlisting" a host by moving it to `skip` instead, which
+silently stops verifying it rather than just unblocking it. They stay separate files for that reason, cross-referenced
+in comments on both sides.
+
+This runs [`scripts/link-check.mjs`](../../../scripts/link-check.mjs) — a thin wrapper, same shape as `check:example-paths`
+below — that resolves the file list via `git ls-files '*.md'` (tracked files only) and passes it to
+`linkinator --config linkinator.config.json`, so the config is still the single source of truth for fragment checking
+and every skip pattern; nothing is repeated on the command line. The nightly CI runs the same script.
+
+**Why `git ls-files`, not a `**/*.md` glob.** A raw glob also matches gitignored `.md` files physically sitting in your
+working directory — a personal scratch checklist, local notes — that CI's clean checkout never has. Locally that shows
+up as a false "broken link" (or a Socket Firewall block on some host only *that* file references) for content that
+isn't part of the doc corpus and that no one else will ever see. Scoping to tracked files makes local runs match what
+CI checks, exactly.
 
 [Linkinator](https://github.com/JustinBeckwith/linkinator) checks Markdown files for broken links and (optionally) broken heading anchors. Two cadences run today, both off the same config: a **nightly cron at 02:00 UTC** (full sweep) and a **PR diff gate** that checks only the changed `.md` files — both via [`.github/workflows/link-check.yml`](../../../.github/workflows/link-check.yml). See [CI wiring](#ci-wiring) for the split.
 
@@ -74,6 +114,29 @@ One linkinator quirk worth knowing when reading reports: a **valid** fragment is
 - If the PR changes the config or the workflow, it falls back to a **full** `npm run link-check` sweep, since a weakened skip rule or fragment-setting change can expose breakage outside the diff.
 - **Known gap:** the diff gate only validates links *originating from* changed files. A PR that renames a heading breaks inbound `#anchor` references in *other* (unchanged) files, which this job won't see — the nightly full sweep is the backstop for that. Treat the PR gate as a fast first line, not a replacement for the nightly.
 
+## Nightly example-path verification
+
+To hand run ahead of the nightly, from the repo root:
+
+```bash
+npm run check:example-paths
+```
+
+This wraps [`scripts/check-example-paths.mjs`](../../../scripts/check-example-paths.mjs), a plain Node script with no new dependency — the same shape as `link-check` being a thin wrapper over one tool and one config.
+
+**What it checks.** Linkinator only resolves Markdown links (`[text](target)`). A bare `examples/...` path named in prose or inside a fenced code block — `node examples/backend/miners/whatsminer/index.js` in a ```bash``` fence, for instance — is invisible to it by design allowing dead references in prose and fences, not links. `check:example-paths` closes that gap by walking every tracked `.md` file (`git ls-files '*.md'`), extracting `examples/...`-shaped tokens from the raw text, and confirming each one resolves to a real file or directory.
+
+**Resolve-relative-then-root.** A candidate path is checked two ways: relative to the directory of the Markdown file that names it, then relative to the repo root. A miss on both is a finding. This matters because some packages document their own bundled examples using a path that's only correct relative to the package itself — `backend/workers/miners/whatsminer/USAGE.md` names its runtime-parity example relative to itself, which resolves to `backend/workers/miners/whatsminer/examples/run-runtime-parity.js` (a root-relative miss, a file-relative hit).
+
+**Skip policy — `example-paths.config.json` at repo root**, mirroring `linkinator.config.json`'s shape:
+
+- `skipFiles` — whole Markdown files excluded from scanning (glob patterns): historical records (`docs/reference/changelog-archive/**`, `docs/reference/release-notes/**`, `CHANGELOG.md`) that correctly name paths as they existed at the time they were written, not as they exist today.
+- `skipPaths` — specific `examples/...` paths excluded wherever named: tutorial output the reader builds from scratch (`examples/minimal-dashboard`, built by `docs/tutorials/build-a-dashboard.md`) and gitignored runtime state created on first run (`examples/mvp-site/.site-data`, `examples/full-site/.mdk-data`).
+- `_skip_notes` — mandatory sibling object, one entry per `skipFiles`/`skipPaths` pattern, explaining why. The checker refuses to run if any skip entry lacks a note. An unexplained skip is a silent false negative waiting to happen — the same lesson the linkinator skip list already enforces by convention; here it's enforced by the script itself.
+- Placeholders are dropped automatically, not via the skip list: any candidate token immediately followed by `<`, `>`, `*`, `{`, `}`, or `…` (for example `examples/run-<scenario>.js` or `` examples/run-*.js ``) is treated as unresolved template text, not a real path.
+
+**CI wiring** — not wired today. Runs locally on demand via `npm run check:example-paths`; a nightly-only workflow (`schedule` + `workflow_dispatch`, no PR gate, mirroring the intended shape of `link-check.yml`'s nightly job — open-or-comment on a tracking issue labelled `example-paths`, then exit non-zero) is a follow-on.
+
 ## 🚧 Spelling — Vale
 
 Vale catches accidental misspellings and enforces a project word list. Configured via `.vale.ini` at the repo root when present. Runs locally on demand today; CI wiring is a follow-on.
@@ -85,4 +148,4 @@ Vale catches accidental misspellings and enforces a project word list. Configure
 ## See also
 
 - [`ia.md`](ia.md#qa-gates) — the five proposed IA-specific lint gates that would enforce contract / catalogue / port-signal correctness if adopted by engineering.
-- [`port-signals.md`](port-signals.md) — the link-routing comment vocabulary that `check:port-signals` reads.
+- [`single-source-of-truth.md`](single-source-of-truth.md) — the link-routing comment vocabulary that `check:port-signals` reads, plus UI manifest generation workflow.

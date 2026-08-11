@@ -6,11 +6,13 @@ import {
   readdirSync,
   readFileSync,
   renameSync,
+  rmSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { findTemplate } from '../templates.js'
 import { runInit } from './init.js'
@@ -45,23 +47,72 @@ const findMdkMonorepoRoot = (start: string): string | null => {
 }
 
 /**
- * Rewrite the scaffolded package.json so it lives as a workspace child:
- *   - name → `@tetherto/<appName>` (scoped, matches the rest of the monorepo)
- *   - MDK dependencies → `"*"` (npm workspace protocol)
- * Used when scaffolding INSIDE the monorepo (`apps/<appName>`).
+ * Fallback range for MDK deps if the CLI's own version can't be read. MDK
+ * packages release in lockstep with the CLI, so its version is the source of
+ * truth for standalone pins; `latest` is a safe last resort.
  */
-const wireAsWorkspace = (pkgJsonPath: string, appName: string): void => {
+const FALLBACK_MDK_RANGE = 'latest'
+
+/** Package root of the CLI, in both `dist/commands/*.js` and `src/commands/*.ts`. */
+const CLI_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
+
+/** The published range to pin standalone MDK deps to (`^<cliVersion>`). */
+const publishedMdkRange = (): string => {
+  try {
+    const pkg = JSON.parse(readFileSync(join(CLI_ROOT, 'package.json'), 'utf8')) as {
+      version?: string
+    }
+    if (pkg.version) return `^${pkg.version}`
+  } catch {
+    // fall through to the fallback range
+  }
+  return FALLBACK_MDK_RANGE
+}
+
+/**
+ * Rewrite the scaffolded package.json for its target context. The generated
+ * app keeps the bare name the user chose (the `@tetherto/` scope belongs to the
+ * MDK library packages, not the app). The template's own `package.json` links
+ * MDK packages via `file:` (so it runs in place); a generated app must never
+ * inherit those unresolvable links:
+ *   - INSIDE the monorepo → MDK deps `"*"` (npm workspace protocol; picks up
+ *     the root `node_modules/@tetherto` symlinks).
+ *   - STANDALONE → any `file:` MDK dep rewritten to a published range so it
+ *     resolves from npm.
+ */
+const rewritePackageJson = (
+  pkgJsonPath: string,
+  { appName, isMonorepo }: { appName: string; isMonorepo: boolean },
+): void => {
   const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8')) as {
     name?: string
     dependencies?: Record<string, string>
   }
-  pkg.name = `@tetherto/${appName}`
-  if (pkg.dependencies) {
+  pkg.name = appName
+  const deps = pkg.dependencies
+  if (deps) {
+    const range = isMonorepo ? '*' : publishedMdkRange()
     for (const name of MDK_PACKAGES) {
-      if (name in pkg.dependencies) pkg.dependencies[name] = '*'
+      if (!(name in deps)) continue
+      // Monorepo: always `*`. Standalone: only rewrite local `file:` links,
+      // leaving any already-published range (e.g. the starter's) untouched.
+      if (isMonorepo || deps[name]!.startsWith('file:')) deps[name] = range
     }
   }
   writeFileSync(pkgJsonPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8')
+}
+
+/**
+ * The shell template centralises its human-facing name in an `APP_NAME`
+ * constant (src/constants/env.ts) — read by the browser tab and the Home page.
+ * Rewrite it to the chosen app name. No-op for templates without that constant.
+ */
+const setDisplayName = (targetDir: string, appName: string): void => {
+  const envPath = join(targetDir, 'src', 'constants', 'env.ts')
+  if (!existsSync(envPath)) return
+  const content = readFileSync(envPath, 'utf8')
+  const next = content.replace(/(export const APP_NAME\s*=\s*)(['"]).*?\2/, `$1'${appName}'`)
+  if (next !== content) writeFileSync(envPath, next, 'utf8')
 }
 
 export type CreateOptions = {
@@ -98,6 +149,26 @@ const walk = (dir: string): string[] => {
     }
   }
   return out
+}
+
+/**
+ * Local artifacts the runnable template accrues on disk (it is a real app you
+ * can `npm run dev` in place) that must never be copied into a scaffolded app.
+ * Matched by basename; directory matches skip the whole subtree.
+ */
+const COPY_EXCLUDES = new Set([
+  'node_modules',
+  'dist',
+  'coverage',
+  '.env',
+  '.env.local',
+  '.vite',
+  'package-lock.json',
+])
+
+const isCopyExcluded = (src: string): boolean => {
+  const base = src.split('/').pop()!
+  return COPY_EXCLUDES.has(base) || base.endsWith('.log') || base.endsWith('.tsbuildinfo')
 }
 
 /**
@@ -168,17 +239,23 @@ export const runCreate = (opts: CreateOptions): { appPath: string } => {
   }
 
   mkdirSync(targetDir, { recursive: true })
-  cpSync(template.path, targetDir, { recursive: true })
+  cpSync(template.path, targetDir, { recursive: true, filter: (src) => !isCopyExcluded(src) })
+  // `_managed/` holds the CLI-only demo page sources (Dashboard, Pool Manager,
+  // Alerts, …) that `mdk-ui add page` copies on demand. A fresh app ships a bare
+  // backbone, so strip the whole directory from the scaffold — it is read from
+  // the template on disk, never from the generated app.
+  rmSync(join(targetDir, '_managed'), { recursive: true, force: true })
   finalizeTree(targetDir, opts.appName)
+  // Rewrite the package name + MDK dep protocol for the target context (workspace
+  // `*` inside the monorepo, published range for a standalone app).
+  rewritePackageJson(join(targetDir, 'package.json'), { appName: opts.appName, isMonorepo })
+  // Inject the chosen name into the app's display-name constant (tab + Home).
+  setDisplayName(targetDir, opts.appName)
   out(`✓ Scaffolded ${opts.appName} from template "${template.meta.id}"`)
 
   if (isMonorepo) {
-    // Inside the monorepo: live as a workspace child. Use `*` protocol and
-    // scope the package name so it picks up the existing
-    // node_modules/@tetherto symlinks on `npm install` at the root.
-    wireAsWorkspace(join(targetDir, 'package.json'), opts.appName)
     out(
-      `→ Detected MDK monorepo at ${monorepoRoot!}; wired as @tetherto/${opts.appName} workspace.`,
+      `→ Detected MDK monorepo at ${monorepoRoot!}; wired ${opts.appName} as a workspace.`,
     )
   }
 
@@ -223,7 +300,7 @@ export const runCreate = (opts: CreateOptions): { appPath: string } => {
   out('')
   out('Next steps:')
   if (isMonorepo) {
-    out(`  npm run dev --workspace @tetherto/${opts.appName}`)
+    out(`  npm run dev --workspace ${opts.appName}`)
   } else {
     out(`  cd ${opts.appName}`)
     if (!shouldInstall) {

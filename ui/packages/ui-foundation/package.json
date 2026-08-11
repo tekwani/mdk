@@ -1,7 +1,7 @@
 {
   "name": "@tetherto/mdk-ui-foundation",
   "type": "module",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "description": "Framework-agnostic headless foundation for the MDK Devkit. Currently exposes Zustand vanilla stores and a TanStack QueryClient factory. No React.",
   "sideEffects": false,

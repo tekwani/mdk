@@ -34,6 +34,7 @@ import {
   type VariableDeclaration,
 } from "ts-morph";
 
+import { summarizeInterfaceMembers } from "../../../scripts/ts-morph-utils.mts";
 import { buildBlueprints } from "./generate-blueprints.mts";
 import type {
   ComponentMeta,
@@ -42,6 +43,7 @@ import type {
   RegistryIndexes,
   RegistryManifest,
   Tier,
+  TypeMeta,
 } from "./registry-types.ts";
 import {
   DEFAULT_TIER,
@@ -435,9 +437,10 @@ const buildHookMeta = (resolved: ResolvedHook): HookMeta => {
  * either an index into the array (`byName`) or arrays of names (everything
  * else). Keeps payload tiny while letting agents skip linear scans.
  */
-const buildIndexes = (components: ComponentMeta[], hooks: HookMeta[]): RegistryIndexes => {
+const buildIndexes = (components: ComponentMeta[], hooks: HookMeta[], types: TypeMeta[]): RegistryIndexes => {
   const componentsByName: Record<string, number> = {};
   const hooksByName: Record<string, number> = {};
+  const typesByName: Record<string, number> = {};
   const componentsByCategory: Record<string, string[]> = {};
   const componentsByDomain: Record<string, string[]> = {};
   const componentsByKernelCapability: Record<string, string[]> = {};
@@ -446,6 +449,9 @@ const buildIndexes = (components: ComponentMeta[], hooks: HookMeta[]): RegistryI
   const hooksByDomain: Record<string, string[]> = {};
   const hooksByKernelCapability: Record<string, string[]> = {};
   const hooksByPublic: Record<string, string[]> = {};
+  const typesByCategory: Record<string, string[]> = {};
+  const typesByDomain: Record<string, string[]> = {};
+  const typesByPublic: Record<string, string[]> = {};
 
   const pushUnique = (bucket: Record<string, string[]>, key: string, value: string): void => {
     if (!bucket[key]) bucket[key] = [];
@@ -468,9 +474,17 @@ const buildIndexes = (components: ComponentMeta[], hooks: HookMeta[]): RegistryI
     pushUnique(hooksByPublic, String(h.public), h.name);
   });
 
+  types.forEach((t, i) => {
+    typesByName[t.name] = i;
+    if (t.category) pushUnique(typesByCategory, t.category, t.name);
+    if (t.domainContext) pushUnique(typesByDomain, t.domainContext, t.name);
+    pushUnique(typesByPublic, String(t.public), t.name);
+  });
+
   return {
     componentsByName,
     hooksByName,
+    typesByName,
     componentsByCategory,
     componentsByDomain,
     componentsByKernelCapability,
@@ -479,6 +493,54 @@ const buildIndexes = (components: ComponentMeta[], hooks: HookMeta[]): RegistryI
     hooksByDomain,
     hooksByKernelCapability,
     hooksByPublic,
+    typesByCategory,
+    typesByDomain,
+    typesByPublic,
+  };
+};
+
+// ─── Type extraction ────────────────────────────────────────────────────────
+
+const buildTypeMeta = (
+  name: string,
+  declaration: Node,
+  sourceFile: SourceFile,
+): TypeMeta | null => {
+  let jsDocs: JSDoc[] = [];
+  let kind: "type" | "interface" = "type";
+  let definition = "";
+
+  if (Node.isTypeAliasDeclaration(declaration)) {
+    jsDocs = declaration.getJsDocs();
+    kind = "type";
+    const typeNode = declaration.getTypeNode();
+    definition = typeNode ? typeNode.getText() : "";
+  } else if (Node.isInterfaceDeclaration(declaration)) {
+    jsDocs = declaration.getJsDocs();
+    kind = "interface";
+    definition = summarizeInterfaceMembers(declaration);
+  } else {
+    return null;
+  }
+
+  const description = truncate(getJsDocDescription(jsDocs), DESCRIPTION_MAX_CHARS);
+  const descriptionFull = descriptionFullIfDiffers(getJsDocDescriptionFull(jsDocs), description);
+  const category = getJsDocTagValues(jsDocs, "category")[0];
+  const domainContext = getJsDocTagValues(jsDocs, "domain")[0];
+  const tier = parseTier(getJsDocTagValues(jsDocs, "tier")[0]);
+  const hasPublicTag = getJsDocTagValues(jsDocs, "public").length > 0;
+
+  return {
+    name,
+    path: toRelativeFromPackage(sourceFile.getFilePath()),
+    kind,
+    description,
+    ...(descriptionFull ? { descriptionFull } : {}),
+    ...(tier ? { tier } : {}),
+    public: hasPublicTag,
+    definition: truncate(definition.replace(/\s+/g, " ").trim(), TYPE_MAX_CHARS),
+    category: category || undefined,
+    domainContext: domainContext ? (domainContext as TypeMeta["domainContext"]) : undefined,
   };
 };
 
@@ -493,6 +555,9 @@ const main = (): void => {
     tsConfigFilePath: TSCONFIG_PATH,
     skipAddingFilesFromTsConfig: false,
     skipFileDependencyResolution: false,
+    compilerOptions: {
+      noErrorTruncation: true,
+    },
   });
 
   const entry = project.getSourceFile(ENTRY_PATH);
@@ -502,8 +567,10 @@ const main = (): void => {
 
   const components: ComponentMeta[] = [];
   const hooks: HookMeta[] = [];
+  const types: TypeMeta[] = [];
   const seenComponentNames = new Set<string>();
   const seenHookNames = new Set<string>();
+  const seenTypeNames = new Set<string>();
 
   for (const [name, declarations] of entry.getExportedDeclarations()) {
     const declaration = declarations[0];
@@ -513,7 +580,14 @@ const main = (): void => {
     if (isExcludedSourceFile(filePath)) continue;
     if (!filePath.startsWith(SRC_ROOT)) continue;
 
-    if (isReactComponentName(name) && !isHookName(name)) {
+    // Check for types first since type names also start with uppercase
+    if (Node.isTypeAliasDeclaration(declaration) || Node.isInterfaceDeclaration(declaration)) {
+      if (seenTypeNames.has(name)) continue;
+      const typeMeta = buildTypeMeta(name, declaration, declaration.getSourceFile());
+      if (!typeMeta) continue;
+      seenTypeNames.add(name);
+      types.push(typeMeta);
+    } else if (isReactComponentName(name) && !isHookName(name)) {
       if (seenComponentNames.has(name)) continue;
       const resolved = resolveComponent(name, declaration, entry);
       if (!resolved) continue;
@@ -532,13 +606,35 @@ const main = (): void => {
   // They are tracked locally for counting but never shipped to consumers.
   const allComponents = components;
   const allHooks = hooks;
+  const allTypes = types;
   const publicComponents = allComponents.filter((c) => c.public);
   const publicHooks = allHooks.filter((h) => h.public);
 
+  // Auto-promote component/hook prop types when their API is public.
+  // Pattern: ComponentName -> ComponentNameProps is implicitly public.
+  const publicApiNames = new Set([
+    ...publicComponents.map((c) => c.name),
+    ...publicHooks.map((h) => h.name),
+  ]);
+
+  const publicTypes = allTypes.filter((t) => {
+    if (t.public) return true; // Explicitly tagged @public
+    // Auto-promote FooProps when Foo is a public component/hook
+    if (t.name.endsWith("Props")) {
+      const baseName = t.name.slice(0, -5); // Remove "Props"
+      if (publicApiNames.has(baseName)) {
+        t.public = true; // Mark as promoted so manifest reflects it
+        return true;
+      }
+    }
+    return false;
+  });
+
   publicComponents.sort((a, b) => a.name.localeCompare(b.name));
   publicHooks.sort((a, b) => a.name.localeCompare(b.name));
+  publicTypes.sort((a, b) => a.name.localeCompare(b.name));
 
-  const indexes = buildIndexes(publicComponents, publicHooks);
+  const indexes = buildIndexes(publicComponents, publicHooks, publicTypes);
 
   const manifest: RegistryManifest = {
     version: REGISTRY_SCHEMA_VERSION,
@@ -548,6 +644,7 @@ const main = (): void => {
     generatedFrom: { gitSha: resolveGitSha() },
     components: publicComponents,
     hooks: publicHooks,
+    types: publicTypes,
     indexes,
   };
 
@@ -564,10 +661,12 @@ const main = (): void => {
   const advancedC = publicComponents.filter((c) => c.tier === "advanced").length;
   const internalC = allComponents.length - publicComponents.length;
   const internalH = allHooks.length - publicHooks.length;
+  const internalT = allTypes.length - publicTypes.length;
   console.log(
     `✓ Wrote ${toRelativeFromPackage(outPath)} (${sizeKb} KB) — ${publicComponents.length} components `
     + `(${agentReady} agent-ready, ${advancedC} advanced, ${internalC} internal), `
-    + `${publicHooks.length} hooks (${publicHooks.length} public, ${internalH} internal).`,
+    + `${publicHooks.length} hooks (${publicHooks.length} public, ${internalH} internal), `
+    + `${publicTypes.length} types (${publicTypes.length} public, ${internalT} internal).`,
   );
 
   // Blueprints: curated intent → recipe layer. Validation errors are non-fatal

@@ -19,7 +19,7 @@ export const HeaderStatsBarPage = (): JSX.Element => (
 
     <DemoBlock
       title="Typical site snapshot"
-      description="MOS-side and pool-side numbers populated end-to-end."
+      description="App-side and pool-side numbers populated end-to-end."
     >
       <HeaderStatsBar>
         <HeaderMinersBox
@@ -27,12 +27,12 @@ export const HeaderStatsBarPage = (): JSX.Element => (
           online={158}
           error={1}
           offline={57}
-          mosTotal={216}
+          appTotal={216}
           poolTotal={205}
           poolOnline={201}
           poolMismatch={4}
         />
-        <HeaderHashrateBox mosPhs={63.262} poolPhs={52.687} />
+        <HeaderHashrateBox appPhs={63.262} poolPhs={52.687} />
         <HeaderConsumptionBox valueMw={1.663} />
         <HeaderEfficiencyBox valueWthS={26.29} />
       </HeaderStatsBar>
@@ -55,8 +55,8 @@ export const HeaderStatsBarPage = (): JSX.Element => (
       description="Some pool-side counts not yet available — fallback only fires for the missing fields."
     >
       <HeaderStatsBar>
-        <HeaderMinersBox total={2188} online={158} error={1} offline={57} mosTotal={216} />
-        <HeaderHashrateBox mosPhs={63.262} />
+        <HeaderMinersBox total={2188} online={158} error={1} offline={57} appTotal={216} />
+        <HeaderHashrateBox appPhs={63.262} />
         <HeaderConsumptionBox valueMw={1.663} />
         <HeaderEfficiencyBox valueWthS={26.29} />
       </HeaderStatsBar>
@@ -70,7 +70,7 @@ export const HeaderStatsBarPage = (): JSX.Element => (
         <HeaderMinersBox total={2188} online={158} error={1} offline={57} />
       </HeaderStatsBar>
       <HeaderStatsBar>
-        <HeaderHashrateBox mosPhs={63.262} poolPhs={52.687} />
+        <HeaderHashrateBox appPhs={63.262} poolPhs={52.687} />
       </HeaderStatsBar>
       <HeaderStatsBar>
         <HeaderConsumptionBox valueMw={1.663} />

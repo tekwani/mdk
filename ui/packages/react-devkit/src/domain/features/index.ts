@@ -7,6 +7,7 @@
 
 // Feature components
 export * from './alerts'
+export * from './container-detail'
 export * from './explorer'
 export * from './pool-manager'
 export * from './site-overview'

@@ -3,12 +3,9 @@
 const os = require('os')
 const path = require('path')
 
-// This example lives under examples/backend/powermeters/satec/, so the repo root is
-// four levels up. Everything is required from backend/ — the canonical source tree.
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..')
-const { getKernel } = require(path.join(REPO_ROOT, 'backend', 'core', 'mdk'))
-const { startSatecWorker } = require(path.join(REPO_ROOT, 'backend', 'workers', 'power-meter', 'satec'))
-const mockServer = require(path.join(REPO_ROOT, 'backend', 'workers', 'power-meter', 'satec', 'mock', 'server'))
+const { getKernel } = require('@tetherto/mdk-core')
+const { startSatecWorker } = require('@tetherto/mdk-worker-satec')
+const mockServer = require('@tetherto/mdk-worker-satec/mock/server')
 
 const HOST = '127.0.0.1'
 const PORT = 5061

@@ -6,7 +6,10 @@ module.exports = function (ctx) {
   const pastHashrates = []
   const state = {
     ...libUtils.createBaseState({ led_mode: 'auto' }),
-    summary: libUtils.createSummary(libUtils, true),
+    // M56S_VH30 draws ~3306W nominal — override the shared 8000 placeholder
+    // so Power (Limit / powerDivisor, see calculatePowerModeHashrate) lands
+    // in that range instead of the generic default's 4000W.
+    summary: { ...libUtils.createSummary(libUtils, true), 'Power Limit': 6500 },
     devdetails: libUtils.createDevdetails('M56S_VH30'),
     devs: libUtils.createDevs(
       ctx,

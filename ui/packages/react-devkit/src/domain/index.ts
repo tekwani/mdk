@@ -41,6 +41,7 @@ export * from './features'
 
 export * from './types'
 
+export { getHashrateString, getHashrateUnit } from './utils/device-utils'
 export type { FilterSelectionTuple, UseListViewFiltersParams } from './utils/use-list-view-filters'
 export { useListViewFilters } from './utils/use-list-view-filters'
 export type { NotificationOptions } from './utils/use-notification'

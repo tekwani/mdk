@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router";
 
 import { useMdkContext, useQuery } from "@tetherto/mdk-react-adapter";
 import {
@@ -17,7 +17,7 @@ import {
 import { AppHeader, MiningStatusIcon, Spinner, Typography } from "@tetherto/mdk-react-devkit/primitives";
 
 import { AppSidebar } from "./AppSidebar";
-import { HS_PER_PHS, HS_PER_THS, MHS_PER_PHS, NOMINAL_MHS_PER_MINER } from "./constants";
+import { HS_PER_THS, MHS_PER_THS, NOMINAL_MHS_PER_MINER, W_PER_KW } from "./constants";
 import { ContainerDetailPage, ContainersListPage } from "./ContainersPage";
 import { ControlPage } from "./ControlPage";
 import { DashboardPage } from "./DashboardPage";
@@ -104,8 +104,8 @@ export function SitePage(): JSX.Element {
     });
   }, [selectedMiner, modeOptions, data?.miners]);
 
-  const containerPowerMw = useMemo(
-    () => (data?.containers ?? []).reduce((sum, c) => sum + c.powerW, 0) / 1e6,
+  const containerPowerKw = useMemo(
+    () => (data?.containers ?? []).reduce((sum, c) => sum + c.powerW, 0) / W_PER_KW,
     [data?.containers],
   );
 
@@ -124,18 +124,18 @@ export function SitePage(): JSX.Element {
     return { total: data?.totals.minerCount ?? miners.length, online, error, offline };
   }, [data?.miners, data?.totals.minerCount]);
 
-  const mosPhs = (data?.totals.hashrateMhs ?? 0) / MHS_PER_PHS;
-  const poolPhs = useMemo(
-    () => (data?.pools ?? []).reduce((sum, p) => sum + p.hashrate, 0) / HS_PER_PHS,
+  const siteThs = (data?.totals.hashrateMhs ?? 0) / MHS_PER_THS;
+  const poolThs = useMemo(
+    () => (data?.pools ?? []).reduce((sum, p) => sum + p.hashrate, 0) / HS_PER_THS,
     [data?.pools],
   );
 
   const efficiencyWthS = useMemo(() => {
     const ths = (data?.totals.hashrateMhs ?? 0) / 1e6;
-    return ths > 0 ? (containerPowerMw * 1e6) / ths : 0;
-  }, [data?.totals.hashrateMhs, containerPowerMw]);
+    return ths > 0 ? (containerPowerKw * W_PER_KW) / ths : 0;
+  }, [data?.totals.hashrateMhs, containerPowerKw]);
 
-  const nominalPhs = ((data?.totals.minerCount ?? 0) * NOMINAL_MHS_PER_MINER) / MHS_PER_PHS;
+  const nominalThs = ((data?.totals.minerCount ?? 0) * NOMINAL_MHS_PER_MINER) / MHS_PER_THS;
 
   const incidents = useMemo<TIncidentRowProps[]>(() => {
     const out: TIncidentRowProps[] = [];
@@ -202,7 +202,7 @@ export function SitePage(): JSX.Element {
     details: [
       { title: "Status", value: pool.status },
       { title: "Type", value: pool.poolType },
-      { title: "Hashrate", value: `${(pool.hashrate / HS_PER_THS).toFixed(1)} TH/s` },
+      { title: "Hashrate", value: `${(pool.hashrate / HS_PER_THS).toFixed(0)} TH/s` },
       { title: "Workers online", value: pool.workersOnline },
     ],
   }));
@@ -260,13 +260,14 @@ export function SitePage(): JSX.Element {
             online={minerCounts.online}
             error={minerCounts.error}
             offline={minerCounts.offline}
-            mosTotal={minerCounts.total}
+            appTotal={minerCounts.total}
             poolTotal={data.pools.length}
             poolOnline={0}
             poolMismatch={0}
+            appLabel="Site"
           />
-          <HeaderHashrateBox mosPhs={mosPhs} poolPhs={poolPhs} />
-          <HeaderConsumptionBox valueMw={containerPowerMw} />
+          <HeaderHashrateBox appPhs={siteThs} poolPhs={poolThs} unit="TH/s" fractionDigits={0} appLabel="Site" />
+          <HeaderConsumptionBox valueMw={containerPowerKw} unit="kW" />
           <HeaderEfficiencyBox valueWthS={efficiencyWthS} />
         </HeaderStatsBar>
       </AppHeader>
@@ -282,9 +283,9 @@ export function SitePage(): JSX.Element {
               element={
                 <DashboardPage
                   hashHistory={hashHistory.data}
-                  mosPhs={mosPhs}
-                  containerPowerMw={containerPowerMw}
-                  nominalPhs={nominalPhs}
+                  siteThs={siteThs}
+                  containerPowerKw={containerPowerKw}
+                  nominalThs={nominalThs}
                   nowTs={data.ts}
                   incidents={incidents}
                   incidentsLoading={false}

@@ -18,7 +18,7 @@ a remote Kernel over HRPC (cross-host deployments), and as a standalone process 
 - Node.js >=24 (LTS)
 - npm >=11
 - Commands are run from the repository root
-- An Kernel instance running and reachable, or `kernelKey: false` to start without a Kernel connection (development only)
+- A Kernel instance running and reachable, or `kernelKey: false` to start without a Kernel connection (development only)
 
 <Steps>
 
@@ -29,45 +29,18 @@ a remote Kernel over HRPC (cross-host deployments), and as a standalone process 
 Most teams embed `startGateway()` in their own Node.js application rather than running the Gateway as a separate process.
 This is the standard production path.
 
-#### 1.1 Development (no auth)
-
-Use `noAuth: true` during local development to skip the JWT requirement:
-
 ```js
 const { getKernel, startGateway } = require('@tetherto/mdk')
 
 const kernel = await getKernel()
-const server = await startGateway({ kernel, port: 3000, noAuth: true })
+const server = await startGateway({ kernel, port: 3000 })
 // HTTP server is up at http://localhost:3000
 ```
 
-> [!IMPORTANT]
-> `noAuth: true` disables JWT validation on all routes. Never use this in production.
-
-#### 1.2 Production (OAuth2)
-
-Pass an `auth` block to enable OAuth2. Google and Microsoft providers are built in:
-
-```js
-const { getKernel, startGateway } = require('@tetherto/mdk')
-
-const kernel = await getKernel()
-const server = await startGateway({
-  kernel,
-  port: 3000,
-  auth: {
-    h0: {
-      method: 'google',
-      credentials: { client: { id: 'YOUR_CLIENT_ID', secret: 'YOUR_CLIENT_SECRET' } },
-      users: ['admin@example.com']
-    }
-  }
-})
-```
-
-Replace the `users` array with the email addresses that should have access. A copy of the full OAuth2 config format ships in
-[`backend/core/gateway/config/facs/httpd-oauth2.config.json.example`][oauth2-example]. The generated `httpd-oauth2.config.json`
-(written to `opts.root/config/facs/` on first start) persists your settings across restarts — edit that file rather than the code.
+> [!WARNING]
+> The Gateway ships no built-in authentication, so every route it serves is unauthenticated. Supply your own identity layer and call it from the
+> controllers that need protecting, as [auth and permissions][plugins-auth] describes. The [`@tetherto/mdk-plugin-auth`][auth-plugin] plugin bundled
+> with MDK is not a substitute: the Gateway neither registers it nor provides what its controllers expect.
 
 The full configuration reference, including all `startGateway()` options, is in the [Gateway API reference][gateway-readme].
 
@@ -77,7 +50,7 @@ The full configuration reference, including all `startGateway()` options, is in 
 
 ### Cross-host path (HRPC)
 
-Use this path when Kernel runs on a separate host. Pass the Kernel HRPC listener public key to `startGateway()` instead of an Kernel instance.
+Use this path when Kernel runs on a separate host. Pass the Kernel HRPC listener public key to `startGateway()` instead of a Kernel instance.
 (On a single host, neither is needed: `startGateway()` reads the key from the well-known key file that `getKernel()` publishes —
 see the [key resolution order][gateway-readme].)
 
@@ -101,13 +74,12 @@ const { startGateway } = require('@tetherto/mdk')
 
 const server = await startGateway({
   kernelKey: '<kernel-listener-pubkey-hex>',
-  port: 3000,
-  noAuth: true   // replace with auth config for production
+  port: 3000
 })
 ```
 
 > [!NOTE]
-> Pre v1.0, Kernel's `auth.whitelist` defaults to empty and admits any HRPC caller. For production deployments, add the Gateway's
+> Pre v1.0, Kernel's allowlist `auth.whitelist` defaults to empty and admits any HRPC caller. For production deployments, add the Gateway's
 > DHT public key to Kernel's allowlist — see the [Gateway concept page][gateway-concept] and [`opts.kernelKey` reference][mdk-readme].
 
 </Step>
@@ -156,11 +128,14 @@ npm start
 [gateway-readme]: ../../../backend/core/gateway/README.md
 <!-- docs@tether.io: gateway-readme → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md -->
 
-[oauth2-example]: ../../../backend/core/gateway/config/facs/httpd-oauth2.config.json.example
-<!-- docs@tether.io: oauth2-example → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/config/facs/httpd-oauth2.config.json.example -->
-
 [plugins-how-to]: plugins.md
 <!-- docs@tether.io: plugins-how-to → guides/gateway/plugins -->
+
+[auth-plugin]: ../../../backend/core/plugins/README.md#the-bundled-auth-plugin
+<!-- docs@tether.io: auth-plugin → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#the-bundled-auth-plugin -->
+
+[plugins-auth]: plugins.md#auth-and-permissions
+<!-- docs@tether.io: plugins-auth → guides/gateway/plugins#auth-and-permissions -->
 
 [deployment-topologies]: ../../concepts/deployment-topologies.md
 <!-- docs@tether.io: deployment-topologies → concepts/deployment-topologies -->

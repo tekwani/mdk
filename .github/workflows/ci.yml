@@ -1,5 +1,10 @@
-# MDK private monorepo (mdk-prv): backend/core/*, backend/workers/**, ui (all npm).
-# Aligned with MiningOS CI Checks: per-package lockfile check, node cache actions, parallel jobs, PR audits.
+# MDK monorepo (mdk): backend/core/*, backend/workers/**, ui (all npm).
+# Aligned with MiningOS CI Checks: workspace-aware install/cache, node cache actions, parallel jobs, PR audits.
+# npm workspace members (see root package.json `workspaces`) install once at the
+# repo root and share one hoisted node_modules cache; standalone packages (ui,
+# backend/core/plugins, the example ui apps) install in place. The membership is
+# resolved by .github/scripts/workspace-context.sh, so a package moving in or out
+# of `workspaces` needs no workflow change.
 name: CI Checks
 
 on:
@@ -62,7 +67,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.sha }}
         run: |
-          ui=false; core=false; workers=false; examples=false; docs_only=false
+          ui=false; core=false; workers=false; examples=false; docs_only=false; ci_infra=false
           if [ "$EVENT_NAME" != "workflow_dispatch" ]; then
             if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
               git fetch origin main --depth=1 2>/dev/null || true
@@ -73,6 +78,10 @@ jobs:
             echo "$CHANGED" | grep -q "^backend/core/"      && core=true || true
             echo "$CHANGED" | grep -q "^backend/workers/"   && workers=true || true
             echo "$CHANGED" | grep -q "^examples/"          && examples=true || true
+            # CI infra (workflows/composite actions/scripts) affects every domain,
+            # so a change here must run all suites — even if only one domain's
+            # files also changed (otherwise the CI change rides along untested).
+            echo "$CHANGED" | grep -qE '^\.github/(workflows|actions|scripts)/' && ci_infra=true || true
             # docs/meta-only: every changed file is docs or repo-meta with no build/runtime
             # impact. Markdown link correctness is covered separately by link-check.yml, so
             # these changes need none of the domain build/test suites. Anything NOT on this
@@ -88,6 +97,7 @@ jobs:
           echo "workers=$workers"   >> "$GITHUB_OUTPUT"
           echo "examples=$examples" >> "$GITHUB_OUTPUT"
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "ci_infra=$ci_infra" >> "$GITHUB_OUTPUT"
 
       - name: Resolve which pipelines should run
         id: flags
@@ -100,6 +110,7 @@ jobs:
           WORKERS_CHANGED: ${{ steps.changed.outputs.workers }}
           EXAMPLES_CHANGED: ${{ steps.changed.outputs.examples }}
           DOCS_ONLY: ${{ steps.changed.outputs.docs_only }}
+          CI_INFRA: ${{ steps.changed.outputs.ci_infra }}
         run: |
           run_ui=false
           run_core=false
@@ -119,6 +130,13 @@ jobs:
               all)      run_ui=true;       run_core=true;  run_workers=true;  run_examples=true;  reason="manual=all" ;;
               *)        run_ui=true;       run_core=true;  run_workers=true;  run_examples=true;  reason="manual=unknown-fallback-all" ;;
             esac
+          elif [ "$CI_INFRA" = "true" ]; then
+            # CI workflow/actions changed → validate every domain.
+            run_ui=$([ "$has_ui_lock" = "true" ] && echo true || echo false)
+            run_core=true
+            run_workers=true
+            run_examples=true
+            reason="auto=ci-infra-change->run-all"
           else
             if [ "$UI_CHANGED" = "true" ] && [ "$has_ui_lock" = "true" ]; then run_ui=true; fi
             if [ "$CORE_CHANGED" = "true" ]; then run_core=true; fi
@@ -170,7 +188,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t dirs < <(
-            find backend/workers -name package.json -not -path '*/node_modules/*' \
+            find backend/workers -mindepth 2 -name package.json -not -path '*/node_modules/*' \
               | xargs -I{} dirname {} | sort -u
           )
           if [ "${#dirs[@]}" -eq 0 ]; then
@@ -200,6 +218,7 @@ jobs:
     if: needs.detect-target.outputs.run_core == 'true'
     outputs:
       dirs: ${{ steps.list.outputs.dirs }}
+      test_dirs: ${{ steps.list.outputs.test_dirs }}
       buildable_dirs: ${{ steps.list.outputs.buildable_dirs }}
     steps:
       - name: Checkout repository
@@ -213,7 +232,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t dirs < <(
-            find backend/core -name package.json -not -path '*/node_modules/*' \
+            find backend/core -mindepth 2 -name package.json -not -path '*/node_modules/*' \
               | xargs -I{} dirname {} | sort -u
           )
           if [ "${#dirs[@]}" -eq 0 ]; then
@@ -223,6 +242,12 @@ jobs:
           json=$(printf '%s\n' "${dirs[@]}" | jq -R . | jq -s -c .)
           echo "dirs=${json}" >> "$GITHUB_OUTPUT"
           echo "Core packages: ${json}"
+          # mdk is tested via the sharded test-mdk/coverage-mdk jobs (its integration
+          # suite is too slow for a single runner), so exclude it from the generic
+          # per-package test matrix. It stays in `dirs` for lint/typecheck/build.
+          test_json=$(printf '%s\n' "${dirs[@]}" | grep -v '^backend/core/mdk$' | jq -R . | jq -s -c .)
+          echo "test_dirs=${test_json}" >> "$GITHUB_OUTPUT"
+          echo "Core test packages (mdk sharded separately): ${test_json}"
           buildable=()
           for dir in "${dirs[@]}"; do
             node -e "const s=require('./${dir}/package.json').scripts||{}; process.exit(s.build?0:1)" 2>/dev/null \
@@ -312,7 +337,25 @@ jobs:
           cache-key: ${{ needs.setup-examples.outputs.cache-key }}
           node-version: ${{ env.NODE_VERSION }}
           working-directory: ${{ matrix.dir }}
-      - run: npm run test:coverage --if-present || npm test --if-present
+      # Examples relative-require the shared core/worker packages. Those are all
+      # npm workspace members, so one install at the workspace root hoists their
+      # deps and the requires resolve. Examples are run but not coverage-gated.
+      - name: Ensure workspace dependencies (sibling resolution)
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          # Member jobs already restored the root node_modules above (no-op here);
+          # standalone example jobs install it alongside their own node_modules.
+          if [ ! -d node_modules ] || [ -z "$(ls -A node_modules 2>/dev/null)" ]; then
+            npm ci --ignore-scripts --no-audit --no-fund
+            for pkg in sqlite3 bcrypt; do
+              if npm ls "$pkg" --depth=99 --parseable 2>/dev/null | grep -qE "(^|/)${pkg}$"; then
+                npm rebuild "$pkg"
+              fi
+            done
+          fi
+      - run: npm test --if-present
 
   setup-ui:
     name: 📦 Setup UI (ui)
@@ -565,17 +608,19 @@ jobs:
       - name: Lockfile consistency check
         id: lockfile
         shell: bash
-        working-directory: ${{ matrix.dir }}
         run: |
           set -euo pipefail
-          if [ ! -f package-lock.json ]; then
-            echo "No package-lock.json; skipping lockfile check"
+          # For a workspace member the authoritative lockfile is the repo-root
+          # one; for a standalone package it is the package's own. Resolve which.
+          read -r LOCK_DIR _slug _nm < <(bash "${GITHUB_WORKSPACE}/.github/scripts/workspace-context.sh" "${{ matrix.dir }}")
+          if [ ! -f "${LOCK_DIR}/package-lock.json" ]; then
+            echo "No package-lock.json in ${LOCK_DIR}; skipping lockfile check"
             exit 0
           fi
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          git -C "${GITHUB_WORKSPACE}" diff --exit-code "${{ matrix.dir }}/package-lock.json" || (
-            echo "::error::package-lock.json is out of sync with package.json in ${{ matrix.dir }}."
-            echo "::error::Regenerate with: npm install --package-lock-only --ignore-scripts --no-audit --no-fund"
+          ( cd "${LOCK_DIR}" && npm install --package-lock-only --ignore-scripts --no-audit --no-fund )
+          git -C "${GITHUB_WORKSPACE}" diff --exit-code "${LOCK_DIR}/package-lock.json" || (
+            echo "::error::package-lock.json (${LOCK_DIR}) is out of sync with package.json."
+            echo "::error::Regenerate with: (cd ${LOCK_DIR} && npm install --package-lock-only --ignore-scripts --no-audit --no-fund)"
             exit 1
           )
 
@@ -638,7 +683,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dir: ${{ fromJson(needs.list-core.outputs.dirs) }}
+        dir: ${{ fromJson(needs.list-core.outputs.test_dirs) }}
     defaults:
       run:
         working-directory: ${{ matrix.dir }}
@@ -651,28 +696,149 @@ jobs:
           cache-key: ${{ needs.setup-core.outputs.cache-key }}
           node-version: ${{ env.NODE_VERSION }}
           working-directory: ${{ matrix.dir }}
-      - name: Install cross-package dependencies
+      - name: Ensure workspace dependencies (sibling resolution)
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
-          # Core packages use relative requires into sibling core packages
-          # (e.g. mdk -> kernel) and into backend/workers/** (base, lib,
-          # http.node.wrk, containers). Each test runner only restores the
-          # matrix package's node_modules, so the reachable sibling packages
-          # must be installed here too.
-          find backend/core backend/workers -name package.json \
-            -not -path '*/node_modules/*' -not -path '*/examples/*' \
-            | xargs -I{} dirname {} \
-            | grep -v "^${{ matrix.dir }}$" \
-            | while read -r dir; do
-                echo "Installing deps: $dir"
-                if [ -f "$dir/package-lock.json" ]; then
-                  (cd "$dir" && npm ci --ignore-scripts --no-audit --no-fund)
-                else
-                  (cd "$dir" && npm install --ignore-scripts --no-audit --no-fund)
-                fi
-              done
-      - run: npm run test:coverage --if-present || npm test --if-present
+          set -euo pipefail
+          # Core packages relative-require sibling core packages (e.g. mdk ->
+          # kernel) and backend/workers/** packages. All are npm workspace
+          # members, so a single install at the workspace root hoists their deps
+          # and makes the requires resolve. Member jobs already restored the root
+          # node_modules above (no-op here); standalone jobs install it here.
+          if [ ! -d node_modules ] || [ -z "$(ls -A node_modules 2>/dev/null)" ]; then
+            npm ci --ignore-scripts --no-audit --no-fund
+            for pkg in sqlite3 bcrypt; do
+              if npm ls "$pkg" --depth=99 --parseable 2>/dev/null | grep -qE "(^|/)${pkg}$"; then
+                npm rebuild "$pkg"
+              fi
+            done
+          fi
+      - name: Test with coverage (enforce ≥80%)
+        uses: ./.github/actions/test-with-coverage
+        with:
+          working-directory: ${{ matrix.dir }}
+          min: "80"
+
+  # mdk is sharded across parallel runners: its integration suite (real worker
+  # discovery, ~16-40s per test) is too slow for one 20-min job. Shards split by
+  # cost — fast unit vs the slow actions-flow suites. Each shard writes its own
+  # coverage; coverage-mdk merges them and enforces the ≥80% gate.
+  test-mdk:
+    name: 🧩 Test Core shard — mdk [${{ matrix.shard }}]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [detect-target, list-core, setup-core]
+    if: needs.detect-target.outputs.run_core == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        # Shard by test group so the slow integration suites run on separate
+        # runners (dir-based globs, robust to files being added/removed).
+        shard: [unit, miners, containers, other]
+    defaults:
+      run:
+        working-directory: backend/core/mdk
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/node-restore-cache
+        with:
+          cache-key: ${{ needs.setup-core.outputs.cache-key }}
+          node-version: ${{ env.NODE_VERSION }}
+          working-directory: backend/core/mdk
+      - name: Ensure workspace dependencies (sibling resolution)
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          # mdk relative-requires kernel/client/mdk-worker and backend/workers/**;
+          # all are workspace members, hoisted by a single root install. Member
+          # jobs already restored the root node_modules above (no-op here).
+          if [ ! -d node_modules ] || [ -z "$(ls -A node_modules 2>/dev/null)" ]; then
+            npm ci --ignore-scripts --no-audit --no-fund
+            for pkg in sqlite3 bcrypt; do
+              if npm ls "$pkg" --depth=99 --parseable 2>/dev/null | grep -qE "(^|/)${pkg}$"; then
+                npm rebuild "$pkg"
+              fi
+            done
+          fi
+      - name: Run shard with coverage
+        shell: bash
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          case "$SHARD" in
+            unit)       GLOB='tests/unit/**/*.test.js' ;;
+            miners)     GLOB='tests/integration/actions-flow/miners/*.test.js' ;;
+            containers) GLOB='tests/integration/actions-flow/containers/*.test.js' ;;
+            other)      GLOB='tests/integration/*.test.js' ;;  # top-level only (* is single-level)
+            *) echo "::error::unknown shard $SHARD"; exit 1 ;;
+          esac
+          rm -rf coverage
+          NODE_ENV=test npx brittle --coverage "$GLOB"
+          [ -f coverage/coverage-final.json ] || { echo "::error::no coverage-final.json for shard $SHARD"; exit 1; }
+          cp coverage/coverage-final.json "coverage/mdk-cov-$SHARD.json"
+      - name: Upload shard coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdk-cov-${{ matrix.shard }}
+          path: backend/core/mdk/coverage/mdk-cov-${{ matrix.shard }}.json
+          retention-days: 1
+
+  coverage-mdk:
+    name: 📊 Coverage Merge (backend/core/mdk)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [detect-target, test-mdk]
+    if: needs.detect-target.outputs.run_core == 'true'
+    defaults:
+      run:
+        working-directory: backend/core/mdk
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Download shard coverage
+        uses: actions/download-artifact@v4
+        with:
+          path: backend/core/mdk/coverage-parts
+          pattern: mdk-cov-*
+          merge-multiple: true
+      - name: Merge coverage and enforce ≥80%
+        shell: bash
+        run: |
+          set -euo pipefail
+          MIN=80
+          rm -rf .nyc_output && mkdir -p .nyc_output
+          npx --yes nyc@17.1.0 merge coverage-parts .nyc_output/out.json
+          set +e
+          npx --yes nyc@17.1.0 check-coverage --lines=$MIN --statements=$MIN --functions=$MIN --branches=$MIN
+          EXIT=$?
+          set -e
+          REPORT="$(npx --yes nyc@17.1.0 report --reporter=text-summary 2>&1)"
+          echo "$REPORT"
+          STMT=$(echo "$REPORT" | sed -n 's/^Statements[^:]*: *\([0-9.]*\)%.*/\1/p'); [ -z "$STMT" ] && STMT="—"
+          BRANCH=$(echo "$REPORT" | sed -n 's/^Branches[^:]*: *\([0-9.]*\)%.*/\1/p'); [ -z "$BRANCH" ] && BRANCH="—"
+          FN=$(echo "$REPORT" | sed -n 's/^Functions[^:]*: *\([0-9.]*\)%.*/\1/p'); [ -z "$FN" ] && FN="—"
+          LINES=$(echo "$REPORT" | sed -n 's/^Lines[^:]*: *\([0-9.]*\)%.*/\1/p'); [ -z "$LINES" ] && LINES="—"
+          [ $EXIT -eq 0 ] && STATUS="PASS" || STATUS="FAIL"
+          # Row consumed by the coverage-summary job (mdk lands in the Core block).
+          printf '%s\t%s\t%s\t%s\t%s\t%s\n' "backend/core/mdk" "$STATUS" "$STMT" "$BRANCH" "$FN" "$LINES" > coverage-row.tsv
+          exit $EXIT
+      - name: Upload coverage row
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: covrow-backend-core-mdk
+          path: backend/core/mdk/coverage-row.tsv
+          retention-days: 1
+          if-no-files-found: ignore
 
   build-core:
     name: 🏗️ Build Core (${{ matrix.dir }})
@@ -716,29 +882,34 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Lockfile consistency check
-        id: lockfile
-        shell: bash
-        working-directory: ${{ matrix.dir }}
-        run: |
-          set -euo pipefail
-          if [ ! -f package-lock.json ]; then
-            echo "No package-lock.json; skipping lockfile check"
-            exit 0
-          fi
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          git -C "${GITHUB_WORKSPACE}" diff --exit-code "${{ matrix.dir }}/package-lock.json" || (
-            echo "::error::package-lock.json is out of sync with package.json in ${{ matrix.dir }}."
-            echo "::error::Regenerate with: npm install --package-lock-only --ignore-scripts --no-audit --no-fund"
-            exit 1
-          )
-
+      # node-setup-cache runs first so the lockfile check below uses the pinned
+      # NODE_VERSION npm (setup-node), not the runner default — otherwise a
+      # different npm reformats the lock and reports a false out-of-sync.
       - name: Install dependencies and cache node_modules
         id: setup-deps
         uses: ./.github/actions/node-setup-cache
         with:
           node-version: ${{ env.NODE_VERSION }}
           working-directory: ${{ matrix.dir }}
+
+      - name: Lockfile consistency check
+        id: lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          # For a workspace member the authoritative lockfile is the repo-root
+          # one; for a standalone package it is the package's own. Resolve which.
+          read -r LOCK_DIR _slug _nm < <(bash "${GITHUB_WORKSPACE}/.github/scripts/workspace-context.sh" "${{ matrix.dir }}")
+          if [ ! -f "${LOCK_DIR}/package-lock.json" ]; then
+            echo "No package-lock.json in ${LOCK_DIR}; skipping lockfile check"
+            exit 0
+          fi
+          ( cd "${LOCK_DIR}" && npm install --package-lock-only --ignore-scripts --no-audit --no-fund )
+          git -C "${GITHUB_WORKSPACE}" diff --exit-code "${LOCK_DIR}/package-lock.json" || (
+            echo "::error::package-lock.json (${LOCK_DIR}) is out of sync with package.json."
+            echo "::error::Regenerate with: (cd ${LOCK_DIR} && npm install --package-lock-only --ignore-scripts --no-audit --no-fund)"
+            exit 1
+          )
 
   lint-workers:
     name: ✨ Lint Worker (${{ matrix.dir }})
@@ -810,22 +981,28 @@ jobs:
           cache-key: ${{ needs.setup-workers.outputs.cache-key }}
           node-version: ${{ env.NODE_VERSION }}
           working-directory: ${{ matrix.dir }}
-      - name: Install shared package dependencies
+      - name: Ensure workspace dependencies (sibling resolution)
         shell: bash
         working-directory: ${{ github.workspace }}
         run: |
-          # Worker packages use relative requires into the shared core packages
-          # (mdk → kernel, mdk-worker, client) and the mock toolkit. Each test
-          # runner only restores the matrix package's node_modules, so those
-          # shared packages must be installed here too. The base packages this
-          # step used to install were deleted with the WorkerRuntime migration.
-          for dir in backend/core/kernel backend/core/client backend/core/mdk backend/core/mdk-worker backend/workers/mock backend/core/mock-control-service; do
-            [ -f "$dir/package.json" ] || continue
-            [ "$dir" = "${{ matrix.dir }}" ] && continue
-            echo "Installing deps: $dir"
-            (cd "$dir" && npm ci --ignore-scripts --no-audit --no-fund)
-          done
-      - run: npm run test:coverage --if-present || npm test --if-present
+          set -euo pipefail
+          # Worker packages relative-require shared core packages (mdk -> kernel,
+          # mdk-worker, client) and the mock toolkit. All are workspace members,
+          # hoisted by a single root install. Member jobs already restored the
+          # root node_modules above (no-op here).
+          if [ ! -d node_modules ] || [ -z "$(ls -A node_modules 2>/dev/null)" ]; then
+            npm ci --ignore-scripts --no-audit --no-fund
+            for pkg in sqlite3 bcrypt; do
+              if npm ls "$pkg" --depth=99 --parseable 2>/dev/null | grep -qE "(^|/)${pkg}$"; then
+                npm rebuild "$pkg"
+              fi
+            done
+          fi
+      - name: Test with coverage (enforce ≥80%)
+        uses: ./.github/actions/test-with-coverage
+        with:
+          working-directory: ${{ matrix.dir }}
+          min: "80"
 
   build-workers:
     name: 🏗️ Build Worker (${{ matrix.dir }})
@@ -952,6 +1129,12 @@ jobs:
       - name: Security audit (npm)
         run: |
           set +e
+          # Workspace members share the root lockfile/node_modules (see
+          # workspace-context.sh); audit-ci needs a lockfile in its cwd to
+          # detect the package manager, so audit from the resolved install
+          # dir instead of always matrix.dir.
+          read -r INSTALL_DIR _slug _nm < <(bash "${GITHUB_WORKSPACE}/.github/scripts/workspace-context.sh" "${{ matrix.dir }}")
+          cd "${GITHUB_WORKSPACE}/${INSTALL_DIR}"
           npm audit signatures 2>&1
           SIGNATURES_EXIT=$?
           npm audit --audit-level=moderate 2>&1
@@ -965,7 +1148,8 @@ jobs:
           # Only emit a per-package summary block when the audit found
           # something; a clean PR should not produce a wall of PASS tables.
           if [ $MODERATE_EXIT -ne 0 ] || [ $HIGH_EXIT -ne 0 ]; then
-            AUD_JSON="${RUNNER_TEMP:-/tmp}/npm-audit-${{ matrix.dir }}.json"
+            SAFE_NAME=$(echo "${{ matrix.dir }}" | tr '/' '-')
+            AUD_JSON="${RUNNER_TEMP:-/tmp}/npm-audit-${SAFE_NAME}.json"
             npm audit --json > "${AUD_JSON}" 2>/dev/null || true
             {
               echo "## Security Audit — Core (\`${{ matrix.dir }}\`)"
@@ -1006,6 +1190,12 @@ jobs:
       - name: Security audit (npm)
         run: |
           set +e
+          # Workspace members share the root lockfile/node_modules (see
+          # workspace-context.sh); audit-ci needs a lockfile in its cwd to
+          # detect the package manager, so audit from the resolved install
+          # dir instead of always matrix.dir.
+          read -r INSTALL_DIR _slug _nm < <(bash "${GITHUB_WORKSPACE}/.github/scripts/workspace-context.sh" "${{ matrix.dir }}")
+          cd "${GITHUB_WORKSPACE}/${INSTALL_DIR}"
           npm audit signatures 2>&1
           SIGNATURES_EXIT=$?
           npm audit --audit-level=moderate 2>&1
@@ -1019,7 +1209,8 @@ jobs:
           # Only emit a per-package summary block when the audit found
           # something; a clean PR should not produce a wall of PASS tables.
           if [ $MODERATE_EXIT -ne 0 ] || [ $HIGH_EXIT -ne 0 ]; then
-            AUD_JSON="${RUNNER_TEMP:-/tmp}/npm-audit-${{ matrix.dir }}.json"
+            SAFE_NAME=$(echo "${{ matrix.dir }}" | tr '/' '-')
+            AUD_JSON="${RUNNER_TEMP:-/tmp}/npm-audit-${SAFE_NAME}.json"
             npm audit --json > "${AUD_JSON}" 2>/dev/null || true
             {
               echo "## Security Audit — Workers (\`${{ matrix.dir }}\`)"
@@ -1031,6 +1222,51 @@ jobs:
             bash "${GITHUB_WORKSPACE}/.github/scripts/github-summary-npm-audit-high-critical.sh" "${AUD_JSON}" >> "$GITHUB_STEP_SUMMARY" || true
           fi
           [ $HIGH_EXIT -eq 0 ]
+
+  coverage-summary:
+    name: 📊 Coverage Summary (per domain)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always() && !cancelled()
+    needs: [detect-target, test-core, test-mdk, coverage-mdk, test-workers]
+    steps:
+      - name: Download coverage rows
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: rows
+          pattern: covrow-*
+      - name: Render per-domain coverage tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          find rows -name coverage-row.tsv -exec cat {} + > all.tsv 2>/dev/null || true
+          if [ ! -s all.tsv ]; then
+            echo "No coverage rows were produced this run." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          pct () { [ "$1" = "—" ] && printf '—' || printf '%s%%' "$1"; }
+          render () {
+            local title="$1" prefix="$2" body
+            body=$(grep -E "^${prefix}" all.tsv || true)
+            [ -z "$body" ] && return 0
+            {
+              echo "## Coverage — ${title}"
+              echo ""
+              echo "| Package | Status | Statements | Branches | Functions | Lines |"
+              echo "|---|:--|--:|--:|--:|--:|"
+              while IFS=$'\t' read -r pkg status stmt br fn ln; do
+                [ -z "$pkg" ] && continue
+                case "$status" in
+                  PASS) icon="✅" ;; FAIL|TESTS-FAILED) icon="❌" ;; *) icon="⚠️" ;;
+                esac
+                echo "| \`${pkg}\` | ${icon} ${status} | $(pct "$stmt") | $(pct "$br") | $(pct "$fn") | $(pct "$ln") |"
+              done <<< "$body"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+          render "Core" "backend/core/"
+          render "Workers" "backend/workers/"
 
   summary:
     name: 📋 CI Summary
@@ -1054,6 +1290,8 @@ jobs:
       - lint-core
       - typecheck-core
       - test-core
+      - test-mdk
+      - coverage-mdk
       - build-core
       - list-workers
       - setup-workers
@@ -1064,6 +1302,7 @@ jobs:
       - list-examples
       - setup-examples
       - test-examples
+      - coverage-summary
     steps:
       - name: Write job summary
         shell: bash
@@ -1093,7 +1332,7 @@ jobs:
             esac
           }
           {
-            echo "## CI Summary (mdk-prv monorepo)"
+            echo "## CI Summary (mdk monorepo)"
             echo ""
             echo "**Selection:** ${REASON} (ui=${RUN_UI} core=${RUN_CORE} workers=${RUN_WORKERS} examples=${RUN_EXAMPLES})"
             echo ""
@@ -1106,7 +1345,7 @@ jobs:
             echo "| 📋 Examples | $(ic "${EX_SETUP}") \`${EX_SETUP}\` (test: $(ic "${EX_TEST}") \`${EX_TEST}\`) | — |"
             echo ""
             echo "### What ran"
-            echo "- Per-package **lockfile consistency** in setup jobs (npm \`package-lock.json\`)"
-            echo "- **One install per package** via cache actions; downstream jobs restore \`node_modules\`"
+            echo "- **Lockfile consistency** in setup jobs (root lock for workspace members, own lock for standalone packages)"
+            echo "- **Workspace-aware install**: members install once at the repo root and share the hoisted \`node_modules\` cache; standalone packages install in place"
             echo "- **PR:** dependency review + per-package npm audits (audit-ci for high/critical)"
           } >> "$GITHUB_STEP_SUMMARY"

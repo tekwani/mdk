@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-worker-avalon",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Miner Avalon",
   "keywords": [
     "tether"
@@ -30,5 +30,8 @@
     "debug": "4.4.1",
     "standard": "17.1.2",
     "yargs": "17.7.2"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }

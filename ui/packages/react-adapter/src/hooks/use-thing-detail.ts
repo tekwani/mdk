@@ -30,6 +30,14 @@ export type UseThingDetailResult = {
  * Op Centre field projection — the data source for the Explorer detail
  * panel and the container Thing-detail view.
  *
+ * @remarks
+ * The `/auth/list-things` endpoint is illustrative. MDK does not ship built-in
+ * endpoints — create your own via a
+ * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) matching
+ * your Worker/business logic. See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference.
+ *
  * @category op-centre
  */
 export const useThingDetail = (

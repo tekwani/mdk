@@ -94,7 +94,10 @@ Pick **microservices** when:
 
 The microservices shape is built on [`backend/core/mdk/worker.js`][worker-entry], a shared process entry compatible with pm2, Docker, or a direct `node worker.js`. It is driven by environment variables (`SERVICE`, and for a Worker `WORKER`/`TYPE`/`RACK`) rather than CLI flags. One `worker.js` runs per service, and the supervisor (pm2 or Docker) owns its lifecycle and resource limits. The [standalone `worker.js` install pattern][install-pattern] defines the per-Worker mechanics.
 
-The single-process and local shapes both call the programmatic APIs (`getKernel`, `startWorker`, `startGateway`) directly. Local mode passes `discovery: { mode: 'local' }` to both `getKernel` and `startWorker` so they coordinate via a shared directory rather than DHT — see [local Worker discovery][worker-discovery-local] for configuration options.
+The single-process and local shapes both call the programmatic APIs directly: `getKernel()` and `startGateway()` from [`@tetherto/mdk`][mdk-readme],
+and each Worker's own boot function (there is no single generic `startWorker`). Local mode passes `discovery: { mode: 'local' }` to `getKernel()` and
+publishes each Worker's RPC key to the same shared directory with `publishWorkerKey()`. The [local Worker discovery][worker-discovery-local] page has
+the configuration options.
 
 ## Relationship to scaling
 
@@ -123,6 +126,9 @@ Topology is orthogonal to scale. [Logical scaling][scaling] is about *how many* 
 
 [worker-entry]: ../../backend/core/mdk/worker.js
 <!-- docs@tether.io: worker-entry → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/worker.js -->
+
+[mdk-readme]: ../../backend/core/mdk/README.md
+<!-- docs@tether.io: mdk-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/README.md -->
 
 [install-pattern]: ../../backend/workers/docs/install-pattern.md#standalone-via-workerjs
 <!-- docs@tether.io: install-pattern → https://github.com/tetherto/mdk/blob/main/backend/workers/docs/install-pattern.md#standalone-via-workerjs -->

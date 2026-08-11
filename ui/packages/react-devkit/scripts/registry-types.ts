@@ -127,6 +127,26 @@ export type ComponentMeta = {
   usageDoc?: string
 }
 
+/** Metadata for a single exported type alias or interface. */
+export type TypeMeta = {
+  name: string
+  path: string
+  /** `type` for type aliases, `interface` for interfaces. */
+  kind: 'type' | 'interface'
+  /** First paragraph of JSDoc; truncated to 200 chars. */
+  description: string
+  /** Full untruncated JSDoc description; only emitted when it differs from `description`. */
+  descriptionFull?: string
+  /** Audience tier; undefined when `@tier` is absent. */
+  tier?: Tier
+  /** Whether this type is part of the public API surface (`tier` ≠ `internal`). */
+  public: boolean
+  /** The type definition body (truncated for large types). */
+  definition: string
+  category?: string
+  domainContext?: DomainContext
+}
+
 /** Metadata for a single exported hook. */
 export type HookMeta = {
   name: string
@@ -158,6 +178,7 @@ export type HookMeta = {
 export type RegistryIndexes = {
   componentsByName: Record<string, number>
   hooksByName: Record<string, number>
+  typesByName: Record<string, number>
   componentsByCategory: Record<string, string[]>
   componentsByDomain: Record<string, string[]>
   componentsByKernelCapability: Record<string, string[]>
@@ -168,6 +189,10 @@ export type RegistryIndexes = {
   hooksByKernelCapability: Record<string, string[]>
   /** Keys are `"true"` and `"false"`. */
   hooksByPublic: Record<string, string[]>
+  typesByCategory: Record<string, string[]>
+  typesByDomain: Record<string, string[]>
+  /** Keys are `"true"` and `"false"`. */
+  typesByPublic: Record<string, string[]>
 }
 
 /** Top-level registry manifest, emitted as `dist/registry.json`. */
@@ -188,17 +213,22 @@ export type RegistryManifest = {
   generatedFrom?: { gitSha: string | null }
   components: ComponentMeta[]
   hooks: HookMeta[]
+  types: TypeMeta[]
   indexes: RegistryIndexes
 }
 
 /**
- * Current registry schema version. Bump on breaking changes.
+ * Current registry schema version. Bump major on breaking changes,
+ * minor on additive changes.
  *
  * 2.0.0 - `orkCapabilities` renamed to `kernelCapabilities` (and the
  * `@orkCapability` JSDoc tag to `@kernelCapability`) as part of the
  * ORK -> Kernel nomenclature shift. Breaking for registry consumers.
+ *
+ * 2.1.0 - Added `types` array and related indexes for TypeScript type
+ * extraction. Additive change; existing consumers can ignore the new field.
  */
-export const REGISTRY_SCHEMA_VERSION = '2.0.0'
+export const REGISTRY_SCHEMA_VERSION = '2.1.0'
 
 // ─── Blueprints ─────────────────────────────────────────────────────────────
 

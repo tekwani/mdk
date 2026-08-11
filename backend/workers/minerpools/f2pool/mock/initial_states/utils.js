@@ -132,9 +132,10 @@ function addNewWorker (workers, newWorker) {
   })
 }
 
-function generateRandomizedDataWorkers () {
+function generateRandomizedDataWorkers (workerCount) {
   const dataWorkers = []
-  for (let i = 0; i < 10; i++) {
+  const count = workerCount != null ? Math.max(workerCount - 1, 0) : 10
+  for (let i = 0; i < count; i++) {
     dataWorkers.push(getRandomWorkerData())
   }
   dataWorkers.push(getWorkerDataWithSameInfo())

@@ -25,9 +25,18 @@ class OceanMinerpoolManager extends MinerpoolManager {
   async fetchStats (time) {
     const stats = []
     for (const username of this.accounts) {
-      const earnings = await this.getEarnings(username)
-      const hashRate = await this.oceanApi.getHashRateInfo(username)
-      const yearlyBalances = await this.getYearlyBalances(username)
+      // Unknown/inactive accounts get an error body (result undefined) —
+      // skip them instead of failing the whole cycle.
+      let earnings, hashRate, yearlyBalances
+      try {
+        earnings = await this.getEarnings(username)
+        hashRate = await this.oceanApi.getHashRateInfo(username)
+        yearlyBalances = await this.getYearlyBalances(username)
+        if (!earnings || !hashRate) throw new Error('ERR_ACCOUNT_DATA_MISSING')
+      } catch (e) {
+        this._logErr(`ERR_STATS_FETCH ${username}`, e)
+        continue
+      }
 
       stats.push({
         username,

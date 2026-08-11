@@ -1,16 +1,14 @@
 # Mock framework (`backend/workers/mock`)
 
-A generic, layered foundation for device mocks, mirroring the Worker-manager hierarchy
-(`ThingManager → MinerManager → WhatsminerManager`). It replaces the copy-pasted per-device
-`mock/server.js` files with a shared base plus composed transports, so a device mock is a few lines
-instead of a ~130-line boilerplate file.
+A generic, layered foundation for device mocks. Provides a shared base plus composed transports, supporting a device mock 
+of just a few lines.
 
 ## Two axes
 
-- **Inheritance (behaviour):** `BaseMock` → `<category>.mock` → `<device>` leaf. The base owns all
+- **Inheritance (behavior):** `BaseMock` → `<category>.mock` → `<device>` leaf. The base owns all
   the boilerplate — the yargs CLI, mock-control-agent wiring, bulk-file expansion, initial-state
   loading, `--type` validation, the `{ state, start, stop, reset, exit }` lifecycle the control
-  plane reads, and the `createServer` entry point. Category and leaf mocks add only behaviour + a
+  plane reads, and the `createServer` entry point. Category and leaf mocks add only behavior + a
   little config.
 - **Composition (the wire):** `createTransport()` returns a transport adapter (`tcp` / `http` /
   `modbus` / `mqtt`). Transport does **not** line up with category — miners span encrypted-TCP +
@@ -36,7 +34,7 @@ by relative path — the same convention the managers already use.
 
 ## Coverage
 
-All 11 device families run on the framework. A category that shares one wire (power meters, pools)
+All the device families run on the framework. A category that shares one wire (power meters, pools)
 pins its transport; one whose vendors disagree (miners, containers) composes per leaf.
 
 | Category (`*.mock.js`) | Transport | Devices |
@@ -57,7 +55,7 @@ npm run mock m56s 14028, s19xp 14029, b23 5071, ocean 8061
 
 bitdeer is an MQTT **client**, so it needs a broker reachable at its `--port` before it will serve.
 
-## Adding a new device
+## Add a new device
 
 A Modbus power meter ("Siemens") is just a leaf — the category already pins the transport:
 

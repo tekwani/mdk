@@ -10,11 +10,20 @@ import { getTableCellAlignClassName } from './data-table-cell-align'
 export type TableBodyProps<I = unknown> = {
   table: Table<I>
   renderExpandedContent?: (row: Row<I>) => ReactNode
+  onRowClick?: (rowData: I) => void
 }
+
+// Clicks that land on an interactive control inside the row (the selection
+// checkbox, expand toggle, a link/button/input, or anything opting out with
+// `data-no-row-click`) must not trigger the row-level navigation.
+const isInteractiveTarget = (target: EventTarget | null): boolean =>
+  target instanceof Element &&
+  target.closest('button, a, input, label, [role="checkbox"], [data-no-row-click]') !== null
 
 export const TableBody = <I = unknown,>({
   table,
   renderExpandedContent,
+  onRowClick,
 }: TableBodyProps<I>): JSX.Element => (
   <tbody>
     {table.getRowModel().rows.map((row) => (
@@ -22,6 +31,21 @@ export const TableBody = <I = unknown,>({
         <tr
           className={cn('mdk-table__body-row', {
             'mdk-table__body-row--selected': row.getIsSelected(),
+            'mdk-table__body-row--clickable': Boolean(onRowClick),
+          })}
+          {...(onRowClick && {
+            role: 'button',
+            tabIndex: 0,
+            onClick: (event) => {
+              if (isInteractiveTarget(event.target)) return
+              onRowClick(row.original)
+            },
+            onKeyDown: (event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return
+              if (isInteractiveTarget(event.target)) return
+              event.preventDefault()
+              onRowClick(row.original)
+            },
           })}
         >
           {row.getVisibleCells().map((cell) => {

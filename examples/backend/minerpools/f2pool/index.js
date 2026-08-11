@@ -4,11 +4,8 @@ const os = require('os')
 const fs = require('fs')
 const path = require('path')
 
-// This example lives under examples/backend/minerpools/f2pool/, so the repo root
-// is four levels up. Everything is required from backend/ — the canonical source tree.
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..')
-const { createServer } = require(path.join(REPO_ROOT, 'backend', 'workers', 'minerpools', 'f2pool', 'mock', 'server'))
-const { F2_POOL } = require(path.join(REPO_ROOT, 'backend', 'workers', 'minerpools', 'f2pool'))
+const { createServer } = require('@tetherto/mdk-worker-f2pool/mock/server')
+const { F2_POOL } = require('@tetherto/mdk-worker-f2pool')
 
 const HOST = '127.0.0.1'
 const PORT = 5063

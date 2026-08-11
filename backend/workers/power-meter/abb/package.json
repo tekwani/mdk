@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-worker-abb",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "PowerMeter ABB",
   "keywords": [
     "tether"
@@ -31,5 +31,8 @@
     "standard": "17.1.2",
     "uuid": "14.0.0",
     "yargs": "17.7.2"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }

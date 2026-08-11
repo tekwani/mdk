@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { NotFoundPage as NotFoundPageComponent } from '@tetherto/mdk-react-devkit/primitives'
 
 import type { JSX } from 'react'

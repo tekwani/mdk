@@ -1,7 +1,7 @@
 # MDK Schneider Power Meter Example
 
 A small, self-contained **Schneider PM5340** power-meter example you can clone and run with **no real
-hardware**. It starts a mock Schneider meter, brings up an Kernel, registers the meter as a thing, and
+hardware**. It starts a mock Schneider meter, brings up a Kernel, registers the meter as a thing, and
 stays running. It prints a ready-to-paste `hp-rpc-cli` command for pulling the meter's live telemetry
 over HRPC.
 
@@ -10,7 +10,7 @@ the Schneider counterpart of [`examples/backend/miners/antminer`](../../miners/a
 
 ## What it demonstrates
 
-- Bringing up an Kernel and one Schneider power-meter Worker in a single process.
+- Bringing up a Kernel and one Schneider power-meter Worker in a single process.
 - Starting a **mock** Schneider meter (Modbus TCP) and **registering** it as a thing.
 - Pulling live telemetry (voltage, current, power) through the Kernel over HRPC — no hardware.
 
@@ -45,8 +45,8 @@ other actions, and troubleshooting.
 `index.js`:
 
 1. Starts the mock Schneider meter (`backend/workers/power-meter/schneider/mock/server`).
-2. Brings up an Kernel (HRPC only) pinned to its own store root (`$TMPDIR/mdk-site-schneider/kernel/`).
-3. `startWorker(SCHNEIDER_PM5340, { kernel })` and `manager.registerThing({ info, opts })`.
+2. Brings up a Kernel (HRPC only) pinned to its own store root (`$TMPDIR/mdk-site-schneider/kernel/`).
+3. `startSchneiderWorker({ workerId, storeDir, seedDevices })`, then `kernel.registerWorker(worker.runtime.getPublicKey())`.
 4. Prints an `hp-rpc-cli` command and stays running until `Ctrl+C`, which tears down the Worker and
    Kernel (the mock exits with the process).
 
@@ -81,4 +81,3 @@ $TMPDIR/mdk-site-schneider/kernel/    # Kernel Corestore
 | Path | Purpose |
 |---|---|
 | [`backend/workers/power-meter/schneider`](../../../../backend/workers/power-meter/schneider/README.md) | Schneider `SCHNEIDER_PM5340` / `SCHNEIDER_P3U30` managers, mock server, `mdk-contract.json`. |
-| [`examples/backend/powermeters/mdk.client.powermeter.js`](../mdk.client.powermeter.js) | The minimal single-file power-meter example (ABB B23). |

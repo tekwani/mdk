@@ -46,11 +46,11 @@ describe('HeaderEfficiencyBox', () => {
 })
 
 describe('HeaderHashrateBox', () => {
-  it('renders both MOS and Pool rows with formatted values', () => {
-    render(<HeaderHashrateBox mosPhs={12.345} poolPhs={11.111} />)
+  it('renders both app and Pool rows with formatted values', () => {
+    render(<HeaderHashrateBox appPhs={12.345} poolPhs={11.111} />)
     expect(screen.getByText('12.345')).toBeInTheDocument()
     expect(screen.getByText('11.111')).toBeInTheDocument()
-    expect(screen.getByText('MOS')).toBeInTheDocument()
+    expect(screen.getByText('APP')).toBeInTheDocument()
     expect(screen.getByText('Pool')).toBeInTheDocument()
     expect(screen.getAllByText('PH/s')).toHaveLength(2)
   })
@@ -65,7 +65,7 @@ describe('HeaderHashrateBox', () => {
       <HeaderHashrateBox
         icon={<span data-testid="hr-icon" />}
         unit="TH/s"
-        mosPhs={1}
+        appPhs={1}
         poolPhs={2}
       />,
     )
@@ -78,7 +78,7 @@ describe('HeaderMinersBox', () => {
   it('renders all numeric fields when provided', () => {
     render(
       <HeaderMinersBox
-        mosTotal={2188}
+        appTotal={2188}
         total={2188}
         online={158}
         error={12}
@@ -88,7 +88,7 @@ describe('HeaderMinersBox', () => {
         poolMismatch={4}
       />,
     )
-    expect(screen.getByText('MOS (2,188)')).toBeInTheDocument()
+    expect(screen.getByText('APP (2,188)')).toBeInTheDocument()
     expect(screen.getByText('Pool (2,200)')).toBeInTheDocument()
     expect(screen.getAllByText('158')).toHaveLength(2)
     expect(screen.getByText('12')).toBeInTheDocument()
@@ -101,7 +101,7 @@ describe('HeaderMinersBox', () => {
     const { container } = render(<HeaderMinersBox />)
     expect(container.querySelectorAll('.mdk-header-stat-box__success').length).toBeGreaterThan(0)
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(6)
-    expect(screen.getByText('MOS (—)')).toBeInTheDocument()
+    expect(screen.getByText('APP (—)')).toBeInTheDocument()
     expect(screen.getByText('Pool (—)')).toBeInTheDocument()
   })
 

@@ -15,12 +15,12 @@ export const HeaderStatsExample = (): React.ReactNode => (
       online={158}
       error={1}
       offline={57}
-      mosTotal={216}
+      appTotal={216}
       poolTotal={205}
       poolOnline={201}
       poolMismatch={4}
     />
-    <HeaderHashrateBox mosPhs={63.262} poolPhs={52.687} />
+    <HeaderHashrateBox appPhs={63.262} poolPhs={52.687} />
     <HeaderConsumptionBox valueMw={1.663} />
     <HeaderEfficiencyBox valueWthS={26.29} />
   </HeaderStatsBar>

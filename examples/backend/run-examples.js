@@ -47,22 +47,10 @@ const EXAMPLES = [
   // ── Auto-exit: pass if process exits with code 0 ─────────────────────────
 
   {
-    script: 'mdk-e2e/run.js',
-    description: 'E2E single-process automated test (worker + Kernel + HRPC queries)',
-    mode: 'auto',
-    timeout: 60000
-  },
-  {
     script: 'mdk-plugin-e2e/run.js',
     description: 'Plugin-authoring E2E (WorkerRuntime + worker plugin on mock devices + fleet-summary gateway plugin)',
     mode: 'auto',
     timeout: 90000
-  },
-  {
-    script: 'minerpools/mdk.client.ocean.js',
-    description: 'Ocean pool standalone (mock API fetch)',
-    mode: 'auto',
-    timeout: 20000
   },
   {
     script: 'minerpools/f2pool/index.js',
@@ -80,22 +68,15 @@ const EXAMPLES = [
   // ── Server: long-running; pass when successMarker appears, then SIGTERM ──
 
   {
-    script: 'miners/mdk.client.miner.js',
+    script: 'miners/whatsminer/index.js',
     description: 'Whatsminer M56S worker + Kernel (port 14028)',
     mode: 'server',
     successMarker: 'Ctrl+C to stop',
     timeout: 60000
   },
   {
-    script: 'containers/mdk.client.container.js',
+    script: 'containers/antspace/index.js',
     description: 'Antspace HK3 container worker + Kernel (port 8000)',
-    mode: 'server',
-    successMarker: 'Ctrl+C to stop',
-    timeout: 60000
-  },
-  {
-    script: 'powermeters/mdk.client.powermeter.js',
-    description: 'ABB B23 power meter worker + Kernel (port 5020)',
     mode: 'server',
     successMarker: 'Ctrl+C to stop',
     timeout: 60000
@@ -117,13 +98,6 @@ const EXAMPLES = [
   {
     script: 'powermeters/schneider/index.js',
     description: 'Schneider PM5340 power meter example: Kernel + Schneider worker (standalone, port 5062)',
-    mode: 'server',
-    successMarker: 'Ctrl+C to stop',
-    timeout: 60000
-  },
-  {
-    script: 'sensors/mdk.client.sensor.js',
-    description: 'Seneca temperature sensor worker + Kernel (port 5030)',
     mode: 'server',
     successMarker: 'Ctrl+C to stop',
     timeout: 60000
@@ -171,20 +145,6 @@ const EXAMPLES = [
     timeout: 60000
   },
   {
-    script: 'mdk-e2e/server.js',
-    description: 'E2E interactive server (Kernel + mock miner, stays running)',
-    mode: 'server',
-    successMarker: 'Ctrl+C to stop',
-    timeout: 60000
-  },
-  {
-    script: 'mdk-site/site.js',
-    description: 'Full site: 5 workers, 26 devices (takes ~60 s)',
-    mode: 'server',
-    successMarker: 'Ctrl+C to stop',
-    timeout: 180000
-  },
-  {
     script: 'miners/antminer/index.js',
     description: 'Antminer site: Kernel + gateway + 4 Antminer workers (S19XP/S19XPH/S21/S21PRO)',
     mode: 'server',
@@ -204,40 +164,6 @@ const EXAMPLES = [
     mode: 'server',
     successMarker: 'Ctrl+C to stop',
     timeout: 90000
-  },
-
-  // ── Skipped ───────────────────────────────────────────────────────────────
-
-  {
-    script: 'mdk-e2e/dht-worker.js',
-    description: 'DHT worker (part of 3-process DHT demo)',
-    mode: 'skip',
-    reason: 'requires coordinated 3-process DHT setup'
-  },
-  {
-    script: 'mdk-e2e/dht-kernel.js',
-    description: 'DHT Kernel (part of 3-process DHT demo)',
-    mode: 'skip',
-    reason: 'requires coordinated 3-process DHT setup'
-  },
-  {
-    script: 'mdk-e2e/client.js',
-    description: 'Interactive HRPC client (REPL)',
-    mode: 'skip',
-    reason: 'requires a running Kernel key file'
-  },
-  {
-    script: 'mdk-e2e/http.js',
-    description: 'HTTP bridge for Kernel',
-    mode: 'skip',
-    reason: 'requires server.js to be running first'
-  },
-  {
-    script: 'site-single-process/index.js',
-    description: 'Single-process site (config-driven)',
-    mode: 'server',
-    timeout: 120000,
-    successMarker: 'All services started'
   }
 ]
 
@@ -350,19 +276,31 @@ function formatDuration (ms) {
 // ── Prerequisites check ───────────────────────────────────────────────────────
 
 function checkPrereqs () {
-  const { existsSync } = require('fs')
+  // backend/core/kernel and backend/workers/miners/whatsminer are npm
+  // workspace members, so their deps are hoisted into the repo-root
+  // node_modules instead of a per-package node_modules dir — check
+  // resolvability, not directory existence.
   const checks = [
     {
-      path: path.join(REPO_ROOT, 'backend/core/kernel/node_modules'),
+      module: 'hyperdht',
+      fromDir: path.join(REPO_ROOT, 'backend/core/kernel'),
       hint: 'npm --prefix backend/core run install:packages'
     },
     {
-      path: path.join(REPO_ROOT, 'backend/workers/miners/whatsminer/node_modules'),
+      module: 'crypto-js',
+      fromDir: path.join(REPO_ROOT, 'backend/workers/miners/whatsminer'),
       hint: 'npm --prefix backend/workers run install:packages'
     }
   ]
 
-  const missing = checks.filter(c => !existsSync(c.path))
+  const missing = checks.filter(c => {
+    try {
+      require.resolve(c.module, { paths: [c.fromDir] })
+      return false
+    } catch {
+      return true
+    }
+  })
   if (missing.length === 0) return
 
   console.error(`\n${C.red}${C.bold}  Missing dependencies — run first:${C.reset}`)

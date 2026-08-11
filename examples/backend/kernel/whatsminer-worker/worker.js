@@ -21,8 +21,8 @@
  */
 
 const contract = require('./mdk-contract.json')
-const { ACTIONS } = require('../../../../backend/core/kernel/lib/protocol/actions')
-const { buildResponse } = require('../../../../backend/core/kernel/lib/protocol/envelope')
+const { ACTIONS } = require('@tetherto/mdk-kernel/lib/protocol/actions')
+const { buildResponse } = require('@tetherto/mdk-kernel/lib/protocol/envelope')
 
 // ─── Simulated Internal Services (mirrors ThingManager services) ─────
 

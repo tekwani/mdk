@@ -7,10 +7,9 @@ export const MINER_POWER_MODES: Record<MinerFamily, readonly string[]> = {
   avalon: ["normal", "high"],
 };
 
-export const MHS_PER_PHS = 1e9; // MH/s per PH/s
-export const HS_PER_THS = 1e12; // H/s per TH/s (pool reports hashrate in H/s)
-export const HS_PER_PHS = 1e15; // H/s per PH/s (site hashrate history is in H/s)
-export const W_PER_MW = 1e6; // W per MW
+export const MHS_PER_THS = 1e6; // MH/s per TH/s
+export const HS_PER_THS = 1e12; // H/s per TH/s (pool and site hashrate history are in H/s)
+export const W_PER_KW = 1e3; // W per kW
 
 // Nominal (installed) hashrate per miner, used to draw the "Nominal Hash Rate"
 // reference line on the dashboard. ~450 TH/s ≈ a modern air-cooled unit.

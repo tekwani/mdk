@@ -5,6 +5,11 @@
 **Date:** 2026-06-29
 **Companion plan:** [`pool-management-page.md`](./pool-management-page.md) (same shape, prior page)
 
+> [!NOTE]
+> Incompatible from 0.6.0: this plan's tooling references (`apps/mdk-ui-shell`,
+> `templates/mdk-ui-shell/`, `generate:shell`) were removed. The shell is now
+> `examples/mdk-ui-shell-template`; pages are added via `mdk-ui add page`, not regeneration.
+
 ---
 
 ## 1. Goal

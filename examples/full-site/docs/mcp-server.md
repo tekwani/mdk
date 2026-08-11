@@ -1,8 +1,15 @@
-# MDK MCP server
+  # MDK MCP server
 
 The full-site example ships an MCP server component that connects directly to the Kernel
 via HRPC and exposes the site's device registry, telemetry, and command dispatch as MCP
 tools. AI agents connect to it over HTTP; the service does not require the Gateway.
+
+> [!NOTE]
+> This is a purpose-built implementation for this example, not the shared
+> [`@tetherto/mdk-mcp`](../../../backend/core/mcp/README.md) package — the tools and behavior described below are
+> specific to `full-site`. For the shared package's own API (`createMcpServer`, plugin-based tools), see its
+> [README](../../../backend/core/mcp/README.md); [`examples/mvp-site`](../../mvp-site/README.md) is the runnable
+> example that uses it.
 
 ## Contents
 
@@ -17,15 +24,73 @@ tools. AI agents connect to it over HTTP; the service does not require the Gatew
 
 ## Tools
 
+The server exposes two sets of tools over the same endpoint.
+
+### Agent-facing tools
+
+These satisfy the agent tool authoring contract: each is named
+`<verb>_<entity>`, takes only closed enums and device references, and returns a `summary` line
+alongside its data. They declare routing metadata in `_meta["x-mdk-agent"]`, so an MDK agent
+admits them and shows them to its model.
+
+| Tool | Type | Description |
+|---|---|---|
+| `summarize_site` | read | Worker and device totals by family and state, naming anything offline |
+| `count_devices` | read | How many devices match a family and state |
+| `list_devices` | read | Which devices match a family and state, named individually |
+| `get_device` | read | One attribute of one device — telemetry, state, capabilities or power modes |
+| `rank_devices` | read | Devices of a family ordered by a metric, highest or lowest first |
+| `act_device` | **write** | Perform an action on a device. An agent gates this on operator approval |
+
+### Direct-access tools
+
+The original tools, for consumers that want the raw payloads. They carry no agent metadata, so
+an MDK agent withholds them from its model rather than letting it read an unaggregated dump.
+
+> **Breaking change:** `list_devices` already carried a contract-shaped name, so rather than
+> registering a second tool under it, it moved into the agent set above. Its parameters changed
+> from `type`/`status` to `family`/`state`, `ready`/`notready` became `online`/`offline`, and its
+> rows no longer carry `type` or `workerState`. Direct callers of `list_devices` must update.
+> Every other tool in this table is unchanged.
+
 | Tool | Type | Description |
 |---|---|---|
 | `get_status` | read | All registered Workers — state, health, device count, RPC key |
+| `get_site_overview` | read | Site-wide inventory totals |
 | `get_capabilities` | read | Command schema for a device (what `send_command` accepts) |
 | `pull_telemetry` | read | Latest telemetry metrics from a device |
 | `pull_state` | read | Current state snapshot (live readings, config) from a device |
+| `get_supported_power_modes` | read | Power modes a device can be switched to |
 | `send_command` | **write** | Dispatch a command to a device via the Kernel |
 
 ### Tool parameters
+
+**`count_devices`, `list_devices`**
+```
+family  enum  optional — miner | container | powermeter | sensor | pool | all, default "all"
+state   enum  optional — all | online | offline, default "all"
+```
+
+**`get_device`**
+```
+ref     string  required — a device id
+attr    enum    optional — telemetry | state | capabilities | power_modes, default "telemetry"
+```
+
+**`rank_devices`**
+```
+family  enum     optional — as above, default "all"
+metric  enum     optional — hashrate | power | temperature | efficiency | uptime, default "power"
+order   enum     optional — desc | asc, default "desc"
+limit   integer  optional — 1..50, default 5
+```
+
+**`act_device`**
+```
+ref     string  required — a device id
+action  enum    required — reboot | set_power_mode
+mode    enum    optional — low | normal | high | sleep, default "normal" (set_power_mode only)
+```
 
 **`get_capabilities`**
 ```
@@ -151,7 +216,12 @@ mdk> stop mcp-server
 
 ### Port
 
-Default port is `3008`. Override before launching the CLI:
+Default port is `3008`. If that port is already taken, the server walks upward
+(`3009`, `3010`, …) until it finds one free, so a stale process or another
+service on `3008` won't block startup. Check `logs mcp-server` (or the
+`MDK_READY mcp-server port=…` line) for the port actually bound.
+
+Override the starting port before launching the CLI:
 
 ```
 MDK_MCP_PORT=4000 node cli.js
@@ -335,6 +405,6 @@ exercise the tools:
 ## Links
 
 [full-site]: ../README.md
-[minimal-dashboard]: ../../../docs/tutorials/quickstart/build-a-dashboard.md
+[minimal-dashboard]: ../../../docs/tutorials/build-a-dashboard.md
 [ai-agents-concept]: ../../../docs/concepts/architecture.md#ai-agents-and-the-mcp-server
 [gateway-plugins]: ../../../docs/guides/gateway/plugins.md

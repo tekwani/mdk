@@ -83,5 +83,5 @@ straight through.
 Site Detail is a transient view opened by clicking a Sites Overview card. Capture
 the selected unit id via `onSiteSelect`, then pass `siteDetailDataOptions`
 (e.g. the miners assigned to that container) and `isSiteDetailLoading` so the
-view shows live data. See `templates/mdk-ui-shell/src/pages/PoolManager.tsx` for
+view shows live data. See `examples/mdk-ui-shell-template/_managed/pages/PoolManager.tsx` for
 a complete example.

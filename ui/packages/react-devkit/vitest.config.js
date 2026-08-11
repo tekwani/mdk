@@ -3,8 +3,8 @@ import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 const alias = {
-  '@domain': resolve(__dirname, './src/domain'),
-  '@primitives': resolve(__dirname, './src/primitives'),
+  '@domain': resolve(import.meta.dirname, './src/domain'),
+  '@primitives': resolve(import.meta.dirname, './src/primitives'),
 }
 
 const define = {

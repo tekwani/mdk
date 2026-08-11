@@ -1,0 +1,34 @@
+{
+  "name": "@tetherto/mdk-mvp-site",
+  "version": "0.6.0",
+  "description": "MDK MVP Site",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "setup": "npm run setup:config && npm --prefix ../.. run setup && npm --prefix ../.. run build:ui && npm --prefix ../.. install && npm --prefix ui install && npm --prefix ui run build",
+    "setup:example": "npm run setup:config && npm install && npm --prefix ../.. run build:ui && npm --prefix ui install && npm --prefix ui run build",
+    "setup:config": "node deploy/setup-config.js",
+    "build:ui": "npm --prefix ui run build",
+    "dev:ui": "VITE_API_PORT=3000 npm --prefix ui run dev",
+    "start": "node start.js",
+    "stop:pm2": "pm2 delete deploy/ecosystem.config.js",
+    "lint": "standard",
+    "test:unit": "NODE_ENV=test brittle tests/unit/*.test.js",
+    "test": "npm run test:unit"
+  },
+  "dependencies": {
+    "@tetherto/mdk-client": "^0.6.0",
+    "@tetherto/mdk-core": "^0.6.0",
+    "@tetherto/mdk-mcp": "^0.6.0",
+    "@tetherto/mdk-worker-ocean": "^0.6.0",
+    "@tetherto/mdk-worker-satec": "^0.6.0",
+    "@tetherto/mdk-worker-whatsminer": "^0.6.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "brittle": "3.18.0",
+    "standard": "17.1.0"
+  }
+}

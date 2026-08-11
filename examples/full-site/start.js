@@ -76,7 +76,6 @@ async function main () {
 
   const gateway = await startGateway({
     kernel,
-    noAuth: true,
     kernelKey,
     extraPluginDirs: [
       path.join(__dirname, 'plugins', 'site')

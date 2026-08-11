@@ -20,11 +20,6 @@ export default antfu(
       // dependency tree (fumadocs, @/ alias), not resolvable here. They ship
       // verbatim and are installed into the docs repo by `mdk-ui docs:build`.
       'packages/cli/templates-docs/**',
-      // mdk-ui-shell is a scaffold-shaped app: it owns its own eslint
-      // config (PascalCase filenames, looser typed-lint scope) so the
-      // monorepo-wide rules don't apply here. Lint via
-      // `npm run lint --workspace @tetherto/mdk-ui-shell`.
-      'apps/mdk-ui-shell/**',
     ],
   },
   // ── Cross-boundary import guard ──────────────────────────────────────────

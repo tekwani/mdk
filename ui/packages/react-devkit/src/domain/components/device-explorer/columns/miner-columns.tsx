@@ -344,7 +344,9 @@ export const getMinerColumns = ({
         '-'
       ) : (
         <div className="mdk-device-explorer__table__cell--type-hash-rate">
-          <SimpleTooltip content="Pool Hashrate">{stats?.poolHashrate}</SimpleTooltip>
+          <SimpleTooltip content="Pool Hashrate">
+            <span>{stats?.poolHashrate}</span>
+          </SimpleTooltip>
         </div>
       )
 

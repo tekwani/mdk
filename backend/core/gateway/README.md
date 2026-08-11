@@ -6,9 +6,11 @@ The Gateway is where your business logic is defined and you can extend the logic
 that connects to the Kernel over HRPC, sends typed queries and receives aggregated responses. You decide what happens to your telemetry data.
 
 [Gateway](../../../docs/concepts/stack/gateway.md), `@tetherto/mdk-gateway`, wraps [`@tetherto/mdk-client`](../client/README.md)
-and delivers an authenticated HTTP, WebSocket, and MCP interface for consumers that need those capabilities.
-It handles authentication, RBAC, fleet aggregation, and MCP endpoint exposure on top of the [Kernel](../kernel/README.md).
-For use cases that do not need the Gateway's HTTP surface, RBAC, or plugin system, see
+and delivers an HTTP interface for consumers that need those capabilities. It handles plugin-declared routing and fleet aggregation
+on top of the [Kernel](../kernel/README.md). Agents can reach MDK over MCP through the standalone [`@tetherto/mdk-mcp`](../mcp/README.md) package.
+
+Authentication is not among its responsibilities, as the [security model](#security-model) sets out.
+For use cases that do not need the Gateway's HTTP surface or plugin system, see
 [Connect without the Gateway](../../../docs/concepts/stack/gateway.md#connect-without-the-gateway).
 
 > [!TIP] 
@@ -16,41 +18,32 @@ For use cases that do not need the Gateway's HTTP surface, RBAC, or plugin syste
 > Ready to run it? Follow the [run guide](../../../docs/guides/gateway/run.md).
 
 > [!NOTE]
-> The Gateway connects to Kernel via [`@tetherto/mdk-client`](../client/README.md). While
-> `startGateway()` currently accepts one Kernel endpoint — `kernel`, `kernelKey`, or a key file,
-> multi-site aggregation (a single Gateway fronting several per-site Kernel kernels via `mdk-client`) is
-> on the roadmap.
+> `startGateway()`, used throughout this page, is exported by [`@tetherto/mdk`](../mdk/README.md), not by this
+> `@tetherto/mdk-gateway` package — it's the bootstrap function that boots this Gateway worker. The Gateway connects
+> to Kernel via [`@tetherto/mdk-client`](../client/README.md). While `startGateway()` currently accepts one Kernel
+> endpoint: `kernel`, `kernelKey`, or a key file, multi-site aggregation (a single Gateway fronting several per-site
+> Kernel kernels via `mdk-client`) is on the roadmap.
 
 ## HTTP API overview
 
-The Gateway exposes two categories of REST routes:
+The Gateway declares no application routes of its own. Every REST route it serves comes from one of three places, all wired in
+[`http.node.wrk.js`](workers/http.node.wrk.js):
 
-**Core Kernel-proxy routes** — hardcoded in `workers/lib/server/routes/`, always present:
+| Source | How it arrives |
+|--------|----------------|
+| Plugins | `telemetry`, `site-hashrate`, and `site-monitor` are registered at startup; your own follow via `extraPluginDirs` |
+| [`additionalRoutes`](#raw-fastify-routes) | Raw Fastify route objects you pass to `startGateway()` |
+| `GET /echo` | A debug route contributed by the httpd facility's `addDefaultRoutes` |
 
-| Category | Endpoints |
-|----------|-----------|
-| Workers | List workers, get worker state |
-| Devices | List devices, get telemetry, pull metrics, get capabilities |
-| Commands | Send command, get command status |
-| Logs | Tail logs, fetch historical logs |
-| Settings | Get/set worker settings, device config |
-| Comments | Add, edit, delete device comments |
-| Stats | Aggregated site statistics |
-| Health | Worker health status |
+Which paths that adds up to is a property of the manifests, not of the Gateway. The
+[plugin route reference](../plugins/README.md#default-plugins) lists every route the registered plugins serve, generated from their
+`mdk-plugin.json` files so it cannot drift.
 
-**Plugin routes** — loaded through the plugin system, extendable via `extraPluginDirs`:
+## Live data
 
-| Plugin | Routes |
-|--------|--------|
-| `auth` | `/auth/userinfo`, `/auth/token`, `/auth/permissions`, `/auth/ext-data` |
-| `telemetry` | `/auth/metrics/*` (hashrate, consumption, efficiency, temperature, containers) |
-| `site-hashrate` | `/api/site/hashrate-history` |
-
-The [plugin reference](../plugins/README.md) lists every default route, its method, auth requirement, and parameters.
-
-## WebSocket subscriptions
-
-Connect to `ws://localhost:3000/ws` for real-time telemetry subscriptions. Authentication is required in production mode.
+The Gateway has no push channel — clients poll its HTTP routes for updates. The
+[React adapter](../../../ui/packages/react-adapter/README.md) does this on fixed cadences for its hooks (for example, `useThingDetail`
+polls every 20 seconds, `useExplorerList` every 60).
 
 ## Configuration
 
@@ -59,12 +52,14 @@ Edit the generated files to persist your changes across restarts.
 
 | File | Controls |
 |------|---------|
-| `auth.config.json` | JWT secret, session settings |
 | `httpd.config.json` | Fastify HTTP server options |
-| `httpd-oauth2.config.json` | OAuth2 providers (Google, Microsoft) |
 | `store.config.json` | SQLite and Hyperbee storage paths |
 | `net.config.json` | IP assignment (DHCP facility) |
 | `logging.config.json` | Log level, format |
+
+> [!NOTE]
+> No config file here controls [authentication](../../../docs/guides/gateway/plugins.md#auth-and-permissions), because the Gateway performs none. 
+> Callers must be validated by your own identity layer, invoked from the controllers that need it.
 
 ## Kernel connection
 
@@ -77,10 +72,10 @@ The Gateway dials Kernel over HRPC (`@hyperswarm/rpc`) using the Kernel's listen
 3. Key file — `keyFile` (default: `DEFAULT_KEY_FILE`, i.e. `os.tmpdir()/mdk/.kernel-key`), which `getKernel()` publishes on start.
 4. If none resolves, `startGateway()` throws `ERR_KERNEL_KEY_FILE_NOT_FOUND`.
 
-**Zero-config (same host, default)** — start the Kernel with `getKernel()`, then `startGateway()` with no endpoint options: the
+**Zero-config (same host, default)**: Start the Kernel with `getKernel()`, then `startGateway()` with no endpoint options: the
 Gateway picks the key up from the key file automatically.
 
-**Cross-host** — obtain the Kernel listener key with `kernel.getPublicKey().toString('hex')` on the host running Kernel, then pass
+**Cross-host**: Obtain the Kernel listener key with `kernel.getPublicKey().toString('hex')` on the host running Kernel, then pass
 it on the Gateway host:
 
 ```js
@@ -99,14 +94,17 @@ public key must be added before the connection is accepted — see [Kernel trans
 
 ## Security model
 
-- UI and AI agents authenticate via **JWT Bearer tokens**
+- **No built-in user authentication**: the Gateway serves the routes its plugins declare to any caller. Validating callers is work each controller
+  does for itself, using an identity layer you supply
+  ([auth and permissions](../../../docs/guides/gateway/plugins.md#auth-and-permissions))
 - **Kernel connection security**: the HRPC connection is an encrypted Noise channel. Kernel maintains an HRPC firewall; when
   `auth.whitelist` is configured, the Gateway's DHT public key must be in Kernel's `auth.whitelist` (pre v1.0 the default is an
-  empty allowlist — any caller is admitted).
+  empty allowlist, so any caller is admitted).
   See [Kernel Transport](../kernel/README.md#transports) and the [`auth-whitelist` example](../../../examples/backend/kernel/auth-whitelist.js)
-  for the key exchange pattern.
-- Once connected, Kernel trusts all messages from the Gateway implicitly; user-level auth is the Gateway's responsibility
-- AI agents are treated as authenticated clients, going through the same JWT/RBAC path as human API consumers
+  for the key exchange pattern
+- Once connected, Kernel trusts all messages from the Gateway implicitly, apart from the device-family write permissions it requires in the
+  `authPerms` array accompanying each write action
+- Human and AI callers reach the same routes on the same terms, since the Gateway distinguishes neither
 
 ## Extend the Gateway
 
@@ -124,7 +122,7 @@ await startGateway({
 ```
 
 Plugins receive `(req, services)` in every controller, where `services.mdkClient` and `services.dataProxy` give access to Kernel
-and historical data without any protocol knowledge. The default plugins (`auth`, `telemetry`, `site-hashrate`) are loaded the same way.
+and historical data without any protocol knowledge. The default plugins (`telemetry`, `site-hashrate`, `site-monitor`) are loaded the same way.
 
 The [plugin authoring guide](../../../docs/guides/gateway/plugins.md) and the [plugin reference](../plugins/README.md) cover the full 
 manifest schema, controller contract, services bag, and loader errors.
@@ -146,7 +144,8 @@ await startGateway({
 })
 ```
 
-These are registered as plain Fastify routes — no `services` injection, no manifest validation, no auth wiring.
+These are registered as plain Fastify routes: no `services` injection and no manifest validation. Unlike a plugin controller, the handler
+receives the Fastify `reply`, so this is the way to control status codes.
 
 ## Directory layout
 
@@ -156,19 +155,18 @@ gateway/
 │   ├── http.node.wrk.js          # WrkServerHttp — Fastify worker, mounts plugins and routes
 │   └── lib/
 │       ├── plugin-loader.js      # Loads mdk-plugin.json manifests, validates structure
-│       ├── plugin-adapter.js     # Converts plugin routes to Fastify handlers, wires auth/cache
-│       ├── auth.js               # JWT validation, OAuth2 callbacks
+│       ├── plugin-adapter.js     # Converts plugin routes to Fastify handlers, applies caching
 │       ├── data.proxy.js         # Historical data aggregation via worker tail-logs
-│       └── server/               # Raw Fastify route definitions (non-plugin routes)
+│       ├── constants.js
+│       ├── utils.js
+│       └── server/lib/           # cachedRoute.js and send200.js, used by the adapter
 ├── config/
 │   └── facs/                     # Example config files (*.json.example)
 ├── db/                           # SQLite database files
-├── store/                        # Hyperbee storage
 └── tests/
-    ├── unit/
+    ├── unit/lib/                 # One suite per lib module
     └── integration/
-        ├── api.test.js           # HTTP route tests
-        └── ws.test.js            # WebSocket tests
+        └── api.test.js           # HTTP route tests
 ```
 
 ## Next steps

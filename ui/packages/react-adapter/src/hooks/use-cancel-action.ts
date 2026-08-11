@@ -25,6 +25,14 @@ export type UseCancelActionResult = {
  * Cancels pending actions via `DELETE /auth/actions/:type/cancel?ids=…`.
  * Invalidates the pool/miner/actions caches on success. Gated by `actions:w`.
  *
+ * @remarks
+ * The `/auth/actions/*` endpoint is illustrative. MDK does not ship built-in
+ * endpoints — create your own via a
+ * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) matching
+ * your Worker/business logic. See the
+ * [full-site example](https://github.com/tetherto/mdk/tree/main/examples/full-site/plugins/site)
+ * for a working reference.
+ *
  * @category dashboard
  */
 export const useCancelAction = (): UseCancelActionResult => {
