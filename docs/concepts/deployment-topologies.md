@@ -114,7 +114,7 @@ Topology is orthogonal to scale. [Logical scaling][scaling] is about *how many* 
 [architecture]: architecture.md
 <!-- docs@tether.io: architecture → concepts/architecture -->
 
-[architecture-workers]: architecture.md#workers
+[architecture-workers]: architecture.md#the-three-tiers
 <!-- docs@tether.io: architecture-workers → concepts/architecture#workers -->
 
 [gateway-kernel-connection]: ../../backend/core/gateway/README.md#kernel-connection

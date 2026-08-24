@@ -123,7 +123,7 @@ One linkinator quirk worth knowing when reading reports: a **valid** fragment is
 - If the PR changes the config or either checker script ([`scripts/link-check.mjs`](../../../scripts/link-check.mjs), [`scripts/check-directory-links.mjs`](../../../scripts/check-directory-links.mjs)) or the workflow itself, it falls back to a **full** `npm run link-check` sweep (no file-list argument), since a weakened skip rule or a change to how either check works can expose breakage outside the diff.
 - **Known gap:** the linkinator half of the diff gate only validates links *originating from* changed files. A PR that renames a heading breaks inbound `#anchor` references in *other* (unchanged) files, which this job won't see — the nightly full sweep is the backstop for that. Treat the PR gate as a fast first line, not a replacement for the nightly.
 
-## Nightly example-path verification
+## 🚧 Nightly example-path verification (CI wiring not yet implemented)
 
 To hand run ahead of the nightly, from the repo root:
 
@@ -144,7 +144,7 @@ This wraps [`scripts/check-example-paths.mjs`](../../../scripts/check-example-pa
 - `_skip_notes` — mandatory sibling object, one entry per `skipFiles`/`skipPaths` pattern, explaining why. The checker refuses to run if any skip entry lacks a note. An unexplained skip is a silent false negative waiting to happen — the same lesson the linkinator skip list already enforces by convention; here it's enforced by the script itself.
 - Placeholders are dropped automatically, not via the skip list: any candidate token immediately followed by `<`, `>`, `*`, `{`, `}`, or `…` (for example `examples/run-<scenario>.js` or `` examples/run-*.js ``) is treated as unresolved template text, not a real path.
 
-**CI wiring** — [`.github/workflows/example-paths.yml`](../../../.github/workflows/example-paths.yml). Nightly only, deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split: the `example-paths` job (`schedule` + `workflow_dispatch`) runs `npm run check:example-paths`, and on failure opens or (if one is already open) comments on a tracking issue labelled `example-paths`, then exits non-zero so the run shows red. There is no PR gate — this check is not wired into the PR path.
+**CI wiring** — not implemented. A nightly-only job (deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split), running `npm run check:example-paths` and opening or commenting on an `example-paths`-labelled tracking issue on failure, would mirror `link-check.yml`'s nightly job. No PR gate is planned either way — this check would stay nightly-only even once wired. Runs locally on demand today; CI wiring is a follow-on.
 
 ## 🚧 Spelling — Vale
 
