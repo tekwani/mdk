@@ -9,13 +9,13 @@ Use this as the confirm step for a destructive "Delete" row action in a spare-pa
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `isOpen` | `boolean` | — | Whether the modal is open |
-| `onClose` | `() => void` | — | Called when the modal requests to close |
-| `onConfirm` | `(sparePart) => Promise<void> \| void` | — | Called with the part when the user confirms |
-| `sparePart` | `{ id: string; code: string }` | — | The part to delete; when omitted the modal renders nothing |
-| `isLoading` | `boolean` | — | Disables the action buttons while the delete is in flight |
+| Prop        | Status   | Type                                   | Default | Description                                                |
+| ----------- | -------- | -------------------------------------- | ------- | ---------------------------------------------------------- |
+| `isOpen`    | Optional | `boolean`                              | —       | Whether the modal is open                                  |
+| `onClose`   | Optional | `() => void`                           | —       | Called when the modal requests to close                    |
+| `onConfirm` | Optional | `(sparePart) => Promise<void> \| void` | —       | Called with the part when the user confirms                |
+| `sparePart` | Optional | `{ id: string; code: string }`         | —       | The part to delete; when omitted the modal renders nothing |
+| `isLoading` | Optional | `boolean`                              | —       | Disables the action buttons while the delete is in flight  |
 
 ## Example
 

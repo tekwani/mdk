@@ -53,7 +53,7 @@ other actions, and troubleshooting.
 
 ### Committed (source)
 
-```
+```text
 examples/backend/powermeters/satec/
 ├── README.md
 ├── index.js                      # Kernel + Satec Worker + mock + registration
@@ -62,7 +62,7 @@ examples/backend/powermeters/satec/
 
 ### Generated (ignored)
 
-```
+```text
 $TMPDIR/mdk-site-satec/kernel/        # Kernel Corestore
 ```
 

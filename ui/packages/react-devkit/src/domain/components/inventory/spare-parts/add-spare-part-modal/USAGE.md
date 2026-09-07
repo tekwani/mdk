@@ -13,22 +13,27 @@ allowed part models without leaving the dialog.
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `isOpen` | `boolean` | — | Whether the modal is open |
-| `onClose` | `() => void` | — | Called when the modal requests to close |
-| `partTypes` | `{ value: string; label: string }[]` | — | Part-type tabs |
-| `defaultPartTypeId` | `string` | — | Initially selected part type |
-| `modelOptions` | `FormSelectOption[]` | — | Part model options for the active part type |
-| `isModelOptionsLoading` | `boolean` | — | Disables the model select while options load |
-| `minerModelOptions` | `FormSelectOption[]` | — | Parent miner model options |
-| `statusOptions` | `FormSelectOption[]` | — | Status options |
-| `locationOptions` | `FormSelectOption[]` | — | Location options |
-| `isControllerPartTypeSelected` | `boolean` | — | When true, the MAC address field is shown and required |
-| `onPartTypeChange` | `(partTypeId: string) => void` | — | Called when the active part type changes (refetch model options here) |
-| `onSubmit` | `(values: AddSparePartFormValues) => Promise<{ fieldErrors? } \| void>` | — | Submit handler; return `fieldErrors` to surface server-side validation |
-| `isLoading` | `boolean` | — | Renders a loader instead of the form |
-| `subTypesPartTypes`, `subTypesActivePartTypeId`, `subTypes`, `onSubTypesPartTypeChange`, `onAddSubType`, `isSubTypesLoading` | — | — | Optional wiring for the embedded "View Subtypes" modal |
+| Prop                           | Status   | Type                                                                    | Default | Description                                                                              |
+| ------------------------------ | -------- | ----------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| `isOpen`                       | Required | `boolean`                                                               | —       | Whether the modal is open                                                                |
+| `onClose`                      | Required | `() => void`                                                            | —       | Called when the modal requests to close                                                  |
+| `partTypes`                    | Required | `{ value: string; label: string }[]`                                    | —       | Part-type tabs                                                                           |
+| `modelOptions`                 | Required | `FormSelectOption[]`                                                    | —       | Part model options for the active part type                                              |
+| `minerModelOptions`            | Required | `FormSelectOption[]`                                                    | —       | Parent miner model options                                                               |
+| `statusOptions`                | Required | `FormSelectOption[]`                                                    | —       | Status options                                                                           |
+| `locationOptions`              | Required | `FormSelectOption[]`                                                    | —       | Location options                                                                         |
+| `onPartTypeChange`             | Required | `(partTypeId: string) => void`                                          | —       | Called when the active part type changes (refetch model options here)                    |
+| `onSubmit`                     | Required | `(values: AddSparePartFormValues) => Promise<{ fieldErrors? } \| void>` | —       | Submit handler; return `fieldErrors` to surface server-side validation                   |
+| `defaultPartTypeId`            | Optional | `string`                                                                | —       | Initially selected part type                                                             |
+| `isModelOptionsLoading`        | Optional | `boolean`                                                               | —       | Disables the model select while options load                                             |
+| `isControllerPartTypeSelected` | Optional | `boolean`                                                               | —       | When true, the MAC address field is shown and required                                   |
+| `isLoading`                    | Optional | `boolean`                                                               | —       | Renders a loader instead of the form                                                     |
+| `subTypesPartTypes`            | Optional | `SparePartSubTypesModalPartType[]`                                      | —       | Part types for the embedded "View Subtypes" modal                                        |
+| `subTypesActivePartTypeId`     | Optional | `string`                                                                | —       | Active part type for the embedded subtypes modal                                         |
+| `subTypes`                     | Optional | `string[]`                                                              | —       | Subtype names for the active part type in the embedded modal                             |
+| `onSubTypesPartTypeChange`     | Optional | `(id: string) => void`                                                  | —       | Called when the active tab changes in the embedded subtypes modal                        |
+| `onAddSubType`                 | Optional | `(name: string) => Promise<{ error?: string } \| void>`                 | —       | Add handler for the embedded subtypes modal; return `{ error }` to surface a field error |
+| `isSubTypesLoading`            | Optional | `boolean`                                                               | —       | Loading state for the embedded subtypes modal                                            |
 
 ## Example
 
@@ -54,4 +59,4 @@ import { AddSparePartModal } from '@tetherto/mdk-react-devkit/domain'
 
 - Select fields default to `""` (empty), which renders the placeholder. Switching part type clears
   the part model and any serial/MAC validation errors.
-- MAC validation uses the format `00:1A:2B:3C:4D:5E` (case-insensitive, `:` or `-` separators).
+- MAC validation uses the format `00:1A:2B:3C:4D:5E` (case-insensitive, `:` or `-` separators)

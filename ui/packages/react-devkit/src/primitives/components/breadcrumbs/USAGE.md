@@ -5,16 +5,16 @@ plain labels with an optional "Back" button on the left.
 
 ## Props
 
-| Prop            | Type                | Required | Default | Description                                            |
-| --------------- | ------------------- | -------- | ------- | ------------------------------------------------------ |
-| `items`         | `BreadcrumbItem[]`  | yes      | —       | Ordered trail; the last item is rendered as current.   |
-| `showBack`      | `boolean`           | no       | `false` | Show a leading "Back" button.                          |
-| `backLabel`     | `string`            | no       | `"Back"` | Label for the back button.                            |
-| `onBackClick`   | `VoidFunction`      | no       | —       | Callback fired when the back button is clicked.        |
-| `separator`     | `ReactNode`         | no       | `"/"`   | Custom separator between items.                        |
-| `className`     | `string`            | no       | —       | Root class names.                                      |
-| `itemClassName` | `string`            | no       | —       | Class names applied to each item.                      |
-| `backClassName` | `string`            | no       | —       | Class names applied to the back button.                |
+| Prop            | Status   | Type               | Default  | Description                                         |
+| --------------- | -------- | ------------------ | -------- | --------------------------------------------------- |
+| `items`         | Required | `BreadcrumbItem[]` | —        | Ordered trail; the last item is rendered as current |
+| `showBack`      | Optional | `boolean`          | `false`  | Show a leading "Back" button                        |
+| `backLabel`     | Optional | `string`           | `"Back"` | Label for the back button                           |
+| `onBackClick`   | Optional | `VoidFunction`     | —        | Callback fired when the back button is clicked      |
+| `separator`     | Optional | `ReactNode`        | `"/"`    | Custom separator between items                      |
+| `className`     | Optional | `string`           | —        | Root class names                                    |
+| `itemClassName` | Optional | `string`           | —        | Class names applied to each item                    |
+| `backClassName` | Optional | `string`           | —        | Class names applied to the back button              |
 
 ### `BreadcrumbItem`
 
@@ -42,5 +42,5 @@ type BreadcrumbItem = {
 
 ## Notes
 
-- The last item is rendered as the current page (`aria-current="page"`).
-- Items without `href` or `onClick` render as plain text.
+- The last item is rendered as the current page (`aria-current="page"`)
+- Items without `href` or `onClick` render as plain text

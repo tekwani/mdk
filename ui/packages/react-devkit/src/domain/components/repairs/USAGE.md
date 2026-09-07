@@ -7,11 +7,11 @@ removed. It renders a non-paginated `DataTable`.
 
 ## Props
 
-| Prop          | Type                | Required | Default | Description                                                        |
-| ------------- | ------------------- | -------- | ------- | ------------------------------------------------------------------ |
-| `batchAction` | `RepairBatchAction` | yes      | —       | The repair batch action whose part changes are displayed.          |
-| `devices`     | `RepairDevice[]`    | yes      | —       | Devices referenced by the batch action, pre-fetched by the parent. |
-| `isLoading`   | `boolean`           | no       | `false` | Renders a spinner while the parent is still fetching `devices`.    |
+| Prop          | Status   | Type                | Default | Description                                                       |
+| ------------- | -------- | ------------------- | ------- | ----------------------------------------------------------------- |
+| `batchAction` | Required | `RepairBatchAction` | —       | The repair batch action whose part changes are displayed          |
+| `devices`     | Required | `RepairDevice[]`    | —       | Devices referenced by the batch action, pre-fetched by the parent |
+| `isLoading`   | Optional | `boolean`           | `false` | Renders a spinner while the parent is still fetching `devices`    |
 
 ## Minimal example
 
@@ -35,17 +35,17 @@ export const Example = () => {
 
 - `RepairBatchAction` — [`foundation/components/repairs/types.ts`](./types.ts). The component
   reads `params[].params[0]` for each action's `comment`, `id`, `rackId`, and
-  `info.parentDeviceId`.
+  `info.parentDeviceId`
 - `RepairDevice` — [`foundation/components/repairs/types.ts`](./types.ts). Only `id`, `rack`,
-  `info.serialNum`, and `info.macAddress` are read.
+  `info.serialNum`, and `info.macAddress` are read
 
 ## Notes
 
 - The component does not fetch data itself — pass pre-fetched `devices` from the
   parent (e.g. query the things API by the action ids), consistent with the rest
-  of the devkit.
+  of the devkit
 - Miner actions are filtered out; only spare-part changes are shown.
 - A part is labelled **Removed** when it has no `parentDeviceId`, otherwise
-  **Added**.
+  **Added**
 - Part type is resolved via `MINER_TYPE_NAME_MAP` then `SparePartNames`, falling
-  back to `Unknown`.
+  back to `Unknown`

@@ -21,7 +21,7 @@ npm install @tetherto/mdk-worker-abb
 ## Usage
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startAbbWorker } = require('@tetherto/mdk-worker-abb')
 
 const kernel = await getKernel()

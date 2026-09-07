@@ -161,8 +161,8 @@ export const usePoolManagerDashboard = (
     ],
   }
 
-  /* `useCurrentAlertDevices` already returns a flat row list — it used to hand
-   * back the raw per-Kernel envelope for the alerts table to unwrap itself. */
+  /* `useCurrentAlertDevices` returns a flat row list, already unwrapped from the
+   * per-Kernel envelope, so this only has to reshape it for the alerts table. */
   const alerts = flattenDeviceAlerts((alertDevices.data ?? []) as AlertBearingDevice[])
 
   return {

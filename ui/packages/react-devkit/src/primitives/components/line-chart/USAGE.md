@@ -9,16 +9,16 @@ you get title, legend, range selector, and loading / empty states for free.
 
 ## Key props
 
-| Prop               | Type                                  | Required | Default | Description                          |
-| ------------------ | ------------------------------------- | -------- | ------- | ------------------------------------ |
-| `data`             | `LineChartData`                       | yes      | —       | `{ datasets: LineDataset[] }`.       |
-| `chartRef`         | `MutableRefObject<IChartApi \| null>` | no       | —       | Hold the underlying chart API.       |
-| `yTicksFormatter`  | `(value: number) => string`           | no       | —       | Y-axis tick formatter.               |
-| `priceFormatter`   | `(value: number) => string`           | no       | —       | Take-precedence formatter.           |
-| `timeline`         | `string`                              | no       | —       | Current timeline (drives auto-fit).  |
-| `fixedTimezone`    | `string`                              | no       | —       | IANA timezone (applies offset).      |
-| `unit`             | `string`                              | no       | `""`    | Unit appended in tooltips.           |
-| `height`           | `number`                              | no       | `240`   | Pixel height.                        |
+| Prop              | Status   | Type                                  | Default | Description                        |
+| ----------------- | -------- | ------------------------------------- | ------- | ---------------------------------- |
+| `data`            | Required | `LineChartData`                       | —       | `{ datasets: LineDataset[] }`      |
+| `chartRef`        | Optional | `MutableRefObject<IChartApi \| null>` | —       | Hold the underlying chart API      |
+| `yTicksFormatter` | Optional | `(value: number) => string`           | —       | Y-axis tick formatter              |
+| `priceFormatter`  | Optional | `(value: number) => string`           | —       | Take-precedence formatter          |
+| `timeline`        | Optional | `string`                              | —       | Current timeline (drives auto-fit) |
+| `fixedTimezone`   | Optional | `string`                              | —       | IANA timezone (applies offset)     |
+| `unit`            | Optional | `string`                              | `""`    | Unit appended in tooltips          |
+| `height`          | Optional | `number`                              | `240`   | Pixel height                       |
 
 See [`types.ts`](./types.ts) for the full prop set (20+ props).
 

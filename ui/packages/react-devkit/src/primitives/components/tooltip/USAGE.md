@@ -7,15 +7,15 @@ Hover-triggered floating label built on Radix UI. Two ways to use it:
 
 ## `SimpleTooltip` props
 
-| Prop            | Type        | Required | Default | Description                              |
-| --------------- | ----------- | -------- | ------- | ---------------------------------------- |
-| `content`       | `ReactNode` | yes      | —       | Tooltip body (string or JSX).            |
-| `children`      | `ReactNode` | yes      | —       | Trigger element (any focusable node).    |
-| `side`          | `"top" \| "right" \| "bottom" \| "left"` | no | `"top"` | Side relative to trigger.  |
-| `sideOffset`    | `number`    | no       | `8`     | Distance from the trigger (px).          |
-| `delayDuration` | `number`    | no       | `200`   | Hover delay before showing (ms).         |
-| `showArrow`     | `boolean`   | no       | `true`  | Render a directional arrow.              |
-| `className`     | `string`    | no       | —       | Content class names.                     |
+| Prop            | Status   | Type        | Default | Description                          |
+| --------------- | -------- | ----------- | ------- | ------------------------------------ |
+| `content`       | Required | `ReactNode` | —       | Tooltip body (string or JSX)         |
+| `children`      | Required | `ReactNode` | —       | Trigger element (any focusable node) |
+| `side`          | Optional | `"top" \| "right" \| "bottom" \| "left"` | `"top"` | Side relative to trigger |
+| `sideOffset`    | Optional | `number`    | `8`     | Distance from the trigger (px)       |
+| `delayDuration` | Optional | `number`    | `200`   | Hover delay before showing (ms)      |
+| `showArrow`     | Optional | `boolean`   | `true`  | Render a directional arrow           |
+| `className`     | Optional | `string`    | —       | Content class names                  |
 
 ## Composable parts
 
@@ -38,7 +38,7 @@ Hover-triggered floating label built on Radix UI. Two ways to use it:
 
 ## Notes
 
-- For click-triggered panels, use `Popover` instead.
-- If `content` is empty/null, `SimpleTooltip` renders the trigger unwrapped.
+- For click-triggered panels, use `Popover` instead
+- If `content` is empty/null, `SimpleTooltip` renders the trigger unwrapped
 - Wrap your app in a single `<TooltipProvider>` when you have many tooltips
-  to share the open/close timing logic.
+  to share the open/close timing logic

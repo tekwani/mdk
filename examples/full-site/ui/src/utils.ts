@@ -5,8 +5,17 @@ import { MINER_POWER_MODES, type MinerFamily } from "./constants";
 import type { History, Miner } from "./types";
 
 export function get<T>(base: string, path: string) {
-  return fetch(`${base}${path}`).then((r) => {
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return fetch(`${base}${path}`).then(async (r) => {
+    if (!r.ok) {
+      // Carry the gateway's own reason through. It explains failures the status
+      // code alone cannot, e.g. CHANNEL_CLOSED when the Gateway is up but its
+      // HRPC channel to the Kernel has dropped.
+      const detail = await r
+        .json()
+        .then((body) => (body as { message?: string })?.message)
+        .catch(() => null);
+      throw new Error(detail ? `HTTP ${r.status}: ${detail}` : `HTTP ${r.status}`);
+    }
     return r.json() as Promise<T>;
   });
 }

@@ -5,9 +5,9 @@
 **Kernel** is the orchestrator, the trusted coordination daemon at the center of the [MDK stack](../../../docs/concepts/architecture.md).
 It discovers and registers [Workers](../../workers/README.md), maintains a live registry of devices, dispatches commands, collects
 telemetry on a schedule, and monitors Worker health. The [Workers discovery model](../../workers/docs/architecture.md#discovery-model)
-covers local, same-process, and DHT modes. 
+covers local, same-process, and DHT modes.
 
-The Kernel discovers and registers Workers, dispatches commands through a crash-recoverable state machine, and pulls telemetry on a fixed schedule. 
+The Kernel discovers and registers Workers, dispatches commands through a crash-recoverable state machine, and pulls telemetry on a fixed schedule.
 The Kernel is **pull-only and passive** — it never pushes to your app, and it never receives unsolicited MDK Protocol data from a
 Worker (the one inbound exception is the public key a Worker offers once on the discovery swarm connection). It always
 initiates, on the cadences set in `opts.cadences`, which is what keeps it from being overwhelmed by upstream pressure and why Workers
@@ -28,7 +28,7 @@ write-action path, which requires a device-family permission such as `miner:w` i
 > New to Kernel? The [control plane](../../../docs/concepts/control-plane.md) explains which layer owns what and how a request travels
 > from a consumer down to a device.
 > For deployment shapes and the active/passive connection model, see [deployment topologies](../../../docs/concepts/deployment-topologies.md).
-> Most apps start Kernel via [`getKernel()`](../mdk/README.md) — the `@tetherto/mdk` bootstrap API — rather than calling `createKernel()` directly.
+> Most apps start Kernel via [`getKernel()`](../mdk/README.md) — the `@tetherto/mdk-core` bootstrap API — rather than calling `createKernel()` directly.
 
 ## Prerequisites
 
@@ -60,8 +60,8 @@ await kernel.start()
 await kernel.stop()
 ```
 
-For a higher-level wrapper that also handles SIGINT, topic file management, and publishing the HRPC key to a well-known key file, 
-use `getKernel()` from `@tetherto/mdk`.
+For a higher-level wrapper that also handles SIGINT, topic file management, and publishing the HRPC key to a well-known key file,
+use `getKernel()` from `@tetherto/mdk-core`.
 
 ## API
 
@@ -69,16 +69,16 @@ use `getKernel()` from `@tetherto/mdk`.
 
 Factory that returns a configured, unstarted `KernelManager`. Caller controls the lifecycle.
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `opts.db` | `string` | `os.tmpdir()/mdk/...` | Hyperbee store directory |
-| `opts.root` | `string` | `os.tmpdir()/mdk` | Config root directory |
-| `opts.listeners.hrpc` | `object\|false` | enabled | HRPC listener config; `false` to disable |
-| `opts.auth.whitelist` | `string[]` | `[]` | HRPC firewall — hex public keys of allowed callers |
-| `opts.discovery.topic` | `string` | — | 32-byte hex DHT topic Workers join |
-| `opts.cadences.telemetryPullMs` | `number` | 10000 | Telemetry poll interval |
-| `opts.cadences.healthPingMs` | `number` | 5000 | Health ping interval |
-| `opts.cadences.statePullMs` | `number` | 5000 | DHT Worker identity and device-list refresh interval |
+| Option | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `opts.db` | Optional | `string` | `os.tmpdir()/mdk/...` | Hyperbee store directory |
+| `opts.root` | Optional | `string` | `os.tmpdir()/mdk` | Config root directory |
+| `opts.listeners.hrpc` | Optional | `object\|false` | Enabled | HRPC listener config; `false` to disable |
+| `opts.auth.whitelist` | Optional | `string[]` | `[]` | HRPC firewall — hex public keys of allowed callers |
+| `opts.discovery.topic` | Optional | `string` | None; no DHT listener without one | 32-byte hex DHT topic Workers join |
+| `opts.cadences.telemetryPullMs` | Optional | `number` | `10000` | Telemetry poll interval |
+| `opts.cadences.healthPingMs` | Optional | `number` | `5000` | Health ping interval |
+| `opts.cadences.statePullMs` | Optional | `number` | `5000` | DHT Worker identity and device-list refresh interval |
 
 ### `KernelManager`
 
@@ -94,7 +94,7 @@ kernel.getPublicKey()  // Buffer — HRPC public key (clients connect with it; s
 
 Each running Kernel needs its own Hyperbee store directory. Two Kernel instances that use the same `opts.db` path contend for the same files and fail on file locks. The default development root is `os.tmpdir()/mdk`; production deployments should use an explicit, instance-specific path.
 
-`createKernel()` leaves `init()`, `start()`, and `stop()` to the caller. The higher-level `getKernel()` API from `@tetherto/mdk` initializes and starts Kernel, publishes its HRPC key, and registers signal-driven cleanup.
+`createKernel()` leaves `init()`, `start()`, and `stop()` to the caller. The higher-level `getKernel()` API from `@tetherto/mdk-core` initializes and starts Kernel, publishes its HRPC key, and registers signal-driven cleanup.
 
 **Events:**
 - `'started'` — emitted after `start()` completes
@@ -120,7 +120,7 @@ of single-responsibility modules that do the work. Modules communicate only thro
 
 | Subsystem| Modules / code | What it does |
 |---|---|---|
-| Discovery | [`discovery/dht-listener.js`](lib/discovery/dht-listener.js); local and same-process modes live in [`@tetherto/mdk`](../mdk/lib/local-discovery.js) | Obtains a Worker's RPC public key, then `WorkerRegistry` drives it to `READY` |
+| Discovery | [`discovery/dht-listener.js`](lib/discovery/dht-listener.js); local and same-process modes live in [`@tetherto/mdk-core`](../mdk/lib/local-discovery.js) | Obtains a Worker's RPC public key, then `WorkerRegistry` drives it to `READY` |
 | Transport | [`transport/hrpc-listener.js`](lib/transport/hrpc-listener.js), [`transport/envelope-router.js`](lib/transport/envelope-router.js), [`transport/worker-channel.js`](lib/transport/worker-channel.js) | Inbound HRPC connections; `WorkerChannel` is the outbound path Kernel uses to call Workers |
 | Coordination | [`modules/worker-registry/`](lib/modules/worker-registry/index.js): `WorkerRegistry`, `CommandDispatcher`, `CommandStateMachine`, `TelemetryCollector`, `Scheduler`, `HealthMonitor`, `ActionManager`, `ActionCaller`; plus [`permissions/`](lib/permissions/index.js) | The single-responsibility modules detailed in the subsections below |
 | Storage | [`storage/stores.js`](lib/storage/stores.js), [`storage/wal.js`](lib/storage/wal.js) | Persists the registry, capabilities, command Write-Ahead Log (WAL), and action-approver state in Hyperbee |
@@ -132,7 +132,7 @@ Two flat indexes — `deviceId → { workerId, channel, capabilities }` and `wor
 Source of truth for routability.
 
 **State machine** (constants in [`lib/modules/worker-registry/states.js`](lib/modules/worker-registry/states.js)):
-```
+```text
 UNREGISTERED → DISCOVERED → IDENTITY_SAVED → READY → TERMINATED
 ```
 
@@ -157,7 +157,7 @@ compact the log. Restoring to `QUEUED` does not re-send the command; `recover()`
 caller to drive it.
 
 **State machine:**
-```
+```text
 QUEUED → DISPATCHED → EXECUTING → SUCCESS
                               └→ FAILED
                               └→ TIMEOUT → QUEUED (retry) or FAILED (max retries)
@@ -169,12 +169,12 @@ Thin proxy. Routes `telemetry.pull` queries to the appropriate Worker and passes
 all aggregation and storage — Kernel persists no telemetry at all. (It does hold an in-process subscriber list for callback fan-out,
 so it is not literally stateless, but nothing it keeps survives the process.)
 
-**Supported query types:** `metrics`, `list`, `count`, `logs`, `logs_multi`, `historical_logs`, `settings`, `config`, 
+**Supported query types:** `metrics`, `list`, `count`, `logs`, `logs_multi`, `historical_logs`, `settings`, `config`,
 `thing_config`, `stats`, `ext_data`
 
 ### `Scheduler`
 
-System metronome. Runs non-overlapping interval jobs for telemetry pulls, health pings, and state pulls. Jobs are idempotent 
+System metronome. Runs non-overlapping interval jobs for telemetry pulls, health pings, and state pulls. Jobs are idempotent
 — safe to restart with no state.
 
 | Job | Default | Operation |
@@ -190,7 +190,7 @@ Configure all three intervals with `createKernel({ cadences: { telemetryPullMs, 
 Ping-based liveness checker. Sends `health.ping` to every registered Worker on a configurable cadence and updates the registry with the result.
 
 **State machine per Worker:**
-```
+```text
 UNKNOWN → HEALTHY → SICK → DEAD
                 ↑___________|  (reconnect)
 ```
@@ -299,7 +299,7 @@ All messages use the envelope format:
 
 ### Command control
 
-Beyond the basic dispatch/result cycle, four exported constants extend the CSM with status queries, cancellation, scoped fan-out, and a fan-out cap.
+Beyond the basic dispatch/result cycle, three exported constants extend the CSM with status queries, cancellation, and scoped fan-out.
 
 **`COMMAND_STATUS` / `COMMAND_STATUS_RESPONSE`**: query the live state of an in-flight or recently settled command. The Gateway sends `command.status` with a `commandId`; Kernel replies with the current CSM state (`QUEUED`, `DISPATCHED`, `EXECUTING`, `SUCCESS`, `FAILED`, or `TIMEOUT`). Routed by [`envelope-router.js`](./lib/transport/envelope-router.js) → `dispatcher.getStatus(commandId)`.
 
@@ -315,12 +315,7 @@ Beyond the basic dispatch/result cycle, four exported constants extend the CSM w
 
 The scope field is validated in [`lib/protocol/schemas.js`](./lib/protocol/schemas.js) against `VALID_COMMAND_SCOPES`. Both `COMMAND_SCOPES` and `VALID_COMMAND_SCOPES` are exported from [`lib/protocol/actions.js`](./lib/protocol/actions.js).
 
-Kernel does not expand a scope into a device list. For `worker` and `rack` scope the caller supplies the `targets` array, and `_resolveTarget` passes it through unchanged; for `device` scope `targets` is `null` and the envelope's `deviceId` routes the command. Enumerating which devices a scope covers is the caller's job.
-
-**`MAX_TARGETS`** (`1024`): the declared cap on the number of targets a command may carry, intended to prevent accidental fleet-wide fan-out from a single request. The check lives in `validateCommandRequest` in [`lib/protocol/schemas.js`](./lib/protocol/schemas.js), which validates the envelope *payload*.
-
-> [!WARNING]
-> This cap is not applied on the live HRPC dispatch path. Both [`command-dispatcher`](./lib/modules/command-dispatcher/index.js) and [`envelope-router`](./lib/transport/envelope-router.js) call `validateEnvelope()`, which checks envelope structure only and never invokes payload validation. A caller that submits more than 1024 targets over HRPC is not rejected. Treat the cap as a contract callers are expected to honour, or validate the full payload yourself, until the dispatch path enforces it.
+Kernel does not expand a scope into a device list. For `worker` and `rack` scope the caller supplies the `targets` array, and `_resolveTarget` passes it through unchanged; for `device` scope `targets` is `null` and the envelope's `deviceId` routes the command. Enumerating which devices a scope covers is the caller's job. Kernel does not cap the size of `targets` — a caller fanning a command out to an entire fleet in one request is not rejected.
 
 ## Storage
 
@@ -344,7 +339,7 @@ Tests use real Corestore + `tmpdir` — no mocks for storage.
 
 ## Directory layout
 
-```
+```text
 kernel/
 ├── index.js                  # Exports: KernelManager, createKernel
 ├── lib/
@@ -352,7 +347,7 @@ kernel/
 │   ├── protocol/
 │   │   ├── actions.js        # ACTIONS, MESSAGE_TYPES, PROTOCOL_VERSION
 │   │   ├── envelope.js       # build(), buildResponse(), serialize(), deserialize()
-│   │   └── schemas.js        # Envelope/command validation, VALID_COMMAND_SCOPES, MAX_TARGETS
+│   │   └── schemas.js        # Envelope/command validation, VALID_COMMAND_SCOPES
 │   ├── modules/
 │   │   ├── worker-registry/  # WorkerRegistry + states
 │   │   ├── command-dispatcher/

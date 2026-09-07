@@ -12,14 +12,14 @@ step, use `MoveSparePartModal`.
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `isOpen` | `boolean` | — | Whether the modal is open |
-| `onClose` | `() => void` | — | Called when the modal requests to close |
-| `spareParts` | `BatchMoveSparePart[]` | — | The parts to move, rendered in the table |
-| `locationOptions` | `FormSelectOption[]` | — | New-location options |
-| `statusOptions` | `FormSelectOption[]` | — | New-status options |
-| `onSubmit` | `(values: { location: string \| null; status: string \| null; observation: string \| null }) => Promise<void> \| void` | — | Submit handler; unselected fields are `null` |
+| Prop              | Status   | Type                   | Default | Description                                  |
+| ----------------- | -------- | ---------------------- | ------- | -------------------------------------------- |
+| `isOpen`          | Required | `boolean`              | —       | Whether the modal is open                    |
+| `onClose`         | Required | `() => void`           | —       | Called when the modal requests to close      |
+| `spareParts`      | Required | `BatchMoveSparePart[]` | —       | The parts to move, rendered in the table     |
+| `locationOptions` | Required | `FormSelectOption[]`   | —       | New-location options                         |
+| `statusOptions`   | Required | `FormSelectOption[]`   | —       | New-status options                           |
+| `onSubmit`        | Required | `(values: { location: string \| null; status: string \| null; observation: string \| null }) => Promise<void> \| void` | —       | Submit handler; unselected fields are `null` |
 
 ## Data shape
 
@@ -49,5 +49,5 @@ import { BatchMoveSparePartsModal } from '@tetherto/mdk-react-devkit/domain'
 
 ## Notes
 
-- The form validates that **either** a location or a status is selected before submit.
-- Table location/status cells are resolved to display labels from the passed option lists.
+- The form validates that **either** a location or a status is selected before submit
+- Table location/status cells are resolved to display labels from the passed option lists

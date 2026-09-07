@@ -9,11 +9,11 @@ user to wherever they were redirected from.
 
 ## Props
 
-| Prop           | Type        | Required | Default | Description                                              |
-| -------------- | ----------- | -------- | ------- | -------------------------------------------------------- |
-| `children`     | `ReactNode` | yes      | —       | Rendered when a token is present.                        |
-| `fallback`     | `ReactNode` | yes      | —       | Rendered when no token is present.                       |
-| `rememberPath` | `boolean`   | no       | `true`  | Persists current location to sessionStorage on fallback. |
+| Prop           | Status   | Type        | Default | Description                                             |
+| -------------- | -------- | ----------- | ------- | ------------------------------------------------------- |
+| `children`     | Required | `ReactNode` | —       | Rendered when a token is present                        |
+| `fallback`     | Required | `ReactNode` | —       | Rendered when no token is present                       |
+| `rememberPath` | Optional | `boolean`   | `true`  | Persists current location to sessionStorage on fallback |
 
 ## Example
 

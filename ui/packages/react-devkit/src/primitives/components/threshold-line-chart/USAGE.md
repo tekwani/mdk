@@ -5,17 +5,17 @@ Includes `ChartContainer` chrome: title, legend with series toggle, and empty st
 
 ## Props
 
-| Prop              | Type                        | Required | Default | Description                                       |
-| ----------------- | --------------------------- | -------- | ------- | ------------------------------------------------- |
-| `data`            | `ThresholdLineChartData`    | no       | —       | `series` points plus optional `thresholds` lines. |
-| `title`           | `string`                    | no       | —       | Chart title (unit appended when `unit` is set).   |
-| `unit`            | `string`                    | no       | —       | Shown in title and axis/tooltip formatting.       |
-| `height`          | `number`                    | no       | `280`   | Chart height in pixels (`360` when `isTall`).     |
-| `isTall`          | `boolean`                   | no       | `false` | Taller default height.                            |
-| `isLegendVisible` | `boolean`                   | no       | `true`  | Legend with click-to-hide series.                 |
-| `emptyMessage`    | `string`                    | no       | —       | Message when data is missing or all zero.         |
-| `yTicksFormatter` | `(value: number) => string` | no       | —       | Custom Y-axis tick labels.                        |
-| `className`       | `string`                    | no       | —       | Extra class on the container.                     |
+| Prop              | Status   | Type                        | Default | Description                                      |
+| ----------------- | -------- | --------------------------- | ------- | ------------------------------------------------ |
+| `data`            | Optional | `ThresholdLineChartData`    | —       | `series` points plus optional `thresholds` lines |
+| `title`           | Optional | `string`                    | —       | Chart title (unit appended when `unit` is set)   |
+| `unit`            | Optional | `string`                    | —       | Shown in title and axis/tooltip formatting       |
+| `height`          | Optional | `number`                    | `280`   | Chart height in pixels (`360` when `isTall`)     |
+| `isTall`          | Optional | `boolean`                   | `false` | Taller default height                            |
+| `isLegendVisible` | Optional | `boolean`                   | `true`  | Legend with click-to-hide series                 |
+| `emptyMessage`    | Optional | `string`                    | —       | Message when data is missing or all zero         |
+| `yTicksFormatter` | Optional | `(value: number) => string` | —       | Custom Y-axis tick labels                        |
+| `className`       | Optional | `string`                    | —       | Extra class on the container                     |
 
 ## Example
 

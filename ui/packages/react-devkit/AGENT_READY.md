@@ -15,11 +15,11 @@ downstream agents can read it too.
 
 Three tiers, one decision:
 
-| Tier          | Use when…                                            | Must add                                                                                                                  |
-| ------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `agent-ready` | LLMs / non-experts will pick this component directly | JSDoc summary + `@category` + `@domain` + `@tier` + `@kernelCapability` + `USAGE.md` + `*.example.tsx`                       |
-| `advanced`    | Engineers extending the library use it directly      | JSDoc summary + `@category` + `@domain` + `@tier`                                                                         |
-| `internal`    | Implementation detail, never part of the public API  | `@tier internal` (the registry generator drops these — no `USAGE.md` or examples required)                                |
+| Tier          | Use when…                                            | Must add                                          |
+| ------------- | ---------------------------------------------------- | ------------------------------------------------- |
+| `agent-ready` | LLMs / non-experts will pick this component directly | JSDoc summary + `@category` + `@domain` + `@tier` + `@kernelCapability` + `USAGE.md` + `*.example.tsx` |
+| `advanced`    | Engineers extending the library use it directly      | JSDoc summary + `@category` + `@domain` + `@tier` |
+| `internal`    | Implementation detail, never part of the public API  | `@tier internal` (the registry generator drops these — no `USAGE.md` or examples required) |
 
 ```mermaid
 flowchart TD
@@ -32,13 +32,13 @@ flowchart TD
 
 ## Required JSDoc tags
 
-| Tag              | Required for         | Allowed values                                                                                       |
-| ---------------- | -------------------- | ---------------------------------------------------------------------------------------------------- |
-| `@tier`          | every public export  | `agent-ready` &#124; `advanced` &#124; `internal`                                                    |
-| `@category`      | tier ≠ `internal`    | `charts` &#124; `tables` &#124; `cards` &#124; `forms` &#124; `dialogs` &#124; `navigation` &#124; `layout` &#124; `widgets` &#124; `dashboards` &#124; `actions` &#124; `feedback` &#124; `misc` |
-| `@domain`        | tier ≠ `internal`    | `mining-operations` &#124; `financial-reporting` &#124; `device-management` &#124; `generic`         |
+| Tag                 | Required for                               | Allowed values                                                 |
+| ------------------- | ------------------------------------------ | -------------------------------------------------------------- |
+| `@tier`             | every public export                        | `agent-ready` &#124; `advanced` &#124; `internal`              |
+| `@category`         | tier ≠ `internal`                          | `charts` &#124; `tables` &#124; `cards` &#124; `forms` &#124; `dialogs` &#124; `navigation` &#124; `layout` &#124; `widgets` &#124; `dashboards` &#124; `actions` &#124; `feedback` &#124; `misc` |
+| `@domain`           | tier ≠ `internal`                          | `mining-operations` &#124; `financial-reporting` &#124; `device-management` &#124; `generic` |
 | `@kernelCapability` | `agent-ready` **with** `@domain ≠ generic` | `hashrate-monitoring` &#124; `pool-performance` &#124; `energy-consumption` &#124; `incident-alerts` &#124; `device-telemetry` &#124; `device-management` &#124; *(extendable)* — required for mining domains, skipped for generic primitives |
-| `@example`       | optional, encouraged | inline TSX in the JSDoc                                                                              |
+| `@example`          | optional, encouraged                       | inline TSX in the JSDoc                                        |
 
 The first paragraph of the JSDoc above an export becomes the registry
 `description`. Keep it ≤ 200 chars; longer prose belongs in co-located
@@ -84,9 +84,9 @@ One-paragraph summary of what the component does.
 
 ## Props
 
-| Prop  | Type     | Required | Default | Description                |
-| ----- | -------- | -------- | ------- | -------------------------- |
-| `foo` | `string` | yes      | —       | The primary thing.         |
+| Prop  | Status   | Type     | Default | Description       |
+| ----- | -------- | -------- | ------- | ----------------- |
+| `foo` | Required | `string` | —       | The primary thing |
 
 ## Minimal example
 
@@ -198,18 +198,18 @@ node packages/react-devkit/scripts/check-agent-ready.mjs --no-baseline
 
 Every rule emitted by `check:agent-ready` and the one-line fix:
 
-| Error id                                | Fix                                                                                                            |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `missing-tier`                          | Add `@tier agent-ready` / `advanced` / `internal`. Every public export must declare its audience.              |
-| `missing-description`                   | Add a JSDoc summary above the export — the first paragraph is captured into the registry.                      |
+| Error id                                | Fix                                                                                          |
+| --------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `missing-tier`                          | Add `@tier agent-ready` / `advanced` / `internal`. Every public export must declare its audience |
+| `missing-description`                   | Add a JSDoc summary above the export — the first paragraph is captured into the registry     |
 | `description-too-short`                 | Replace the auto-generated placeholder with a 1–2 sentence summary. Must be ≥40 chars and not match `"<Name> component."` / `"Use <Name> hook."` templates. |
-| `missing-category`                      | Add `@category <bucket>` (see "Required JSDoc tags" above for the allowed values).                             |
-| `missing-domain`                        | Add `@domain <area>` — one of `mining-operations`, `financial-reporting`, `device-management`, `generic`.      |
-| `agent-ready-missing-usage`             | Create `USAGE.md` next to the component (summary + props table + minimal example + notes).                     |
-| `agent-ready-missing-example`           | Add `<name>.example.tsx` next to the component (mock data only; imports must use `@tetherto/mdk-react-devkit`).|
-| `agent-ready-missing-kernel-capability`    | Add at least one `@kernelCapability <id>` tag so agents can find the component by capability.                     |
-| `blueprint:<id>: component <X> ...`     | The blueprint references a component that's missing from the registry or not `agent-ready`. Fix or remove.     |
-| `blueprint:<id>: hook <X> ...`          | The blueprint references a hook that doesn't exist in the registry. Fix or remove.                             |
+| `missing-category`                      | Add `@category <bucket>` (see "Required JSDoc tags" above for the allowed values)            |
+| `missing-domain`                        | Add `@domain <area>` — one of `mining-operations`, `financial-reporting`, `device-management`, `generic`. |
+| `agent-ready-missing-usage`             | Create `USAGE.md` next to the component (summary + props table + minimal example + notes)    |
+| `agent-ready-missing-example`           | Add `<name>.example.tsx` next to the component (mock data only; imports must use `@tetherto/mdk-react-devkit`). |
+| `agent-ready-missing-kernel-capability` | Add at least one `@kernelCapability <id>` tag so agents can find the component by capability |
+| `blueprint:<id>: component <X> ...`     | The blueprint references a component that's missing from the registry or not `agent-ready`. Fix or remove. |
+| `blueprint:<id>: hook <X> ...`          | The blueprint references a hook that doesn't exist in the registry. Fix or remove.          |
 
 ## Navigating by intent
 
@@ -239,12 +239,12 @@ The other indexes return arrays of names; agents combine them with the
 Curated recipes mapping a user intent to a concrete starting set. Authored
 under [`blueprints/`](blueprints/README.md) and machine-indexed at build time.
 
-| Blueprint                       | Use when…                                                       |
-| ------------------------------- | --------------------------------------------------------------- |
-| `mining-operations-dashboard`   | "Show me my miners" / "live operator dashboard".                |
-| `reporting`                     | "Monthly report" / "CSV export" / "historical numbers".         |
-| `device-management`             | "Manage miners" / "drill into one device".                      |
-| `custom-feature`                | The user's domain is out-of-scope (weather, inventory, social). |
+| Blueprint                     | Use when…                                                       |
+| ----------------------------- | --------------------------------------------------------------- |
+| `mining-operations-dashboard` | "Show me my miners" / "live operator dashboard".                |
+| `reporting`                   | "Monthly report" / "CSV export" / "historical numbers".         |
+| `device-management`           | "Manage miners" / "drill into one device".                      |
+| `custom-feature`              | The user's domain is out-of-scope (weather, inventory, social). |
 
 ### 3. CLI navigation commands
 
@@ -282,10 +282,10 @@ Worked examples — three intents, three paths through the tools:
 
 ## Pointers
 
-- Registry schema: [`scripts/registry-types.ts`](scripts/registry-types.ts).
+- Registry schema: [`scripts/registry-types.ts`](scripts/registry-types.ts)
 - Reference for "well-documented agent-ready component":
-  [`src/domain/components/active-incidents-card/`](src/domain/components/active-incidents-card/USAGE.md).
+  [`src/domain/components/active-incidents-card/`](src/domain/components/active-incidents-card/USAGE.md)
 - Reference for "well-documented agent-ready hook" — coming when we tier
-  the first hook as `agent-ready`.
-- Downstream usage (consumer apps): [`../cli/README.md`](../cli/README.md).
-- Architecture tour: [`docs/AGENT_FIRST.md`](../../docs/AGENT_FIRST.md).
+  the first hook as `agent-ready`
+- Downstream usage (consumer apps): [`../cli/README.md`](../cli/README.md)
+- Architecture tour: [`docs/AGENT_FIRST.md`](../../docs/AGENT_FIRST.md)

@@ -15,7 +15,7 @@ export type ProfileMenuItem = {
 }
 
 export type ProfileMenuProps = {
-  /** Items rendered in the dropdown, top-to-bottom. Defaults to a single "Sign out" item. */
+  /** Items rendered in the dropdown, top-to-bottom. */
   items: ProfileMenuItem[]
   /** Optional user label rendered at the top of the dropdown (e.g. an email). */
   user?: ReactNode

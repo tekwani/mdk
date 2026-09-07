@@ -9,11 +9,11 @@ drop down to `MinerExplorer`.
 
 ## Props
 
-| Prop              | Type                | Required | Default | Description                                              |
-| ----------------- | ------------------- | -------- | ------- | -------------------------------------------------------- |
-| `miners`          | `Device[]`          | yes      | —       | Devices to render. Same shape consumed by `MinerExplorer`. |
-| `poolConfig`      | `PoolConfigData[]`  | yes      | —       | Powers the "Assign Pool" modal's pool picker.            |
-| `backButtonClick` | `VoidFunction`      | yes      | —       | Called when the operator clicks the "Pool Manager" link. |
+| Prop              | Status   | Type                 | Default | Description                                                |
+| ----------------- | -------- | -------------------- | ------- | ---------------------------------------------------------- |
+| `miners`          | Required | `ListThingsDevice[]` | —       | Devices to render. Same shape consumed by `MinerExplorer`. |
+| `poolConfig`      | Required | `PoolConfigData[]`   | —       | Powers the "Assign Pool" modal's pool picker               |
+| `backButtonClick` | Required | `VoidFunction`       | —       | Called when the operator clicks the "Pool Manager" link    |
 
 ## Minimal example
 
@@ -32,16 +32,16 @@ drop down to `MinerExplorer`.
   `AUTH_PERMISSIONS.ACTIONS:WRITE`), and uses `useContextualModal` for the
   Assign Pool dialog.
 
-## Behaviour
+## Behavior
 
 - The "Assign Pool" button is gated behind `ASSIGN_POOL_POPUP_ENABLED` and
-  the `actions:write` permission. Tooltips explain why it's disabled.
+  the `actions:write` permission. Tooltips explain why it's disabled
 - Submitting a pool assignment calls `setAddPendingSubmissionAction` with
   `ACTION_TYPES.SETUP_POOLS` for every selected miner, then resets the
-  selection via the `MinerExplorerRef` imperative handle.
-- A success `notifyInfo` toast fires when the action is queued.
+  selection via the `MinerExplorerRef` imperative handle
+- A success `notifyInfo` toast fires when the action is queued
 
 ## Data contracts
 
-- `Device` — [`foundation/types/device`](../../../types/device.ts).
-- `PoolConfigData` — exported from `@tetherto/mdk-react-devkit`.
+- `ListThingsDevice` — exported from `@tetherto/mdk-ui-foundation`
+- `PoolConfigData` — exported from `@tetherto/mdk-react-devkit`

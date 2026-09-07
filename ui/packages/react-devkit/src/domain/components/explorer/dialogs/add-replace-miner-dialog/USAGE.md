@@ -4,16 +4,15 @@ Modal for adding a new miner to an empty slot or swapping the existing unit with
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `open` | `boolean` | yes | — | Controls dialog visibility. |
-| `onClose` | `VoidFunction` | yes | — | Called when the dialog should close. |
-| `selectedSocketToReplace` | `UnknownRecord` | no | — | Socket being replaced. |
-| `selectedEditSocket` | `UnknownRecord` | no | — | Socket being edited. |
-| `currentDialogFlow` | `string` | no | — | Active flow identifier. |
-| `isDirectToMaintenanceMode` | `boolean` | no | — | Skip add/replace and go directly to maintenance. |
-| `minersType` | `string` | no | — | Miner hardware type filter. |
-| `isContainerEmpty` | `boolean` | no | — | Whether the target slot is empty. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `open` | Required | `boolean` | — | Controls dialog visibility |
+| `onClose` | Required | `VoidFunction` | — | Called when the dialog should close |
+| `selectedSocketToReplace` | Optional | `UnknownRecord` | — | Socket being replaced |
+| `selectedEditSocket` | Optional | `UnknownRecord` | — | Socket being edited |
+| `currentDialogFlow` | Optional | `string` | — | Active flow identifier |
+| `isDirectToMaintenanceMode` | Optional | `boolean` | `false` | Skip add/replace and go directly to maintenance |
+| `minersType` | Optional | `string` | — | Miner hardware type filter |
 
 ## Minimal example
 

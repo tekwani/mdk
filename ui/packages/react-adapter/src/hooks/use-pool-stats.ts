@@ -36,7 +36,7 @@ export type UsePoolStatsOptions = {
  * shaped for `<HeaderMinersBox poolTotal/poolOnline/poolMismatch>` and
  * `<HeaderHashrateBox poolPhs>` respectively.
  *
- * Independent of the site (MOS-side) queries — pool data comes from a
+ * Independent of the site (app-side) queries — pool data comes from a
  * separate provider and polls at a slower cadence (2 min) by default.
  *
  * @remarks

@@ -32,9 +32,9 @@ The physical device is the one source of truth. Everything above it is a view:
 ## Why this model?
 
 MDK's storage choices favor **local-first, zero-external-dependency operation** over the query flexibility that
-alternatives such as a dedicated time-series database or a managed cloud store would give you: a site can run fully 
-offline, with no database server to provision, back up, or pay for beyond the process itself. The [cost][scalability] is that 
-cross-device queries (a time range across every miner on a site) are the caller's job, not a stored-procedure or index 
+alternatives such as a dedicated time-series database or a managed cloud store would give you: a site can run fully
+offline, with no database server to provision, back up, or pay for beyond the process itself. The [cost][scalability] is that
+cross-device queries (a time range across every miner on a site) are the caller's job, not a stored-procedure or index
 the platform gives you for free.
 
 ## Retention
@@ -69,7 +69,7 @@ with no cross-site consistency to reason about.
 
 - Understand [the integration model][integration-model]: what a Worker plugin decides to persist, and how
 - Understand [architecture][architecture]: the round trip a read or write actually takes
-- Understand [scalability][scalability]: what changes about storage as a fleet grows 
+- Understand [scalability][scalability]: what changes about storage as a fleet grows
 
 ## Links
 

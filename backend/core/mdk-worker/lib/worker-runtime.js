@@ -382,7 +382,7 @@ class WorkerRuntime {
     }, this.workerId)
 
     // Built-ins run before the device checks: provisioning commands arrive
-    // worker-scoped (deviceId null) and store-backed commands must work for
+    // Worker-scoped (deviceId null) and store-backed commands must work for
     // devices the runtime holds offline.
     const builtin = commandBuiltin(this.services, command)
     if (builtin) {

@@ -349,9 +349,9 @@ One-paragraph summary.
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `foo` | `string` | yes | — | The primary thing. |
+| Prop  | Status   | Type     | Default | Description       |
+| ----- | -------- | -------- | ------- | ----------------- |
+| `foo` | Required | `string` | —       | The primary thing |
 
 ## Minimal example
 
@@ -361,7 +361,7 @@ One-paragraph summary.
 
 ## Notes
 
-- Anything non-obvious about composition, accessibility, or performance.
+- Anything non-obvious about composition, accessibility, or performance
 ```
 
 The docs site renders the description, props table, and examples from your

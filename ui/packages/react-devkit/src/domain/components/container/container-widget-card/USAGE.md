@@ -11,24 +11,24 @@ feature/hook shapes every value (including `flash` and the pre-formatted
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `title` | `string` | yes | — | Container display name |
-| `power` | `number` | no | — | Latest power draw in watts (rendered in kW) |
-| `powerUnit` | `string` | no | — | Power unit label |
-| `alarms` | `WidgetTopRowProps["alarms"]` | no | — | Per-category alarm badges |
-| `statsErrorMessage` | `string \| ErrorWithTimestamp[] \| null` | no | — | Raw stats error shown as a tooltip in place of the power reading |
-| `summary` | `MinersSummaryParam[]` | yes | — | Pre-formatted label/value rows |
-| `activity` | `ContainerActivityData` | no | `{}` | Miner-state counts for the activity chart |
-| `isActivityLoading` | `boolean` | no | `false` | Activity chart loading state |
-| `isActivityError` | `boolean` | no | `false` | Activity chart error state |
-| `activityError` | `ContainerActivityError` | no | `null` | Activity chart error payload |
-| `isOffline` | `boolean` | no | `false` | Render the offline banner instead of the body |
-| `errorMessage` | `string` | no | — | Render an error banner instead of the body |
-| `flash` | `boolean` | no | `false` | Critical-high alarm flash (computed upstream) |
-| `vendorContent` | `ReactNode` | no | — | Vendor-specific boxes rendered above the summary |
-| `onClick` | `() => void` | no | — | Card click handler (navigation is the caller's concern) |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop                | Status   | Type                                     | Default | Description                                                      |
+| ------------------- | -------- | ---------------------------------------- | ------- | ---------------------------------------------------------------- |
+| `title`             | Required | `string`                                 | —       | Container display name                                           |
+| `summary`           | Required | `MinersSummaryParam[]`                   | —       | Pre-formatted label/value rows                                   |
+| `power`             | Optional | `number`                                 | —       | Latest power draw in watts (rendered in kW)                      |
+| `powerUnit`         | Optional | `string`                                 | —       | Power unit label                                                 |
+| `alarms`            | Optional | `WidgetTopRowProps["alarms"]`            | —       | Per-category alarm badges                                        |
+| `statsErrorMessage` | Optional | `string \| ErrorWithTimestamp[] \| null` | —       | Raw stats error shown as a tooltip in place of the power reading |
+| `activity`          | Optional | `ContainerActivityData`                  | `{}`    | Miner-state counts for the activity chart                        |
+| `isActivityLoading` | Optional | `boolean`                                | `false` | Activity chart loading state                                     |
+| `isActivityError`   | Optional | `boolean`                                | `false` | Activity chart error state                                       |
+| `activityError`     | Optional | `ContainerActivityError`                 | `null`  | Activity chart error payload                                     |
+| `isOffline`         | Optional | `boolean`                                | `false` | Render the offline banner instead of the body                    |
+| `errorMessage`      | Optional | `string`                                 | —       | Render an error banner instead of the body                       |
+| `flash`             | Optional | `boolean`                                | `false` | Critical-high alarm flash (computed upstream)                    |
+| `vendorContent`     | Optional | `ReactNode`                              | —       | Vendor-specific boxes rendered above the summary                 |
+| `onClick`           | Optional | `() => void`                             | —       | Card click handler (navigation is the caller's concern)          |
+| `className`         | Optional | `string`                                 | —       | Additional class for the root element                            |
 
 ## Example
 
@@ -51,7 +51,7 @@ import { ContainerWidgetCard } from "@tetherto/mdk-react-devkit"
 ## Notes
 
 - `flash` and `summary` are derived by the container-widgets data hook — the card
-  never computes alarm state or formats values itself.
+  never computes alarm state or formats values itself
 - Use `vendorContent` to slot in per-model boxes (`SupplyLiquidBox`, `TanksBox`,
   `MicroBTWidgetBox`, `BitmainImmersionSummaryBox`) without adding model
-  branching to the generic card.
+  branching to the generic card

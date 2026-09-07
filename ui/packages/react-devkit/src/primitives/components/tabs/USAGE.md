@@ -5,14 +5,21 @@ Tabbed content panels built on Radix UI. Compose with `TabsList`,
 
 ## `Tabs` (root) props
 
-| Prop           | Type                          | Required | Default     | Description                              |
-| -------------- | ----------------------------- | -------- | ----------- | ---------------------------------------- |
-| `value`        | `string`                      | no       | —           | Controlled active tab value.             |
-| `defaultValue` | `string`                      | no       | —           | Uncontrolled initial active value.       |
-| `onValueChange`| `(value: string) => void`     | no       | —           | Fired when the active tab changes.       |
-| `variant`      | `"default" \| "side" \| "underline"` | no  | `"default"` | `default` (baseline), `side` (left rail), or `underline` (per-tab underline indicator, white active label). |
-| `orientation`  | `"horizontal" \| "vertical"`   | no       | `"horizontal"` | Keyboard navigation orientation.      |
-| `className`    | `string`                      | no       | —           | Root class names.                        |
+| Prop            | Status   | Type                         | Default        | Description                       |
+| --------------- | -------- | ---------------------------- | -------------- | --------------------------------- |
+| `value`         | Optional | `string`                     | —              | Controlled active tab value       |
+| `defaultValue`  | Optional | `string`                     | —              | Uncontrolled initial active value |
+| `onValueChange` | Optional | `(value: string) => void`    | —              | Fired when the active tab changes |
+| `orientation`   | Optional | `"horizontal" \| "vertical"` | `"horizontal"` | Keyboard navigation orientation   |
+| `className`     | Optional | `string`                     | —              | Root class names                  |
+
+## `TabsList` / `TabsTrigger` props
+
+Both accept a `variant` prop that has no effect on `Tabs` itself:
+
+| Prop      | Status   | Type | Default     | Description |
+| --------- | -------- | ---- | ----------- | ----------- |
+| `variant` | Optional | `"default" \| "side" \| "underline"` | `"default"` | `default` (baseline), `side` (left rail), or `underline` (per-tab underline indicator, white active label) |
 
 ## Example
 
@@ -35,8 +42,7 @@ Tabbed content panels built on Radix UI. Compose with `TabsList`,
 
 ## Notes
 
-- Each `TabsContent` is matched to its `TabsTrigger` by `value`.
-- Set `variant="side"` for a left-side tab rail layout.
-- Set `variant="underline"` for a top tab bar with a per-tab underline
-  indicator and a white active label — pass it to both `Tabs`/`TabsList`
-  and each `TabsTrigger`.
+- Each `TabsContent` is matched to its `TabsTrigger` by `value`
+- Set `variant="side"` on `TabsList` and each `TabsTrigger` for a left-side tab rail layout
+- Set `variant="underline"` on `TabsList` and each `TabsTrigger` for a top tab bar with a per-tab underline
+  indicator and a white active label

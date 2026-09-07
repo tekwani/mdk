@@ -17,7 +17,7 @@ no more:
   action: 'telemetry.pull',// one of ACTIONS below
   sender: 'kernel:shard-1',// sender identity string
   target: null,            // receiver identity, or null
-  deviceId: 'miner-42',    // addressed device, or null for worker-scoped
+  deviceId: 'miner-42',    // addressed device, or null for Worker-scoped
   timestamp: 1750000000000,// Date.now()
   payload: {}              // ALL action-specific data goes here
 }
@@ -49,7 +49,7 @@ Build responses with `buildResponse(requestEnvelope, action, payload, sender)`
 | Kernel → Worker | `write.calls.request` → `write.calls.response` | Write-call resolution (only when worker-infra services are injected) |
 
 Also defined there: `COMMAND_SCOPES` (`device` | `worker` | `rack`),
-`MESSAGE_TYPES`, `MAX_TARGETS` (1024), and `VALID_COMMAND_RESULT_STATUSES`
+`MESSAGE_TYPES`, and `VALID_COMMAND_RESULT_STATUSES`
 (the command state machine's states plus `REJECTED`).
 
 ## Reads: `telemetry.pull`

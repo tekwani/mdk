@@ -4,10 +4,10 @@ Form body inside the maintenance dialog. Captures work-order details (reason, te
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `selectedEditSocket` | `Partial<SelectedEditSocket>` | no | — | The socket/slot being flagged for maintenance. |
-| `onCancel` | `VoidFunction` | no | — | Called when the user cancels. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `selectedEditSocket` | Optional | `Partial<SelectedEditSocket>` | — | The socket/slot being flagged for maintenance |
+| `onCancel` | Optional | `VoidFunction` | — | Called when the user cancels |
 
 ## Minimal example
 

@@ -19,7 +19,7 @@ export type ReportTimeFrameSelectorProps = Pick<
 >
 
 /**
- * Reporting-period selector with preset windows (7d / 30d / month-to-date / custom range).
+ * Reporting-period selector with preset windows (1d / 7d / 30d / custom range).
  *
  * @category filters
  * @domain financial-reporting

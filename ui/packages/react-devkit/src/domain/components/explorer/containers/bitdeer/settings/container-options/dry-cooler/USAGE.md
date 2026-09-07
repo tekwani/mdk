@@ -4,9 +4,9 @@ Dry-cooler subsystem panel for Bitdeer containers. Shows two cooler groups with 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `UnknownRecord` | no | — | Container settings payload. `cooling_system.dry_cooler` is read for fan/pump state. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `UnknownRecord` | — | Container settings payload. `cooling_system.dry_cooler` is read for fan state; `cooling_system.oil_pump` and `cooling_system.water_pump` are read for pump state. |
 
 ## Minimal example
 

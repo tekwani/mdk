@@ -70,7 +70,7 @@ ambient `@tetherto/mdk-worker/device` module instead of a `ctx` argument.
 There is no boot-time probe and no offline state: every device reports
 `online` immediately, and an unreachable one surfaces as an error inside the
 telemetry payload instead. This is the shape `mdk create worker` scaffolds
-today; `backend/workers/samples/demo-worker` is the only real reference
+today; [`backend/workers/samples/demo-worker`](../../../../../../backend/workers/samples/demo-worker/) is the only real reference
 implementation on it so far.
 
 ## Discovery and request flow

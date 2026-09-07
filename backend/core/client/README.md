@@ -4,13 +4,26 @@
 
 MDK Protocol client for [Kernel](../kernel/README.md). Encodes MDK Protocol envelopes and sends them to Kernel over **HRPC** (the
 `@hyperswarm/rpc` listener, by public key). This is the transport layer
-used by the [Gateway](../gateway/README.md) (and any other process) to talk to Kernel — and, by key, directly to a 
+used by the [Gateway](../gateway/README.md) (and any other process) to talk to Kernel — and, by key, directly to a
 [Worker's](../../workers/README.md) RPC server.
 
 > [!TIP]
 > `@tetherto/mdk-client` is the protocol connector every Kernel caller uses — the [Gateway](../gateway/README.md) wraps
 > it internally. For the full layer model, read the [Gateway README](../gateway/README.md)
 > and/or the [architecture overview](../../../docs/concepts/architecture.md).
+
+## When to use which client path
+
+Use [`createMdkClient`](#createmdkclientconfig-opts--auto-connecting-client) for a Gateway plugin or any other consumer
+talking to Kernel: device commands, status queries, telemetry pulls, and, through it,
+[`sendWorkerCommand`](#sendworkercommandworkerid-deviceid-command-params-opts--promiseobject) /
+[`pullWorkerTelemetry`](#pullworkertelemetryworkerid-query-opts--promiseobject) for provisioning operations
+(`registerThing`, `forgetThings`) or Worker-scoped historical queries (logs, stats) that aggregate across a Worker's own
+store.
+
+> [!NOTE]
+> Kernel also exposes `registerThing`/`forgetThings` as governed [write actions](#write-action-methods) and
+> `pushAction`/`voteAction` for when you want the approval/voting flow instead of a direct call.
 
 ## Prerequisites
 
@@ -31,7 +44,7 @@ is optional (only needed for an up-front warmup) — methods connect lazily on f
 const { createMdkClient } = require('@tetherto/mdk-client')
 
 // kernelKey: from kernel.getPublicKey() in-process, or the key file Kernel
-// publishes on start (`@tetherto/mdk`'s DEFAULT_KEY_FILE). Inside a Gateway
+// publishes on start (`@tetherto/mdk-core`'s DEFAULT_KEY_FILE). Inside a Gateway
 // plugin, pass the config from require('@tetherto/mdk-gateway/plugin')
 // directly — kernelKey/kernelBootstrap are already folded in.
 const client = createMdkClient({ kernelKey })
@@ -64,10 +77,10 @@ recovery is always driven by the next caller-initiated request.
 
 | Argument | Status | Type | Default | Description |
 |--------|--------|------|---------|-------------|
-| `config.kernelKey` | Required unless `opts.transport` is set | `string \| Buffer` | None | The Kernel listener's public key. Inside a Gateway plugin, pass the whole `config` from `require('@tetherto/mdk-gateway/plugin')` — this is already folded in |
+| `config.kernelKey` | Required unless `opts.transport` is set | `string \| Buffer` | None | The Kernel listener's public key. Inside a Gateway plugin, pass the whole `config` from `require('@tetherto/mdk-gateway/plugin')` — this is already folded in. |
 | `config.kernelBootstrap` | Optional | `object` | None | HRPC bootstrap override, folded in the same way |
-| `opts.errorCode` | Optional | `string` | `'ERR_MDK_CLIENT_UNAVAILABLE'` | `ERR_` code every method rejects with when `kernelKey` is missing or connect fails |
-| `opts.transport` | Required unless `config.kernelKey` is set | `object` | None | Pre-built transport (`{ connect, close, request }`). Test seam — satisfies the `kernelKey` requirement instead |
+| `opts.errorCode` | Optional | `string` | `'ERR_MDK_CLIENT_UNAVAILABLE'` | Overrides the rejection code every request-issuing method throws when there's no connection. Not validated against the [documented error codes](#errors): any string is accepted, since a Gateway plugin commonly passes its own code instead. |
+| `opts.transport` | Required unless `config.kernelKey` is set | `object` | None | Pre-built transport (`{ connect, close, request }`). Test seam — satisfies the `kernelKey` requirement instead. |
 
 A host booted without a reachable Kernel keeps its routes up and fails per request with `opts.errorCode`, rather than
 failing to boot.
@@ -76,21 +89,31 @@ failing to boot.
 
 The low-level factory `createMdkClient` wraps: opens a persistent connection and exposes the same method surface,
 but the caller owns the lifecycle — call `connect()` before the first request. Use it directly for explicit
-lifecycle control (an up-front warmup, a test transport) rather than the ambient-config, auto-connecting form above.
+lifecycle control (an up-front warmup, a test transport) rather than [`createMdkClient`](#createmdkclientconfig-opts--auto-connecting-client)'s
+ambient-config, auto-connecting form.
 
 | Option | Status | Type | Default | Description |
 |--------|--------|------|---------|-------------|
 | `opts.hrpc` | Required unless `opts.transport` is set | `object` | None | HRPC transport opts: `{ key, seed?, bootstrap?, dht?, rpc? }`. `key` is the Kernel listener **or** a Worker's RPC public key (hex string or Buffer) |
-| `opts.transport` | Required unless `opts.hrpc` is set | `object` | None | Pre-built transport (`{ connect, close, request }`). Test seam — satisfies the `hrpc` requirement instead |
+| `opts.transport` | Required unless `opts.hrpc` is set | `object` | None | Pre-built transport (`{ connect, close, request }`). Test seam — satisfies the `hrpc` requirement instead. |
 
-Throws `ERR_MDK_CLIENT_TRANSPORT_REQUIRED` if none is given (including the removed `opts.ipc`), or `ERR_MDK_CLIENT_HRPC_KEY_REQUIRED` if `hrpc` is passed without a `key`.
+Throws one of the [documented error codes](#errors): `ERR_MDK_CLIENT_TRANSPORT_REQUIRED` or `ERR_MDK_CLIENT_HRPC_KEY_REQUIRED`.
 
 ### `createWorkerClient(rpcKey, hrpcOpts?)` → client
 
-Convenience factory for a client bound **directly to a Worker** by its RPC public key (resolve the key with [`getWorkerKey`](#getworkerkeyworkerid--promisestring--null)). Wraps `createRawMdkClient`, so `connect()` is explicit, same as that factory.
+Use this for a direct, persistent connection to one Worker — several calls over its lifetime rather than a single
+request. Requires the Worker's RPC public key — resolve it with
+[`getWorkerKey`](#getworkerkeyworkerid--promisestring--null). Wraps `createRawMdkClient`, so `connect()` is explicit,
+same as that factory.
 
-Same client surface as `createMdkClient`; use it for ops the Worker adapter handles directly (`registerThing`, `forgetThings`, …) rather 
-than Kernel contract commands. `hrpcOpts` forwards `seed`/`bootstrap`/`dht`/`rpc` to the transport.
+Same client surface as `createMdkClient`; scoped to ops the Worker adapter handles directly (`registerThing`,
+`forgetThings`, …) rather than Kernel contract commands. `hrpcOpts` forwards `seed`/`bootstrap`/`dht`/`rpc` to the
+transport.
+
+> [!NOTE]
+> [`sendWorkerCommand`](#sendworkercommandworkerid-deviceid-command-params-opts--promiseobject) and
+> [`pullWorkerTelemetry`](#pullworkertelemetryworkerid-query-opts--promiseobject) build one of these internally per call
+> and close it. Call those for a single request.
 
 ```js
 const { createWorkerClient } = require('@tetherto/mdk-client')
@@ -110,7 +133,7 @@ explicitly only for an up-front warmup.
 
 | Option | Status | Type | Default | Description |
 |--------|--------|------|---------|-------------|
-| `warmup` | Optional | `boolean` | `false` | Issue a best-effort `listWorkers()` after connecting to absorb the first-request DHT-route flake, so the first *real* request (including commands) is stable. Never throws — a failed warmup is swallowed |
+| `warmup` | Optional | `boolean` | `false` | Issue a best-effort `listWorkers()` after connecting to absorb the first-request DHT-route flake, so the first *real* request (including commands) is stable. Never throws — a failed warmup is swallowed. |
 | `warmupRetries` | Optional | `number` | `3` | Warmup attempts |
 | `warmupDelayMs` | Optional | `number` | `600` | Delay between warmup attempts |
 
@@ -122,7 +145,7 @@ Close the connection.
 
 #### `getStatus(opts?)` → `Promise<{ workers, totalDevices }>`
 
-Read-only status aggregator over `listWorkers()` with built-in **first-request retry** and a timeout. Safe to retry because it only reads. 
+Read-only status aggregator over `listWorkers()` with built-in **first-request retry** and a timeout. Safe to retry because it only reads.
 Returns a stable, shaped result for tooling.
 
 ```js
@@ -147,8 +170,8 @@ const { workers } = await client.listWorkers()
 
 #### `waitForWorkers(opts?)` → `Promise<worker[]>`
 
-Poll `getStatus()` until `count` Workers are READY, then resolve the matching Workers. Out-of-process readiness wait for callers holding 
-only the Kernel key (the in-process equivalent is `@tetherto/mdk`'s `waitForDiscovery`). Throws `ERR_MDK_WAIT_WORKERS_TIMEOUT` on timeout.
+Poll `getStatus()` until `count` Workers are READY, then resolve the matching Workers. Out-of-process readiness wait for callers holding
+only the Kernel key (the in-process equivalent is `@tetherto/mdk-core`'s `waitForDiscovery`). Throws `ERR_MDK_WAIT_WORKERS_TIMEOUT` on timeout.
 
 | Option | Status | Type | Default | Description |
 |--------|--------|------|---------|-------------|
@@ -159,7 +182,7 @@ only the Kernel key (the in-process equivalent is `@tetherto/mdk`'s `waitForDisc
 
 #### `waitForDevice(deviceId, opts?)` → `Promise<true>`
 
-Poll until `deviceId` appears in the Kernel registry (optionally under a specific `workerId`). Used after provisioning to confirm the device synced. 
+Poll until `deviceId` appears in the Kernel registry (optionally under a specific `workerId`). Used after provisioning to confirm the device synced.
 Throws `ERR_MDK_WAIT_DEVICE_TIMEOUT` on timeout.
 
 | Option | Status | Type | Default | Description |
@@ -174,10 +197,11 @@ Fetch the `mdk-contract.json` capabilities for a device as declared by its Worke
 
 #### `pullTelemetry(deviceId, queryType?)` → `Promise<object>`
 
-Pull telemetry from the Worker managing the given device. `queryType` defaults to `'metrics'`, and may be a string or a full query 
+Pull telemetry from the Worker managing the given device. `queryType` defaults to `'metrics'`, and may be a string or a full query
 object (`{ type, key, tag, start, end, limit, ... }`).
 
 Available query types:
+
 | Type | Returns |
 |------|---------|
 | `metrics` | Live hashrate, power, temperature, fan speeds |
@@ -198,8 +222,8 @@ Fetch a snapshot of the Worker's state machine status for the given device.
 
 #### `sendCommand(deviceId, command, params?)` → `Promise<object>`
 
-Dispatch a command to the Worker managing `deviceId`. When the client is connected to the **Kernel**, the command must be declared in 
-the Worker's `mdk-contract.json`. When connected **directly to a Worker** (see `createWorkerClient`), this also reaches adapter-handled 
+Dispatch a command to the Worker managing `deviceId`. When the client is connected to the **Kernel**, the command must be declared in
+the Worker's `mdk-contract.json`. When connected **directly to a Worker** (see `createWorkerClient`), this also reaches adapter-handled
 ops like `registerThing`/`forgetThings`. Commands are **never auto-retried** (the Kernel, not the transport, removes duplicate command IDs).
 
 ```js
@@ -214,7 +238,7 @@ await client.sendCommand('wm-001', 'setupPools', {
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `commandId` | `string` | Correlation ID generated by Kernel. Echo this to your caller to allow tracking |
+| `commandId` | `string` | Correlation ID generated by Kernel. Echo this to your caller to allow tracking. |
 | `status` | `string` | `'SUCCESS'` or `'FAILED'` |
 | `result` | `object` | Command-specific response payload (present when `status` is `'SUCCESS'`) |
 | `error` | `string` | Error message (present when `status` is `'FAILED'`) |
@@ -228,13 +252,13 @@ const res = await client.sendCommand('wm-001', 'setPowerMode', { mode: 'low' })
 
 #### `getWorkerKey(workerId)` → `Promise<string | null>`
 
-Resolve a Worker's RPC public key (hex) from the Kernel registry (the Kernel learned it via discovery), or `null` if the Worker isn't 
+Resolve a Worker's RPC public key (hex) from the Kernel registry (the Kernel learned it via discovery), or `null` if the Worker isn't
 registered. Pair with `createWorkerClient`/`sendWorkerCommand` for Worker-direct ops.
 
 #### `sendWorkerCommand(workerId, deviceId, command, params?, opts?)` → `Promise<object>`
 
-Send a Worker-direct command (e.g. `registerThing`) by `workerId` in one call: resolve the Worker's key via the Kernel, open a 
-short-lived Worker client, send, and close it. Returns the command response. Throws `ERR_MDK_WORKER_KEY_UNKNOWN` if the Worker 
+Send a Worker-direct command (e.g. `registerThing`) by `workerId` in one call: resolve the Worker's key via the Kernel, open a
+short-lived Worker client, send, and close it. Returns the command response. Throws `ERR_MDK_WORKER_KEY_UNKNOWN` if the Worker
 isn't in the registry. `opts.hrpc` forwards `seed`/`bootstrap`/`dht`/`rpc` to the Worker client's transport.
 
 ```js
@@ -262,7 +286,7 @@ Signal Kernel to evict a Worker from the registry. The Worker process itself con
 ### Write-action methods
 
 The write-action methods wrap the `action.*` protocol envelope set and call through to the Kernel's `ActionManager`. They bypass the Gateway auth
-layer — the caller is responsible for its own access control. 
+layer — the caller is responsible for its own access control.
 
 > [!NOTE]
 > [React hook equivalents are available](../../../docs/concepts/control-plane.md#developer-surfaces).
@@ -296,10 +320,24 @@ device-family permissions (`miner:w`, `container:w`, etc.) from `authPerms` befo
 
 Cancel one or more staged actions by ids. `opts`: `{ ids, voter }`.
 
+## Errors
+
+| Code | Fires when | Fix |
+| --- | --- | --- |
+| `ERR_MDK_CLIENT_UNAVAILABLE` | `createMdkClient`'s `config.kernelKey` is missing, or connecting failed | Supply `config.kernelKey` (or `opts.transport`), or check Kernel connectivity |
+| `ERR_MDK_CLIENT_TRANSPORT_REQUIRED` | `createRawMdkClient` called with neither `opts.hrpc` nor `opts.transport` | Pass one of them |
+| `ERR_MDK_CLIENT_HRPC_KEY_REQUIRED` | `createRawMdkClient({ hrpc: {...} })` called without `hrpc.key` | Pass the Kernel's or a Worker's public key as `hrpc.key` |
+| `ERR_MDK_CLIENT_NO_SUCH_METHOD` | A `createMdkClient` call resolves to a property that isn't a function on the raw client | Check the method name |
+| `ERR_HRPC_NOT_CONNECTED` | A `createRawMdkClient`/`createWorkerClient` client's request-issuing method (not e.g. `close()`) is called before `connect()` has run, or after `close()` | Call `connect()` first |
+| `ERR_MDK_STATUS_TIMEOUT` | `getStatus()`'s per-attempt timeout elapsed without Kernel answering `listWorkers()` | Increase `timeoutMs`, or check Kernel reachability |
+| `ERR_MDK_WAIT_WORKERS_TIMEOUT` | `waitForWorkers()` gave up: fewer than `count` Workers were READY (and, since `requireDevices` defaults `true`, had at least one device) within `timeoutMs` | Increase `timeoutMs`, or lower `count`, or confirm the Workers are actually starting with devices |
+| `ERR_MDK_WAIT_DEVICE_TIMEOUT` | `waitForDevice()` gave up: `deviceId` never appeared in the Kernel registry within `timeoutMs`, optionally scoped to a specific `workerId` | Confirm the device is being provisioned (on that Worker, if `workerId` was passed); increase `timeoutMs` |
+| `ERR_MDK_WORKER_KEY_UNKNOWN` | `sendWorkerCommand`/`pullWorkerTelemetry` called with a `workerId` the Kernel registry doesn't know | Confirm the Worker is running and registered |
+
 ## Transport details
 
-HRPC is the only transport: each request is an independent `@hyperswarm/rpc` call to the listener's `mdk` responder, so concurrent requests are 
-multiplexed by the RPC layer (no FIFO queue). The same transport addresses the Kernel listener or any Worker's RPC server by public key. 
+HRPC is the only transport: each request is an independent `@hyperswarm/rpc` call to the listener's `mdk` responder, so concurrent requests are
+multiplexed by the RPC layer (no FIFO queue). The same transport addresses the Kernel listener or any Worker's RPC server by public key.
 The first request after `connect()` can flake while the DHT route settles — use `getStatus()` (built-in retry) or `connect({ warmup: true })`.
 
 Every message is a fully formed MDK Protocol envelope and the model is request/response (one response per request).
@@ -333,7 +371,7 @@ const allDeviceIds = workers.flatMap(w => w.deviceIds)
 
 ## Directory layout
 
-```
+```text
 client/
 ├── index.js              # Exports createMdkClient, createWorkerClient
 ├── lib/

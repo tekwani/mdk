@@ -4,15 +4,15 @@ Financial dashboard section for subsidy and fee reporting. Shows a summary with 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `isError` | `boolean` | no | — | Show error state. |
-| `isLoading` | `boolean` | no | — | Show loading state. |
-| `errorMessage` | `string` | no | — | Error message to display. |
-| `showSummaryCards` | `boolean` | no | — | Show summary stat cards. |
-| `log` | `SubsidyFeesLogEntry[]` | no | — | Fee log entries. |
-| `data` | `SubsidyFeesResponse \| null` | no | — | Subsidy fee data. |
-| `onDateRangeChange` | `(dateRange, query) => void` | no | — | Called when date range changes. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `isError` | Optional | `boolean` | `false` | Show error state |
+| `isLoading` | Optional | `boolean` | `false` | Show loading state |
+| `errorMessage` | Optional | `string` | `'Error loading block data. Please try again later.'` | Error message to display |
+| `showSummaryCards` | Optional | `boolean` | `false` | Show summary stat cards |
+| `log` | Optional | `SubsidyFeesLogEntry[]` | — | Fee log entries |
+| `data` | Optional | `SubsidyFeesResponse \| null` | — | Subsidy fee data |
+| `onDateRangeChange` | Optional | `(dateRange, query) => void` | — | Called when date range changes |
 
 ## Minimal example
 

@@ -55,7 +55,7 @@ Before contributing, ensure you have the following installed:
 
 - **Node.js** (version >=24)
 - **Git** (latest stable version)
-- **npm** (version 11 or higher)
+- **npm 11** (< 12)
 
 ### Licensing
 
@@ -105,8 +105,14 @@ Use this workflow when contributing to backend code under [`backend/core/`](./ba
 
 ```bash
 cd backend/core
-npm install
+npm run install:packages
 ```
+
+> [!NOTE]> 
+> Plain `npm install` here would only install this directory's own `devDependencies`. 
+> `install:packages` installs the repo-root workspace (most `backend/core/*` 
+> packages are workspace members, hoisted and linked from there). It separately installs and symlinks 
+> [`backend/core/agent`](./backend/core/agent/README.md), which isn't a workspace member.
 
 #### Common commands
 
@@ -156,7 +162,7 @@ MDK uses Conventional Commits-style types for both branch names and PR titles.
 | `feat` | New features |
 | `fix` | Bug fixes |
 | `docs` | Documentation changes |
-| `refactor` | Code refactoring without behaviour change |
+| `refactor` | Code refactoring without behavior change |
 | `test` | Test additions or changes |
 | `chore` | Tooling, dependencies, repo maintenance |
 | `perf` | Performance improvements |
@@ -219,6 +225,11 @@ Before submitting your PR, ensure that:
 - [ ] Type-check passes for frontend TypeScript changes (`npm run typecheck`)
 - [ ] New features include tests
 - [ ] Public behavior or APIs changes have a [`docs-needed` issue][docs-needed-issue] linked to the PR
+- [ ] Generated pages affected by the change are regenerated, using the command named in that file's `DO NOT EDIT` header (a Worker contract, a plugin manifest, or devkit component source each rewrite a different file)
+
+> [!NOTE]
+> There is no CI workflow enforcing generated-page freshness yet, so regenerating stale pages is on you — see
+> [`npm run regenerate-docs -- --check`](docs/reference/maintainers/single-source-of-truth.md#checking-without-changing-anything).
 
 ### PR title format
 

@@ -108,7 +108,7 @@ flowchart TD
 <!-- docs@tether.io: react-adapter → https://github.com/tetherto/mdk/blob/main/ui/packages/react-adapter/README.md -->
 
 [react-devkit]: ../../ui/packages/react-devkit/README.md
-<!-- docs@tether.io: react-devkit → https://github.com/tetherto/mdk/blob/main/ui/packages/react-devkit/README.md -->
+<!-- docs@tether.io: react-devkit → reference/ui/components -->
 
 [mcp-readme]: ../../backend/core/mcp/README.md
 <!-- docs@tether.io: mcp-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->

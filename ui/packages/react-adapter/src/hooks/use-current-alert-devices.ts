@@ -23,11 +23,10 @@ export type UseCurrentAlertDevicesOptions = {
  * one or more alerts, ready to hand straight to the devkit `<Alerts>` /
  * `<CurrentAlerts>` table.
  *
- * Used to return the raw nested `ListThingsDevice[][]` and let the table head the
- * outer array itself, which pushed the Gateway's per-Kernel envelope all the way
- * into a component prop type — so a consumer on another backend had to reproduce
- * an envelope shape, and rows from every node after the first were dropped.
- * Unwrapping is the data layer's job.
+ * The Gateway's per-Kernel envelope (`ListThingsDevice[][]`) is unwrapped here
+ * rather than by the table: flattening keeps the rows from every node, and keeps
+ * an envelope shape out of a component prop type that a consumer on another
+ * backend would otherwise have to reproduce. Unwrapping is the data layer's job.
  *
  * Unlike `useActiveIncidents` — which maps the same endpoint down to the
  * dashboard card's `IncidentRow[]` — this hook leaves the *rows* unshaped so the

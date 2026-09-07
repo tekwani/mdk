@@ -12,6 +12,7 @@ import '@tetherto/mdk-fonts/jetbrains-mono.css'
 
 import '@tetherto/mdk-react-devkit/styles.css'
 import '@tetherto/mdk-react-devkit/styles-domain.css'
+import '@tetherto/mdk-ui-agent/styles.css'
 import './index.scss'
 
 document.title = APP_NAME

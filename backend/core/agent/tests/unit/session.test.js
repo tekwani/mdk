@@ -29,22 +29,28 @@ const { admitted: TOOLS } = admitTools([{
     }
   }
 }])
-const MCP = { callTool: async () => ({ text: '{}', isError: false }) }
+// A result that satisfies summarize_site's contract, or the loop reports the call as a contract
+// breach and no turn here ever counts as answered.
+const MCP = { callTool: async () => ({ text: '{"summary":"15 miners are up.","totals":{"devices":{"total":15}}}', isError: false }) }
 
 const failingModel = () => new MockLanguageModelV3({
   doStream: async () => { throw new Error('model unreachable') }
 })
 
-const answeringModel = (text) => new MockLanguageModelV3({
-  doStream: async () => ({
-    stream: convertArrayToReadableStream([
-      { type: 'text-start', id: '0' },
-      { type: 'text-delta', id: '0', delta: text },
-      { type: 'text-end', id: '0' },
-      { type: 'finish', finishReason: 'stop', usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } }
-    ])
+// Replies with each text in turn, so a tool turn can be scripted as the call and then the answer.
+const answeringModel = (...texts) => {
+  let step = 0
+  return new MockLanguageModelV3({
+    doStream: async () => ({
+      stream: convertArrayToReadableStream([
+        { type: 'text-start', id: '0' },
+        { type: 'text-delta', id: '0', delta: texts[Math.min(step++, texts.length - 1)] },
+        { type: 'text-end', id: '0' },
+        { type: 'finish', finishReason: { unified: 'stop' }, usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } }
+      ])
+    })
   })
-})
+}
 
 async function drain (session, text) {
   const events = []
@@ -66,10 +72,41 @@ test('a failed plain chat turn leaves no trace in history', async (t) => {
   t.is(session.messages.length, 0, 'both turn types discard a failed turn identically')
 })
 
+// An abort is a clean close to the SDK, so a stalled model ends the stream quietly. The tool
+// loop checks the signal; the plain path set one and never looked at it, so a turn that timed
+// out reported DONE with empty text and exit 0 — the operator told nothing, the caller told
+// everything went fine.
+test('a plain chat turn that times out says so, rather than answering nothing', async (t) => {
+  const stalling = new MockLanguageModelV3({
+    doStream: async ({ abortSignal }) => new Promise((resolve, reject) => {
+      // A pending timer, so the process stays alive long enough for the unref'd deadline to fire.
+      const keepAlive = setTimeout(() => {}, 10_000)
+      abortSignal?.addEventListener('abort', () => { clearTimeout(keepAlive); reject(abortSignal.reason) })
+    })
+  })
+  const session = new Session({ provider: providerWith(stalling), limits: { requestTimeoutMs: 120, maxRetries: 0 } })
+
+  const events = await drain(session, 'how is the site?')
+  const error = events.find((ev) => ev.type === EVENT.ERROR)
+
+  t.ok(error, 'the turn reported an error')
+  t.ok(/did not respond within/.test(error.error), 'and named the deadline rather than an abort code')
+  t.absent(events.some((ev) => ev.type === EVENT.DONE), 'no done follows an error')
+  t.is(session.messages.length, 0, 'and the unanswered question left no trace')
+})
+
 test('a successful tool turn records the exchange', async (t) => {
-  const session = new Session({ provider: providerWith(answeringModel('All 15 miners are up.')), tools: TOOLS, mcp: MCP, limits: { maxSteps: 1 } })
+  // The call, then the answer: a figure stated without asking a tool for it is refused now, so
+  // the turn this test is named after has to actually make one.
+  const model = answeringModel('{"tool":"summarize_site","args":{}}', 'All 15 miners are up.')
+  const session = new Session({ provider: providerWith(model), tools: TOOLS, mcp: MCP, limits: { maxSteps: 2 } })
   await drain(session, 'status?')
-  t.is(session.messages.length, 2, 'the user message and the answer are both kept')
+  // Four, not two: the tool step is kept as well as the answer. Recording only the answer left
+  // a transcript in which the right response to "reboot X" is a sentence saying it happened,
+  // and by the third repeat the model produced exactly that with no call behind it. The
+  // stale-figure guard does not cover it — a write claim names a device rather than a number,
+  // and the guard strips identifiers before looking for one. See tool-history.test.js.
+  t.is(session.messages.length, 4, 'asked → called a tool → got a result → answered')
   t.alike(session.messages.at(-1), { role: 'assistant', content: 'All 15 miners are up.' })
 })
 
@@ -419,4 +456,63 @@ test('closing the agent leaves the store alone', async (t) => {
   // A caller that supplied a store owns its lifetime; closing it here would reach past the
   // agent's boundary and disconnect a Redis client somebody else is using.
   t.ok(await store.get(session.id), 'the record survives')
+})
+
+// A model that emits a tool call on its first step of each turn, then prose. Enough to check
+// what the session keeps, without a real provider.
+const callThenAnswer = (call, answer) => {
+  let step = 0
+  return new MockLanguageModelV3({
+    doStream: async () => {
+      const text = step++ % 2 === 0 ? call : answer
+      return {
+        stream: convertArrayToReadableStream([
+          { type: 'text-start', id: '0' },
+          { type: 'text-delta', id: '0', delta: text },
+          { type: 'text-end', id: '0' },
+          { type: 'finish', finishReason: 'stop', usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } }
+        ])
+      }
+    }
+  })
+}
+
+test('history records the tool step, not only the answer', async (t) => {
+  // Keeping just the answer taught the model that the reply to a request is a bare sentence.
+  // Asked the same thing again it obliged — claiming the action had happened, having called
+  // nothing. History has to show the tool being used.
+  const call = '{"tool":"summarize_site","args":{}}'
+  const session = new Session({
+    provider: providerWith(callThenAnswer(call, 'All 15 miners are up.')),
+    tools: TOOLS,
+    mcp: MCP,
+    limits: { maxSteps: 2 }
+  })
+
+  await drain(session, 'how is the site?')
+
+  t.alike(
+    session.messages.map((m) => m.role),
+    ['user', 'assistant', 'user', 'assistant'],
+    'asked → called a tool → got a result → answered'
+  )
+  t.is(session.messages[1].content, call, 'the call is kept as the model emitted it')
+  t.ok(session.messages[2].content.includes('summarize_site'), 'and the result it produced')
+  t.is(session.messages.at(-1).content, 'All 15 miners are up.', 'the answer still lands last')
+})
+
+test('a second turn sees the first turn tool step', async (t) => {
+  const call = '{"tool":"summarize_site","args":{}}'
+  const session = new Session({
+    provider: providerWith(callThenAnswer(call, 'All 15 miners are up.')),
+    tools: TOOLS,
+    mcp: MCP,
+    limits: { maxSteps: 2 }
+  })
+
+  await drain(session, 'how is the site?')
+  await drain(session, 'how is the site?')
+
+  const toolCalls = session.messages.filter((m) => m.role === 'assistant' && m.content === call)
+  t.is(toolCalls.length, 2, 'both turns are on record as having called the tool')
 })

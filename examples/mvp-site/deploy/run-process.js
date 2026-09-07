@@ -29,25 +29,6 @@ const readKernelTopic = (root, mode) => {
   return fs.readFileSync(topicFile, 'utf8').trim()
 }
 
-const KERNEL_KEY_WAIT_TIMEOUT_MS = 30000
-const KERNEL_KEY_POLL_INTERVAL_MS = 250
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-// gateway and mcp start as PM2 apps alongside (not after) the kernel role, so
-// .kernel-key may not exist yet when they boot. Poll for it instead of
-// crashing immediately — avoids a PM2 crash-restart loop racing the kernel's
-// own boot time on every `npm run start`.
-const waitForKernelKey = async (root) => {
-  const kernelKeyFile = path.join(root, '.kernel-key')
-  const deadline = Date.now() + KERNEL_KEY_WAIT_TIMEOUT_MS
-  while (!fs.existsSync(kernelKeyFile)) {
-    if (Date.now() >= deadline) throw new Error('ERR_KERNEL_KEY_MISSING: start the Kernel first')
-    await sleep(KERNEL_KEY_POLL_INTERVAL_MS)
-  }
-  return fs.readFileSync(kernelKeyFile, 'utf8').trim()
-}
-
 // Boots one Whatsminer mock server per seed miner in config/devices.json — the
 // real worker connects to these instead of hardware. The mock listeners keep
 // the event loop alive; SIGINT/SIGTERM tear them down.
@@ -119,7 +100,7 @@ const runWorker = async () => {
 
   const { miners } = loadSeedDevices()
   const handle = await bootWorker({ kernelTopic, root, mode, devices: miners })
-  const seeded = handle.services.provisioning.listDeviceIds().length
+  const seeded = handle.seeded
 
   // bootWorker (no kernel handle) binds SIGINT/SIGTERM to the runtime handle's stop.
   console.log('MDK_READY worker devices=%d', seeded)
@@ -157,7 +138,9 @@ const runGateway = async () => {
   const root = arg('--root', ROOT)
   const port = Number(arg('--port', GATEWAY_PORT))
 
-  const kernelKey = await waitForKernelKey(root)
+  const kernelKeyFile = path.join(root, '.kernel-key')
+  if (!fs.existsSync(kernelKeyFile)) throw new Error('ERR_KERNEL_KEY_MISSING: start the Kernel first')
+  const kernelKey = fs.readFileSync(kernelKeyFile, 'utf8').trim()
 
   await startGateway({
     kernelKey,
@@ -170,9 +153,8 @@ const runGateway = async () => {
   })
 
   // The site plugin's own mdk client (lib/client.js) dials the Kernel lazily
-  // per-request, so gateway boot only needs the Kernel's public key (waited
-  // for above), not the Kernel actually reachable yet — no depends_on/ordering
-  // required between the two PM2 apps.
+  // per-request, so gateway boot doesn't need the Kernel to be up yet — no
+  // depends_on/ordering required between the two PM2 apps.
   // Standalone startGateway handles SIGINT/SIGTERM (hnd.stop()).
   console.log('MDK_READY gateway port=%d kernel=%s', port, kernelKey.slice(0, 16))
 }
@@ -187,7 +169,9 @@ const runMcp = async () => {
   const root = arg('--root', ROOT)
   const port = Number(arg('--port', MCP_AGENT_TOOLS_PORT))
 
-  const kernelKey = await waitForKernelKey(root)
+  const kernelKeyFile = path.join(root, '.kernel-key')
+  if (!fs.existsSync(kernelKeyFile)) throw new Error('ERR_KERNEL_KEY_MISSING: start the Kernel first')
+  const kernelKey = fs.readFileSync(kernelKeyFile, 'utf8').trim()
 
   await createMcpServer(root, port, { kernelKey }, MCP_PLUGIN_DIRS)
 

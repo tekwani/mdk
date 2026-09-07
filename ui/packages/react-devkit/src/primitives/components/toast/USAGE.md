@@ -6,24 +6,24 @@ list of `<Toast>` elements.
 
 ## `Toaster` props
 
-| Prop        | Type                                                                                            | Required | Default       | Description                              |
-| ----------- | ----------------------------------------------------------------------------------------------- | -------- | ------------- | ---------------------------------------- |
-| `children`  | `ReactNode`                                                                                     | yes      | —             | The `<Toast>` elements to render.        |
-| `position`  | `"top-left" \| "top-center" \| "top-right" \| "bottom-left" \| "bottom-center" \| "bottom-right"` | no    | `"top-left"`  | Where the viewport is anchored.          |
+| Prop       | Status   | Type        | Default      | Description                      |
+| ---------- | -------- | ----------- | ------------ | -------------------------------- |
+| `children` | Required | `ReactNode` | —            | The `<Toast>` elements to render |
+| `position` | Optional | `"top-left" \| "top-center" \| "top-right" \| "bottom-left" \| "bottom-center" \| "bottom-right"` | `"top-left"` | Where the viewport is anchored   |
 
 All other `ToastProvider` props are forwarded.
 
 ## `Toast` props
 
-| Prop          | Type                                                | Required | Default     | Description                          |
-| ------------- | --------------------------------------------------- | -------- | ----------- | ------------------------------------ |
-| `title`       | `string`                                            | yes      | —           | Title shown at the top of the toast. |
-| `description` | `string`                                            | no       | —           | Optional body text.                  |
-| `variant`     | `"success" \| "error" \| "warning" \| "info"`        | no       | `"info"`    | Determines the icon and accent.      |
-| `icon`        | `JSX.Element`                                       | no       | —           | Override the default variant icon.   |
-| `open`        | `boolean`                                           | no       | —           | Controlled open state.                |
-| `onOpenChange`| `(open: boolean) => void`                           | no       | —           | Open-state change handler.            |
-| `duration`    | `number`                                            | no       | —           | Auto-dismiss after N ms.              |
+| Prop           | Status   | Type                      | Default  | Description                         |
+| -------------- | -------- | ------------------------- | -------- | ----------------------------------- |
+| `title`        | Required | `string`                  | —        | Title shown at the top of the toast |
+| `description`  | Optional | `string`                  | —        | Body text                           |
+| `variant`      | Optional | `"success" \| "error" \| "warning" \| "info"` | `"info"` | Determines the icon and accent      |
+| `icon`         | Optional | `JSX.Element`             | —        | Override the default variant icon   |
+| `open`         | Optional | `boolean`                 | —        | Controlled open state               |
+| `onOpenChange` | Optional | `(open: boolean) => void` | —        | Open-state change handler           |
+| `duration`     | Optional | `number`                  | —        | Auto-dismiss after N ms             |
 
 ## Example
 
@@ -48,5 +48,5 @@ const { notifications } = useNotification();
 ## Notes
 
 - The compound parts (`ToastProvider`, `ToastViewport`) are available for
-  fine-grained control; most code should stick to `<Toaster>`.
-- Place exactly one `<Toaster>` in your app root.
+  fine-grained control; most code should stick to `<Toaster>`
+- Place exactly one `<Toaster>` in your app root

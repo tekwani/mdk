@@ -77,10 +77,38 @@ if [ "$needs_root_install" = true ]; then
   run_root_install
 fi
 
+# A standalone package is installed, but nothing puts it under the repo root's
+# node_modules/@tetherto/ — so anything outside its own directory that requires it by name
+# cannot resolve it. That is why the agent gateway plugin only worked with a hand-made
+# symlink, and why any root `npm install` broke it again: the gateway then aborts with
+# ERR_PLUGIN_HANDLER_NOT_FOUND naming a controller that exists, because the loader reads a
+# failed require of the package as a missing handler.
+#
+# Linking rather than making them workspace members: npm then owns the tree, prunes the
+# standalone install and does not rebuild it — measured as "removed 407 packages, added 0",
+# silently. The link is what was actually missing.
+link_into_root () {
+  local dir="$1"
+  local name
+  name="$(node -p "require('./$dir/package.json').name" 2>/dev/null)" || return 0
+  case "$name" in
+    @*/*) ;;
+    *) return 0 ;;
+  esac
+  local scope="${name%%/*}"
+  local target="$REPO_ROOT/node_modules/$scope"
+  mkdir -p "$target"
+  # Relative, the way npm writes its own workspace links, so the repo can be moved.
+  # node_modules/<scope>/ is two levels under the repo root.
+  ln -sfn "../../backend/core/$dir" "$target/${name##*/}"
+  echo "[mdk-core]    linked ${name} -> node_modules/${name}"
+}
+
 for pkg in "${PACKAGES[@]}"; do
   if [ -f "$pkg/package.json" ] && ! is_workspace_member "backend/core/$pkg"; then
     echo "[mdk-core] -> ${pkg}/ (standalone)"
     run_npm_prefix "$pkg"
+    link_into_root "$pkg"
   fi
 done
 

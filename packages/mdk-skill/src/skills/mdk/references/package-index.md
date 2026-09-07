@@ -8,7 +8,7 @@ failure. Paths are relative to the monorepo root.
 
 | Package | Folder | What it is |
 | --- | --- | --- |
-| `@tetherto/mdk` | [`backend/core/mdk`](../../../../../../backend/core/mdk/README.md) | Umbrella boot glue (`getKernel`, `startGateway`, `waitForDiscovery`, default topic file helpers); no generic `startWorker`, each Worker package ships its own boot function |
+| `@tetherto/mdk-core` | [`backend/core/mdk`](../../../../../../backend/core/mdk/README.md) | Umbrella boot glue (`getKernel`, `startGateway`, `waitForDiscovery`, default topic file helpers); no generic `startWorker`, each Worker package ships its own boot function |
 | `@tetherto/mdk-kernel` | [`backend/core/kernel`](../../../../../../backend/core/kernel/README.md) | The Kernel (ORK): protocol layer + 8 orchestration modules |
 | `@tetherto/mdk-worker` | [`backend/core/mdk-worker`](../../../../../../backend/core/mdk-worker/index.js) | Worker Runtime: `WorkerRuntime`, `loadPlugin`, contract schema |
 | `@tetherto/mdk-gateway` | [`backend/core/gateway`](../../../../../../backend/core/gateway/README.md) | HTTP gateway in front of the Kernel |
@@ -21,7 +21,6 @@ Also under [`backend/core/`](../../../../../../backend/core/README.md): [`plugin
 
 | Package | Folder | Device protocol |
 | --- | --- | --- |
-| `@tetherto/mdk-worker-whatsminer` | [`backend/workers/miners/whatsminer`](../../../../../../backend/workers/miners/whatsminer/README.md) | CGMiner JSON over TCP (AES-encrypted) |
 | `@tetherto/mdk-worker-antminer` | [`backend/workers/miners/antminer`](../../../../../../backend/workers/miners/antminer/README.md) | HTTP JSON (Digest auth) |
 | `@tetherto/mdk-worker-avalon` | [`backend/workers/miners/avalon`](../../../../../../backend/workers/miners/avalon/README.md) | CGMiner ASCII over TCP |
 | `@tetherto/mdk-worker-abb` | [`backend/workers/power-meter/abb`](../../../../../../backend/workers/power-meter/abb/README.md) | Modbus TCP |
@@ -33,6 +32,8 @@ Also under [`backend/core/`](../../../../../../backend/core/README.md): [`plugin
 | `@tetherto/mdk-worker-f2pool` | [`backend/workers/minerpools/f2pool`](../../../../../../backend/workers/minerpools/f2pool/README.md) | Pool HTTP API |
 | `@tetherto/mdk-worker-ocean` | [`backend/workers/minerpools/ocean`](../../../../../../backend/workers/minerpools/ocean/README.md) | Pool HTTP API |
 | `@tetherto/mdk-worker-demo` | [`backend/workers/samples/demo-worker`](../../../../../../backend/workers/samples/demo-worker/) | HTTP JSON (canonical minimal sample) |
+
+Whatsminer support is no longer an in-repo package — it's the external [`whatsminer-mdk-worker`](https://github.com/whatsminer/whatsminer-mdk-worker) contract plugin (CGMiner JSON over TCP, AES-encrypted), hosted directly on `WorkerRuntimeV2` via a thin per-deployment adapter (see `examples/full-site/backend/whatsminer-adapter.js`).
 | `@tetherto/mdk-worker-mock` | [`backend/workers/mock`](../../../../../../backend/workers/mock/README.md) | Shared device-mock framework (BaseMock, category mocks, transports) |
 
 Generated worker docs: [`backend/workers/docs/supported-hardware.md`](../../../../../../backend/workers/docs/supported-hardware.md) and

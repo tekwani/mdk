@@ -4,17 +4,17 @@ Prominent stat tile for displaying a single key metric. Supports flash animation
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `name` | `string` | no | — | Metric label. |
-| `subtitle` | `string` | no | — | Optional subtitle text. |
-| `value` | `number \| string \| null` | no | — | Metric value. |
-| `unit` | `string` | no | — | Unit of measurement (e.g. `"TH/s"`, `"W"`). |
-| `color` | `string` | no | — | Accent color for the border or flash effect. |
-| `flash` | `boolean` | no | — | Enable flash animation on value change. |
-| `superflash` | `boolean` | no | — | Faster flash animation. |
-| `variant` | `"primary" \| "secondary" \| "tertiary" \| "highlighted"` | no | `"primary"` | Visual style variant. |
-| `row` | `boolean` | no | — | Use row layout instead of column. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `name` | Optional | `string` | — | Metric label |
+| `subtitle` | Optional | `string` | `''` | Optional subtitle text |
+| `value` | Optional | `number \| string \| null` | `null` | Metric value |
+| `unit` | Optional | `string` | `''` | Unit of measurement (e.g. `"TH/s"`, `"W"`) |
+| `color` | Optional | `string` | `'inherit'` | Accent color for the border or flash effect |
+| `flash` | Optional | `boolean` | `false` | Enable flash animation on value change |
+| `superflash` | Optional | `boolean` | `false` | Faster flash animation |
+| `variant` | Optional | `"primary" \| "secondary" \| "tertiary" \| "highlighted"` | `"primary"` | Visual style variant |
+| `row` | Optional | `boolean` | `false` | Use row layout instead of column |
 
 ## Minimal example
 

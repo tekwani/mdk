@@ -53,7 +53,7 @@ Use the Antminer Worker's [USAGE.md][antminer-usage] to confirm the `model` valu
 Antminer devices use an HTTP API with digest authentication. Add this code to the Node.js service or script that runs the MDK Worker in your deployment. The snippet shows the minimum boot call seeding one Antminer device; replace the example IP address and credentials with your miner's values:
 
 ```js
-const { getKernel } = require('@tetherto/mdk/backend/core/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
 
 const kernel = await getKernel()
@@ -76,7 +76,7 @@ await kernel.registerWorker(worker.runtime.getPublicKey())
 `seedDevices` only seeds a fresh, empty `storeDir` — once persisted, the device set survives restarts on its own. To add a device to an already-running fleet, send the `registerThing` command to the live Worker instead:
 
 ```js
-const { createMdkClient } = require('@tetherto/mdk/backend/core/client')
+const { createMdkClient } = require('@tetherto/mdk-client')
 
 const client = createMdkClient({ kernelKey: kernel.getPublicKey() })
 await client.connect()
@@ -116,9 +116,6 @@ If it does not print those values, or if a mock port is already in use, follow [
 
 ## Links
 
-[terminology]: ../../reference/glossary.md
-<!-- docs@tether.io: terminology → reference/glossary -->
-
 [miner-guide-assumptions]: index.md#prerequisites
 <!-- docs@tether.io: miner-guide-assumptions → guides/miners#prerequisites -->
 
@@ -127,9 +124,6 @@ If it does not print those values, or if a mock port is already in use, follow [
 
 [install-pattern]: ../../../backend/workers/docs/install-pattern.md
 <!-- docs@tether.io: install-pattern → https://github.com/tetherto/mdk/blob/main/backend/workers/docs/install-pattern.md -->
-
-[get-started]: ../../tutorials/run-a-site.md
-<!-- docs@tether.io: get-started → tutorials/run-a-site -->
 
 [deployment-topologies]: ../deployment/index.md
 <!-- docs@tether.io: deployment-topologies → guides/deployment -->

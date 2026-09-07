@@ -5,13 +5,13 @@ via props — no data fetching.
 
 ## Props
 
-| Prop      | Type                            | Required | Default | Description                              |
-| --------- | ------------------------------- | -------- | ------- | ---------------------------------------- |
-| `data`    | `ChartJS<"line">["data"]`       | yes      | —       | Chart.js data object.                    |
-| `options` | `ChartJS<"line">["options"]`    | no       | —       | Merged with defaults.                    |
-| `tooltip` | `ChartTooltipConfig`            | no       | —       | Custom HTML tooltip configuration.       |
-| `height`  | `number`                        | no       | `300`   | Pixel height.                            |
-| `className`| `string`                       | no       | —       | Additional class names.                  |
+| Prop        | Status   | Type                         | Default | Description                       |
+| ----------- | -------- | ---------------------------- | ------- | --------------------------------- |
+| `data`      | Required | `ChartJS<"line">["data"]`    | —       | Chart.js data object              |
+| `options`   | Optional | `ChartJS<"line">["options"]` | —       | Merged with defaults              |
+| `tooltip`   | Optional | `ChartTooltipConfig`         | —       | Custom HTML tooltip configuration |
+| `height`    | Optional | `number`                     | `300`   | Pixel height                      |
+| `className` | Optional | `string`                     | —       | Additional class names            |
 
 ## Example
 

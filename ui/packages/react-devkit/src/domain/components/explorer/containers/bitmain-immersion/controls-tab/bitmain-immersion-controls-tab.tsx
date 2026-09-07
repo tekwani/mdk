@@ -11,7 +11,7 @@ export type BitMainControlsTabProps = {
 }
 
 /**
- * Controls tab for a BitMain container exposing start/stop, mode select, and emergency actions.
+ * Read-only status tab for a BitMain container: fan status, tank levels, and GPS location.
  *
  * Displays container controls including:
  * - Container fan status

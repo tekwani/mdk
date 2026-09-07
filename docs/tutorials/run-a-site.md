@@ -27,8 +27,8 @@ DHT.
 
 ## Prerequisites
 
-- Node.js >=24 (LTS)
-- npm >=11
+- [Node.js][node] >=24 (LTS)
+- npm 11 (< 12)
 - PM2 (`npm install -g pm2`)
 
 <Steps>
@@ -190,6 +190,9 @@ run, [reset it][mvp-site-reset] before restarting — seed devices are only regi
 - Browse [every runnable example in one place][examples-readme]
 
 ## Links
+
+[node]: https://nodejs.org/
+<!-- docs@tether.io: external link — preserve URL -->
 
 [terminology]: ../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->

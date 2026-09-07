@@ -21,7 +21,13 @@ const PLAIN = {
 
 /** One line per case as it finishes, plus why it failed. */
 export function formatResult (result, { paint = PLAIN } = {}) {
-  const lines = [`  ${result.ok ? paint.good('PASS') : paint.warn('FAIL')} ${paint.dim(result.id)} ${result.question}`]
+  // A multi-turn case says where it broke: surviving two turns and failing the third is a
+  // different defect from failing on the first ask, and the header is the only place a reader
+  // sees it before the detail lines.
+  const depth = result.totalTurns
+    ? paint.dim(result.failedAtTurn ? ` [turn ${result.failedAtTurn}/${result.totalTurns}]` : ` [${result.totalTurns} turns]`)
+    : ''
+  const lines = [`  ${result.ok ? paint.good('PASS') : paint.warn('FAIL')} ${paint.dim(result.id)}${depth} ${result.question}`]
   if (result.ok) return lines[0]
 
   if (!result.checks.route) lines.push(`       route    : ${result.routed} ${paint.dim(`(wanted ${result.expected.join(' | ')})`)}`)
@@ -40,7 +46,7 @@ export function formatResult (result, { paint = PLAIN } = {}) {
  * @returns {string}
  */
 export function formatReport (report, { paint = PLAIN } = {}) {
-  const { passed, runs, failed, flaky = [], byCheck = {}, byTool = {}, byTag = {}, misroutes = {}, skipped = [] } = report
+  const { passed, runs, failed, charter, flaky = [], byCheck = {}, byTool = {}, byTag = {}, misroutes = {}, skipped = [] } = report
   const out = []
 
   // A battery that quietly shrank against this fleet would read as a cleaner pass than it is.
@@ -49,7 +55,9 @@ export function formatReport (report, { paint = PLAIN } = {}) {
   }
 
   const pct = runs ? Math.round((passed / runs) * 100) : 0
-  out.push('', `  ${passed}/${runs} passed (${pct}%)${failed ? ` · ${failed} failed` : ''}`)
+  // The charter the run answered under, from the report rather than from today's constant, so a
+  // score read back next month still names the instruction that produced it.
+  out.push('', `  ${passed}/${runs} passed (${pct}%)${failed ? ` · ${failed} failed` : ''}${charter ? ` ${paint.dim(`· charter ${charter}`)}` : ''}`)
 
   const broken = Object.entries(byCheck).filter(([, n]) => n > 0)
   if (broken.length) out.push(`  ${paint.dim(`by check: ${broken.map(([k, n]) => `${k} ${n}`).join(' · ')}`)}`)

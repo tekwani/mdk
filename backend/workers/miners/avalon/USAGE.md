@@ -2,7 +2,7 @@
 
 Drives Canaan Avalon Bitcoin miners over the native TCP CGMiner API. Supports one model family today: A1346.
 
-This page documents what's specific to Avalon: the SDK surface: the manager class this package exports, how to run a mock device, and the shape of `registerThing` options. For the runtime contract — telemetry units, command shapes, error codes, alert thresholds — read [`mdk-contract.json`](plugin/mdk-contract.json) directly. For model coverage across all Workers, see the [generated catalogue](../../docs/supported-hardware.md#miners).
+This page documents what's specific to Avalon: the SDK surface: the manager class this package exports, how to run a mock device, and the shape of `registerThing` options. For the runtime contract — telemetry units, command shapes, error codes, alert thresholds — read [`mdk-contract.json`](plugin/mdk-contract.json) directly. For model coverage across all Workers, see the [generated catalogue](../../docs/supported-hardware.md).
 
 For the canonical install pattern that applies to every Worker in the monorepo, see [`backend/workers/docs/install-pattern.md`](../../docs/install-pattern.md). 
 
@@ -60,7 +60,7 @@ The mock control agent ([`mock-control-agent.js`](../../mock/mock-control-agent.
 the first boot against an empty `opts.storeDir`:
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startAvalonWorker } = require('@tetherto/mdk-worker-avalon')
 
 const kernel = await getKernel()
@@ -94,7 +94,7 @@ behavior.
 To register a device with an already-running Worker instead of at boot, send the `registerThing` command over HRPC:
 
 ```js
-const { createMdkClient } = require('@tetherto/mdk/backend/core/client')
+const { createMdkClient } = require('@tetherto/mdk-client')
 
 const client = createMdkClient({ kernelKey: kernel.getPublicKey() })
 await client.connect()
@@ -120,7 +120,7 @@ Gateway, and starts the Worker, then stays running until Ctrl+C:
 node examples/backend/miners/avalon/index.js
 ```
 
-This is the Avalon mirror of [`examples/backend/miners/whatsminer/index.js`](../../../../examples/backend/miners/whatsminer/index.js), which uses Whatsminer.
+This is the Avalon mirror of [`examples/backend/miners/antminer/index.js`](../../../../examples/backend/miners/antminer/index.js), which uses Antminer.
 
 ## Capabilities
 

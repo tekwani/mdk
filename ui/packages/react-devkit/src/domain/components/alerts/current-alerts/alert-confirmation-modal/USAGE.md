@@ -4,10 +4,10 @@ Confirmation dialog that appears before acknowledging or clearing one or more al
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `isOpen` | `boolean` | yes | — | Controls dialog visibility. |
-| `onOk` | `VoidFunction` | yes | — | Called when the user confirms the action. |
+| Prop     | Status   | Type           | Default | Description                              |
+| -------- | -------- | -------------- | ------- | ---------------------------------------- |
+| `isOpen` | Required | `boolean`      | —       | Controls dialog visibility               |
+| `onOk`   | Required | `VoidFunction` | —       | Called when the user confirms the action |
 
 ## Minimal example
 

@@ -4,14 +4,14 @@ Settings panel for exporting the site configuration as a JSON snapshot and impor
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `onExport` | `VoidFunction` | yes | — | Trigger configuration export. |
-| `onImport` | `(data: SettingsExportData) => void` | yes | — | Apply imported configuration. |
-| `onParseFile` | `(file: File) => Promise<SettingsExportData>` | no | — | Custom file-parsing function. |
-| `isExporting` | `boolean` | no | — | Show export loading state. |
-| `isImporting` | `boolean` | no | — | Show import loading state. |
-| `className` | `string` | no | — | Additional CSS class. |
+| Prop          | Status   | Type                                          | Default | Description                  |
+| ------------- | -------- | --------------------------------------------- | ------- | ---------------------------- |
+| `onExport`    | Required | `VoidFunction`                                | —       | Trigger configuration export |
+| `onImport`    | Required | `(data: SettingsExportData) => void`          | —       | Apply imported configuration |
+| `onParseFile` | Optional | `(file: File) => Promise<SettingsExportData>` | —       | Custom file-parsing function |
+| `isExporting` | Optional | `boolean`                                     | `false` | Show export loading state    |
+| `isImporting` | Optional | `boolean`                                     | `false` | Show import loading state    |
+| `className`   | Optional | `string`                                      | —       | Additional CSS class         |
 
 ## Minimal example
 

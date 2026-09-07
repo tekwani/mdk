@@ -5,16 +5,15 @@
 MCP (Model Context Protocol) server for MDK. Exposes MDK data and actions to AI agents as declarative tools over a
 `StreamableHTTPServerTransport`. `createMcpServer` below runs it as a standalone server — a separate process from the
 [Gateway](../gateway/README.md), not a Gateway plugin — that talks to Kernel the same way the Gateway does, over
-[`@tetherto/mdk-client`](../client/README.md). The Gateway also uses this package directly to start an in-process MCP
-server when a plugin is mounted with `autoGenerateMcp: true` (see [Expose Gateway data to an agent](../../../docs/guides/agent/expose-data.md)).
+[`@tetherto/mdk-client`](../client/README.md).
 
 ## AI agents and the MCP server
 
-An AI agent reaches fleet data through this server, not through the [Gateway](../gateway/README.md)'s HTTP surface — either
-a standalone process started by `createMcpServer` below, or the one the Gateway auto-generates in-process from a mounted
-plugin's routes. MDK's own operator agent, [`@tetherto/mdk-agent`](../agent/README.md), is one such client and uses the same
-path any third-party agent would. (Separately, [`@tetherto/mdk-plugin-agent`](../../plugins/agent/README.md) mounts a chat API
-on the Gateway so a human operator can talk to that agent — a different surface from the MCP endpoint described here.)
+An AI agent reaches fleet data through this server, not through the [Gateway](../gateway/README.md)'s HTTP surface — a
+standalone process started by `createMcpServer` below. MDK's own operator agent, [`@tetherto/mdk-agent`](../agent/README.md),
+is one such client and uses the same path any third-party agent would. (Separately,
+[`@tetherto/mdk-plugin-agent`](../../plugins/agent/README.md) mounts a chat API on the Gateway so a human operator can talk
+to that agent — a different surface from the MCP endpoint described here.)
 
 Agents sit in the same security envelope as every other consumer of this server: whatever checks front it apply equally to a
 human caller and an agent, and an unprotected endpoint is open to both. Establishing that envelope is your work, since
@@ -27,9 +26,8 @@ neither Kernel nor this server performs user-level authentication on its own.
 
 The intended distinctive feature is **runtime tool derivation** from each registered Worker's `mdk-contract.json` — so a new
 device type would give an agent new tools with no MCP server code change. That path is not wired up today: tools come from a
-static, author-written `mcp-plugin.json` manifest ([`lib/plugin-loader.js`](./lib/plugin-loader.js)), or are auto-generated
-from a Gateway plugin's HTTP routes when it sets `autoGenerateMcp: true`
-([`lib/from-http-plugin.js`](./lib/from-http-plugin.js)) — neither reads a Worker's contract.
+static, author-written `mcp-plugin.json` manifest ([`lib/plugin-loader.js`](./lib/plugin-loader.js)), which does not read a
+Worker's contract.
 
 ## `createMcpServer(root, port, config, pluginDirs)`
 
@@ -39,12 +37,12 @@ const { createMcpServer } = require('@tetherto/mdk-mcp')
 await createMcpServer(root, port, { kernelKey, kernelBootstrap }, pluginDirs)
 ```
 
-| Param | Type | Description |
-|---|---|---|
-| `root` | `string` | Working directory for this server instance. Throws `ERR_INVALID_MCP_ROOT` if falsy |
-| `port` | `number` | Port to listen on (`127.0.0.1` only). Throws `ERR_INVALID_MCP_PORT` if falsy |
-| `config` | `object` | `{ kernelKey, kernelBootstrap }` (or any other config a tool needs). Frozen and handed to every plugin directory as the `config` in its context — the server builds no client of its own; each tool plugin builds its own [`@tetherto/mdk-client`](../client/README.md) from it |
-| `pluginDirs` | `string[]` | Directories to load tools from (see below). Empty/omitted starts a server with no tools |
+| Param | Status | Type | Description |
+| --- | --- | --- | --- |
+| `root` | Required | `string` | Working directory for this server instance. Throws `ERR_INVALID_MCP_ROOT` if falsy |
+| `port` | Required | `number` | Port to listen on (`127.0.0.1` only). Throws `ERR_INVALID_MCP_PORT` if falsy |
+| `config` | Optional | `object` | `{ kernelKey, kernelBootstrap }` (or any other config a tool needs). Frozen and handed to every plugin directory as the `config` in its context — the server builds no client of its own; each tool plugin builds its own [`@tetherto/mdk-client`](../client/README.md) from it |
+| `pluginDirs` | Optional | `string[]` | Directories to load tools from, one per [plugin](#plugin-format). Empty/omitted starts a server with no tools |
 
 The server answers `POST /mcp` only; everything else gets a `404`. It builds a fresh `McpServer` per request (stateless
 transport, no session id). `SIGINT`/`SIGTERM` are handled for you: they stop the HTTP server — there is no client of the
@@ -87,13 +85,25 @@ module.exports = {
 [`tools/get-device.js`](../../../examples/mvp-site/backend/mcp-plugins/site/tools/get-device.js) ship the production version
 of this pattern.
 
-[`loadPlugin()`](./lib/plugin-loader.js) validates the manifest and every handler at load time, throwing `ERR_PLUGIN_MANIFEST_MISSING`,
-`ERR_PLUGIN_MANIFEST_INVALID`, `ERR_PLUGIN_HANDLER_NOT_FOUND`, `ERR_PLUGIN_HANDLER_NOT_FUNCTION`, or
-`ERR_PLUGIN_TOOL_DUPLICATE_ID` on the first problem.
+[`loadPlugin()`](./lib/plugin-loader.js) validates the manifest and every handler at load time, throwing on the first
+problem — see [Errors](#errors) below.
+
+## Errors
+
+| Code | Fires when | Fix |
+|---|---|---|
+| `ERR_INVALID_MCP_ROOT` | `createMcpServer` is called with no working directory (`root` falsy) | Pass a valid path as `root` |
+| `ERR_INVALID_MCP_PORT` | `createMcpServer` is called with no port (`port` falsy) | Pass a valid port as `port` |
+| `ERR_PLUGIN_MANIFEST_MISSING` | [`loadPlugin()`](./lib/plugin-loader.js) can't resolve a plugin directory's `mcp-plugin.json` — it doesn't exist | Add the manifest, or drop the directory from `pluginDirs` |
+| `ERR_PLUGIN_MANIFEST_INVALID` | The manifest isn't a JSON object, is missing `name`/`version`, `tools` isn't a non-empty array, or a tool is missing `id`/`handler`/`description` | Fix the field the error message names |
+| `ERR_PLUGIN_HANDLER_NOT_FOUND` | A tool's `handler` file, named in the manifest, can't be resolved by [`loadPlugin()`](./lib/plugin-loader.js) | Fix the `handler` path for that tool |
+| `ERR_PLUGIN_HANDLER_NOT_FUNCTION` | A tool's resolved handler module (or named export) has no `handler` property that's a function | Export a `handler` function from the file |
+| `ERR_PLUGIN_TOOL_DUPLICATE_ID` | Two tools share an `id` — [`loadPlugin()`](./lib/plugin-loader.js) only checks within one plugin's own `tools` array, not across separate `pluginDirs` | Rename one of the duplicate tool ids |
+| `ERR_NO_PLUGIN_CONTEXT` | [`@tetherto/mdk-mcp/plugin`](./plugin.js) was required outside a loaded plugin, e.g. a tool module required directly in a test | Load the plugin through `createMcpServer()` or `loadPlugin(dir, context)` instead |
 
 ## Real usage
 
-[`examples/mvp-site/deploy/run-process.js`](../../../examples/mvp-site/deploy/run-process.js) runs this as its own PM2-supervised process 
+[`examples/mvp-site/deploy/run-process.js`](../../../examples/mvp-site/deploy/run-process.js) runs this as its own PM2-supervised process
 (`--role mcp`): it resolves the Kernel key using the same `.kernel-key` discovery the Gateway uses, then calls
 `createMcpServer(root, port, { kernelKey }, MCP_PLUGIN_DIRS)`.
 

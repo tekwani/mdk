@@ -1,14 +1,14 @@
 # MinerChip
 
-Individual chip tile inside `MinerChipsCard`. Shows the slot index, current frequency, and average/min/max temperature. Selectable via click.
+Individual chip tile inside `MinerChipsCard`. Shows the slot index, current frequency, and average/min/max temperature.
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `index` | `number` | yes | — | Chip slot index (0-based). |
-| `frequency` | `{ current: number }` | yes | — | Current frequency in MHz. |
-| `temperature` | `{ avg: number; min: number; max: number }` | yes | — | Temperature stats in °C. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `index` | Required | `number` | — | Chip slot index (0-based) |
+| `frequency` | Required | `{ current: number }` | — | Current frequency in MHz |
+| `temperature` | Required | `{ avg: number; min: number; max: number }` | — | Temperature stats in °C |
 
 ## Minimal example
 

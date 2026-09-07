@@ -45,6 +45,7 @@ export const COMPONENT_NAV: SidebarMenuItem[] = [
       { id: 'hooks', label: 'Adapter Hooks' },
       { id: 'theming', label: 'Theming' },
       { id: 'bring-your-own-backend', label: 'Bring Your Own Backend' },
+      { id: 'agent-co-pilot', label: 'Agent Co-pilot' },
     ],
   },
   {

@@ -70,8 +70,6 @@ const VALID_COMMAND_RESULT_STATUSES = new Set([
   'REJECTED'
 ])
 
-const MAX_TARGETS = 1024
-
 /**
  * MDK Protocol message types
  */
@@ -88,7 +86,6 @@ module.exports = {
   COMMAND_SCOPES,
   VALID_COMMAND_SCOPES,
   VALID_COMMAND_RESULT_STATUSES,
-  MAX_TARGETS,
   MESSAGE_TYPES,
   PROTOCOL_VERSION
 }

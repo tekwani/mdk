@@ -1,0 +1,16 @@
+/**
+ * The package's single stylesheet entry, compiled to `dist/styles.css`.
+ *
+ * Components here deliberately do not import their own `.scss` — every partial
+ * is reached from this file, and `scripts/check-style-forwards.mjs` fails the
+ * build if one is not. `postcss-mdk-layer` then wraps the output in `@layer mdk`
+ * so a consuming app's own styles win without specificity hacks.
+ */
+
+@use './styles/tokens';
+@use './styles/mixins';
+@use './styles/panel';
+@use './styles/messages';
+@use './styles/approval';
+@use './styles/composer';
+@use './styles/conversations';

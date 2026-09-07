@@ -1,0 +1,68 @@
+/* The inline approval prompt. The stream is paused behind this. */
+
+.mdk-agent-approval {
+  padding: 12px 14px 14px;
+
+  /* Dashed, per the design — it reads as "pending / not yet real", which is
+     exactly the state a paused write is in. */
+  border: 1px dashed color-mix(in srgb, var(--mdk-agent-accent) 60%, transparent);
+  border-radius: var(--mdk-agent-radius);
+  background: color-mix(in srgb, var(--mdk-agent-accent) 6%, var(--mdk-agent-surface));
+
+  &__title {
+    margin: 0 0 12px;
+    color: var(--mdk-agent-accent);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  &__details {
+    margin: 0 0 14px;
+  }
+
+  &__row {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+
+    & + & {
+      margin-top: 6px;
+    }
+  }
+
+  &__label {
+    flex: none;
+    width: 90px;
+    color: var(--mdk-agent-text-muted);
+    font-size: 11px;
+    text-transform: capitalize;
+  }
+
+  &__value {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+
+    /* Reject is the outline variant, which the devkit renders light-on-dark —
+       a white slab next to the filled Approve. The design has it dark with a
+       hairline border, so it reads as the secondary choice. */
+    button:first-child {
+      border: 1px solid var(--mdk-agent-border-strong);
+      background: transparent;
+      color: var(--mdk-agent-text);
+
+      &:hover:not(:disabled) {
+        border-color: var(--mdk-agent-danger);
+        color: var(--mdk-agent-danger);
+      }
+    }
+  }
+}

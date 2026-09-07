@@ -14,7 +14,7 @@ type MinerChipProps = {
 }
 
 /**
- * Selectable chip representing a single miner; surfaces id, slot, and current state with click handling.
+ * Chip representing a single miner; surfaces slot index, temperature, and frequency.
  *
  * @category widgets
  * @domain device-management

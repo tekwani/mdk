@@ -18,7 +18,7 @@ npm install @tetherto/mdk-worker-antspace
 ## Usage
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startAntspaceWorker } = require('@tetherto/mdk-worker-antspace')
 
 const kernel = await getKernel()

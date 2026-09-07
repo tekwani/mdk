@@ -4,21 +4,21 @@ A Chart.js bar chart with gradient fills, optional stacking, horizontal layout, 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `data` | `any` | yes | — | Chart.js dataset object (`{ labels, datasets }`) |
-| `options` | `ChartJS<'bar'>['options']` | no | — | Extra Chart.js options merged with the MDK defaults |
-| `isStacked` | `boolean` | no | `false` | Stacks datasets on top of each other |
-| `isHorizontal` | `boolean` | no | `false` | Renders bars horizontally (sets `indexAxis: 'y'`) |
-| `formatYLabel` | `(value: number) => string` | no | — | Formats Y-axis tick labels |
-| `showLegend` | `boolean` | no | `true` | Displays the Chart.js built-in legend |
-| `legendPosition` | `Position` | no | `'top'` | Legend placement (`'top' \| 'bottom' \| 'left' \| 'right'`) |
-| `legendAlign` | `FlexAlign` | no | `'start'` | Horizontal alignment of legend labels |
-| `showDataLabels` | `boolean` | no | `false` | Renders values above each bar |
-| `formatDataLabel` | `(value: number) => string` | no | — | Formats the data label text |
-| `tooltip` | `ChartTooltipConfig` | no | — | Custom HTML tooltip configuration (replaces the default Chart.js tooltip) |
-| `height` | `number` | no | `300` | Chart height in pixels |
-| `className` | `string` | no | — | Additional class for the wrapper `div` |
+| Prop              | Status   | Type                        | Default   | Description                                                  |
+| ----------------- | -------- | --------------------------- | --------- | ------------------------------------------------------------ |
+| `data`            | Required | `any`                       | —         | Chart.js dataset object (`{ labels, datasets }`)             |
+| `options`         | Optional | `ChartJS<'bar'>['options']` | —         | Extra Chart.js options merged with the MDK defaults          |
+| `isStacked`       | Optional | `boolean`                   | `false`   | Stacks datasets on top of each other                         |
+| `isHorizontal`    | Optional | `boolean`                   | `false`   | Renders bars horizontally (sets `indexAxis: 'y'`)            |
+| `formatYLabel`    | Optional | `(value: number) => string` | —         | Formats Y-axis tick labels                                   |
+| `showLegend`      | Optional | `boolean`                   | `true`    | Displays the Chart.js built-in legend                        |
+| `legendPosition`  | Optional | `Position`                  | `'top'`   | Legend placement (`'top' \| 'bottom' \| 'left' \| 'right'`)  |
+| `legendAlign`     | Optional | `FlexAlign`                 | `'start'` | Horizontal alignment of legend labels                        |
+| `showDataLabels`  | Optional | `boolean`                   | `false`   | Renders values above each bar                                |
+| `formatDataLabel` | Optional | `(value: number) => string` | —         | Formats the data label text                                  |
+| `tooltip`         | Optional | `ChartTooltipConfig`        | —         | Custom HTML tooltip configuration (replaces the default Chart.js tooltip) |
+| `height`          | Optional | `number`                    | `300`     | Chart height in pixels                                       |
+| `className`       | Optional | `string`                    | —         | Additional class for the wrapper `div`                       |
 
 ## Example
 
@@ -50,5 +50,5 @@ const data = {
 ## Notes
 
 - Bar datasets automatically receive a vertical gradient fill derived from `backgroundColor`. Pass `backgroundColor` as a function to opt out.
-- For mixed bar + line charts pass the dataset `type: 'line'` inside `data.datasets` and use `data` typed as `any`.
-- `showDataLabels` adds `chartjs-plugin-datalabels`; it adds 20 px of top padding to prevent label clipping.
+- For mixed bar + line charts pass the dataset `type: 'line'` inside `data.datasets` and use `data` typed as `any`
+- `showDataLabels` adds `chartjs-plugin-datalabels`; it adds 20 px of top padding to prevent label clipping

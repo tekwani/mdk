@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-mvp-site",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "MDK MVP Site",
   "private": true,
   "engines": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "setup": "npm run setup:config && npm --prefix ../.. run setup && npm --prefix ../.. run build:ui && npm --prefix ../.. install && npm --prefix ui install && npm --prefix ui run build",
-    "setup:example": "npm run setup:config && npm install && npm --prefix ../.. run build:ui && npm --prefix ui install && npm --prefix ui run build",
+    "setup:example": "npm run setup:config && npm install && npm --prefix ../.. run setup:ui && npm --prefix ../.. run build:ui && npm --prefix ui install && npm --prefix ui run build",
     "setup:config": "node deploy/setup-config.js",
     "build:ui": "npm --prefix ui run build",
     "dev:ui": "VITE_API_PORT=3000 npm --prefix ui run dev",
@@ -19,10 +19,15 @@
     "test": "npm run test:unit"
   },
   "dependencies": {
-    "@tetherto/mdk-core": "^0.7.0",
-    "@tetherto/mdk-worker-ocean": "^0.7.0",
-    "@tetherto/mdk-worker-satec": "^0.7.0",
-    "@tetherto/mdk-worker-whatsminer": "^0.7.0"
+    "@tetherto/mdk-core": "^0.8.0",
+    "@tetherto/mdk-worker": "^0.8.0",
+    "@tetherto/mdk-worker-ocean": "^0.8.0",
+    "@tetherto/mdk-worker-satec": "^0.8.0",
+    "mdk-crypto-lib": "file:../../backend/lib/mdk-crypto-lib",
+    "whatsminer-mdk-worker": "git+https://github.com/whatsminer/whatsminer-mdk-worker.git"
+  },
+  "overrides": {
+    "crypto-js": "file:../../backend/lib/mdk-crypto-lib"
   },
   "devDependencies": {
     "brittle": "3.18.0",

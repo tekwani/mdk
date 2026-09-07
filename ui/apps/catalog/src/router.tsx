@@ -57,6 +57,11 @@ const BringYourOwnBackendPage = lazy(() =>
     default: module.BringYourOwnBackendPage,
   })),
 )
+const AgentCoPilotPage = lazy(() =>
+  import('./pages/agent-co-pilot/agent-co-pilot-page').then((module) => ({
+    default: module.AgentCoPilotPage,
+  })),
+)
 const ActionButtonPage = lazy(() =>
   import('./pages/action-button-page').then((module) => ({ default: module.ActionButtonPage })),
 )
@@ -442,6 +447,7 @@ export const router = createBrowserRouter(
         { path: 'hooks', element: withSuspense(HooksDemoPage) },
         { path: 'theming', element: withSuspense(ThemingDemoPage) },
         { path: 'bring-your-own-backend', element: withSuspense(BringYourOwnBackendPage) },
+        { path: 'agent-co-pilot', element: withSuspense(AgentCoPilotPage) },
         { path: 'alerts', element: withSuspense(AlertExample) },
         { path: 'action-button', element: withSuspense(ActionButtonPage) },
         { path: 'buttons', element: withSuspense(ButtonsPage) },

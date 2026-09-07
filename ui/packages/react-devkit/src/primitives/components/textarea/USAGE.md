@@ -4,16 +4,16 @@ A multi-line text input with optional label, error message, and accessible marku
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `label` | `string` | no | — | Label text rendered above the textarea |
-| `id` | `string` | no | auto-generated | HTML id for the textarea; required for label association when providing `label` |
-| `error` | `string` | no | — | Validation error message shown below the textarea; also applies error styling |
-| `wrapperClassName` | `string` | no | — | Additional class for the root wrapper element |
-| `className` | `string` | no | — | Additional class for the `<textarea>` element |
-| `disabled` | `boolean` | no | — | Disables the textarea |
+| Prop               | Status   | Type      | Default  | Description                                                                       |
+| ------------------ | -------- | --------- | ---------| --------------------------------------------------------------------------------- |
+| `label`            | Optional | `string`  | —        | Label text rendered above the `<textarea>`                                        |
+| `id`               | Optional | `string`  | auto-generated | HTML id for the `<textarea>`; required for label association when providing `label` |
+| `error`            | Optional | `string`  | —        | Validation error message shown below the `<textarea>`; also applies error styling |
+| `wrapperClassName` | Optional | `string`  | —        | Additional class for the root wrapper element                                     |
+| `className`        | Optional | `string`  | —        | Additional class for the `<textarea>` element                                     |
+| `disabled`         | Optional | `boolean` | —        | Disables the `<textarea>`                                                         |
 
-All other native `textarea` HTML attributes are forwarded (e.g. `rows`, `placeholder`, `value`, `onChange`).
+All other native `<textarea>` HTML attributes are forwarded (e.g. `rows`, `placeholder`, `value`, `onChange`).
 
 ## Example
 
@@ -43,5 +43,5 @@ import { TextArea } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- When an `error` is provided, the textarea receives `aria-invalid` and `aria-describedby` pointing to the error message for screen reader accessibility.
-- When no `label` is provided, `wrapperClassName` is applied directly to the inner wrapper `div`; when a label is present, it applies to the outer root `div`.
+- When an `error` is provided, the `<textarea>` receives `aria-invalid` and `aria-describedby` pointing to the error message for screen reader accessibility
+- When no `label` is provided, `wrapperClassName` is applied directly to the inner wrapper `div`; when a label is present, it applies to the outer root `div`

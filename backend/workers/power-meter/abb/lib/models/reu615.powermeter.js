@@ -3,7 +3,7 @@
 const { promiseTimeout } = require('@bitfinex/lib-js-util-promise')
 const ABBPowerMeter = require('../abb.powermeter')
 const { series } = require('async')
-const { FUNCTION_CODES } = require('svc-facs-modbus/lib/constants')
+const { FUNCTION_CODES } = require('@tetherto/svc-facs-modbus/lib/constants')
 
 class REU615PowerMeter extends ABBPowerMeter {
   async _readValues () {

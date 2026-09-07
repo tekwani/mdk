@@ -21,16 +21,12 @@ const {
 // Each seed type targets one running worker. The new device's connection opts
 // default to that family's mock port (so the device has live telemetry); --port
 // overrides.
+//
+// whatsminer is deliberately absent: it hosts the third-party
+// whatsminer-mdk-worker plugin, whose device list is fixed at construction —
+// no registerThing equivalent, so it can't be seeded live like the others
+// (see backend/whatsminer-adapter.js).
 const SEED_TYPES = {
-  whatsminer: {
-    workerId: 'whatsminer-worker',
-    prefix: 'whatsminer',
-    params: (id, flags) => ({
-      id,
-      info: { container: flags.container || CONTAINER_ANTSPACE, pos: flags.pos || id, serialNum: `WM-${id}` },
-      opts: { address: HOST, port: Number(flags.port) || PORTS.MINER_BASE, password: 'admin' }
-    })
-  },
   antminer: {
     workerId: 'antminer-worker',
     prefix: 'antminer',

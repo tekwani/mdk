@@ -26,8 +26,8 @@ const path = require('path')
 const crypto = require('crypto')
 const { createKernel } = require('@tetherto/mdk-kernel')
 const { waitForDiscovery } = require('@tetherto/mdk-core')
-const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
-const wmMock = require('@tetherto/mdk-worker-whatsminer/mock/server')
+const { startAvalonWorker } = require('@tetherto/mdk-worker-avalon')
+const avMockServer = require('@tetherto/mdk-worker-avalon/mock/server')
 
 const MOCK_PORT = 14033
 
@@ -46,7 +46,7 @@ function e (action, payload, deviceId) {
 }
 
 async function main () {
-  wmMock.createServer({ port: MOCK_PORT, host: '127.0.0.1', type: 'm56s', serial: 'WM-001', password: 'admin' })
+  avMockServer.createServer({ port: MOCK_PORT, host: '127.0.0.1', type: 'a1346', serial: 'AV-001' })
 
   // Generate a fresh DHT topic for this run
   const topic = crypto.randomBytes(32).toString('hex')
@@ -87,13 +87,13 @@ async function main () {
   // ── start() recovers state, starts listeners, scheduler, health monitor ─
   await kernel.start()
 
-  // Start a runtime-hosted whatsminer worker and register it with the kernel
-  const worker = await startWhatsminerWorker({
-    workerId: 'whatsminer-m56s-shell',
-    model: 'm56s',
+  // Start a runtime-hosted Avalon worker and register it with the kernel
+  const worker = await startAvalonWorker({
+    workerId: 'avalon-a1346-shell',
+    model: 'a1346',
     storeDir: path.join(os.tmpdir(), 'mdk', 'kernel-shell', 'worker-store'),
     seedDevices: [{
-      info: { serialNum: 'WM-001', container: 'rack-1' },
+      info: { serialNum: 'AV-001', container: 'rack-1' },
       opts: { address: '127.0.0.1', port: MOCK_PORT, password: 'admin' }
     }]
   })
@@ -125,7 +125,6 @@ async function main () {
   console.log(`  hp-rpc-cli -s ${K} -m mdk -d '${e('command.request', { command: 'setPowerMode', params: { mode: 'low' } }, deviceId)}'`)
   console.log(`  hp-rpc-cli -s ${K} -m mdk -d '${e('command.request', { command: 'setPowerMode', params: { mode: 'normal' } }, deviceId)}'`)
   console.log(`  hp-rpc-cli -s ${K} -m mdk -d '${e('command.request', { command: 'setLED', params: { enabled: true } }, deviceId)}'`)
-  console.log(`  hp-rpc-cli -s ${K} -m mdk -d '${e('command.request', { command: 'setPowerPct', params: { pct: 80 } }, deviceId)}'`)
   console.log(`  hp-rpc-cli -s ${K} -m mdk -d '${e('command.request', { command: 'setupPools', params: { pools: [{ url: 'stratum+tcp://ocean.xyz:3334', user: 'bc1q.worker1', pass: 'x' }] } }, deviceId)}'`)
   console.log(`  hp-rpc-cli -s ${K} -m mdk -d '${e('command.request', { command: 'saveComment', params: { comment: 'Replaced fan #2', user: 'ops' } }, deviceId)}'`)
 

@@ -6,11 +6,11 @@ docs@tether_slug: reference/kernel/modules
 
 ## Overview
 
-[Kernel][kernel-package]'s coordination splits across single-purpose modules. Each owns its own state, persistence boundary, and scaling 
-characteristics. It communicates with the others only through its declared interface. 
+[Kernel][kernel-package]'s coordination splits across single-purpose modules. Each owns its own state, persistence boundary, and scaling
+characteristics. It communicates with the others only through its declared interface.
 
 > [!NOTE]
-> The [Kernel's Architecture overview][kernel-architecture] provides the canonical spec for each module's 
+> The [Kernel's Architecture overview][kernel-architecture] provides the canonical spec for each module's
 > interfaces, state machine, and recovery behavior.
 
 ## Modules

@@ -1,0 +1,160 @@
+/* The conversations view. */
+
+@use '@tetherto/mdk-react-devkit/styles' as *;
+@use 'mixins' as *;
+
+.mdk-agent-conversations {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+
+  &__scroll {
+    @include scroll_column;
+  }
+
+  &__empty {
+    @include empty_note;
+  }
+
+  /* A row is a container, not a button: the delete control is a second button
+     and nesting one inside another is invalid. */
+  &__row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mdk-agent-border);
+
+    &:hover {
+      background: var(--mdk-agent-surface-raised);
+    }
+
+    &--active {
+      background: var(--mdk-agent-surface-raised);
+      box-shadow: inset 2px 0 0 var(--mdk-agent-accent);
+    }
+  }
+
+  &__open {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  &__title {
+    @include text_ellipsis;
+
+    color: var(--mdk-color-white, #fff);
+  }
+
+  &__meta {
+    color: var(--mdk-agent-text-muted);
+    font-size: 11px;
+  }
+
+  &__badge {
+    display: flex;
+    flex: none;
+    gap: 6px;
+    align-items: center;
+    color: var(--mdk-agent-text-muted);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+
+    &::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: currentcolor;
+    }
+
+    &--running {
+      color: var(--mdk-agent-accent);
+    }
+  }
+
+  &__delete {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--mdk-agent-text-muted);
+    cursor: pointer;
+
+    /* Revealed on hover, but never hidden from assistive tech or the keyboard. */
+    opacity: 0;
+
+    &:hover:not(:disabled) {
+      color: var(--mdk-agent-danger);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  &__row:hover &__delete,
+  &__delete:focus-visible {
+    opacity: 1;
+  }
+
+  &__confirm {
+    display: flex;
+    flex: none;
+    gap: 6px;
+    align-items: center;
+
+    button {
+      padding: 3px 8px;
+      border: 1px solid var(--mdk-agent-border-strong);
+      background: none;
+      color: var(--mdk-agent-text);
+      font: inherit;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    /* Two classes, so it outranks the element selector above without
+       `!important` — the cascade-layer setup exists precisely to avoid those. */
+    .mdk-agent-conversations__confirm-yes {
+      border-color: color-mix(in srgb, var(--mdk-agent-danger) 60%, transparent);
+      color: var(--mdk-agent-danger);
+    }
+  }
+
+  &__footer {
+    flex: none;
+    padding: 12px;
+    border-top: 1px solid var(--mdk-agent-border);
+
+    /* The devkit's outline button is light-on-dark by default, which reads as a
+       filled white slab inside this panel. */
+    button {
+      border: 1px solid var(--mdk-agent-border-strong);
+      background: transparent;
+      color: var(--mdk-agent-text);
+
+      &:hover:not(:disabled) {
+        border-color: var(--mdk-agent-accent);
+        background: var(--mdk-agent-surface-raised);
+        color: var(--mdk-color-white, #fff);
+      }
+    }
+  }
+}

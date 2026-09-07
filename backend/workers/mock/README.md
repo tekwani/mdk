@@ -1,6 +1,6 @@
 # Mock framework (`backend/workers/mock`)
 
-A generic, layered foundation for device mocks. Provides a shared base plus composed transports, supporting a device mock 
+A generic, layered foundation for device mocks. Provides a shared base plus composed transports, supporting a device mock
 of just a few lines.
 
 ## Two axes
@@ -16,7 +16,7 @@ of just a few lines.
 
 ## Layout
 
-```
+```text
 backend/workers/mock/
   base.mock.js              BaseMock — the shared foundation
   index.js                  exports every base/transport/category class
@@ -49,7 +49,7 @@ pins its transport; one whose vendors disagree (miners, containers) composes per
 
 From the repo root, via the shared runner (comma-separated `type|device [port] [k=v]…`):
 
-```
+```text
 npm run mock m56s 14028, s19xp 14029, b23 5071, ocean 8061
 ```
 
@@ -72,5 +72,5 @@ module.exports = SiemensMock.expose(module) // -> { createServer }, and runs the
 
 plus `initial_states/default.js` (its register map). For a `miner`/`container` whose transport
 isn't fixed by the category, also implement `createTransport()` to return the adapter it speaks
-(see [`miners/antminer`](../miners/antminer/README.md) for HTTP, [`miners/whatsminer`](../miners/whatsminer/README.md) for TCP, [`containers/bitdeer`](../containers/bitdeer/README.md) for MQTT). A
+(see [`miners/antminer`](../miners/antminer/README.md) for HTTP, [`miners/avalon`](../miners/avalon/README.md) for TCP, [`containers/bitdeer`](../containers/bitdeer/README.md) for MQTT). A
 brand-new wire protocol only needs one new `transports/<x>.transport.js` adapter.

@@ -117,7 +117,7 @@ It reads the Kernel key file the example publishes (`$TMPDIR/mdk-site-antminer/k
 speaking the MDK Protocol and, for each of the four Antminer
 Workers, prints the discovered device plus its capabilities and **live mock telemetry**:
 
-```
+```text
 Kernel sees 4 Worker(s):
 
   AntminerManagerS19xp-rack-s19xp  state=READY health=HEALTHY devices=1
@@ -189,7 +189,7 @@ per-Worker, so distinct Workers may reuse the loopback address).
 
 ### Committed (source)
 
-```
+```text
 examples/backend/miners/antminer/
 ├── README.md
 ├── index.js                      # orchestration: Kernel + gateway + Workers + mocks + registration
@@ -201,7 +201,7 @@ examples/backend/miners/antminer/
 
 ### Generated (ignored)
 
-```
+```text
 examples/backend/miners/antminer/
 ├── config/mdk.config.json        # your copy of the .example (optional — falls back to .example)
 └── data/rack-<name>/             # per-Worker store

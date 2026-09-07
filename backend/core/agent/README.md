@@ -71,7 +71,7 @@ node bin/mdk-agent.js --model qwen3-4b --mcp-url http://127.0.0.1:3008/mcp
 
 Then ask, in plain language:
 
-```
+```text
 you › how many miners are on the site?
   → tool   count_devices({"family":"miner","state":"all"})
   ← data   { "summary": "15 miners.", "count": 15 }
@@ -85,18 +85,77 @@ REPL commands: `/about` (what this is) · `/tools` · `/info` · `/new` · `/exi
 
 ### Flags
 
-| Flag | Default | Meaning |
+| Flag | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `--model` | Required for a hosted provider | `string` | `qwen3-4b` | Model id served by QVAC — the floor the budgets assume |
+| `--provider` | Optional | `string` | `qvac` | `qvac`, `openai`, or `openai-compatible` with an explicit `--base-url` |
+| `--mode` | Optional | `string` | `external` | How the provider reaches the model; `external` talks to `--base-url` |
+| `--base-url` | Optional | `string` | `http://127.0.0.1:11500/v1` | The QVAC model endpoint from step 1, or the hosted endpoint |
+| `--api-key` | Optional | `string` | None | Hosted key, read only if the [environment variable](#talking-to-a-hosted-model) isn't set |
+| `--rpm` | Optional | `number` | Unpaced | Cap requests per minute against a hosted endpoint that rate limits |
+| `--capability` | Optional | `string` | `small`, or `large` for a hosted provider | Which tools are admitted and what a turn may spend |
+| `--max-steps` | Optional | `number` | From the capability | Override the step budget |
+| `--max-output-tokens` | Optional | `number` | From the capability | Override the token budget |
+| `--mcp-url` | Optional | `string` | None | MCP tool server; omit for plain grounded chat, no tools |
+| `--eval` | Optional | `boolean` | Off | Run the eval battery instead of the REPL (needs `--mcp-url`) |
+| `--reps` | Optional | `number` | `1` | Repetitions per question; 3+ exposes unstable routing |
+| `--only` | Optional | `string` | All | Restrict the run to case ids containing this string |
+| `--tag` | Optional | `string` | All | Restrict the run to cases carrying this tag |
+| `--concurrency` | Optional | `number` | `1` | Run this many cases at once; 6 is ~4x faster |
+| `--out` | Optional | `string` | None | Write the JSON report to this path |
+
+### Talking to a hosted model
+
+The same tools and the same contract, against any endpoint that speaks the OpenAI chat API.
+Useful as a control: a low battery score against a local model is ambiguous between a wrong tool
+contract and a model that is too small, and a frontier model separates the two.
+
+```sh
+export OPENAI_API_KEY=sk-…
+node bin/mdk-agent.js --provider openai --model gpt-5.5 --mcp-url http://127.0.0.1:3008/mcp
+
+# any other endpoint that speaks the same protocol
+export MDK_AGENT_API_KEY=…
+node bin/mdk-agent.js --provider openai-compatible \
+  --base-url https://generativelanguage.googleapis.com/v1beta/openai --model gemini-3-pro
+```
+
+**The key is read from the environment first, and only then from `--api-key`.** An argument is
+visible to every other process on the box via `ps` and lands in shell history, so the flag exists
+for convenience, not as the recommendation. `--provider openai` reads `OPENAI_API_KEY`; every
+other endpoint reads `MDK_AGENT_API_KEY`.
+
+Prompts and tool results leave the site for the endpoint's host. The CLI says so at startup —
+with the local model nothing leaves, and that difference should not have to be inferred.
+
+If the endpoint rate limits, `--rpm 30` paces requests; retries follow the endpoint's own
+`Retry-After` rather than a guess. A 429 at startup is reported and treated as reachable, since
+it is the endpoint answering on a valid key for a model it recognises.
+
+### Capability
+
+One knob decides two things: which tools a model is shown, and what a turn of it may spend.
+They are the same judgement — a model trusted with harder tools is trusted to take more steps
+to use them.
+
+| Capability | Steps | Output tokens |
 | --- | --- | --- |
-| `--model` | `qwen3-600m` | model id served by QVAC (use `qwen3-4b`) |
-| `--mode` | `external` | how the provider reaches the model; `external` talks to `--base-url` |
-| `--base-url` | `http://127.0.0.1:11500/v1` | the QVAC model endpoint from step 1 |
-| `--mcp-url` | *(none)* | MCP tool server; omit for plain grounded chat, no tools |
-| `--eval` | off | run the eval battery instead of the REPL (needs `--mcp-url`) |
-| `--reps` | `1` | repetitions per question; 3+ exposes unstable routing |
-| `--only` | *(all)* | restrict the run to case ids containing this string |
-| `--tag` | *(all)* | restrict the run to cases carrying this tag |
-| `--concurrency` | `1` | run this many cases at once; 6 is ~4× faster |
-| `--out` | *(none)* | write the JSON report to this path |
+| `small` | 6 | 2048 |
+| `mid` | 8 | 4096 |
+| `large` | 10 | 8192 |
+
+`small` is budgeted for the 4B this agent was measured on, which is also the floor: the tool
+loop asks for JSON on demand and a sub-billion model does not reliably produce it.
+
+**Nothing is inferred from the model name.** An alias, a fine-tune or a local tag says nothing
+about what is behind it, and guessing upward is the direction that produces runaway turns — so a
+bigger local model is declared with `--capability mid`, never detected. A hosted endpoint is the
+one exception, and it is read from the provider rather than the name, because reaching for one
+is already the decision to use a frontier model.
+
+A step is one model call, not one tool call: the answer costs a step of its own. A question that
+fans out over the whole fleet does not fit any of these numbers and belongs in a tool that fans
+out internally, not in a larger budget.
 
 ### Measuring the agent
 
@@ -231,9 +290,10 @@ reply whose question has been dropped reads as something the model said unprompt
 
 ## Layout
 
-```
+```text
 index.js                   createAgent(config) — the entry point
-src/                       provider (local model) · session (charter + turns) · loop (tool loop)
+src/                       provider (local model) · session (turns) · loop (tool loop)
+src/charter.js             the standing system prompt and its version
 src/session-store.js       where conversations live; the contract Redis/SQL must satisfy
 src/eval.js                the battery runner, its expectation grammar and the report
 eval/battery.json          the questions themselves

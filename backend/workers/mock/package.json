@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-worker-mock",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "Generic mock framework for MDK device workers (BaseMock + transport adapters)",
   "keywords": [
@@ -22,7 +22,7 @@
     "test:coverage": "NODE_ENV=test brittle --coverage 'tests/**/*.test.js'"
   },
   "dependencies": {
-    "fastify": "5.8.5"
+    "fastify": "5.12.1"
   },
   "devDependencies": {
     "brittle": "3.18.0",

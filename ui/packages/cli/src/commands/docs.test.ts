@@ -32,13 +32,18 @@ describe('runDocs', () => {
     const { sink, out } = captureLines()
     runDocs({
       packageName: '@tetherto/mdk-react-devkit',
-      componentName: 'Accordion',
+      // Accordion now ships a co-located USAGE.md, so it no longer exercises this
+      // path. CabinetDetailCard is confirmed to still lack one in the registry.
+      componentName: 'CabinetDetailCard',
       cwd: fixture.dir,
       out: sink,
     })
     const text = out.join('\n')
-    expect(text).toMatch(/#\s+Accordion/)
+    expect(text).toMatch(/#\s+CabinetDetailCard/)
     expect(text).toMatch(/Props/)
+    // Pins the synthesised table to the USAGE.md column shape so the two don't drift apart.
+    expect(text).toContain('| Prop | Status | Type | Default | Description |')
+    expect(text).toContain('| --- | --- | --- | --- | --- |')
   })
 
   it('throws for unknown components', () => {
@@ -52,10 +57,12 @@ describe('runDocs', () => {
     ).toThrow(/not found/)
   })
 
-  it('emits kernel capabilities line when the component declares them', () => {
-    // LineChartCard is agent-ready and ships kernelCapabilities. The synthesised
-    // path is only hit when the component has no USAGE.md — pick one we know
-    // lacks USAGE.md but declares capabilities. ActiveIncidentsCard fits.
+  it('emits the co-located USAGE.md for a component that declares kernel capabilities', () => {
+    // ActiveIncidentsCard is agent-ready and ships kernelCapabilities, but it now
+    // has its own USAGE.md too, so this only exercises the co-located passthrough
+    // (docs.ts:33-38) — no registry component currently lacks USAGE.md while
+    // declaring kernelCapabilities, so the synthesised "Kernel capabilities:" line
+    // (docs.ts:46-47) has no fixture to cover it against.
     const { sink, out } = captureLines()
     runDocs({
       packageName: '@tetherto/mdk-react-devkit',

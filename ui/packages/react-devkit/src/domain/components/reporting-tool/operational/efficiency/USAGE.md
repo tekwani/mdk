@@ -11,12 +11,12 @@ Operational efficiency reporting view with three tabs: site-level, miner-type-le
 
 ## OperationsEfficiency Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `defaultTab` | `EfficiencyTabValue` | no | — | Initially selected tab. |
-| `siteView` | `EfficiencySiteViewProps` | no | — | Props forwarded to `EfficiencySiteView`. |
-| `minerTypeView` | `EfficiencyMinerTypeViewProps` | no | — | Props forwarded to `EfficiencyMinerTypeView`. |
-| `minerUnitView` | `EfficiencyMinerUnitViewProps` | no | — | Props forwarded to `EfficiencyMinerUnitView`. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `defaultTab` | Optional | `EfficiencyTabValue` | `'site-view'` | Initially selected tab |
+| `siteView` | Optional | `EfficiencySiteViewProps` | — | Props forwarded to `EfficiencySiteView` |
+| `minerTypeView` | Optional | `EfficiencyMinerTypeViewProps` | — | Props forwarded to `EfficiencyMinerTypeView` |
+| `minerUnitView` | Optional | `EfficiencyMinerUnitViewProps` | — | Props forwarded to `EfficiencyMinerUnitView` |
 
 ## Minimal example
 

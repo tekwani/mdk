@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { EXPORT_ITEM_KEYS, EXPORT_ITEMS, EXPORT_LABEL } from './constants'
 
 type StatsExportProps = {
-  showLabel?: boolean
+  hideLabel?: boolean
   disabled?: boolean
   onCsvExport: () => Promise<void>
   onJsonExport: () => Promise<void>
@@ -33,7 +33,7 @@ export const StatsExport = ({
   onJsonExport,
   onCsvExport,
   disabled = false,
-  showLabel = false,
+  hideLabel = false,
 }: StatsExportProps): React.ReactElement => {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -74,7 +74,7 @@ export const StatsExport = ({
           ) : (
             <ExportIcon />
           )}
-          {!showLabel && <span className="stats-export__label">{EXPORT_LABEL}</span>}
+          {!hideLabel && <span className="stats-export__label">{EXPORT_LABEL}</span>}
           <span className="stats-export__divider" />
           <ArrowIcon isOpen={open} />
         </button>

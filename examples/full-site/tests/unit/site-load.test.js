@@ -16,6 +16,7 @@ test('resolveFamily falls back to workerId map when config is missing', (t) => {
   t.is(resolveFamily({ workerId: 'bitdeer-worker' }, {}), 'container')
 })
 
-test('WORKER_FAMILY covers all full-site workers', (t) => {
-  t.is(Object.keys(WORKER_FAMILY).length, 12)
+test('WORKER_FAMILY covers all full-site workers except the contract-only whatsminer plugin', (t) => {
+  t.is(Object.keys(WORKER_FAMILY).length, 11)
+  t.absent(WORKER_FAMILY['whatsminer-worker'])
 })

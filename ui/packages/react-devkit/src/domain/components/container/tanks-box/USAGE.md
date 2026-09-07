@@ -4,23 +4,23 @@
 
 ## TanksBox Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `{ oil_pump: Tank[]; water_pump: WaterPump[]; pressure: TanksBoxPressure[] }` | no | — | Tank telemetry arrays; returns `null` when omitted. |
+| Prop   | Status   | Type | Default | Description |
+| ------ | -------- | ---- | ------- | ----------- |
+| `data` | Optional | `{ oil_pump: Tank[]; water_pump: WaterPump[]; pressure: TanksBoxPressure[] }` | —       | Tank telemetry arrays; returns `null` when omitted |
 
 ## TankRow Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `label` | `string` | yes | — | Tank identifier label (e.g. "Tank 1"). |
-| `temperature` | `number` | yes | — | Current temperature value. |
-| `unit` | `string` | yes | — | Temperature unit string (e.g. "°C"). |
-| `oilPumpEnabled` | `boolean` | yes | — | Running state for the oil pump. |
-| `waterPumpEnabled` | `boolean` | yes | — | Running state for the water pump. |
-| `color` | `string` | yes | — | CSS colour for the temperature value (threshold-driven). |
-| `flash` | `boolean` | no | — | Enables flash animation on the temperature row. |
-| `tooltip` | `string` | no | — | Tooltip text for the temperature value. |
-| `pressure` | `TankRowPressure` | yes | — | Pressure reading with optional flash/colour/tooltip. |
+| Prop               | Status   | Type              | Default | Description                                             |
+| ------------------ | -------- | ----------------- | ------- | ------------------------------------------------------- |
+| `label`            | Required | `string`          | —       | Tank identifier label (e.g. "Tank 1")                   |
+| `temperature`      | Required | `number`          | —       | Current temperature value                               |
+| `unit`             | Required | `string`          | —       | Temperature unit string (e.g. "°C")                     |
+| `oilPumpEnabled`   | Required | `boolean`         | —       | Running state for the oil pump                          |
+| `waterPumpEnabled` | Required | `boolean`         | —       | Running state for the water pump                        |
+| `color`            | Required | `string`          | —       | CSS colour for the temperature value (threshold-driven) |
+| `pressure`         | Required | `TankRowPressure` | —       | Pressure reading with optional flash/colour/tooltip     |
+| `flash`            | Optional | `boolean`         | —       | Enables flash animation on the temperature row          |
+| `tooltip`          | Optional | `string`          | —       | Tooltip text for the temperature value                  |
 
 ## Minimal example
 

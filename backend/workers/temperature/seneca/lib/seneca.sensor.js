@@ -1,7 +1,7 @@
 'use strict'
 
 const { Sensor } = require('../../../../core/mdk')
-const { FUNCTION_CODES, PROTOCOL } = require('svc-facs-modbus/lib/constants')
+const { FUNCTION_CODES, PROTOCOL } = require('@tetherto/svc-facs-modbus/lib/constants')
 const { promiseTimeout } = require('@bitfinex/lib-js-util-promise')
 
 class SenecaSensor extends Sensor {

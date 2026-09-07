@@ -11,23 +11,23 @@ table or just the historical log, drop down to `CurrentAlerts` /
 
 ## Props
 
-| Prop                        | Type                                       | Required | Default        | Description                                                              |
-| --------------------------- | ------------------------------------------ | -------- | -------------- | ------------------------------------------------------------------------ |
-| `devices`                   | `Device[]`                                 | no       | —              | Raw devices payload — the current-alerts table derives rows from `device.last.alerts`. |
-| `isCurrentAlertsLoading`    | `boolean`                                  | no       | `false`        | Loading flag for the current-alerts table.                               |
-| `historicalAlerts`          | `Alert[]`                                  | no       | —              | Pre-fetched historical log entries.                                      |
-| `isHistoricalAlertsLoading` | `boolean`                                  | no       | `false`        | Loading flag for the historical log.                                     |
-| `isHistoricalAlertsEnabled` | `boolean`                                  | no       | `false`        | Show the historical section. Gate behind a feature flag if needed.       |
-| `selectedAlertId`           | `string`                                   | no       | —              | Focus a single alert (deep-link from `?alertId=`).                       |
-| `initialSeverity`           | `string`                                   | no       | —              | Initial severity filter (e.g. from `?severity=`).                        |
-| `onAlertClick`              | `(id?: string, uuid?: string) => void`     | no       | —              | Row-click handler. Receives the device id and alert uuid.                |
-| `dateRange`                 | `HistoricalAlertsRange`                    | no       | last 14 days   | Controlled date range for the historical log.                            |
-| `onDateRangeChange`         | `(range: HistoricalAlertsRange) => void`   | no       | —              | Called when the operator picks a new historical range.                   |
-| `isSoundEnabled`            | `boolean`                                  | no       | `false`        | Whether sound alerts are on in user prefs. Drives the confirmation modal. |
-| `isDemoMode`                | `boolean`                                  | no       | `false`        | Skip sound playback (demo / preview screens).                            |
-| `typeFiltersForSite`        | `CascaderOption[]`                         | no       | —              | Site-specific overrides for the type filter dropdown.                    |
-| `header`                    | `ReactNode`                                | no       | —              | Optional header (breadcrumbs etc.) rendered above the table.             |
-| `className`                 | `string`                                   | no       | —              | Extra class on the page wrapper.                                         |
+| Prop                        | Status   | Type                                     | Default      | Description                                                                           |
+| --------------------------- | -------- | ---------------------------------------- | ------------ | ------------------------------------------------------------------------------------- |
+| `devices`                   | Optional | `Device[]`                               | —            | Raw devices payload — the current-alerts table derives rows from `device.last.alerts` |
+| `isCurrentAlertsLoading`    | Optional | `boolean`                                | `false`      | Loading flag for the current-alerts table                                             |
+| `historicalAlerts`          | Optional | `Alert[]`                                | —            | Pre-fetched historical log entries                                                    |
+| `isHistoricalAlertsLoading` | Optional | `boolean`                                | `false`      | Loading flag for the historical log                                                   |
+| `isHistoricalAlertsEnabled` | Optional | `boolean`                                | `false`      | Show the historical section. Gate behind a feature flag if needed.                    |
+| `selectedAlertId`           | Optional | `string`                                 | —            | Focus a single alert (deep-link from `?alertId=`)                                     |
+| `initialSeverity`           | Optional | `string`                                 | —            | Initial severity filter (e.g. from `?severity=`)                                      |
+| `onAlertClick`              | Optional | `(id?: string, uuid?: string) => void`   | —            | Row-click handler. Receives the device id and alert uuid.                             |
+| `dateRange`                 | Optional | `HistoricalAlertsRange`                  | last 14 days | Controlled date range for the historical log                                          |
+| `onDateRangeChange`         | Optional | `(range: HistoricalAlertsRange) => void` | —            | Called when the operator picks a new historical range                                 |
+| `isSoundEnabled`            | Optional | `boolean`                                | `false`      | Whether sound alerts are on in user prefs. Drives the confirmation modal.             |
+| `isDemoMode`                | Optional | `boolean`                                | `false`      | Skip sound playback (demo / preview screens)                                          |
+| `typeFiltersForSite`        | Optional | `CascaderOption[]`                       | —            | Site-specific overrides for the type filter dropdown                                  |
+| `header`                    | Optional | `ReactNode`                              | —            | Header (breadcrumbs etc.) rendered above the table                                    |
+| `className`                 | Optional | `string`                                 | —            | Extra class on the page wrapper                                                       |
 
 ## Minimal example
 
@@ -55,7 +55,7 @@ table or just the historical log, drop down to `CurrentAlerts` /
 ## Notes
 
 - Filter tags are written to the shared devices store via `useDevices().setFilterTags` —
-  clicking a row appends the device id, mirroring the source app behaviour.
-- When `isHistoricalAlertsEnabled` is `false`, only the current-alerts table renders.
+  clicking a row appends the device id, mirroring the source app behavior
+- When `isHistoricalAlertsEnabled` is `false`, only the current-alerts table renders
 - For URL-driven deep links, pass `initialSeverity` (one render only) for the
-  severity dropdown and `selectedAlertId` to highlight a row.
+  severity dropdown and `selectedAlertId` to highlight a row

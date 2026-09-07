@@ -4,13 +4,13 @@ Displays Min/Max/Avg values and an optional grid of additional stat items below 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `minMaxAvg` | `MinMaxAvg` | no | — | Min, Max, and Avg values to display |
-| `stats` | `ChartStatsFooterItem[]` | no | — | Additional label/value pairs displayed in columns |
-| `statsPerColumn` | `number` | no | `1` | How many stat items to stack per column |
-| `secondaryLabel` | `SecondaryLabel` | no | — | A single label/value row shown below `stats` |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop             | Status   | Type                     | Default | Description                                       |
+| ---------------- | -------- | ------------------------ | ------- | ------------------------------------------------- |
+| `minMaxAvg`      | Optional | `MinMaxAvg`              | —       | Min, Max, and Avg values to display               |
+| `stats`          | Optional | `ChartStatsFooterItem[]` | —       | Additional label/value pairs displayed in columns |
+| `statsPerColumn` | Optional | `number`                 | `1`     | How many stat items to stack per column           |
+| `secondaryLabel` | Optional | `SecondaryLabel`         | —       | A single label/value row shown below `stats`      |
+| `className`      | Optional | `string`                 | —       | Additional class for the root element             |
 
 ### `MinMaxAvg`
 
@@ -61,5 +61,5 @@ import { ChartStatsFooter } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- Returns `null` when none of `minMaxAvg`, `stats`, or `secondaryLabel` are provided.
-- If `minMaxAvg.avg` is `'-'`, all three values display as `'-'`.
+- Returns `null` when none of `minMaxAvg`, `stats`, or `secondaryLabel` are provided
+- If `minMaxAvg.avg` is `'-'`, all three values display as `'-'`

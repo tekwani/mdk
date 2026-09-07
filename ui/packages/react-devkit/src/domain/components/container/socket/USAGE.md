@@ -4,21 +4,22 @@ Per-socket panel representing a single PDU slot in a container. Shows the miner 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `socket` | `number \| null` | no | — | Slot index displayed as a label. |
-| `enabled` | `boolean` | no | `false` | Whether the slot is enabled. |
-| `power_w` | `number \| null` | no | — | Power draw in watts. |
-| `current_a` | `number \| null` | no | — | Current draw in amperes. |
-| `miner` | `Miner \| null` | no | — | Miner data for the device in this slot. |
-| `heatmap` | `Heatmap \| null` | no | — | Heatmap mode config; enables thermal/hashrate overlay. |
-| `isEditFlow` | `boolean` | no | `false` | Shows the edit-flow reticle when `true`. |
-| `clickDisabled` | `boolean` | no | `false` | Disables click interactions. |
-| `cooling` | `boolean` | no | — | Cooling fan active state indicator. |
-| `isEmptyPowerDashed` | `boolean` | no | `false` | Shows dashed border for empty-power slots. |
-| `isContainerControlSupported` | `boolean` | no | `false` | Shows container-level action buttons. |
-| `pdu` | `{ pdu?: string \| number }` | no | — | PDU reference metadata. |
-| `innerRef` | `ForwardedRef<HTMLDivElement>` | no | — | Forwarded ref for the container div. |
+| Prop                          | Status   | Type                           | Default     | Description                                                           |
+| ----------------------------- | -------- | ------------------------------ | ----------- | --------------------------------------------------------------------- |
+| `socket`                      | Optional | `number \| null`               | `null`      | Slot index displayed as a label                                       |
+| `enabled`                     | Optional | `boolean`                      | `false`     | Whether the slot is enabled                                           |
+| `power_w`                     | Optional | `number \| null`               | `null`      | Power draw in watts                                                   |
+| `current_a`                   | Optional | `number \| null`               | `null`      | Current draw in amperes                                               |
+| `selected`                    | Optional | `boolean`                      | `false`     | Whether the socket is shown in the selected state                     |
+| `miner`                       | Optional | `Miner \| null`                | `null`      | Miner data for the device in this slot                                |
+| `heatmap`                     | Optional | `Heatmap \| null`              | `null`      | Heatmap mode config; enables thermal/hashrate overlay                 |
+| `isEditFlow`                  | Optional | `boolean`                      | `false`     | Shows the edit-flow reticle when `true`                               |
+| `clickDisabled`               | Optional | `boolean`                      | `false`     | Disables click interactions                                           |
+| `cooling`                     | Optional | `boolean \| undefined`         | `undefined` | Cooling fan active state indicator; `undefined` means no cooling data |
+| `isEmptyPowerDashed`          | Optional | `boolean`                      | `false`     | Shows dashed border for empty-power slots                             |
+| `isContainerControlSupported` | Optional | `boolean`                      | `false`     | Shows container-level action buttons                                  |
+| `pdu`                         | Optional | `{ pdu?: string \| number }`   | —           | PDU reference metadata                                                |
+| `innerRef`                    | Optional | `ForwardedRef<HTMLDivElement>` | —           | Forwarded ref for the container div                                   |
 
 ## Minimal example
 

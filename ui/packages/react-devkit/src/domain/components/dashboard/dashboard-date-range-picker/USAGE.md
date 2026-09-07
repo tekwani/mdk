@@ -7,13 +7,13 @@ intermediate `Date <-> number` plumbing in the page.
 
 ## Props
 
-| Prop         | Type                                              | Required | Default        | Description                                                       |
-| ------------ | ------------------------------------------------- | -------- | -------------- | ----------------------------------------------------------------- |
-| `value`      | `{ start: number; end: number }`                  | yes      | —              | Current range as epoch-millisecond timestamps.                    |
-| `onChange`   | `(next: { start: number; end: number }) => void`  | yes      | —              | Fires when the user applies a range.                              |
-| `dateFormat` | `string`                                          | no       | `'dd/MM/yyyy'` | `date-fns` format string used for the trigger label.              |
-| `disabled`   | `boolean`                                         | no       | `false`        | Disable the trigger.                                              |
-| `className`  | `string`                                          | no       | —              | Optional class hook applied to the trigger button.                |
+| Prop         | Status   | Type                                             | Default        | Description                                         |
+| ------------ | -------- | ------------------------------------------------ | -------------- | --------------------------------------------------- |
+| `value`      | Required | `{ start: number; end: number }`                 | —              | Current range as epoch-millisecond timestamps       |
+| `onChange`   | Required | `(next: { start: number; end: number }) => void` | —              | Fires when the user applies a range                 |
+| `dateFormat` | Optional | `string`                                         | `'dd/MM/yyyy'` | `date-fns` format string used for the trigger label |
+| `disabled`   | Optional | `boolean`                                        | `false`        | Disable the trigger                                 |
+| `className`  | Optional | `string`                                         | —              | Class hook applied to the trigger button            |
 
 ## Example
 
@@ -33,6 +33,6 @@ const { start, end, setRange } = useDashboardDateRange()
 
 - The wrapper ignores partial selections — `onChange` only fires once the
   user has picked both `from` and `to` and clicked **Apply Range** in the
-  core picker.
+  core picker
 - The popover, presets, and styling all come from the core
-  `DateRangePicker`. This wrapper exists only to adapt the value shape.
+  `DateRangePicker`. This wrapper exists only to adapt the value shape

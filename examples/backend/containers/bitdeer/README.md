@@ -59,7 +59,7 @@ to populate before pulling it.
 
 ### Committed (source)
 
-```
+```text
 examples/backend/containers/bitdeer/
 ├── README.md
 └── index.js                      # Kernel + Bitdeer Worker + MQTT mock + registration
@@ -67,7 +67,7 @@ examples/backend/containers/bitdeer/
 
 ### Generated (ignored)
 
-```
+```text
 $TMPDIR/mdk-site-bitdeer/kernel/     # Kernel Corestore
 ```
 

@@ -296,6 +296,45 @@ import "@tetherto/mdk-react-devkit/styles.css";
 import "@tetherto/mdk-react-devkit/styles-domain.css"; // only if using domain (mining-domain) components
 ```
 
+### `@tetherto/mdk-ui-agent`
+
+**Purpose**: The operator agent chat, as one drop-in for any MDK shell. Renders
+the agent gateway plugin's six-event SSE contract as a conversation, including
+tool activity and the approval gate on writes.
+
+**Location**: `packages/ui-agent`
+
+**Surface**:
+
+- `<CoPilot />` — the docked overlay (launcher + panel), mounted once at the app
+  root. Props are all optional; it reads the API base URL and the auth token
+  from `MdkProvider` when there is one.
+- `ChatUIEntry` (subpath `./chat-page`) — the same conversation as a
+  full-height route page, for shells that want it in the router instead.
+- `./core` — the headless half: the event union, the SSE reader, the turn
+  reducer and the conversation store. No React; it does touch `localStorage`,
+  `fetch` and `crypto` via guarded `globalThis` lookups, so it degrades
+  gracefully outside a browser rather than being DOM-free. The root package
+  re-exports everything here too, so a consumer can reach the same functions
+  from `@tetherto/mdk-ui-agent` without the `/core` subpath — the subpath
+  exists to pull in the protocol layer without the components, not because
+  the root barrel omits it.
+- `./styles.css` — imported once alongside the devkit stylesheets.
+
+**Layering**: keeps foundation / adapter / devkit's separation *inside* the
+package (`core/` → `hooks/` → `components/`) rather than spread across the three,
+because the deliverable is a single injectable unit. It borrows `Button`,
+`Loader` and `createIcon` from the devkit and themes off `--mdk-color-*` tokens
+through its own `--mdk-agent-*` indirection, so a host can retheme the panel
+alone.
+
+**Build**: `tsc` → `dist/`, `vite` → `dist/styles.css`.
+
+**Note**: `private: true` — workspace-linked only, not published. The backend
+half is a stack concern; see
+[`packages/ui-agent/README.md`](../packages/ui-agent/README.md) for the whole
+chain from an empty machine.
+
 ### `@tetherto/mdk-ui-cli`
 
 **Purpose**: Agent-first CLI for registry discovery, co-located docs/examples,

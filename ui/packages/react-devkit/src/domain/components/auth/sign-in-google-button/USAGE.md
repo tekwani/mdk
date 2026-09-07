@@ -7,12 +7,12 @@ session store.
 
 ## Props
 
-| Prop           | Type           | Required | Default                 | Description                                                |
-| -------------- | -------------- | -------- | ----------------------- | ---------------------------------------------------------- |
-| `oauthBaseUrl` | `string`       | yes      | —                       | Base URL of the OAuth backend; trailing slash stripped.    |
-| `label`        | `string`       | no       | `"Sign in with Google"` | Visible button label.                                      |
-| `onClick`      | `() => void`   | no       | redirect                | Override click behaviour; useful for tests / custom flows. |
-| ...rest        | `ButtonProps`  | no       | —                       | Forwarded to the underlying `<Button>`.                    |
+| Prop           | Status   | Type          | Default                 | Description                                               |
+| -------------- | -------- | ------------- | ----------------------- | --------------------------------------------------------- |
+| `oauthBaseUrl` | Required | `string`      | —                       | Base URL of the OAuth backend; trailing slash stripped    |
+| `label`        | Optional | `string`      | `"Sign in with Google"` | Visible button label                                      |
+| `onClick`      | Optional | `() => void`  | redirect                | Override click behavior; useful for tests / custom flows  |
+| ...rest        | Optional | `ButtonProps` | —                       | Forwarded to the underlying `<Button>`                    |
 
 ## Example
 
@@ -23,7 +23,7 @@ session store.
 ## Notes
 
 - Uses `window.location.href` (full-page navigation) rather than client-side
-  routing so the OAuth callback URL is treated as an external load.
+  routing so the OAuth callback URL is treated as an external load
 - The backend side is an identity plugin you supply — MDK ships no OAuth
   implementation. It serves the `/oauth/google` start endpoint this button
   navigates to, and redirects back to the frontend with `?authToken=<jwt>`.

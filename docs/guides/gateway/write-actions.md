@@ -16,7 +16,7 @@ reject, or cancel pending actions through the Gateway.
 - Your controllers pass the caller's device-family write permissions (`miner:w`, `container:w`) to Kernel as `authPerms`, which Kernel requires before
 resolving or approving a write
 - If present, your React app is wrapped in [`<MdkProvider apiBaseUrl={...}>`][react-adapter-surface]
-- The feature stages write actions in [`actionsStore`][react-adapter-hooks] from `@tetherto/mdk-ui-foundation` or provides 
+- The feature stages write actions in [`actionsStore`][react-adapter-hooks] from `@tetherto/mdk-ui-foundation` or provides
 actions through an existing feature such as [Pool Manager][pool-manager-blueprint]
 
 <Steps>
@@ -103,7 +103,7 @@ function PendingActionsList() {
 
 #### 2.2 Review with `useLiveActions()`
 
-Use `useLiveActions()` when the UI needs to separate the current user's actions from others and gate approve/reject controls on `canApprove`. 
+Use `useLiveActions()` when the UI needs to separate the current user's actions from others and gate approve/reject controls on `canApprove`.
 For polling cadence and role logic, see the [hook reference][react-adapter-hooks].
 
 </Step>
@@ -173,7 +173,7 @@ Approved actions become command requests after the configured vote thresholds ar
 action, or poll the action list with `usePendingActions()` / `useLiveActions()` until the item leaves the voting queue.
 
 > [!NOTE]
-> For Pool Manager screens, use the existing [actions sidebar USAGE][actions-sidebar-usage] and 
+> For Pool Manager screens, use the existing [actions sidebar USAGE][actions-sidebar-usage] and
 > [Pool Manager blueprint][pool-manager-blueprint] as the integration examples.
 
 </Step>
@@ -279,7 +279,7 @@ module.exports = async function pushAction (req) {
 ### Mount the plugin
 
 ```javascript
-const { startGateway } = require('@tetherto/mdk/backend/core/mdk')
+const { startGateway } = require('@tetherto/mdk-core')
 const path = require('path')
 
 await startGateway({

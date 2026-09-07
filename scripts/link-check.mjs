@@ -22,30 +22,38 @@
 // just those files — this is what the PR workflow job passes in (the files
 // changed in the diff), so a PR check never crawls the whole repo. With no
 // args (the nightly job, and the default local run), every tracked .md file
-// is crawled. check-directory-links.mjs always runs in full either way — it
-// isn't a per-file crawl, just a handful of `git ls-files` checks against
-// linkinator.config.json's skip list, so there's no "scoped" version of it
-// and no cost to running it in full every time.
+// is crawled. Only tracked .md paths narrow the crawl; any other argument —
+// e.g. a linkinator flag such as `--format json` — is ignored here and leaves
+// the full sweep intact (see resolveCrawlFiles). check-directory-links.mjs
+// always runs in full either way — it isn't a per-file crawl, just a handful
+// of `git ls-files` checks against linkinator.config.json's skip list, so
+// there's no "scoped" version of it and no cost to running it in full every time.
 
 import { execFileSync, spawnSync } from 'node:child_process'
+import { pathToFileURL } from 'node:url'
 
 const REPO_ROOT = process.cwd()
 
-const allFiles = execFileSync('git', ['ls-files', '*.md'], { cwd: REPO_ROOT, encoding: 'utf8' })
-  .split('\n')
-  .filter(Boolean)
-
-if (allFiles.length === 0) {
-  console.error('No tracked Markdown files found.')
-  process.exit(1)
-}
-
-const requested = process.argv.slice(2)
-let files = allFiles
-
-if (requested.length > 0) {
+// Resolve which tracked .md files linkinator should crawl, given the full
+// tracked set and the raw CLI args. Pure and exported so the flag-vs-file
+// split is unit-tested (test/link-check-scope.test.mjs) without spawning git
+// or linkinator.
+//
+// Only args that name a tracked .md file scope the crawl. Every other arg —
+// a linkinator flag like `--format json` and its value — is ignored here and
+// does NOT narrow the sweep. Keying scope off real tracked-file matches
+// rather than "any arg present" is the fix for the regression where the
+// nightly's `-- --format json` was read as an empty scope and collapsed the
+// full sweep to the README anchor alone.
+export function resolveCrawlFiles (allFiles, args) {
   const allFilesSet = new Set(allFiles)
-  files = requested.filter((f) => allFilesSet.has(f))
+  const requestedFiles = args.filter((a) => allFilesSet.has(a))
+
+  if (requestedFiles.length === 0) {
+    return { files: allFiles, scoped: false }
+  }
+
+  let files = requestedFiles
 
   // README.md is always included as a server-root anchor: linkinator roots
   // its local server at the common ancestor of its inputs, so a scoped list
@@ -56,29 +64,42 @@ if (requested.length > 0) {
   if (!files.includes('README.md') && allFilesSet.has('README.md')) {
     files = ['README.md', ...files]
   }
+
+  return { files, scoped: true }
 }
 
-// Spawned before the empty-scope check below so it always runs in full, per
-// the comment block above — a PR that ends up with nothing left to crawl
-// (no tracked README.md to anchor a scoped list, today only a hypothetical)
-// must not report success without it.
-const directoryLinksResult = spawnSync(
-  'node',
-  ['scripts/check-directory-links.mjs'],
-  { cwd: REPO_ROOT, stdio: 'inherit' }
-)
-const directoryLinksOk = (directoryLinksResult.status ?? 1) === 0
+function main () {
+  const allFiles = execFileSync('git', ['ls-files', '*.md'], { cwd: REPO_ROOT, encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean)
 
-if (requested.length > 0 && files.length === 0) {
-  console.log('No changed markdown files to check.')
-  process.exit(directoryLinksOk ? 0 : 1)
+  if (allFiles.length === 0) {
+    console.error('No tracked Markdown files found.')
+    process.exit(1)
+  }
+
+  const { files } = resolveCrawlFiles(allFiles, process.argv.slice(2))
+
+  // Spawned before linkinator so it always runs in full regardless of scope,
+  // per the header comment — the directory-skip staleness check is not a
+  // per-file crawl and must gate every run.
+  const directoryLinksResult = spawnSync(
+    'node',
+    ['scripts/check-directory-links.mjs'],
+    { cwd: REPO_ROOT, stdio: 'inherit' }
+  )
+  const directoryLinksOk = (directoryLinksResult.status ?? 1) === 0
+
+  const result = spawnSync(
+    'npx',
+    ['--yes', 'linkinator@7.6.1', '--config', 'linkinator.config.json', ...files],
+    { cwd: REPO_ROOT, stdio: 'inherit' }
+  )
+
+  const linkinatorOk = (result.status ?? 1) === 0
+  process.exit(directoryLinksOk && linkinatorOk ? 0 : 1)
 }
 
-const result = spawnSync(
-  'npx',
-  ['--yes', 'linkinator@^7.6.0', '--config', 'linkinator.config.json', ...files],
-  { cwd: REPO_ROOT, stdio: 'inherit' }
-)
-
-const linkinatorOk = (result.status ?? 1) === 0
-process.exit(directoryLinksOk && linkinatorOk ? 0 : 1)
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main()
+}

@@ -4,9 +4,9 @@ Power and GPS-positioning panel for a BitMain container. Shows distribution-box 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `Device` | no | — | Live device object. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `Device` | — | Live device object |
 
 ## Minimal example
 

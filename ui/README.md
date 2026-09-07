@@ -29,7 +29,7 @@ The **MDK** UI is a comprehensive toolkit providing:
 - **70+ custom React hooks** for common patterns
 - **Headless state management** built on Zustand vanilla stores, consumed through framework-specific adapters
 - **TanStack Query** integration scaffolding (`@tetherto/mdk-react-adapter` wires up `QueryClientProvider`)
-- **Modern tech stack**: React 19, Radix UI, React Hook Form, Zod, SCSS design tokens with `@layer mdk` 
+- **Modern tech stack**: React 19, Radix UI, React Hook Form, Zod, SCSS design tokens with `@layer mdk`
 cascade ordering
 
 ### Key benefits
@@ -42,7 +42,7 @@ cascade ordering
 
 ## Packages
 
-The monorepo ships **runtime packages** (what React apps depend on), **assets**, a **demo**, and 
+The monorepo ships **runtime packages** (what React apps depend on), **assets**, a **demo**, and
 **tooling** (how you build and explore — not imported by production UI code).
 
 ### Product — runtime packages and assets
@@ -255,7 +255,7 @@ For details:
 
 **Pick your role:**
 
-- **Contributor** (monorepo changes, agent-ready exports) → [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) + 
+- **Contributor** (monorepo changes, agent-ready exports) → [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) +
 [`AGENT_READY.md`](packages/react-devkit/AGENT_READY.md)
 - **Agent** (LLM workflows, manifests, `mdk-ui` CLI) → [`AGENTS.md`](AGENTS.md) + [`docs/AGENT_FIRST.md`](docs/AGENT_FIRST.md)
 - **Engineer** (integrating MDK into an app) → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) + the package READMEs below
@@ -276,10 +276,10 @@ For details:
 ### Agents and CLI
 
 - **[AGENTS.md](AGENTS.md)**: agent contract overview and quick recipe.
-- **[Agent-first](docs/AGENT_FIRST.md)**: plain-language tour, deeper architecture reference 
+- **[Agent-first](docs/AGENT_FIRST.md)**: plain-language tour, deeper architecture reference
 (manifests, blueprints, registry), and the
   end-to-end shell setup
-- **[@tetherto/mdk-ui-cli](packages/cli/README.md)**: full CLI command reference (`create`, `add page`, 
+- **[@tetherto/mdk-ui-cli](packages/cli/README.md)**: full CLI command reference (`create`, `add page`,
 `add feature`, `remove page`, `registry`, `hooks`, `stores`, `suggest`, …)
 
 ### Package documentation

@@ -4,14 +4,14 @@ Button group for selecting the operating power mode of selected miners. Reads av
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `selectedDevices` | `Device[]` | no | — | Devices to apply the power mode to. |
-| `setPowerMode` | `(devices, mode) => void` | no | — | Callback to apply the selected mode. |
-| `connectedMiners` | `Device[]` | no | — | Currently connected miners. |
-| `powerModesLog` | `UnknownRecord` | no | — | Log of previous power mode selections. |
-| `disabled` | `boolean` | no | — | Disable all buttons. |
-| `hasMargin` | `boolean` | no | — | Add margin around the button group. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `selectedDevices` | Optional | `Device[]` | `[]` | Devices to apply the power mode to |
+| `setPowerMode` | Optional | `(devices, mode) => void` | — | Callback to apply the selected mode |
+| `connectedMiners` | Optional | `Device[]` | — | Currently connected miners |
+| `powerModesLog` | Optional | `UnknownRecord` | — | Log of previous power mode selections |
+| `disabled` | Optional | `boolean` | `false` | Disable all buttons |
+| `hasMargin` | Optional | `boolean` | `false` | Add margin around the button group |
 
 ## Minimal example
 

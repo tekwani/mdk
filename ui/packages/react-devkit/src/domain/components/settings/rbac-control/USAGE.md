@@ -4,18 +4,18 @@ Full role-based access control settings panel: user list with inline role editin
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `users` | `SettingsUser[]` | yes | — | List of current users. |
-| `roles` | `RoleOption[]` | yes | — | Available role options. |
-| `rolePermissions` | `Record<string, Record<string, PermLevel>>` | yes | — | Permission levels per role. |
-| `permissionLabels` | `Record<string, string>` | yes | — | Display labels for permission keys. |
-| `canWrite` | `boolean` | yes | — | Whether the current user may edit access settings. |
-| `isLoading` | `boolean` | no | — | Show loading state. |
-| `onCreateUser` | `(data) => Promise<void>` | yes | — | Create a new user. |
-| `onUpdateUser` | `(data) => Promise<void>` | yes | — | Update an existing user's role. |
-| `onDeleteUser` | `(userId) => Promise<void>` | yes | — | Delete a user. |
-| `className` | `string` | no | — | Additional CSS class. |
+| Prop               | Status   | Type                                        | Default | Description                                       |
+| ------------------ | -------- | ------------------------------------------- | ------- | ------------------------------------------------- |
+| `users`            | Required | `SettingsUser[]`                            | —       | List of current users                             |
+| `roles`            | Required | `RoleOption[]`                              | —       | Available role options                            |
+| `rolePermissions`  | Required | `Record<string, Record<string, PermLevel>>` | —       | Permission levels per role                        |
+| `permissionLabels` | Required | `Record<string, string>`                    | —       | Display labels for permission keys                |
+| `canWrite`         | Required | `boolean`                                   | —       | Whether the current user may edit access settings |
+| `onCreateUser`     | Required | `(data) => Promise<void>`                   | —       | Create a new user                                 |
+| `onUpdateUser`     | Required | `(data) => Promise<void>`                   | —       | Update an existing user's role                    |
+| `onDeleteUser`     | Required | `(userId) => Promise<void>`                 | —       | Delete a user                                     |
+| `isLoading`        | Optional | `boolean`                                   | `false` | Show loading state                                |
+| `className`        | Optional | `string`                                    | —       | Additional CSS class                              |
 
 ## Minimal example
 

@@ -49,6 +49,7 @@ export function ControlPage({
   modeOptions,
   applyAction,
   actionMsg,
+  isApplying,
 }: {
   miners: Miner[];
   selectedMiner: string;
@@ -58,6 +59,7 @@ export function ControlPage({
   modeOptions: readonly string[];
   applyAction: () => void;
   actionMsg: string;
+  isApplying: boolean;
 }) {
   const selections = useMemo(
     () => (selectedMiner ? { [selectedMiner]: true } : {}),
@@ -73,7 +75,7 @@ export function ControlPage({
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <Typography variant="caption">Miner</Typography>
               <Select value={selectedMiner} onValueChange={setSelectedMiner}>
-                <SelectTrigger style={{ minWidth: 220 }} data-testid="miner-select">
+                <SelectTrigger style={{ minWidth: 220 }} data-testid="miner-select" disabled={isApplying}>
                   <SelectValue placeholder="Select a miner" />
                 </SelectTrigger>
                 <SelectContent>
@@ -88,7 +90,7 @@ export function ControlPage({
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <Typography variant="caption">Power mode</Typography>
               <Select value={selectedMode} onValueChange={setSelectedMode}>
-                <SelectTrigger style={{ minWidth: 140 }} data-testid="mode-select">
+                <SelectTrigger style={{ minWidth: 140 }} data-testid="mode-select" disabled={isApplying}>
                   <SelectValue placeholder="Select mode" />
                 </SelectTrigger>
                 <SelectContent>
@@ -98,7 +100,14 @@ export function ControlPage({
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={applyAction} data-testid="apply-action">Set power mode</Button>
+            <Button
+              onClick={applyAction}
+              data-testid="apply-action"
+              loading={isApplying}
+              disabled={!selectedMiner}
+            >
+              {isApplying ? "Dispatching…" : "Set power mode"}
+            </Button>
             {actionMsg && <Typography data-testid="action-msg">{actionMsg}</Typography>}
           </div>
         </CardBody>

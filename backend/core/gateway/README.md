@@ -12,9 +12,9 @@ the Kernel, which routes a query to whichever [Worker](../../workers/README.md) 
 Authentication is not among its responsibilities, as the [security model](#security-model) sets out.
 
 > [!NOTE]
-> The Gateway's responsibilities stop at sending the request to the right controller and returning whatever that controller produces; 
-> it never combines results from more than one controller itself. The route (the URL your app calls) is handled entirely by the plugin 
-> that declared it. That plugin's "controller" must build the whole answer 
+> The Gateway's responsibilities stop at sending the request to the right controller and returning whatever that controller produces;
+> it never combines results from more than one controller itself. The route (the URL your app calls) is handled entirely by the plugin
+> that declared it. That plugin's "controller" must build the whole answer
 > and hand it back as the HTTP response. If a route needs to combine telemetry from many
 > devices, such as total hashrate across every miner on site, that happens inside that one controller, which must
 > query every relevant Worker and aggregate the results.
@@ -36,13 +36,13 @@ Which paths that adds up to is a property of the manifests, not of the Gateway. 
 
 ## Live data
 
-The Gateway has no push channel — clients poll its HTTP routes for updates. 
+The Gateway has no push channel — clients poll its HTTP routes for updates.
 
-> To see an example of this, consider the [React adapter](../../../ui/packages/react-adapter/README.md) which does this on fixed cadences for its 
-> hooks (for example, `useThingDetail` polls every 20 seconds, `useExplorerList` every 60). 
+> To see an example of this, consider the [React adapter](../../../ui/packages/react-adapter/README.md) which does this on fixed cadences for its
+> hooks (for example, `useThingDetail` polls every 20 seconds, `useExplorerList` every 60).
 > Note, while the poll cadence is a real Gateway fact, the route those two hooks poll,
-> `/auth/list-things`, is illustrative — it is not served by any [built-in plugin](../plugins/README.md#default-plugins). Get live data out of these hooks by 
-> writing a [Gateway plugin](../../../docs/guides/gateway/plugins.md) that serves the shape the hook expects; 
+> `/auth/list-things`, is illustrative — it is not served by any [built-in plugin](../plugins/README.md#default-plugins). Get live data out of these hooks by
+> writing a [Gateway plugin](../../../docs/guides/gateway/plugins.md) that serves the shape the hook expects;
 > see each hook's own JSDoc for its exact endpoint and disclosure.
 
 ## Configuration
@@ -58,20 +58,20 @@ Edit the generated files to persist your changes across restarts.
 | `logging.config.json` | Log level, format |
 
 > [!NOTE]
-> No config file here controls [authentication](../../../docs/guides/gateway/plugins.md#auth-and-permissions), because the Gateway performs none. 
+> No config file here controls [authentication](../../../docs/guides/gateway/plugins.md#auth-and-permissions), because the Gateway performs none.
 > Callers must be validated by your own identity layer, invoked from the controllers that need it.
 
 ## Kernel connection
 
 > [!NOTE]
-> `startGateway()`, used throughout this section, is exported by [`@tetherto/mdk`](../mdk/README.md), not by this
+> `startGateway()`, used throughout this section, is exported by [`@tetherto/mdk-core`](../mdk/README.md), not by this
 > `@tetherto/mdk-gateway` package. A Gateway connects to exactly one Kernel; fronting several per-site
 > Kernels from a single Gateway is not supported.
 
 The Gateway dials Kernel over HRPC (`@hyperswarm/rpc`) using the Kernel's listener public key. `startGateway()` resolves that key
 **before any boot side effects**, in this order:
 
-1. `kernelKey`: hex string or Buffer. Pass `kernelKey: false` to run without a Kernel connection (useful when testing without a live Kernel; 
+1. `kernelKey`: hex string or Buffer. Pass `kernelKey: false` to run without a Kernel connection (useful when testing without a live Kernel;
 a plugin's own `mdkClient` still builds, but its calls fail per request with [`ERR_MDK_CLIENT_UNAVAILABLE`](../client/README.md#createmdkclientconfig-opts--auto-connecting-client)).
 2. `kernel`: an in-process `KernelManager` handle; the key comes from `kernel.getPublicKey()`.
 3. Key file: `keyFile` (default: `DEFAULT_KEY_FILE`, i.e. `os.tmpdir()/mdk/.kernel-key`), which `getKernel()` publishes on start.
@@ -130,8 +130,8 @@ Plugins receive `(req)` in every controller, and each builds its own `@tetherto/
 context config it reads via `require('@tetherto/mdk-gateway/plugin')`. The default plugins (`telemetry`, `site-hashrate`, `site-monitor`)
 are loaded the same way.
 
-The [plugin authoring guide](../../../docs/guides/gateway/plugins.md) and the [plugin reference](../plugins/README.md) cover the full 
-manifest schema, controller contract, plugin context, and loader errors.
+The [plugin authoring guide](../../../docs/guides/gateway/plugins.md) and the [plugin reference](../plugins/README.md) cover the full
+manifest schema, controller contract, and plugin context, and [what the loader throws](#errors) is documented here.
 
 ### Raw Fastify routes
 
@@ -153,9 +153,22 @@ await startGateway({
 These are registered as plain Fastify routes: no plugin context and no manifest validation. Unlike a plugin controller, the handler
 receives the Fastify `reply`, so this is the way to control status codes.
 
+## Errors
+
+[`loadPlugin()`](workers/lib/plugin-loader.js) validates every manifest and handler at startup and throws on the
+first problem:
+
+| Code | Fires when | Fix |
+| --- | --- | --- |
+| `ERR_PLUGIN_MANIFEST_MISSING` | No `mdk-plugin.json` in the plugin directory | Add the manifest, or drop the directory from `extraPluginDirs` |
+| `ERR_PLUGIN_MANIFEST_INVALID` | The manifest fails to parse as JSON, parses to a non-object value (e.g. a bare string or number), or is missing `name`, `version`, `routes`, or a route is missing `id`/`handler`/a valid `method`/`path`. A JSON array manifest passes the object check and fails on the missing `name` field instead — same code, different message. | Fix the field the error message names |
+| `ERR_PLUGIN_ROUTE_DUPLICATE_ID` | Two routes in the same manifest share an `id` | Rename one of the duplicate route ids |
+| `ERR_PLUGIN_HANDLER_NOT_FOUND` | A route's `handler` file path doesn't exist or fails to load | Fix the `handler` path for that route |
+| `ERR_PLUGIN_HANDLER_NOT_FUNCTION` | A route's resolved handler module (or named export) isn't a function | Export a function from the file |
+
 ## Directory layout
 
-```
+```text
 gateway/
 ├── workers/
 │   ├── http.node.wrk.js          # WrkServerHttp — Fastify worker, mounts plugins and routes

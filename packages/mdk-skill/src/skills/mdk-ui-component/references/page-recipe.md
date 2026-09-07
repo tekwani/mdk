@@ -1,6 +1,6 @@
 # Page recipe — API-backed metric page
 
-Checklist for a new dashboard page that shows live worker/plugin data.
+Checklist for a new dashboard page that shows live Worker/plugin data.
 
 ## Files to add or touch
 

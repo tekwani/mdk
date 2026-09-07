@@ -10,28 +10,28 @@ background colour.
 
 ## Heatmap props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `data` | `HeatmapCell[][]` | yes | — | Row-major matrix of cells (`{ value, label?, key? }`); rows may be ragged |
-| `min` | `number` | no | auto | Range floor (maps to the first gradient stop) |
-| `max` | `number` | no | auto | Range ceiling (maps to the last stop) |
-| `colors` | `readonly string[]` | no | `HEATMAP_GRADIENT` | Gradient stops low→high |
-| `emptyColor` | `string` | no | `#000000` | Colour for `null` cells |
-| `showValues` | `boolean` | no | `false` | Render each cell's value/label as text |
-| `renderCell` | `(cell, ctx) => ReactNode` | no | — | Override cell content; `ctx` is `{ color, row, col }` |
-| `ariaLabel` | `string` | no | `"Heatmap"` | Accessible label for the grid |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop         | Status   | Type                       | Default            | Description                                                               |
+| ------------ | -------- | -------------------------- | ------------------ | ------------------------------------------------------------------------- |
+| `data`       | Required | `HeatmapCell[][]`          | —                  | Row-major matrix of cells (`{ value, label?, key? }`); rows may be ragged |
+| `min`        | Optional | `number`                   | auto               | Range floor (maps to the first gradient stop)                             |
+| `max`        | Optional | `number`                   | auto               | Range ceiling (maps to the last stop)                                     |
+| `colors`     | Optional | `readonly string[]`        | `HEATMAP_GRADIENT` | Gradient stops low→high                                                   |
+| `emptyColor` | Optional | `string`                   | `#000000`          | Colour for `null` cells                                                   |
+| `showValues` | Optional | `boolean`                  | `false`            | Render each cell's value/label as text                                    |
+| `renderCell` | Optional | `(cell, ctx) => ReactNode` | —                  | Override cell content; `ctx` is `{ color, row, col }`                     |
+| `ariaLabel`  | Optional | `string`                   | `"Heatmap"`        | Accessible label for the grid                                             |
+| `className`  | Optional | `string`                   | —                  | Additional class for the root element                                     |
 
 ## HeatmapLegend props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `min` | `number \| string` | yes | — | Low-end value or pre-formatted label |
-| `max` | `number \| string` | yes | — | High-end value or pre-formatted label |
-| `unit` | `string` | no | — | Unit suffix appended to `min`/`max` |
-| `label` | `string` | no | — | Heading above the gradient bar |
-| `colors` | `readonly string[]` | no | `HEATMAP_GRADIENT` | Gradient stops low→high |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop        | Status   | Type                | Default            | Description                           |
+| ----------- | -------- | ------------------- | ------------------ | ------------------------------------- |
+| `min`       | Required | `number \| string`  | —                  | Low-end value or pre-formatted label  |
+| `max`       | Required | `number \| string`  | —                  | High-end value or pre-formatted label |
+| `unit`      | Optional | `string`            | —                  | Unit suffix appended to `min`/`max`   |
+| `label`     | Optional | `string`            | —                  | Heading above the gradient bar        |
+| `colors`    | Optional | `readonly string[]` | `HEATMAP_GRADIENT` | Gradient stops low→high               |
+| `className` | Optional | `string`            | —                  | Additional class for the root element |
 
 ## Example
 
@@ -53,5 +53,5 @@ import { Heatmap, HeatmapLegend } from "@tetherto/mdk-react-devkit"
 - The colour scale is exported as `getHeatmapColor(value, min, max, stops?)` and
   the default palette as `HEATMAP_GRADIENT` (cold→hot: blue → green → yellow →
   red) from `@tetherto/mdk-react-devkit`.
-- `null` values render `emptyColor` and no text.
-- Values outside `[min, max]` are clamped to the end stops.
+- `null` values render `emptyColor` and no text
+- Values outside `[min, max]` are clamped to the end stops

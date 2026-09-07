@@ -17,7 +17,7 @@ gateway can validate events at the SSE boundary with `AgentEventSchema.safeParse
 type AgentEvent =
   | { type: 'token';            text: string }                  // a chunk of the answer
   | { type: 'tool_call';        name: string; args: object }    // model chose a tool
-  | { type: 'tool_result';      name: string; text: string; isError?: boolean }
+  | { type: 'tool_result';      name: string; text: string; isError?: boolean; contractViolation?: string; approvalWaitMs?: number }
   | { type: 'pending_approval'; name: string; args: object }    // write — stream PAUSES
   | { type: 'error';            error: string }                 // terminal
   | { type: 'done';             text?: string; usage?: object } // terminal
@@ -27,7 +27,7 @@ type AgentEvent =
 |---|---|---|
 | `token` | Streaming answer prose (concatenated tokens === the final answer) | Append to bubble |
 | `tool_call` | The model chose a tool | Show `→ name(args)` |
-| `tool_result` | The tool executed; `isError` flags failure | `← …`, red if error |
+| `tool_result` | The tool executed; `isError` flags failure, `contractViolation` says the result broke its verb's contract, `approvalWaitMs` is how long the operator held it at the prompt | `← …`, red if error; subtract `approvalWaitMs` before showing a duration |
 | `pending_approval` | A **write** needs a human decision | **Modal, blocks** |
 | `error` | The turn failed | Error state (≠ decline) |
 | `done` | The turn completed | Finalize; latency from `usage` |
@@ -41,6 +41,11 @@ type AgentEvent =
 4. **A decline is `token`s + `done`** with no `tool_call` — distinguish it from `error`
 5. **Unknown event types MUST be ignored, not thrown on** — this is what lets us add event
    types later without a breaking release
+6. **The producer emits `contractViolation` only with `isError: true`**, and its value is a
+   non-empty reason. Its presence means the tool answered and the answer broke its verb's
+   contract; its absence with `isError: true` means the call itself failed. Like 1–4, this is a
+   guarantee about what is emitted, not something `safeParse` checks — the schema pins the
+   field's presence and type, never its co-occurrence with `isError`
 
 ## The approval round-trip (bidirectional)
 

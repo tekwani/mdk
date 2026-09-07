@@ -4,12 +4,12 @@ Displays Min, Max, and Avg labels with MDK chart footer styling (orange labels, 
 
 ## Props
 
-| Prop | Type | Required | Description |
-| --- | --- | --- | --- |
-| `min` | `string` | no | Minimum value (hidden if empty) |
-| `max` | `string` | no | Maximum value (hidden if empty) |
-| `avg` | `string` | no | Average value (hidden if empty) |
-| `className` | `string` | no | Additional root class |
+| Prop        | Status   | Type     | Default | Description                     |
+| ----------- | -------- | -------- | ------- | ------------------------------- |
+| `min`       | Optional | `string` | —       | Minimum value (hidden if empty) |
+| `max`       | Optional | `string` | —       | Maximum value (hidden if empty) |
+| `avg`       | Optional | `string` | —       | Average value (hidden if empty) |
+| `className` | Optional | `string` | —       | Additional root class           |
 
 ## Usage
 

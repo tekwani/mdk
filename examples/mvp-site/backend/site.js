@@ -12,10 +12,10 @@ const fs = require('fs')
 const debug = require('debug')('mdk:example:mvp-site')
 const { getKernel } = require('@tetherto/mdk-core')
 const { publishWorkerKey, keysDir } = require('@tetherto/mdk-core/lib/local-discovery')
-const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
+const { startWhatsminerWorker } = require('./whatsminer-adapter')
 const { startOceanPoolWorker } = require('@tetherto/mdk-worker-ocean')
 const { startSatecWorker } = require('@tetherto/mdk-worker-satec')
-const wmMock = require('@tetherto/mdk-worker-whatsminer/mock/server')
+const wmMock = require('whatsminer-mdk-worker/mock/api-v3-server')
 const oceanMock = require('@tetherto/mdk-worker-ocean/mock/server')
 const satecMock = require('@tetherto/mdk-worker-satec/mock/server')
 
@@ -68,14 +68,19 @@ const mockHandles = (mocks) => {
   return { mocks, ready, close }
 }
 
+// whatsminer-mdk-worker's mock takes a raw state override (no type/serial
+// shorthand) and exposes close() instead of exit() — normalize both here so
+// mockHandles()/startMocks() callers don't need to know which mock backs them.
 const startMocks = (miners) => {
-  return mockHandles(miners.map((d) => wmMock.createServer({
-    port: d.opts.port,
-    host: HOST,
-    type: deploy.mocks.type,
-    serial: d.info.serialNum,
-    password: d.opts.password ?? deploy.mocks.defaultPassword
-  })))
+  return mockHandles(miners.map((d) => {
+    const mock = wmMock.createServer({
+      port: d.opts.port,
+      host: HOST,
+      password: d.opts.password ?? deploy.mocks.defaultPassword,
+      state: { deviceInfo: { miner: { type: deploy.mocks.type, 'miner-sn': d.info.serialNum } } }
+    })
+    return { ...mock, exit: () => mock.close() }
+  }))
 }
 
 // Typical draw of one modern hydro/immersion ASIC (the m56s the mocks.type
@@ -138,12 +143,14 @@ const workerStoreDir = (root, workerId) => {
   return storeDir
 }
 
+// whatsminer-mdk-worker's device list is fixed at construction (no
+// provisioning store), so model/allowDuplicateIPs/thing-timer config from the
+// retired internal package no longer apply — pools already travel per-device
+// via loadSeedDevices()'s opts.conf.pools.
 const bootWorker = async ({ kernel, kernelTopic, root, mode = DISCOVERY, devices }) => {
   const handle = await startWhatsminerWorker({
     workerId: WORKER_ID,
-    model: deploy.worker.model,
     storeDir: workerStoreDir(root, WORKER_ID),
-    conf: { allowDuplicateIPs: deploy.worker.allowDuplicateIPs, pools: deploy.worker.pools, thing: deploy.worker.thing },
     kernelTopic: (!kernel && mode !== 'local') ? kernelTopic : null,
     seedDevices: devices
   })
@@ -153,27 +160,37 @@ const bootWorker = async ({ kernel, kernelTopic, root, mode = DISCOVERY, devices
 }
 
 // The Ocean worker's real fetch/save cron is 1m/5m — too slow for a demo, so
-// drive the same methods on a fast non-overlapping cadence.
+// drive the same methods on a fast non-overlapping cadence. stop() clears the
+// interval AND awaits a tick already in flight — clearInterval alone only
+// stops *future* ticks, so a tick mid-fetchStats would otherwise keep running
+// against HTTP resources the caller tears down right after.
 const drivePool = (pool, tickMs) => {
-  let running = false
-  const tick = async () => {
-    if (running) return
-    running = true
-    try {
-      const now = new Date()
-      await pool.fetchWorkers(now)
-      await pool.fetchStats(now)
-      await pool.saveStats(now)
-    } catch (e) {
-      debug('pool tick error: %s', e.message)
-    } finally {
-      running = false
-    }
+  let inFlight = null
+  const tick = () => {
+    if (inFlight) return inFlight
+    inFlight = (async () => {
+      try {
+        const now = new Date()
+        await pool.fetchWorkers(now)
+        await pool.fetchStats(now)
+        await pool.saveStats(now)
+      } catch (e) {
+        debug('pool tick error: %s', e.message)
+      } finally {
+        inFlight = null
+      }
+    })()
+    return inFlight
   }
   tick()
   const timer = setInterval(tick, tickMs)
   timer.unref()
-  return timer
+  return {
+    stop: async () => {
+      clearInterval(timer)
+      if (inFlight) await inFlight
+    }
+  }
 }
 
 // The pool is one logical device (deviceId == workerId), not a LAN device.
@@ -187,15 +204,15 @@ const bootOceanWorker = async ({ kernel, kernelTopic, root, mode = DISCOVERY }) 
   })
 
   await registerWorker(handle, OCEAN_WORKER_ID, { kernel, root, mode })
-  const poolTimer = drivePool(handle.pool, deploy.ocean.worker.tickMs)
+  const poolDriver = drivePool(handle.pool, deploy.ocean.worker.tickMs)
   // registerWorker's SIGINT/kernel._cleanup paths both call handle.stop() by a
   // fresh property lookup each time, so wrapping it here — after
-  // registerWorker already wired its own caller — still takes effect. Clear
-  // the pacer before the underlying stop logic runs, so a tick already
-  // mid-flight isn't the only thing racing whatever handle.stop() tears down.
+  // registerWorker already wired its own caller — still takes effect. Stop
+  // the pacer (interval + any in-flight tick) before the underlying stop
+  // logic runs, so nothing races whatever handle.stop() tears down.
   const stopWorker = handle.stop.bind(handle)
   handle.stop = async (...args) => {
-    clearInterval(poolTimer)
+    await poolDriver.stop()
     return stopWorker(...args)
   }
   return handle

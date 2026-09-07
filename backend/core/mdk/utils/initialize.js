@@ -16,10 +16,6 @@ const THING_CONFIG_SOURCES = [
     srcDirs: [path.join(localPackages, LIB_TYPES.AVALON, 'config')]
   },
   {
-    destDir: 'types/WhatsminerManagerM56s/config',
-    srcDirs: [path.join(localPackages, LIB_TYPES.WHATSMINER, 'config')]
-  },
-  {
     destDir: 'types/BitdeerManagerD40M56/config',
     srcDirs: [path.join(localPackages, LIB_TYPES.BITDEER, 'config')]
   },
@@ -46,7 +42,6 @@ const TEMPLATE = {
     'db',
     'types/AntminerManagerS19xp/config',
     'types/AvalonMinerManagerA1346/config',
-    'types/WhatsminerManagerM56s/config',
     'types/BitdeerManagerD40M56/config',
     'types/AnstspaceManagerHK3/config',
     'types/B23PowerMeterManager/config',

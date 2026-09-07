@@ -9,20 +9,20 @@ Sortable, searchable data table of currently active alerts derived from a raw
 
 ## Props
 
-| Prop                   | Type                                       | Required | Default | Description                                                     |
-| ---------------------- | ------------------------------------------ | -------- | ------- | --------------------------------------------------------------- |
-| `devices`              | `Device[]`                                 | no       | —       | Raw devices payload (alerts derived from `device.last.alerts`). |
-| `isLoading`            | `boolean`                                  | no       | `false` | Show DataTable loading overlay.                                 |
-| `localFilters`         | `AlertLocalFilters`                        | yes      | —       | Filters controlled outside (e.g. URL severity).                 |
-| `onLocalFiltersChange` | `(filters: AlertLocalFilters) => void`     | yes      | —       | Setter for the filters above.                                   |
-| `filterTags`           | `string[]`                                 | yes      | —       | Search tag chips (controlled).                                  |
-| `onFilterTagsChange`   | `(tags: string[]) => void`                 | yes      | —       | Setter for the tags above.                                      |
-| `selectedAlertId`      | `string`                                   | no       | —       | Optional deep-link id.                                          |
-| `onAlertClick`         | `(id?: string, uuid?: string) => void`     | no       | —       | Called when the user opens an alert.                            |
-| `isSoundEnabled`       | `boolean`                                  | no       | `false` | Enable critical alert beep.                                     |
-| `isDemoMode`           | `boolean`                                  | no       | `false` | Skip sound entirely (demos / previews).                         |
-| `typeFiltersForSite`   | `TagFilterBarProps["typeFiltersForSite"]`  | no       | —       | Site-specific overrides for the type filter.                    |
-| `className`            | `string`                                   | no       | —       | Additional class names.                                         |
+| Prop                   | Status   | Type                                      | Default | Description                                                    |
+| ---------------------- | -------- | ----------------------------------------- | ------- | -------------------------------------------------------------- |
+| `localFilters`         | Required | `AlertLocalFilters`                       | —       | Filters controlled outside (e.g. URL severity)                 |
+| `onLocalFiltersChange` | Required | `(filters: AlertLocalFilters) => void`    | —       | Setter for the filters above                                   |
+| `filterTags`           | Required | `string[]`                                | —       | Search tag chips (controlled)                                  |
+| `onFilterTagsChange`   | Required | `(tags: string[]) => void`                | —       | Setter for the tags above                                      |
+| `devices`              | Optional | `Device[]`                                | —       | Raw devices payload (alerts derived from `device.last.alerts`) |
+| `isLoading`            | Optional | `boolean`                                 | `false` | Show DataTable loading overlay                                 |
+| `selectedAlertId`      | Optional | `string`                                  | —       | Optional deep-link id                                          |
+| `onAlertClick`         | Optional | `(id?: string, uuid?: string) => void`    | —       | Called when the user opens an alert                            |
+| `isSoundEnabled`       | Optional | `boolean`                                 | `false` | Enable critical alert beep                                     |
+| `isDemoMode`           | Optional | `boolean`                                 | `false` | Skip sound entirely (demos / previews)                         |
+| `typeFiltersForSite`   | Optional | `TagFilterBarProps["typeFiltersForSite"]` | —       | Site-specific overrides for the type filter                    |
+| `className`            | Optional | `string`                                  | —       | Additional class names                                         |
 
 ## Minimal example
 
@@ -46,5 +46,5 @@ Sortable, searchable data table of currently active alerts derived from a raw
 ## Notes
 
 - Calls `useTimezoneFormatter` from `@tetherto/mdk-react-adapter`; wrap your
-  app in `<MdkProvider>` so the timezone store is reachable.
-- `getRowId` returns the alert `uuid`.
+  app in `<MdkProvider>` so the timezone store is reachable
+- `getRowId` returns the alert `uuid`

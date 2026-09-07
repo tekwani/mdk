@@ -42,17 +42,17 @@ Where they live inside the shape above:
 - `troubleshooting` is an array of conditional remediation strings at the health level (`capabilities.health.troubleshooting`), each entry a vendor-validated *if X then Y* runbook step.
 - `errors` is its own top-level map under `capabilities` (`capabilities.errors.<E_CODE>`), shown in the shape above; each value is the sentence the agent surfaces to the user when that code is reported.
 
-See [`backend/workers/miners/whatsminer/plugin/mdk-contract.json`](../../../backend/workers/miners/whatsminer/plugin/mdk-contract.json) for a complete worked example with all four populated.
+See [`backend/workers/miners/antminer/plugin/mdk-contract.json`](../../../backend/workers/miners/antminer/plugin/mdk-contract.json) for a complete worked example with all four populated.
 
 ### Core
 
-Nothing yet. Core monorepo presence today. The open question is whether [`backend/core/`](../../../backend/core/README.md) adopts UI's JSDoc shape (`@tier`, `@category`, `@domain`, `@kernelCapability` parsed by the registry generator) for non-UI exports, or has alt contract surface. See [Decisions deferred](#decisions-deferred). 
+Nothing yet. Core monorepo presence today. The open question is whether [`backend/core/`](../../../backend/core/README.md) adopts UI's JSDoc shape (`@tier`, `@category`, `@domain`, `@kernelCapability` parsed by the registry generator) for non-UI exports, or has alt contract surface. See [Decisions deferred](#decisions-deferred).
 
 ## What this monorepo adds on top
 
 `mdk-contract.json` covers the **runtime** contract. For the **docs / discovery** layer the monorepo adds two co-located files per artefact:
 
-```
+```text
 backend/workers/miners/whatsminer/
   src/...
   package.json
@@ -111,9 +111,9 @@ Once `dist/index.json` is shipping, it would also unlock [`check:integrations-fr
 
 ## Gateway plugin reference
 
-The default Gateway plugins in [`backend/core/plugins/`](../../../backend/core/plugins/README.md) each ship an `mdk-plugin.json` manifest — the source of truth for their HTTP routes. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js) (`npm run generate:plugin-reference` in [`backend/core/plugins`](../../../backend/core/plugins/README.md)) reads those manifests and regenerates the route tables inside the marked region of [`backend/core/plugins/README.md`](../../../backend/core/plugins/README.md), so the published route list never drifts from the manifests. This is the same read-source-of-truth, generate, ship pattern as the Worker catalogue.
+The default Gateway plugins in [`backend/core/plugins/`](../../../backend/core/plugins/README.md) each ship an `mdk-plugin.json` manifest — the source of truth for their HTTP routes. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js) (run via `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` in [`backend/core/plugins`](../../../backend/core/plugins/README.md) for this generator alone) reads those manifests and regenerates the route tables inside the marked region of [`backend/core/plugins/README.md`](../../../backend/core/plugins/README.md), so the published route list never drifts from the manifests. This is the same read-source-of-truth, generate, ship pattern as the Worker catalogue.
 
-Only the default plugins are generated — plugins mounted at runtime via `startGateway({ extraPluginDirs })` live outside the repo and document their own routes. A [`check:plugin-reference-fresh`](ia.md#checkplugin-reference-fresh) gate would keep the generated tables honest; it is not wired today, so regenerate and commit when a default plugin's routes change.
+Only the default plugins are generated — plugins mounted at runtime via `startGateway({ extraPluginDirs })` live outside the repo and document their own routes. The [`check:plugin-reference-fresh`](ia.md#checkplugin-reference-fresh) gate keeps the generated tables honest, but no CI workflow runs it yet — regenerate with `npm run regenerate-docs` and commit when a default plugin's routes change.
 
 ## Decisions deferred
 

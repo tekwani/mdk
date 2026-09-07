@@ -4,10 +4,10 @@ Status card for the dielectric supply tank in a Bitmain Hydro container. Shows s
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `Device` | no | — | Live device object. Returns `null` when omitted. |
-| `containerSettings` | `SupplyLiquidBoxContainerSettings \| null` | no | `null` | Optional threshold map that controls colour and flash states on readings. |
+| Prop                | Status   | Type     | Default | Description                                                              |
+| ------------------- | -------- | -------- | ------- | ------------------------------------------------------------------------ |
+| `data`              | Optional | `Device` | —       | Live device object. Returns `null` when omitted.                         |
+| `containerSettings` | Optional | `SupplyLiquidBoxContainerSettings \| null` | `null`  | Optional threshold map that controls colour and flash states on readings |
 
 ## Minimal example
 
@@ -19,4 +19,4 @@ import { SupplyLiquidBox } from "@tetherto/mdk-react-devkit";
 
 ## Notes
 
-- Returns `null` when `data` is falsy.
+- Returns `null` when `data` is falsy

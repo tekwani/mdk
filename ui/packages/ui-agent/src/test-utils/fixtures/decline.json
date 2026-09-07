@@ -1,0 +1,83 @@
+{
+  "name": "decline",
+  "prompt": "What did our energy cost last week?",
+  "events": [
+    {
+      "type": "token",
+      "text": "I",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 0,
+      "ts": 0
+    },
+    {
+      "type": "token",
+      "text": " do",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 1,
+      "ts": 39
+    },
+    {
+      "type": "token",
+      "text": " not",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 2,
+      "ts": 72
+    },
+    {
+      "type": "token",
+      "text": " have",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 3,
+      "ts": 108
+    },
+    {
+      "type": "token",
+      "text": " the",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 4,
+      "ts": 145
+    },
+    {
+      "type": "token",
+      "text": " ability",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 5,
+      "ts": 178
+    },
+    {
+      "type": "token",
+      "text": " to",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 6,
+      "ts": 216
+    },
+    {
+      "type": "token",
+      "text": " report",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 7,
+      "ts": 252
+    },
+    {
+      "type": "token",
+      "text": " costs",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 8,
+      "ts": 286
+    },
+    {
+      "type": "token",
+      "text": ".",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 9,
+      "ts": 318
+    },
+    {
+      "type": "done",
+      "text": "I do not have the ability to report costs.",
+      "turnId": "235f85c3-e834-4b90-aaf6-c649fd1ff860",
+      "seq": 10,
+      "ts": 357
+    }
+  ]
+}

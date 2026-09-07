@@ -3,8 +3,7 @@
 const {
   VALID_COMMAND_SCOPES,
   COMMAND_SCOPES,
-  VALID_COMMAND_RESULT_STATUSES,
-  MAX_TARGETS
+  VALID_COMMAND_RESULT_STATUSES
 } = require('./actions')
 
 /**
@@ -108,9 +107,6 @@ function validateCommandRequest (payload) {
   if (payload.targets !== undefined) {
     if (!Array.isArray(payload.targets)) {
       return { valid: false, error: 'ERR_PAYLOAD_TARGETS_INVALID' }
-    }
-    if (payload.targets.length > MAX_TARGETS) {
-      return { valid: false, error: 'ERR_PAYLOAD_TARGETS_TOO_MANY' }
     }
     for (let i = 0; i < payload.targets.length; i++) {
       if (typeof payload.targets[i] !== 'string' || !payload.targets[i]) {

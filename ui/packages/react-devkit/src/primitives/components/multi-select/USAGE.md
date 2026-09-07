@@ -10,21 +10,21 @@ instead.
 
 ## Props
 
-| Prop                  | Type                                       | Required | Default       | Description                                                                                       |
-| --------------------- | ------------------------------------------ | -------- | ------------- | ------------------------------------------------------------------------------------------------- |
-| `options`             | `MultiSelectOption[]`                      | yes      | -             | `{ value, label, disabled? }` entries to render as option rows.                                   |
-| `value`               | `string[]`                                 | no       | -             | Controlled selected values. Omit to use `defaultValue`.                                           |
-| `defaultValue`        | `string[]`                                 | no       | `[]`          | Initial values for uncontrolled mode. Ignored when `value` is provided.                           |
-| `onValueChange`       | `(next: string[]) => void`                 | no       | -             | Fires with the next array on toggle / chip remove / clear-all.                                    |
-| `placeholder`         | `ReactNode`                                | no       | `'Select...'` | Rendered when nothing is selected.                                                                |
-| `disabled`            | `boolean`                                  | no       | `false`       | Disables the trigger (popover does not open).                                                     |
-| `size`                | `'sm' \| 'md' \| 'lg'`                     | no       | `'lg'`        | Trigger sizing tokens. Mirror the `<Select>` sizes.                                               |
-| `variant`             | `'default' \| 'colored'`                   | no       | `'default'`   | `'colored'` paints the trigger in the primary tint (matches `<Select>`'s colored variant).        |
-| `emptyMessage`        | `ReactNode`                                | no       | `'No options'`| Rendered inside the popover when `options` is empty.                                              |
-| `maxSelectedDisplay`  | `number`                                   | no       | -             | Collapse selections beyond this count into a `+N more` chip. Omit to render every selected chip.  |
-| `className`           | `string`                                   | no       | -             | Extra class on the trigger button.                                                                |
-| `contentClassName`    | `string`                                   | no       | -             | Extra class on the popover content.                                                               |
-| `aria-label`          | `string`                                   | no       | -             | Accessible label applied to the trigger.                                                          |
+| Prop                 | Status   | Type                       | Default        | Description                                                                                      |
+| -------------------- | -------- | -------------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
+| `options`            | Required | `MultiSelectOption[]`      | —              | `{ value, label, disabled? }` entries to render as option rows                                   |
+| `value`              | Optional | `string[]`                 | —              | Controlled selected values; omitting switches to uncontrolled mode driven by `defaultValue`      |
+| `defaultValue`       | Optional | `string[]`                 | `[]`           | Initial values for uncontrolled mode. Ignored when `value` is provided.                          |
+| `onValueChange`      | Optional | `(next: string[]) => void` | —              | Fires with the next array on toggle / chip remove / clear-all                                    |
+| `placeholder`        | Optional | `ReactNode`                | `'Select...'`  | Rendered when nothing is selected                                                                |
+| `disabled`           | Optional | `boolean`                  | `false`        | Disables the trigger (popover does not open)                                                     |
+| `size`               | Optional | `'sm' \| 'md' \| 'lg'`     | `'lg'`         | Trigger sizing tokens. Mirror the `<Select>` sizes.                                              |
+| `variant`            | Optional | `'default' \| 'colored'`   | `'default'`    | `'colored'` paints the trigger in the primary tint (matches `<Select>`'s colored variant)        |
+| `emptyMessage`       | Optional | `ReactNode`                | `'No options'` | Rendered inside the popover when `options` is empty                                              |
+| `maxSelectedDisplay` | Optional | `number`                   | —              | Collapse selections beyond this count into a `+N more` chip. Omit to render every selected chip. |
+| `className`          | Optional | `string`                   | —              | Extra class on the trigger button                                                                |
+| `contentClassName`   | Optional | `string`                   | —              | Extra class on the popover content                                                               |
+| `aria-label`         | Optional | `string`                   | —              | Accessible label applied to the trigger                                                          |
 
 `MultiSelectOption.disabled` blocks toggling that row only; the rest of the
 list remains interactive.
@@ -58,10 +58,10 @@ export const ExampleUsage = () => {
 ## Behaviour notes
 
 - The popover **stays open** after toggling an option so multi-pick is
-  ergonomic without re-opening on every change.
-- Clear-all surfaces in the trigger only when `>= 2` values are selected.
+  ergonomic without re-opening on every change
+- Clear-all surfaces in the trigger only when `>= 2` values are selected
 - Per-chip `x` buttons are not in the tab order (the parent trigger handles
-  focus); they remove only that value on click.
+  focus); they remove only that value on click
 - Keyboard: Enter / Space on the trigger opens the popover, Arrow Down / Up
   move focus through rows, Space toggles the focused row without closing,
-  Esc closes and returns focus to the trigger.
+  Esc closes and returns focus to the trigger

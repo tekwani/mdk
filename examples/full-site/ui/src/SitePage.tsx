@@ -14,7 +14,7 @@ import {
   ProfileMenu,
   type TIncidentRowProps,
 } from "@tetherto/mdk-react-devkit/domain";
-import { AppHeader, MiningStatusIcon, Spinner, Typography } from "@tetherto/mdk-react-devkit/primitives";
+import { AppHeader, Button, MiningStatusIcon, Spinner, Typography } from "@tetherto/mdk-react-devkit/primitives";
 
 import { AppSidebar } from "./AppSidebar";
 import { HS_PER_THS, MHS_PER_THS, NOMINAL_MHS_PER_MINER, W_PER_KW } from "./constants";
@@ -38,6 +38,7 @@ export function SitePage(): JSX.Element {
   const [selectedMiner, setSelectedMiner] = useState("");
   const [selectedMode, setSelectedMode] = useState("normal");
   const [actionMsg, setActionMsg] = useState("");
+  const [isApplying, setIsApplying] = useState(false);
 
   const overview = useQuery({
     queryKey: ["site-overview"],
@@ -208,7 +209,8 @@ export function SitePage(): JSX.Element {
   }));
 
   async function applyAction() {
-    setActionMsg("Dispatching…");
+    setIsApplying(true);
+    setActionMsg("");
     try {
       const res = await fetch(`${base}/site/miners/${selectedMiner}/command`, {
         method: "POST",
@@ -217,18 +219,52 @@ export function SitePage(): JSX.Element {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message || `HTTP ${res.status}`);
+      // Keep the button busy until the refreshed site state is in — otherwise the
+      // spinner clears while the table still shows the pre-command power mode.
+      await overview.refetch();
       setActionMsg(`${selectedMiner} → ${selectedMode} (${body.status})`);
-      overview.refetch();
     } catch (err) {
       setActionMsg(`Failed: ${(err as Error).message}`);
+    } finally {
+      setIsApplying(false);
     }
   }
 
   if (!data) {
+    // Centred full-viewport gate. An unreachable or erroring gateway must not
+    // read as "still loading": react-query keeps retrying, so without the
+    // isError branch the spinner spins forever with nothing to act on.
     return (
-      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: 32 }}>
-        <Spinner />
-        <Typography>Connecting to the site… (start the backend with <code>node start.js</code>)</Typography>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          height: "100vh",
+          padding: 24,
+        }}
+      >
+        {overview.isError ? (
+          <>
+            <Typography variant="heading3">Cannot reach the site</Typography>
+            <Typography style={{ maxWidth: 520 }}>{(overview.error as Error)?.message}</Typography>
+            <Typography variant="caption" style={{ maxWidth: 520 }}>
+              Check the backend is running (<code>node start.js</code>). A <code>CHANNEL_CLOSED</code> reply means the Gateway is
+              up but its channel to the Kernel has dropped, which needs a backend restart.
+            </Typography>
+            <Button onClick={() => overview.refetch()} loading={overview.isFetching}>
+              Retry
+            </Button>
+          </>
+        ) : (
+          <>
+            <Spinner />
+            <Typography>Connecting to the site… (start the backend with <code>node start.js</code>)</Typography>
+          </>
+        )}
       </div>
     );
   }
@@ -319,6 +355,7 @@ export function SitePage(): JSX.Element {
                   modeOptions={modeOptions}
                   applyAction={applyAction}
                   actionMsg={actionMsg}
+                  isApplying={isApplying}
                 />
               }
             />

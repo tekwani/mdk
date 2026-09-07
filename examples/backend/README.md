@@ -107,11 +107,9 @@ Each of these starts one mock hardware server, registers one device, waits for t
 
 | Example | Worker type | Mock port |
 |---|---|---|
-| [`miners/whatsminer/index.js`](./miners/whatsminer/index.js) | Whatsminer M56S | 14028 |
 | [`containers/antspace/index.js`](./containers/antspace/index.js) | Antspace HK3 | 8000 |
 
 ```bash
-node examples/backend/miners/whatsminer/index.js
 node examples/backend/containers/antspace/index.js
 ```
 
@@ -202,8 +200,8 @@ node examples/backend/kernel/auth-whitelist.js     # Ctrl+C to stop
 
 **Symptom**: An example fails to start with:
 
-```
-Error: listen EADDRINUSE: address already in use :::14028
+```text
+Error: listen EADDRINUSE: address already in use :::8000
 ```
 
 **Cause**: Another example or a previous run left a process holding the port. Single-Worker examples bind fixed ports (see the table in [Single-Worker examples](#single-worker-examples)); only one can run at a time.
@@ -211,7 +209,7 @@ Error: listen EADDRINUSE: address already in use :::14028
 **Check**: Find the process holding the port:
 
 ```bash
-lsof -nP -iTCP:14028   # replace with the port from the error
+lsof -nP -iTCP:8000   # replace with the port from the error
 ```
 
 **Fix**: Kill the stale process:
@@ -230,7 +228,7 @@ pkill -f "node examples/backend"
 
 **Symptom**: An example fails with:
 
-```
+```text
 Error: Lock file already held
 ```
 

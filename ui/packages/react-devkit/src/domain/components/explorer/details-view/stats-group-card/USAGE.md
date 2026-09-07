@@ -4,10 +4,10 @@ Aggregated stats card for a group of miners: total hashrate, max temperature, av
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `miners` | `DeviceData[] \| Device[]` | no | — | Array of miners whose stats should be aggregated. |
-| `isMinerMetrics` | `boolean` | no | — | Show miner-metrics layout instead of container layout. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `miners` | Optional | `DeviceData[] \| Device[]` | — | Array of miners whose stats should be aggregated |
+| `isMinerMetrics` | Optional | `boolean` | `false` | Show miner-metrics layout instead of container layout |
 
 ## Minimal example
 

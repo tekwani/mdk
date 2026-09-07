@@ -4,8 +4,8 @@ const { isValidSnap, isOffline } = require('../utils')
 
 // Base alert spec data per device family. Workers compose their own
 // { specs } template object from these — the exported objects are never
-// mutated (each worker process previously mutated a shared module singleton,
-// which breaks when multiple worker families share one process).
+// mutated: one process can host several worker families, and a mutated module
+// singleton would leak one family's specs into all of them.
 
 function isValidPoolConfigSnap (ctx, snap) {
   return (

@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "MDK umbrella repository - thin federated root orchestrator. Forwards install/build/test/lint/typecheck to the UI npm workspace (ui/) and the federated backend (backend/core, backend/workers). No shared dependency graph, no Turbo - each domain keeps its own package manager and install scripts, except backend/core, backend/core/gateway, backend/core/kernel, backend/core/mdk, backend/core/mdk-worker, backend/core/plugins, backend/workers packages, and examples/backend, examples/mvp-site which are linked via root npm workspaces.",
   "license": "Apache-2.0",
@@ -21,8 +21,7 @@
     "backend/workers/minerpools/f2pool",
     "backend/workers/minerpools/ocean",
     "backend/workers/miners/antminer",
-    "backend/workers/miners/avalon",
-    "backend/workers/miners/whatsminer",
+    "backend/workers/miners/avalon",    
     "backend/workers/mock",
     "backend/workers/power-meter/abb",
     "backend/workers/power-meter/satec",
@@ -32,19 +31,24 @@
     "examples/backend",
     "examples/mvp-site"
   ],
+  "devDependencies": {
+    "mdk-crypto-lib": "file:backend/lib/mdk-crypto-lib",
+    "markdownlint-cli2": "^0.23.1"
+  },
   "overrides": {
+    "crypto-js": "file:backend/lib/mdk-crypto-lib",
     "brace-expansion": "5.0.9",
     "@tootallnate/once": "3.0.1",
     "tar": ">=7.5.4",
-    "fastify": "5.10.0",
+    "fastify": "5.12.1",
     "@fastify/static": "10.1.2",
     "@fastify/oauth2": "8.2.0",
     "@hono/node-server": "2.0.12",
-    "fast-uri@>=3.0.0 <3.1.5": "3.1.5",
-    "fast-uri@>=4.0.0 <4.1.2": "4.1.2",
+    "fast-uri": "4.1.4",
     "hono": ">=4.12.34",
     "js-yaml": "4.3.1",
-    "ip-address": ">=10.3.1"
+    "ip-address": ">=10.3.1",
+    "qs": "6.16.0"
   },
   "scripts": {
     "setup": "npm run setup:ui && npm run setup:core && npm run setup:workers",
@@ -81,7 +85,13 @@
     "clean:core": "npm --prefix backend/core run clean:packages",
     "clean:workers": "npm --prefix backend/workers run clean:packages",
     "mock": "npm --prefix backend/workers run mock",
+    "generate:ui-registry": "node docs/scripts/sync-ui-registry.mjs",
+    "regenerate-docs": "node docs/scripts/regenerate-docs.mjs",
     "link-check": "node scripts/link-check.mjs",
-    "check:example-paths": "node scripts/check-example-paths.mjs"
+    "check:example-paths": "node scripts/check-example-paths.mjs",
+    "lint:md": "markdownlint-cli2",
+    "lint:md:pr": "bash scripts/lint-md-pr.sh",
+    "test:scripts": "node --test 'test/**/*.test.mjs'",
+    "check:external-contracts": "node docs/scripts/check-external-contracts.mjs"
   }
 }

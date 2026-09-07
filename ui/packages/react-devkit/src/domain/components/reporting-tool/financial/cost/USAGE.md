@@ -6,18 +6,18 @@ cost-summary view model.
 
 ## Props
 
-| Prop               | Type                                        | Required | Default | Description                                                                                    |
-| ------------------ | ------------------------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------- |
-| `metrics`          | `CostSummaryDisplayMetrics \| null`         | yes      | —       | Headline $/MWh tiles (all-in, energy, operations). Pass `null` while loading.                 |
-| `costLog`          | `ReadonlyArray<CostTimeSeriesEntry>`        | yes      | —       | Monthly/weekly production-cost time series for the Production Cost / Price chart.             |
-| `btcPriceLog`      | `ReadonlyArray<BtcPriceTimeSeriesEntry>`    | yes      | —       | BTC price time series aligned to `costLog` buckets.                                           |
-| `totals`           | `CostSummaryMonetaryTotals \| null`         | yes      | —       | Period totals (energy + operations USD) for the Operations vs Energy doughnut.                |
-| `dateRange`        | `FinancialDateRange \| null`                | yes      | —       | Active date range; drives x-axis labels across all charts.                                    |
-| `avgAllInCostData` | `ReadonlyArray<AvgAllInCostDataPoint>`      | no       | —       | Revenue/cost series for the Avg All-in Cost bar chart (sourced separately from cost-summary). |
-| `controls`         | `ReactElement`                              | yes      | —       | Period selector slot. Pass `<TimeframeControls>` for the OSS-style year/month picker.         |
-| `setCostAction`    | `ReactElement`                              | no       | —       | Optional header action slot (e.g. a "Set Monthly Cost" link or button).                       |
-| `isLoading`        | `boolean`                                   | no       | `false` | Shows a loading spinner overlay over the chart grid.                                          |
-| `error`            | `unknown`                                   | no       | —       | When truthy, renders an error message in place of the chart grid.                             |
+| Prop               | Status   | Type                                     | Default | Description                  |
+| ------------------ | -------- | ---------------------------------------- | ------- | ---------------------------- |
+| `metrics`          | Required | `CostSummaryDisplayMetrics \| null`      | —       | Headline $/MWh tiles (all-in, energy, operations). Pass `null` while loading. |
+| `costLog`          | Required | `ReadonlyArray<CostTimeSeriesEntry>`     | —       | Monthly/weekly production-cost time series for the Production Cost / Price chart |
+| `btcPriceLog`      | Required | `ReadonlyArray<BtcPriceTimeSeriesEntry>` | —       | BTC price time series aligned to `costLog` buckets |
+| `totals`           | Required | `CostSummaryMonetaryTotals \| null`      | —       | Period totals (energy + operations USD) for the Operations vs Energy doughnut |
+| `dateRange`        | Required | `FinancialDateRange \| null`             | —       | Active date range; drives x-axis labels across all charts |
+| `controls`         | Required | `ReactElement`                           | —       | Period selector slot. Pass `<TimeframeControls>` for the OSS-style year/month picker. |
+| `avgAllInCostData` | Optional | `ReadonlyArray<AvgAllInCostDataPoint>`   | —       | Revenue/cost series for the Avg All-in Cost bar chart (sourced separately from cost-summary) |
+| `setCostAction`    | Optional | `ReactElement`                           | —       | Optional header action slot (e.g. a "Set Monthly Cost" link or button) |
+| `isLoading`        | Optional | `boolean`                                | `false` | Shows a loading spinner overlay over the chart grid |
+| `error`            | Optional | `unknown`                                | —       | When truthy, renders an error message in place of the chart grid |
 
 ## Minimal example
 
@@ -43,7 +43,7 @@ const viewModel = buildCostSummaryViewModel({ data: costSummaryApiResponse });
 
 ## Notes
 
-- Use `buildCostSummaryViewModel` to transform the raw API response into the props this component expects.
-- `avgAllInCostData` comes from a separate endpoint (`useAvgAllInPowerCostData` in the OSS app) — omit it to hide the Avg All-in Cost panel.
-- For a custom page layout (different header, navigation), mount `CostContent` directly instead and supply your own chrome.
-- Multi-site aggregation is out of scope for this component; mount one `Cost` per site and compose them yourself.
+- Use `buildCostSummaryViewModel` to transform the raw API response into the props this component expects
+- `avgAllInCostData` comes from a separate endpoint (`useAvgAllInPowerCostData` in the OSS app) — omit it to hide the Avg All-in Cost panel
+- For a custom page layout (different header, navigation), mount `CostContent` directly instead and supply your own Chrome
+- Multi-site aggregation is out of scope for this component; mount one `Cost` per site and compose them yourself

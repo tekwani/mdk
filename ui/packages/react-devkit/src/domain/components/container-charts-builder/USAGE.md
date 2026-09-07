@@ -7,20 +7,19 @@ entries and renders a `LineChart` inside a `ChartContainer`.
 
 ## Props
 
-| Prop                | Type                              | Required | Default       | Description                                              |
-| ------------------- | --------------------------------- | -------- | ------------- | -------------------------------------------------------- |
-| `tag`               | `string`                          | no       | —             | Container tag (any leading prefix is stripped).          |
-| `chartDataPayload`  | `ChartDataPayload`                | no       | —             | Declarative chart configuration.                         |
-| `chartTitle`        | `string`                          | no       | —             | Title shown in the chart header.                         |
-| `dateRange`         | `{ start?: number; end?: number }` | no      | —             | Date range bounds (parent integration).                  |
-| `data`              | `UnknownRecord[]`                 | no       | `[]`          | Raw container telemetry entries (with `ts` + nested stats group). |
-| `timeline`          | `string`                          | no       | `"24h"`       | Initial / controlled timeline value.                     |
-| `fixedTimezone`     | `string`                          | no       | —             | IANA timezone for x-axis ticks.                          |
-| `height`            | `number`                          | no       | —             | Chart pixel height.                                      |
-| `showLegend`        | `boolean`                         | no       | `true`        | Show the toggleable legend.                              |
-| `showRangeSelector` | `boolean`                         | no       | `true`        | Show the range selector buttons.                         |
-| `rangeOptions`      | `Array<{ label; value }>`         | no       | 5m/30m/3h/1D  | Override the default range selector options.             |
-| `footer`            | `React.ReactNode`                 | no       | —             | Optional footer (e.g. min/max/avg stats).                |
+| Prop                | Status   | Type                      | Default      | Description                                                      |
+| ------------------- | -------- | ------------------------- | ------------ | ---------------------------------------------------------------- |
+| `tag`               | Optional | `string`                  | —            | Container tag (any leading prefix is stripped)                   |
+| `chartDataPayload`  | Optional | `ChartDataPayload`        | —            | Declarative chart configuration                                  |
+| `chartTitle`        | Optional | `string`                  | —            | Title shown in the chart header                                  |
+| `data`              | Optional | `UnknownRecord[]`         | `[]`         | Raw container telemetry entries (with `ts` + nested stats group) |
+| `timeline`          | Optional | `string`                  | `"24h"`      | Initial / controlled timeline value                              |
+| `fixedTimezone`     | Optional | `string`                  | —            | IANA timezone for x-axis ticks                                   |
+| `height`            | Optional | `number`                  | —            | Chart pixel height                                               |
+| `showLegend`        | Optional | `boolean`                 | `true`       | Show the toggleable legend                                       |
+| `showRangeSelector` | Optional | `boolean`                 | `true`       | Show the range selector buttons                                  |
+| `rangeOptions`      | Optional | `Array<{ label; value }>` | 5m/30m/3h/1D | Override the default range selector options                      |
+| `footer`            | Optional | `React.ReactNode`         | —            | Footer (e.g. min/max/avg stats)                                  |
 
 ## `ChartDataPayload`
 
@@ -53,7 +52,7 @@ type ChartDataPayload = {
 
 ## Notes
 
-- Returns `null` when `chartDataPayload` is not provided.
+- Returns `null` when `chartDataPayload` is not provided
 - Designed for the "configure once per chart kind" use case — for chart-type
   freedom prefer `ContainerCharts` or a hand-rolled `ChartContainer +
-  LineChart` composition.
+  LineChart` composition

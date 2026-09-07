@@ -4,10 +4,10 @@ Single-pump status card showing RPM, flow, and fault state for one immersion-coo
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `pumpTitle` | `string` | yes | — | Label prefix for the pump (e.g. `"Circulation"`). |
-| `pumpItem` | `{ enabled?: boolean; index: number }` | no | — | Pump data. `index` is 0-based; displayed as `index + 1`. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `pumpTitle` | Required | `string` | — | Label prefix for the pump (e.g. `"Circulation"`) |
+| `pumpItem` | Optional | `{ enabled?: boolean; index: number }` | — | Pump data. `index` is 0-based; displayed as `index + 1`. |
 
 ## Minimal example
 

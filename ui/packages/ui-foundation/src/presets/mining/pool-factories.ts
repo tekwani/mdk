@@ -1,5 +1,5 @@
 /**
- * TanStack Query factories for the MiningOS Pool Manager surface.
+ * TanStack Query factories for the reference app Pool Manager surface.
  *
  * Reads (`GET /auth/configs/pool`, `/auth/pools*`, `/auth/miners`,
  * `/auth/actions`) and the voting/approval write workflow

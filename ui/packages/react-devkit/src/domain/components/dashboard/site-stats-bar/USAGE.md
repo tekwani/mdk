@@ -6,17 +6,17 @@ count, container count) into one horizontal card.
 
 ## Props
 
-| Prop             | Type      | Required | Default  | Description                                       |
-| ---------------- | --------- | -------- | -------- | ------------------------------------------------- |
-| `title`          | `string`  | yes      | —        | Site label, rendered in the header row.           |
-| `power`          | `number`  | no       | —        | Current power, expressed in `powerUnit`.          |
-| `powerUnit`      | `string`  | no       | `'kW'`   | Display unit for `power`.                         |
-| `totalHashrate`  | `number`  | no       | —        | Aggregate hashrate.                               |
-| `hashrateUnit`   | `string`  | no       | `'TH/s'` | Display unit for `totalHashrate`.                 |
-| `minerCount`     | `number`  | no       | —        | Total miner count across the site.                |
-| `containerCount` | `number`  | no       | —        | Total container count across the site.            |
-| `isLoading`      | `boolean` | no       | `false`  | Render a skeleton bar while data is loading.      |
-| `className`      | `string`  | no       | —        | Optional class hook.                              |
+| Prop             | Status   | Type      | Default  | Description                                 |
+| ---------------- | -------- | --------- | -------- | ------------------------------------------- |
+| `title`          | Required | `string`  | —        | Site label, rendered in the header row      |
+| `power`          | Optional | `number`  | —        | Current power, expressed in `powerUnit`     |
+| `powerUnit`      | Optional | `string`  | `'kW'`   | Display unit for `power`                    |
+| `totalHashrate`  | Optional | `number`  | —        | Aggregate hashrate                          |
+| `hashrateUnit`   | Optional | `string`  | `'TH/s'` | Display unit for `totalHashrate`            |
+| `minerCount`     | Optional | `number`  | —        | Total miner count across the site           |
+| `containerCount` | Optional | `number`  | —        | Total container count across the site       |
+| `isLoading`      | Optional | `boolean` | `false`  | Render a skeleton bar while data is loading |
+| `className`      | Optional | `string`  | —        | Class hook                                  |
 
 ## Example
 
@@ -33,6 +33,6 @@ count, container count) into one horizontal card.
 ## Notes
 
 - Renders `'—'` for any stat that's `undefined`. Pass `isLoading` for a
-  cleaner first-paint experience.
+  cleaner first-paint experience
 - `WidgetTopRow` reads timezone formatting via `useTimezoneFormatter`, so this
-  component must live inside an `<MdkProvider>` tree.
+  component must live inside an `<MdkProvider>` tree

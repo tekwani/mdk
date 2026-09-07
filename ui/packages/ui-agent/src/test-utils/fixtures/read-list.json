@@ -1,0 +1,159 @@
+{
+  "name": "read-list",
+  "prompt": "List the miners.",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "list_devices",
+      "args": {
+        "family": "miner",
+        "state": "all"
+      },
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 0,
+      "ts": 0
+    },
+    {
+      "type": "tool_result",
+      "name": "list_devices",
+      "text": "{\n  \"summary\": \"2 miners: demo-miner-a-0, demo-miner-a-1.\",\n  \"count\": 2,\n  \"total\": 2,\n  \"items\": [\n    {\n      \"deviceId\": \"demo-miner-a-0\",\n      \"family\": \"miner\",\n      \"state\": \"online\",\n      \"worker\": \"demo-miner-a\"\n    },\n    {\n      \"deviceId\": \"demo-miner-a-1\",\n      \"family\": \"miner\",\n      \"state\": \"online\",\n      \"worker\": \"demo-miner-a\"\n    }\n  ]\n}",
+      "isError": false,
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 1,
+      "ts": 11
+    },
+    {
+      "type": "token",
+      "text": "demo",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 2,
+      "ts": 921
+    },
+    {
+      "type": "token",
+      "text": "-",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 3,
+      "ts": 960
+    },
+    {
+      "type": "token",
+      "text": "miner",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 4,
+      "ts": 993
+    },
+    {
+      "type": "token",
+      "text": "-",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 5,
+      "ts": 1025
+    },
+    {
+      "type": "token",
+      "text": "a",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 6,
+      "ts": 1062
+    },
+    {
+      "type": "token",
+      "text": "-",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 7,
+      "ts": 1099
+    },
+    {
+      "type": "token",
+      "text": "0",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 8,
+      "ts": 1133
+    },
+    {
+      "type": "token",
+      "text": " and",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 9,
+      "ts": 1172
+    },
+    {
+      "type": "token",
+      "text": " demo",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 10,
+      "ts": 1207
+    },
+    {
+      "type": "token",
+      "text": "-",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 11,
+      "ts": 1240
+    },
+    {
+      "type": "token",
+      "text": "miner",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 12,
+      "ts": 1273
+    },
+    {
+      "type": "token",
+      "text": "-",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 13,
+      "ts": 1311
+    },
+    {
+      "type": "token",
+      "text": "a",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 14,
+      "ts": 1346
+    },
+    {
+      "type": "token",
+      "text": "-",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 15,
+      "ts": 1381
+    },
+    {
+      "type": "token",
+      "text": "1",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 16,
+      "ts": 1419
+    },
+    {
+      "type": "token",
+      "text": " are",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 17,
+      "ts": 1453
+    },
+    {
+      "type": "token",
+      "text": " online",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 18,
+      "ts": 1488
+    },
+    {
+      "type": "token",
+      "text": ".",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 19,
+      "ts": 1532
+    },
+    {
+      "type": "done",
+      "text": "demo-miner-a-0 and demo-miner-a-1 are online.",
+      "turnId": "1e606277-23dd-4eb7-bef5-0c53d9d38374",
+      "seq": 20,
+      "ts": 1568
+    }
+  ]
+}

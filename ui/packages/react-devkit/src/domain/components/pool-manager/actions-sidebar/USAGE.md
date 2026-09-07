@@ -7,9 +7,9 @@ the reference app's sidebar but is built on MDK primitives — no Redux, no Ant 
 
 ## Props
 
-| Prop        | Type     | Required | Default | Description                            |
-| ----------- | -------- | -------- | ------- | -------------------------------------- |
-| `className` | `string` | no       | —       | Extra class on the sidebar root element. |
+| Prop        | Status   | Type     | Default | Description                             |
+| ----------- | -------- | -------- | ------- | --------------------------------------- |
+| `className` | Optional | `string` | —       | Extra class on the sidebar root element |
 
 The sidebar is intentionally prop-light: it reads all state from `actionsStore`
 and the `useLiveActions` hook internally.
@@ -72,14 +72,14 @@ export function AppWithPinSupport() {
   gated by the `actions:w` permission. After a successful submit the card
   briefly shows "Action Submitted" then disappears.
 - **Vote** — calls `useVoteOnAction` for actions awaiting approval; also gated
-  by `actions:w`.
-- **Cancel** — calls `useCancelAction` for submitted actions awaiting execution.
+  by `actions:w`
+- **Cancel** — calls `useCancelAction` for submitted actions awaiting execution
 
 ## Notes
 
 - Mount it **once** at the application root, outside the route `<Outlet>`, so
-  drafts accumulated across Pool Manager sub-views remain visible.
-- Requires `MdkProvider` (TanStack Query client + auth) above it in the tree.
+  drafts accumulated across Pool Manager sub-views remain visible
+- Requires `MdkProvider` (TanStack Query client + auth) above it in the tree
 - The **pin** feature switches to a flex-based layout — ensure the parent
   container uses `display: flex; flex-direction: row` so the sidebar pushes
-  content rather than overlapping it.
+  content rather than overlapping it

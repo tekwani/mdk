@@ -6,10 +6,11 @@ import readline from 'node:readline'
 import process from 'node:process'
 import { performance } from 'node:perf_hooks'
 import { writeFileSync } from 'node:fs'
-import { createAgent, EVENT, runBattery, coverageGaps, loadBattery, selectCases } from '../index.js'
-import { parseArgs, evalOptions } from '../src/args.js'
+import { createAgent, EVENT, runBattery, coverageGaps, loadBattery, selectCases, CHARTER_VERSION } from '../index.js'
+import { parseArgs, evalOptions, resolveProviderArgs, runtimeOptions, describeProvider } from '../src/args.js'
+import { PROVIDER } from '../src/provider.js'
 import { formatReport, formatResult } from '../src/report.js'
-import { DEFAULT_LIMITS, DEFAULT_ENDPOINTS } from '../src/constants.js'
+import { DEFAULT_ENDPOINTS } from '../src/constants.js'
 
 // ── terminal colors (kept minimal; presentation-friendly) ──────────────────────
 const C = {
@@ -35,11 +36,16 @@ const PAINT = {
 }
 
 const args = parseArgs(process.argv.slice(2))
-const provider = {
-  kind: 'qvac',
-  mode: args.mode ?? 'external',
-  baseURL: args['base-url'] ?? DEFAULT_ENDPOINTS.model,
-  model: args.model ?? 'qwen3-600m'
+let provider
+let capability
+let declared
+let limits
+try {
+  provider = resolveProviderArgs(args, process.env)
+  ;({ capability, declared, limits } = runtimeOptions(args, provider))
+} catch (err) {
+  console.error(err.message)
+  process.exit(2)
 }
 const mcpUrl = args['mcp-url'] ?? null
 
@@ -56,10 +62,17 @@ if (args.eval) {
 }
 
 console.log(banner())
-field('provider', `qvac (${provider.mode})`)
+field('provider', describeProvider(provider))
 field('model', provider.model)
-if (provider.mode === 'external') field('endpoint', provider.baseURL)
+if (provider.baseURL) field('endpoint', provider.baseURL)
 field('mcp', mcpUrl ?? 'none (plain chat)')
+field('capability', `${capability}${declared ? '' : ` ${C.yellow}(default)${C.reset}`} ${C.dim}(${limits.maxSteps} steps · ${limits.maxOutputTokens} tokens)${C.reset}`)
+if (!declared && provider.kind === PROVIDER.QVAC) {
+  console.log(`  ${C.dim}a bigger local model needs --capability mid — nothing is inferred from the model name${C.reset}`)
+}
+if (provider.kind === PROVIDER.OPENAI_COMPATIBLE) {
+  console.log(`  ${C.yellow}⚠${C.reset} ${C.dim}prompts and tool results leave the site for ${new URL(provider.baseURL).host}${C.reset}`)
+}
 console.log('')
 
 let agent
@@ -67,7 +80,8 @@ try {
   agent = await createAgent({
     provider,
     mcp: mcpUrl ? { url: mcpUrl } : undefined,
-    limits: DEFAULT_LIMITS
+    capability,
+    limits
   })
 } catch (err) {
   console.error(`Failed to start: ${err.message}`)
@@ -84,16 +98,19 @@ if (mcpUrl) {
   // would otherwise start cleanly and then decline every fleet question.
   if (!tools.length) console.log(`  ${C.yellow}no tools admitted — the agent will answer from the charter only${C.reset}`)
 }
+console.log(`${ok} charter ${CHARTER_VERSION}`)
 
 process.stdout.write('connecting to model… ')
 try {
   const ms = await agent.waitReady({
-    onWait: (_n, elapsed) => process.stdout.write(`\rwaiting for model to load… (${Math.round(elapsed / 1000)}s)   `)
+    onWait: (_n, elapsed) => process.stdout.write(`\rwaiting for model to load… (${Math.round(elapsed / 1000)}s)   `),
+    onRateLimited: (why) => console.log(`\r${C.yellow}⚠${C.reset} endpoint reachable but rate limited — ${C.dim}${why.slice(0, 120)}${C.reset}\n  ${C.dim}consider --rpm to pace requests${C.reset}`)
   })
   console.log(`\r${ok} model ready ${C.dim}(${ms} ms)${C.reset}                      `)
 } catch (err) {
   console.error(`\n\nCould not reach the model: ${err.message}`)
-  if (provider.mode === 'external') console.error(`Is the QVAC server serving "${provider.model}" at ${provider.baseURL}?`)
+  if (provider.kind === PROVIDER.QVAC && provider.mode === 'external') console.error(`Is the QVAC server serving "${provider.model}" at ${provider.baseURL}?`)
+  if (provider.kind === PROVIDER.OPENAI_COMPATIBLE) console.error('Check the api key, the model name, and that the endpoint speaks /chat/completions.')
   process.exit(1)
 }
 
@@ -248,10 +265,11 @@ async function shutdown () {
 }
 
 function printInfo () {
-  console.log(`  provider : qvac (${provider.mode})`)
+  console.log(`  provider : ${describeProvider(provider)}`)
   console.log(`  model    : ${provider.model}`)
-  if (provider.mode === 'external') console.log(`  endpoint : ${provider.baseURL}`)
+  if (provider.baseURL) console.log(`  endpoint : ${provider.baseURL}`)
   console.log(`  mcp      : ${mcpUrl ?? 'none'}`)
+  console.log(`  budget   : ${capability}${declared ? '' : ' (default)'} — ${limits.maxSteps} steps · ${limits.maxOutputTokens} tokens`)
   console.log(`  tools    : ${tools.length ? tools.map((t) => t.name).join(', ') : 'none (plain chat)'}`)
 }
 

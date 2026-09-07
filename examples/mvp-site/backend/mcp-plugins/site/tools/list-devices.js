@@ -16,7 +16,8 @@ module.exports = {
         ? `${rows.length} ${plural(family, rows.length)}: ${rows.map((r) => r.deviceId).join(', ')}.`
         : `No ${plural(family, 0)} match.`,
       count: rows.length,
-      devices: rows
+      total: rows.length,
+      items: rows
     })
   }
 }

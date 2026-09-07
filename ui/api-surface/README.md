@@ -32,7 +32,7 @@ npm run check:api-surface -- --update    # accept the current surface
 
 ## Reading a failure
 
-```
+```text
 ✗ @tetherto/mdk-ui-foundation: public surface drifted
   ./query
     - REMOVED  someHelper (function)      ← breaking: consumers lose an import

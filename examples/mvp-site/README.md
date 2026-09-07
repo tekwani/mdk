@@ -149,11 +149,11 @@ rm -rf .site-data
 
 **Symptom**: PM2 shows `kernel` status as `errored` with:
 
-```
+```text
 Error: Invalid device file, was moved unsafely
 ```
 
-**Cause**: The `.site-data` directory contains RocksDB files with embedded path metadata from a previous location. This happens when the repo is 
+**Cause**: The `.site-data` directory contains RocksDB files with embedded path metadata from a previous location. This happens when the repo is
 moved, copied, cloned to a new location, or when switching between multiple clones of the same repo.
 
 **Fix**: Remove the persisted state directory:

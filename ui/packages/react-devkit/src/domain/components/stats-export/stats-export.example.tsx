@@ -16,7 +16,7 @@ export const StatsExportExample = () => {
         // eslint-disable-next-line no-console
         console.log('export json')
       }}
-      showLabel
+      hideLabel
     />
   )
 }

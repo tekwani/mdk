@@ -53,7 +53,7 @@ Use [the Bitdeer README][bitdeer-readme] to confirm the `model` value for your D
 Add this code to the Node.js service or script that runs the MDK Worker in your deployment. The snippet shows the minimum boot call seeding one D40 container, replace the example container ID with your container's value:
 
 ```js
-const { getKernel } = require('@tetherto/mdk/backend/core/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startBitdeerWorker } = require('@tetherto/mdk-worker-bitdeer')
 
 const kernel = await getKernel()
@@ -72,14 +72,14 @@ await kernel.registerWorker(worker.runtime.getPublicKey())
 ```
 
 > [!WARNING]
-> Make sure the container is configured to publish into this Worker's broker port before registering. Commands act on 
+> Make sure the container is configured to publish into this Worker's broker port before registering. Commands act on
 > physical cooling and power hardware, prioritize thermal safety.
 
-`seedDevices` only seeds a fresh, empty `storeDir`, once persisted, the device set survives restarts on its own. 
+`seedDevices` only seeds a fresh, empty `storeDir`, once persisted, the device set survives restarts on its own.
 To add a container to an already-running fleet, send the `registerThing` command to the live Worker instead:
 
 ```js
-const { createMdkClient } = require('@tetherto/mdk/backend/core/client')
+const { createMdkClient } = require('@tetherto/mdk-client')
 
 const client = createMdkClient({ kernelKey: kernel.getPublicKey() })
 await client.connect()
@@ -91,8 +91,8 @@ await client.sendWorkerCommand('bitdeer-rack-1', null, 'registerThing', {
 ```
 
 > [!IMPORTANT]
-> `registerThing` persists the container config immediately, but the running Worker does not pick it up until it is stopped 
-> and restarted (`await worker.stop()`, then call `startBitdeerWorker` again with the same `storeDir` and no `seedDevices`), 
+> `registerThing` persists the container config immediately, but the running Worker does not pick it up until it is stopped
+> and restarted (`await worker.stop()`, then call `startBitdeerWorker` again with the same `storeDir` and no `seedDevices`),
 > there is no hot-add.
 
 For the full `seedDevices` and `registerThing` option reference, the telemetry and command tables, and the shared install pattern, see [the Bitdeer README][bitdeer-readme] and [install pattern][install-pattern].
@@ -113,9 +113,6 @@ If it does not print those values, or if the broker port is already in use, the 
 - [Review telemetry units, command shapes, and error codes][bitdeer-readme]
 
 ## Links
-
-[terminology]: ../../reference/glossary.md
-<!-- docs@tether.io: terminology → reference/glossary -->
 
 [container-guide-assumptions]: index.md#prerequisites
 <!-- docs@tether.io: container-guide-assumptions → guides/containers#prerequisites -->

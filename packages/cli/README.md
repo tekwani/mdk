@@ -24,7 +24,7 @@ for interactive wizard steps
 `onboard` and `create` emit one role-grouped layout, so a path in `mdk.yaml` says
 what it is:
 
-```
+```text
 mdk.yaml           the stack spec
 package.json       private root manifest; workers/ + plugins/ are npm workspaces
 README.md          generated: layout + the run commands
@@ -73,7 +73,7 @@ repo. From this package after `npm run build`:
 
 ```bash
 mkdir -p /tmp/mdk-try && cd /tmp/mdk-try
-CLI=/path/to/mdk/packages/cli/dist/index.js
+CLI=/path/to/mdk-prv/packages/cli/dist/index.js
 
 # Install the MDK Developer Skill (via the @tetherto/mdk-skill entry point)
 node "$CLI" skill add --client all --dir .
@@ -219,12 +219,13 @@ HTTP on its configured port.
 
 Exit codes make it scriptable (`mdk status && deploy…`):
 
-| Code | Meaning                                                                        |
-| ---- | ------------------------------------------------------------------------------ |
-| `0`  | Healthy — environment fine and every component up                              |
-| `2`  | Usage error (unknown `--output`)                                               |
-| `4`  | Precondition not met — old Node, missing/invalid `mdk.yaml`, packages not installed |
-| `5`  | Stack not fully up — Kernel/Gateway unreachable, or a declared worker is not registered/serving |
+| Exit code | Fires when | Fix |
+| --- | --- | --- |
+| `0` | Environment checks pass and every component reports `healthy` | None |
+| `1` | `collectStatus` throws while gathering the report, an unexpected error | Check the printed error message and the project directory (`--dir`) |
+| `2` | `--output` names a format outside `table`/`json`/`yaml` | Pass one of `table`, `json`, `yaml` |
+| `4` | An environment precondition fails: old Node, a missing or invalid `mdk.yaml`, or a declared package that doesn't resolve | Fix the precondition the report names |
+| `5` | The stack isn't fully up: Kernel or Gateway unreachable, or a declared worker not registered/serving | Check the component the report marks unhealthy |
 
 Notes:
 
@@ -232,28 +233,30 @@ Notes:
 assembling on demand inside the monorepo and copying the bundled skills once
 published
 - `create dashboard` (and the onboarding UI step) scaffold the MDK UI shell from
-[`examples/mdk-ui-shell-template`](../../examples/mdk-ui-shell-template/README.md) (a real, runnable Vite app that doubles as the
-template). **Inside the monorepo** it copies that template locally (no network)
+[`examples/mdk-ui-shell-template`](../../examples/mdk-ui-shell-template/README.md) (a real, runnable
+Vite app that doubles as the template). **Inside the monorepo** it copies that template locally (no network)
 and rewrites the template's `file:` MDK deps to absolute links into the
-monorepo's `ui/packages/*`; `--ref` is ignored here since the local template
-always wins. **Standalone**, it downloads the same subtree from
-GitHub (`tetherto/mdk .../examples/mdk-ui-shell-template`) via `degit` — this
-needs network access — and pins MDK deps to a published range. Either way it
+monorepo's `ui/packages/*`. **Standalone**, it downloads the same subtree from
+GitHub (`tetherto/mdk .../examples/mdk-ui-shell-template`) via `degit`, which
+needs network access, and pins MDK deps to a published range. Either way it
 lands in `apps/dashboard`, takes the package + `APP_NAME` from
 `<stack>-dashboard`, strips the on-demand `_managed/` pages, and copies
 `.env.example` → `.env` with `VITE_GATEWAY_URL` pointed at this stack's gateway
-port. Passing a name puts the app in `apps/<name>` instead. Pick a
-branch/tag with `--ref` (default `main`, GitHub only outside the monorepo),
-overwrite with `--force` (recursively deletes the existing target directory
-first — there is no confirmation prompt), and skip the post-scaffold install
-with `--no-install`.
+port. Passing a name puts the app in `apps/<name>` instead.
+
+  | Flag | Status | Type | Default | Description |
+  | --- | --- | --- | --- | --- |
+  | `--ref` | Optional | `string` | `main` | Branch/tag to scaffold from; ignored inside the monorepo since the local template always wins, applies only to the standalone GitHub path |
+  | `--force` | Optional | `boolean` | `false` | Overwrite the target directory; recursively deletes it first, no confirmation prompt |
+  | `--no-install` | Optional | `boolean` | `false` | Skip the post-scaffold dependency install |
+
 - The scaffolded dashboard is a normal Vite app: `npm run build` inside it
 produces a `dist/` you serve however you serve static assets. `create dashboard`
 only sets `VITE_GATEWAY_URL`/`VITE_OAUTH_BASE_URL` for local dev against this
 stack — update `apps/dashboard/.env` before building for any other target.
 - Reset a scratch run with `rm -rf /tmp/mdk-try`
 
-Or link it as a real `mdk` command (optional, nicest for testing):
+Or link it as a real `mdk` command (optional; best for testing):
 
 ```bash
 cd packages/cli
@@ -270,29 +273,36 @@ mdk onboard
 
 ## Command surface
 
-`mdk onboard`, `mdk create` (worker/plugin/dashboard), `mdk run`, `mdk status`,
-`mdk skill add`, and `mdk version` are implemented. Every other command is a stub
-that prints a "not implemented" notice to stderr and exits 0. (Implemented
-commands are marked ✅ below.)
+Stub commands are wired up (name, arguments, options, help) but not implemented: each prints
+`mdk <command>: not implemented yet (stub).` to stderr and exits 0.
 
+| Group            | Implemented commands                                                                  | Stub commands                                                               |
+| ---------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Onboarding       | `mdk onboard`                                                                         |                                                                             |
+| Scaffold         | `mdk create worker <name>`, `mdk create plugin <name>`, `mdk create dashboard [name]` |                                                                             |
+| Run & manage     | `mdk run [target] [name]`, `mdk status`                                               | `mdk get <resource>`, `mdk describe <resource> <name>`, `mdk logs <target>` |
+| Discover         |                                                                                       | `mdk discover`                                                              |
+| Agent enablement | `mdk skill add`                                                                       | `mdk mcp register`                                                          |
+| Meta             | `mdk version`                                                                         | `mdk manifest` (alias `json-help`)                                          |
 
-| Group            | Commands                                                                                                                                                          |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Onboarding       | `mdk onboard` ✅                                                                                                                                                   |
-| Scaffold         | `mdk create worker <name>` ✅, `mdk create plugin <name>` ✅, `mdk create dashboard [name]` ✅                                                                     |
-| Run & manage     | `mdk run [target] [name]` ✅, `mdk status` ✅, `mdk get <resource>`, `mdk describe <resource> <name>`, `mdk logs <target>`                                         |
-| Discover         | `mdk discover`                                                                                                                                                    |
-| Agent enablement | `mdk skill add` ✅, `mdk mcp register`                                                                                                                             |
-| Meta             | `mdk manifest` (alias `json-help`), `mdk version` ✅                                                                                                               |
+Global flags:
 
-Global flags: `-o, --output <fmt>`, `-v, --verbose`, `--debug`, `--version`, `-h, --help`.
+| Flag | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `-o, --output <fmt>` | Optional | `string` | `table` | Output format for data: `table`, `json`, or `yaml` |
+| `-v, --verbose` | Optional | `boolean` | `false` | Increase log detail |
+| `--debug` | Optional | `boolean` | `false` | Print stack traces for unexpected failures |
+| `--version` | Optional | `boolean` | `false` | Print the CLI version and exit |
+| `-h, --help` | Optional | `boolean` | `false` | Print usage help and exit |
 
-## Implementing a command
+### Implement a command
 
 Each command lives under [`src/commands/`](./src/commands/). To add behavior, replace the
 `stub(...)` call in the command's `.action(...)` with the real implementation.
 The command wiring (name, arguments, options, help) does not need to change.
 
-See [`instruction.md`](instruction.md) for the full guide (conventions, output
+## Next steps
+
+- See [`instruction.md`](instruction.md) for the full guide (conventions, output
 rules, and definition of done) — read it before contributing, especially if you
-are an AI coding agent.
+are an AI coding agent

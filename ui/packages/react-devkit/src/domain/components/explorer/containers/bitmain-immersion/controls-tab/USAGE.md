@@ -1,17 +1,17 @@
-# BitMainImmersionControlsTab
+# BitMainControlsTab
 
-Controls tab for a BitMain immersion container. Exposes start/stop, mode selection, and emergency actions alongside fan status, tank levels, and GPS.
+Read-only status tab for a BitMain immersion container: fan status, tank levels, and GPS location.
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `Device` | yes | — | Live device object. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Required | `Device` | — | Live device object |
 
 ## Minimal example
 
 ```tsx
-import { BitMainImmersionControlsTab } from "@tetherto/mdk-react-devkit";
+import { BitMainControlsTab } from "@tetherto/mdk-react-devkit";
 
-<BitMainImmersionControlsTab data={device} />
+<BitMainControlsTab data={device} />
 ```

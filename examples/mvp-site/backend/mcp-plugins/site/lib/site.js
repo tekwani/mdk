@@ -41,6 +41,17 @@ const matches = (row, family, state) =>
 
 const plural = (family, n) => `${family === 'all' ? 'device' : family}${n === 1 ? '' : 's'}`
 
+/**
+ * A count with its noun attached, and zero spelled as a word.
+ *
+ * Written for how a 4B reads a summary rather than for brevity. "2 devices across 1 workers — 2
+ * online, 0 offline" was misread ten times in twelve: the plural disagreement on "1 workers"
+ * invites the salient 2, the online count is not attached to any noun so it lands on both, and a
+ * bare "0 offline" came back as "two devices are offline" — a zero reported as the total. Every
+ * number here is glued to what it counts, so there is nothing to reattach.
+ */
+const counted = (n, noun) => `${n === 0 ? 'no' : n} ${noun}${n === 1 ? '' : 's'}`
+
 const METRIC_FIELDS = {
   hashrate: ['hashrate_avg', 'hashrate_rt', 'hashrate'],
   power: ['power', 'active_power'],
@@ -85,4 +96,6 @@ async function powerModesFor (deviceId) {
 
 const json = (payload) => ({ content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }] })
 
-module.exports = { AXIS, classifyWorker, collectDevices, matches, plural, readMetric, mapInBatches, powerModesFor, json }
+const isEmpty = (v) => v == null || (typeof v === 'object' && !Object.keys(v).length)
+
+module.exports = { AXIS, classifyWorker, collectDevices, counted, matches, plural, readMetric, mapInBatches, powerModesFor, isEmpty, json }

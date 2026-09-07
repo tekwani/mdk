@@ -4,14 +4,14 @@ Pump-station status card showing alarm, ready, operation, and start states for a
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `title` | `string` | no | — | Card heading. |
-| `alarmStatus` | `boolean` | no | — | Whether an alarm is active. |
-| `ready` | `boolean` | no | — | Pump station is in ready state. |
-| `operation` | `boolean` | no | — | Pump station is in operation. |
-| `start` | `boolean` | no | — | Pump station has started. |
-| `className` | `string` | no | — | Additional CSS class. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `title` | Optional | `string` | — | Card heading |
+| `alarmStatus` | Optional | `boolean` | `false` | Whether an alarm is active |
+| `ready` | Optional | `boolean` | — | Pump station is in ready state |
+| `operation` | Optional | `boolean` | — | Pump station is in operation |
+| `start` | Optional | `boolean` | — | Pump station has started |
+| `className` | Optional | `string` | — | Additional CSS class |
 
 ## Minimal example
 

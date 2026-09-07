@@ -8,21 +8,23 @@ const { convertMsToSeconds } = require('./utils')
  * @see https://api.f2pool.com/v2/doc/en.html
  */
 class F2MinerpoolApi {
-  constructor (http, apiSecret) {
+  constructor (http, apiSecret, signal) {
     this._http = http
     this.apiSecret = apiSecret
+    this._signal = signal
   }
 
   async _request (apiPath, payload) {
     // waiting between calls due to api rate limits (skipped in tests)
     if (process.env.NODE_ENV !== 'test') {
-      await sleep(1000)
+      await sleep(1000, undefined, { signal: this._signal })
     }
     const { body: resp } = await this._http.post(apiPath, {
       headers: { 'F2P-API-SECRET': this.apiSecret },
       encoding: 'json',
       body: payload,
-      timeout: 30 * 1000
+      timeout: 30 * 1000,
+      signal: this._signal
     })
 
     return resp

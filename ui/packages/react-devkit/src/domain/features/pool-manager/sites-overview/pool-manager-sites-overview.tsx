@@ -15,7 +15,7 @@ export type PoolManagerSitesOverviewProps = {
   poolConfig: PoolConfigData[]
   /** Show a skeleton placeholder while site data is fetching. */
   isLoading?: boolean
-  /** Surface a "could not load sites" message when defined. */
+  /** Shows a "Failed to load data" alert when defined (together with the internal pool-config fetch error). */
   error?: unknown
   /** Called when the operator clicks the "Pool Manager" back link. */
   backButtonClick: VoidFunction

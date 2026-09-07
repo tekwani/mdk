@@ -1,0 +1,444 @@
+/* Transcript: bubbles, tool chips, markdown, the streaming and failure states. */
+
+@use 'mixins' as *;
+
+.mdk-agent-messages {
+  @include scroll_column;
+
+  gap: 20px;
+  padding: 16px;
+
+  &__empty {
+    @include empty_note;
+  }
+}
+
+.mdk-agent-message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  &__role {
+    margin: 0;
+    color: var(--mdk-agent-text-muted);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  &__dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 6px;
+    background: var(--mdk-agent-accent);
+  }
+
+  &__bubble {
+    padding: 9px 12px;
+    border: 1px solid var(--mdk-agent-border-strong);
+    border-radius: var(--mdk-agent-radius);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  &__tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* The synthesized "what you are approving" line above the card. */
+  &__intent {
+    margin: 0;
+  }
+
+  &__error {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    margin: 0;
+    color: var(--mdk-agent-danger);
+  }
+
+  /* "Try again" sits on the error line rather than under it: one row, and the
+     affordance is where the operator is already looking. It keeps its own width —
+     sharing the row with a two-line message otherwise broke the label mid-word. */
+  &__retry {
+    flex: none;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    white-space: nowrap;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  /* A turn the operator stopped, or one the panel could not finish. */
+  &__note {
+    margin: 0;
+    color: var(--mdk-agent-text-muted);
+    font-size: 11px;
+  }
+
+  /* The operator's own turns hug the right edge, capped so a long question
+     still reads as a bubble rather than a full-width block. */
+  &--user {
+    align-items: flex-end;
+
+    .mdk-agent-message__role,
+    .mdk-agent-message__bubble {
+      max-width: 85%;
+    }
+  }
+}
+
+.mdk-agent-tool-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--mdk-agent-border-strong);
+  border-radius: var(--mdk-agent-radius);
+  color: var(--mdk-agent-text-muted);
+  font-size: 11px;
+  line-height: 13px;
+
+  &__icon:empty {
+    display: none;
+  }
+
+  &__icon {
+    display: inline-flex;
+  }
+
+  &--ok {
+    color: var(--mdk-agent-success);
+    border-color: color-mix(in srgb, var(--mdk-agent-success) 45%, transparent);
+  }
+
+  &--running,
+  &--awaiting-approval {
+    color: var(--mdk-agent-accent);
+    border-color: color-mix(in srgb, var(--mdk-agent-accent) 45%, transparent);
+  }
+
+  /* A refusal is neither success nor failure — the operator meant it. */
+  &--rejected {
+    color: var(--mdk-agent-text-muted);
+    border-color: var(--mdk-agent-border-strong);
+    text-decoration: line-through;
+  }
+
+  &--error {
+    color: var(--mdk-agent-danger);
+    border-color: color-mix(in srgb, var(--mdk-agent-danger) 45%, transparent);
+  }
+
+  /* The turn ended before the result arrived: not a failure of the tool, and not
+     a success either — the outcome is simply unknown. */
+  &--interrupted {
+    color: var(--mdk-agent-text-muted);
+    border-color: var(--mdk-agent-border-strong);
+    border-style: dashed;
+  }
+}
+
+/* A note from the panel, not from the model — a re-minted session, mostly. */
+.mdk-agent-system {
+  margin: 0;
+  padding: 6px 0;
+  border-top: 1px dashed var(--mdk-agent-border);
+  color: var(--mdk-agent-text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.mdk-agent-markdown {
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  /* While a turn streams the text is rendered raw — a half-written fence would
+     otherwise reflow the whole answer on every token. */
+  &--streaming {
+    white-space: pre-wrap;
+  }
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* Everything remark-gfm can emit is styled, not only what the reference model
+     happens to produce: nothing constrains the answer's format, so a heading, a
+     quote or an image is reachable from any ordinary question. Left at browser
+     defaults they render at document scale inside a 420px panel. */
+  p,
+  ul,
+  ol,
+  pre,
+  table,
+  blockquote,
+  hr,
+  .mdk-agent-code {
+    margin: 0 0 10px;
+  }
+
+  ul,
+  ol {
+    padding-left: 20px;
+  }
+
+  /* A panel is not a document: h1 sits barely above body text, and h4-h6 stop
+     shrinking rather than dropping below it. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 14px 0 6px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  h1 {
+    font-size: 15px;
+  }
+
+  h2 {
+    font-size: 14px;
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: 13px;
+  }
+
+  blockquote {
+    padding-left: 10px;
+    border-left: 2px solid var(--mdk-agent-border-strong);
+    color: var(--mdk-agent-text-muted);
+  }
+
+  hr {
+    height: 0;
+    border: none;
+    border-top: 1px solid var(--mdk-agent-border);
+  }
+
+  /* An image the model links to must not push the panel wider than the viewport. */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  code {
+    padding: 1px 4px;
+    background: var(--mdk-agent-surface-raised);
+    font-size: 12px;
+  }
+
+  pre {
+    padding: 10px;
+    overflow-x: auto;
+    background: var(--mdk-agent-surface-raised);
+    border: 1px solid var(--mdk-agent-border);
+
+    code {
+      padding: 0;
+      background: none;
+    }
+  }
+
+  /* Wide tables scroll inside the panel instead of widening it. */
+  table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 4px 10px 4px 0;
+    text-align: left;
+  }
+
+  th {
+    color: var(--mdk-agent-text-muted);
+    font-weight: 600;
+  }
+
+  /* GFM task lists: the checkbox is `disabled`, so it is a status marker rather
+     than a control, and it has to line up with the first line of its item. */
+  li:has(> input[type='checkbox']) {
+    list-style: none;
+    margin-left: -20px;
+  }
+
+  input[type='checkbox'] {
+    margin-right: 6px;
+    vertical-align: baseline;
+    accent-color: var(--mdk-agent-accent);
+  }
+
+  /* GFM footnotes: a `section` of definitions the answer refers to by `sup`. */
+  .footnotes {
+    margin-top: 12px;
+    padding-top: 6px;
+    border-top: 1px solid var(--mdk-agent-border);
+    color: var(--mdk-agent-text-muted);
+    font-size: 11px;
+
+    h2 {
+      /* remark-gfm labels the section "Footnotes" for screen readers only. */
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+  }
+
+  a {
+    color: var(--mdk-agent-accent);
+  }
+
+  /* Reveals the rest of a long answer. Sits under the text as its own row. */
+  &__more {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--mdk-agent-accent);
+    font: inherit;
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}
+
+/**
+ * A fenced block and its copy button.
+ *
+ * The wrapper carries the block's margin so the button can be positioned against
+ * the code rather than against the transcript.
+ */
+.mdk-agent-code {
+  position: relative;
+
+  pre {
+    margin: 0;
+  }
+
+  &__copy {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--mdk-agent-border-strong);
+    background: var(--mdk-agent-surface);
+    color: var(--mdk-agent-text-muted);
+    font: inherit;
+    font-size: 10px;
+    cursor: pointer;
+
+    /* Revealed on hover, but never hidden from the keyboard. */
+    opacity: 0;
+  }
+
+  &:hover &__copy,
+  &__copy:focus-visible {
+    opacity: 1;
+  }
+}
+
+/**
+ * Syntax colours for the three grammars `rehype-highlight-subset` registers.
+ *
+ * highlight.js ships ~250 themes and none of them are imported: they are written
+ * for a page, carry their own background and foreground, and would fight the
+ * panel's tokens. These are the token classes bash, json and yaml can actually
+ * emit, mapped onto the same `--mdk-agent-*` variables as everything else, so the
+ * highlighting rethemes with the panel instead of overriding it.
+ */
+.mdk-agent-markdown pre code.hljs {
+  .hljs-keyword,
+  .hljs-built_in,
+  .hljs-section {
+    color: var(--mdk-agent-accent);
+  }
+
+  .hljs-string,
+  .hljs-symbol {
+    color: var(--mdk-agent-success);
+  }
+
+  .hljs-attr,
+  .hljs-attribute {
+    color: color-mix(in srgb, var(--mdk-agent-accent) 60%, var(--mdk-agent-text));
+  }
+
+  .hljs-number,
+  .hljs-literal,
+  .hljs-bullet {
+    color: color-mix(in srgb, var(--mdk-agent-success) 55%, var(--mdk-agent-text));
+  }
+
+  .hljs-variable,
+  .hljs-template-variable,
+  .hljs-meta {
+    color: var(--mdk-agent-text);
+  }
+
+  .hljs-comment,
+  .hljs-quote {
+    color: var(--mdk-agent-text-muted);
+    font-style: italic;
+  }
+}
+
+.mdk-agent-no-tools {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: 8px;
+  color: var(--mdk-agent-text-muted);
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.75;
+
+  svg {
+    flex: none;
+  }
+}
+
+.mdk-agent-leaked {
+  padding: 10px 12px;
+  border: 1px dashed color-mix(in srgb, var(--mdk-agent-accent) 55%, transparent);
+  border-radius: var(--mdk-agent-radius);
+
+  &__title {
+    margin: 0 0 4px;
+    color: var(--mdk-agent-accent);
+  }
+
+  &__body {
+    margin: 0;
+    color: var(--mdk-agent-text-muted);
+  }
+
+  &__tool {
+    color: var(--mdk-agent-text);
+  }
+}

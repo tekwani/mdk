@@ -85,7 +85,7 @@ node verify.js        # or: npm run verify
 It builds its own `OCEAN_POOL` against the running mock and prints per-account stats plus each
 Worker's hashrate:
 
-```
+```text
 Ocean account: test
   hashrate: 5m=103.80 TH/s 1h=102.30 TH/s 24h=100.50 TH/s
   workers:  6 total, 5 online
@@ -121,7 +121,7 @@ OK — Ocean pool Worker is fetching live data from the mock API.
 
 ### Committed (source)
 
-```
+```text
 examples/backend/minerpools/ocean/
 ├── README.md
 ├── index.js                      # mock + OCEAN_POOL + fetch/print, stays running
@@ -133,7 +133,7 @@ examples/backend/minerpools/ocean/
 
 ### Generated (ignored)
 
-```
+```text
 examples/backend/minerpools/ocean/
 └── config/mdk.config.json        # your copy of the .example (optional — falls back to .example)
 

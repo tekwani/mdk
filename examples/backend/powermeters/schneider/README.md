@@ -54,7 +54,7 @@ other actions, and troubleshooting.
 
 ### Committed (source)
 
-```
+```text
 examples/backend/powermeters/schneider/
 ├── README.md
 ├── index.js                      # Kernel + Schneider Worker + mock + registration
@@ -63,7 +63,7 @@ examples/backend/powermeters/schneider/
 
 ### Generated (ignored)
 
-```
+```text
 $TMPDIR/mdk-site-schneider/kernel/    # Kernel Corestore
 ```
 

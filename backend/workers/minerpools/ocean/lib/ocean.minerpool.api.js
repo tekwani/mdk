@@ -3,16 +3,17 @@
 const { setTimeout: sleep } = require('timers/promises')
 
 class OceanMinerpoolApi {
-  constructor (http) {
+  constructor (http, signal) {
     this._http = http
+    this._signal = signal
   }
 
   async _request (apiPath) {
     // waiting between calls due to api rate limits (skipped in tests)
     if (process.env.NODE_ENV !== 'test') {
-      await sleep(1000)
+      await sleep(1000, undefined, { signal: this._signal })
     }
-    const { body: resp } = await this._http.get(apiPath, { encoding: 'json' })
+    const { body: resp } = await this._http.get(apiPath, { encoding: 'json', signal: this._signal })
     return resp.result
   }
 

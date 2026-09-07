@@ -39,6 +39,7 @@ const BASELINE_DIR = path.join(UI_ROOT, "api-surface");
 const PACKAGES = [
   { dir: "packages/ui-foundation", baseline: "ui-foundation.json" },
   { dir: "packages/react-adapter", baseline: "react-adapter.json" },
+  { dir: "packages/ui-agent", baseline: "ui-agent.json" },
 ] as const;
 
 type SurfaceEntry = { name: string; kind: string };

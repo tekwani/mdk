@@ -7,7 +7,7 @@ todo: Ported to user docs as reference, breaks diataxis
 
 # Workers
 
-Workers are device protocol adapters for MDK. Each Worker wraps a specific API, such as a hardware vendor's API, and exposes it through the 
+Workers are device protocol adapters for MDK. Each Worker wraps a specific API, such as a hardware vendor's API, and exposes it through the
 MDK Protocol, allowing Kernel to discover, query, and command it without knowing anything about the underlying hardware or business
 logic.
 
@@ -17,7 +17,7 @@ Workers are organized by categories, for example:
 
 | Directory | Description |
 |-----------|-------------|
-| [`miners/`][miners-readme] | Bitcoin ASIC miners — Whatsminer, Antminer, Avalon |
+| [`miners/`][miners-readme] | Bitcoin ASIC miners — Antminer, Avalon |
 | [`containers/`][containers-readme] | Mining container orchestration — Antspace, Bitdeer |
 | [`minerpools/`][minerpools-readme] | Pool API integrations — Ocean, F2Pool |
 | [`power-meter/`][power-meter-readme] | Power metering — ABB, SATEC, Schneider |
@@ -49,7 +49,7 @@ Each Worker has:
 - **A [Worker Plugin](#1-worker-plugin)**, e.g. [`antminer/plugin/index.js`][antminer-plugin-index]. A plain object
 `{ contract, dir, connect, disconnect? }` — no base class, no subclassing
 - **A [`WorkerRuntime`](#2-workerruntime)**, the shared runtime that hosts the plugin's devices and exposes them through the MDK Protocol over HRPC
-- **A [`mdk-contract.json`](#3-mdk-contractjson)**, e.g. the [Antminer contract][antminer-contract], the engineering 
+- **A [`mdk-contract.json`](#3-mdk-contractjson)**, e.g. the [Antminer contract][antminer-contract], the engineering
 source of truth. Declares every telemetry field
 (name, unit, type) and every command (name, params)
 - **A [mock server][mdk-e2e-server]**, a local HTTP server with canned responses for hardware-free development
@@ -62,12 +62,12 @@ base class and no subclassing; a plugin package can be built and tested with zer
 Every telemetry/command handler is invoked as `(ctx, params)`, where `ctx = { deviceId, device, config, services }`.
 
 ```text
-miners/whatsminer/
+miners/antminer/
   plugin/
     index.js               # the Worker Plugin: { contract, dir, connect, disconnect }
     mdk-contract.json
-    boot.js                # startWhatsminerWorker(opts) — constructs WorkerRuntime
-  lib/whatsminer.js         # the device driver plugin.connect() returns
+    boot.js                # startAntminerWorker(opts) — constructs WorkerRuntime
+  lib/antminer.js           # the device driver plugin.connect() returns
 ```
 
 ### 2. WorkerRuntime
@@ -115,25 +115,25 @@ Each Worker package ships its own boot function that constructs `WorkerRuntime` 
 generic `startWorker()` entry point:
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
-const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
+const { getKernel } = require('@tetherto/mdk-core')
+const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
 
 const kernel = await getKernel()
 
-const worker = await startWhatsminerWorker({
-  workerId: 'whatsminer-rack-1',
-  model: 'm56s',
-  storeDir: './store/whatsminer-rack-1',
+const worker = await startAntminerWorker({
+  workerId: 'antminer-rack-1',
+  model: 's21',
+  storeDir: './store/antminer-rack-1',
   seedDevices: [{
-    info: { serialNum: 'WM-001' },
-    opts: { address: '192.168.1.10', port: 14028, password: 'admin' }
+    info: { serialNum: 'AM-001' },
+    opts: { address: '192.168.1.10', port: 80, username: 'root', password: 'root' }
   }]
 })
 await kernel.registerWorker(worker.runtime.getPublicKey())
 ```
 
 `seedDevices` only seeds a fresh, empty `storeDir`; add a device to an already-running Worker with the
-`registerThing` command instead (see each package's own `USAGE.md`, e.g. [`miners/whatsminer/USAGE.md`][whatsminer-usage]).
+`registerThing` command instead (see each package's own `USAGE.md`, e.g. [`miners/antminer/USAGE.md`][antminer-usage]).
 
 The `registerWorker()` call above is the same-process shape. Separate processes on one machine, or Workers on other
 hosts, publish the key to a shared directory or join a DHT topic instead: the [discovery model][discovery-model]
@@ -148,7 +148,7 @@ compares the three, and [Test a new Worker][test-a-worker] has a runnable host s
 4. The Worker instance boots, connects to devices, and publishes or registers its RPC public key through the selected discovery mode — Kernel handles the rest.
 
 > [!WARNING]
-> The miner Workers in [Worker architecture](#worker-architecture) (Whatsminer, Antminer, Avalon) are v1 examples, not
+> The miner Workers in [Worker architecture](#worker-architecture) (Antminer, Avalon) are v1 examples, not
 > recommended templates for a new plugin; they still construct `WorkerRuntime` v1 directly via the
 > `{ contract, dir, connect, disconnect? }` shape, which remains supported. `WorkerRuntimeV2` is the model for new hardware.
 
@@ -157,8 +157,8 @@ compares the three, and [Test a new Worker][test-a-worker] has a runnable host s
 Each Worker package has its own `mock/server.js` that simulates the hardware API. Run tests from the package root:
 
 ```bash
-cd backend/workers/miners/whatsminer && npm test
 cd backend/workers/miners/antminer && npm test
+cd backend/workers/miners/avalon && npm test
 ```
 
 ## Run mock devices
@@ -238,5 +238,5 @@ also run just its own mock on its default port, e.g. `cd miners/whatsminer && np
 [worker-runtime-legacy-services]: ../../docs/reference/maintainers/worker-runtime-legacy-services.md
 <!-- docs@tether.io: worker-runtime-legacy-services → https://github.com/tetherto/mdk/blob/main/docs/reference/maintainers/worker-runtime-legacy-services.md -->
 
-[whatsminer-usage]: ./miners/whatsminer/USAGE.md
-<!-- docs@tether.io: whatsminer-usage → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/whatsminer/USAGE.md -->
+[antminer-usage]: ./miners/antminer/USAGE.md
+<!-- docs@tether.io: antminer-usage → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/antminer/USAGE.md -->

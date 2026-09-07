@@ -2,7 +2,7 @@
 
 const ABBPowerMeter = require('../abb.powermeter')
 const { series } = require('async')
-const { FUNCTION_CODES } = require('svc-facs-modbus/lib/constants')
+const { FUNCTION_CODES } = require('@tetherto/svc-facs-modbus/lib/constants')
 const { promiseTimeout } = require('@bitfinex/lib-js-util-promise')
 
 class M4M20PowerMeter extends ABBPowerMeter {

@@ -13,15 +13,15 @@ explicit confirm step showing exactly what will change. For moving many parts at
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `isOpen` | `boolean` | — | Whether the modal is open |
-| `onClose` | `() => void` | — | Called when the modal requests to close |
-| `sparePart` | `MoveSparePartModalSparePart` | — | The part to move; when omitted the modal renders nothing |
-| `requestedValues` | `{ location?: string; status?: string }` | — | Pre-seeds the target location/status |
-| `locationOptions` | `FormSelectOption[]` | — | Location options |
-| `statusOptions` | `FormSelectOption[]` | — | Status options |
-| `onSubmit` | `(values, sparePart) => Promise<void> \| void` | — | Submit handler with the new `{ location, status, observation }` and the original part |
+| Prop              | Status   | Type                                           | Default | Description                                                                           |
+| ----------------- | -------- | ---------------------------------------------- | ------- | ------------------------------------------------------------------------------------- |
+| `locationOptions` | Required | `FormSelectOption[]`                           | —       | Location options                                                                      |
+| `statusOptions`   | Required | `FormSelectOption[]`                           | —       | Status options                                                                        |
+| `onSubmit`        | Required | `(values, sparePart) => Promise<void> \| void` | —       | Submit handler with the new `{ location, status, observation }` and the original part |
+| `isOpen`          | Optional | `boolean`                                      | —       | Whether the modal is open                                                             |
+| `onClose`         | Optional | `() => void`                                   | —       | Called when the modal requests to close                                               |
+| `sparePart`       | Optional | `MoveSparePartModalSparePart`                  | —       | The part to move; when omitted the modal renders nothing                              |
+| `requestedValues` | Optional | `{ location?: string; status?: string }`       | —       | Pre-seeds the target location/status                                                  |
 
 ## Data shape
 
@@ -55,8 +55,8 @@ import { MoveSparePartModal } from '@tetherto/mdk-react-devkit/domain'
 
 ## Label & color resolution
 
-- Location/status labels are resolved from the passed option lists (`getOptionLabel`).
+- Location/status labels are resolved from the passed option lists (`getOptionLabel`)
 - The current/new badges are colored from `SPARE_PART_LOCATION_BG_COLORS` /
-  `SPARE_PART_STATUS_BG_COLORS`; an unknown location key renders with no background.
+  `SPARE_PART_STATUS_BG_COLORS`; an unknown location key renders with no background
 - The footer shows "No Changes made" until the target location or status differs from the current
-  values, at which point "Save Changes" advances to the confirmation step.
+  values, at which point "Save Changes" advances to the confirmation step

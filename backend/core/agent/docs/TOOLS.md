@@ -106,7 +106,14 @@ regression test). In a [`backend/core/mcp`](../../mcp/README.md) plugin manifest
 
 Mutability is declared in standard MCP `annotations.readOnlyHint` (it survives the wire), and
 an `act_*` tool must declare `readOnlyHint: false` — the approval gate keys off the
-declaration, not a name list.
+declaration, not a name list. (If `readOnlyHint` is unstated, `destructiveHint: true` is also
+recognised as declaring a write).
+
+> [!NOTE]
+> For tools generated from a Gateway plugin's HTTP routes, that declaration comes from the route's own `safety` field in
+> [`from-http-plugin.js`](../../mcp/lib/from-http-plugin.js): `'read-only'` maps to `readOnlyHint: true`, `'write'` maps to
+> `readOnlyHint: false` plus `destructiveHint: true`, and a route that states neither fails safe to `readOnlyHint: false` —
+> treated as a write, gated behind approval, rather than guessed from the route or tool name.
 
 ## Coverage — the boundary, not just the index
 
@@ -292,7 +299,7 @@ Each case is scored on four independent checks, because they fail independently:
 | `route` | did the model pick this tool for these words? | `useWhen` misses the operator's phrasing, or a neighbour overlaps |
 | `answer` | did it relay the right value? | the tool made the model compute, or `summary` buried the number |
 | `contract` | did the result match the verb's shape? | the handler; caught on every tool call in the run |
-| `approval` | was a write gated before running? | `readOnlyHint` not declared `false` |
+| `approval` | was a write gated before running? | `readOnlyHint` not declared `false` (or `destructiveHint: true`) |
 
 Approvals are always rejected during a run — an eval never leaves a write behind on the fleet
 it measures. The `approval` check is an **invariant, not an expectation**: any run that called

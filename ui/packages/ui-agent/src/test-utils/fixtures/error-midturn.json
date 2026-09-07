@@ -1,0 +1,23 @@
+{
+  "name": "error-midturn",
+  "prompt": "How many miners are there?",
+  "synthetic": true,
+  "note": "Hand-written: a turn that ends in `error` rather than `done`. Exactly one terminal event per turn and it is always last (contract invariant 1), so nothing follows this. An error is NOT a decline — a decline is tokens + done with no tool_call (invariant 4, see decline.json). Reproducing this live means killing the model endpoint mid-turn, so it is authored here instead.",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "count_devices",
+      "args": { "family": "miner", "state": "all" },
+      "turnId": "3f5c1f6a-0000-4000-8000-000000000002",
+      "seq": 0,
+      "ts": 0
+    },
+    {
+      "type": "error",
+      "error": "ERR_AGENT_MODEL_UNREACHABLE",
+      "turnId": "3f5c1f6a-0000-4000-8000-000000000002",
+      "seq": 1,
+      "ts": 1240
+    }
+  ]
+}

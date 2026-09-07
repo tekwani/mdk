@@ -6,7 +6,7 @@ docs@tether_slug: guides/miners/troubleshooting
 
 ## Overview
 
-This page covers the mock/development examples used by the Antminer, Whatsminer, and Avalon miner guides. The examples start a bundled mock miner, start a Kernel, register one device, print the identifiers you need, and keep running until you stop them.
+This page covers the mock/development examples used by the [Antminer][run-antminer], [Whatsminer][run-whatsminer], and [Avalon][run-avalon] miner guides. The examples start a bundled mock miner, start a Kernel, register one device, print the identifiers you need, and keep running until you stop them.
 
 ## Expected output
 
@@ -31,10 +31,13 @@ Each runnable example starts a mock miner on the port declared in that example f
 
 1. Open the Worker's `USAGE.md` and choose the runnable example for your model:
    - Antminer: [USAGE.md][antminer-runnable-examples]
-   - Whatsminer: [USAGE.md][whatsminer-runnable-examples]
    - Avalon: [USAGE.md][avalon-runnable-example]
 2. Open the matching `examples/run-*.js` file.
 3. Look for the `createServer({ port: ... })` call.
+
+Whatsminer follows a different shape — it's the external [`whatsminer-mdk-worker`][whatsminer-mdk-worker] plugin, not
+an in-repo package with per-model `examples/run-*.js` files. Its mock port comes from whatever deployment config seeds
+it; [`examples/mvp-site`][run-whatsminer]'s `config/devices.json` is the reference.
 
 The cross-worker manifest also records the expected mock type and default port for each variant: [workers manifest][workers-manifest].
 
@@ -48,6 +51,20 @@ Real devices use their native APIs:
 - Avalon: CGMiner TCP API, usually port `4028`, with no username or password.
 
 Before registering a real miner, confirm the miner is reachable from the machine or container running the Worker.
+
+## Whatsminer example installs an unexpected dependency
+
+[`whatsminer-mdk-worker`][whatsminer-mdk-worker] is a git dependency, not a versioned npm package, and its `package.json` entry carries no pinned commit. Only the committed `package-lock.json` resolves it to a specific commit, so a plain `npm install` with a missing or discarded lockfile, or with a lockfile-regenerating command like `npm update`, can silently pull a different commit than the one already tested.
+
+If `npm install` changes `package-lock.json` unexpectedly, or `git diff` shows the `whatsminer-mdk-worker` entry's `resolved` commit changed, reinstall from the committed lockfile instead. `examples/mvp-site` is an npm workspace, not a standalone project — it has no lockfile of its own, so run this from the repository root:
+
+```bash
+npm ci
+```
+
+`npm ci` fails on a lockfile/`package.json` mismatch instead of drifting.
+
+Separately, `npm ls crypto-js --prefix examples/mvp-site` or an `npm audit` run may show `crypto-js` resolving to `mdk-crypto-lib`, a local file dependency, rather than the real npm package. This is expected: `whatsminer-mdk-worker` still declares a dependency on the deprecated `crypto-js`, and MDK overrides it at install time with a drop-in replacement built on Node's own `node:crypto`. It is not a broken install.
 
 ## Clean up a mock port
 
@@ -78,7 +95,7 @@ Check:
 - The machine has outbound network access.
 - Local security tooling, containers, or sandboxes are not blocking UDP/network-interface access.
 - You are running the command from the repository root.
-- Dependencies have been installed for [`backend/core`](../../../backend/core/README.md) and [`backend/workers`](../../../backend/workers/README.md).
+- Dependencies have been installed for [`backend/core`][backend-core] and [`backend/workers`](../../../backend/workers/README.md).
 
 ## File lock or key file errors
 
@@ -114,8 +131,11 @@ When asking for help on [Discord](https://discord.com/invite/tetherdev) or [GitH
 [antminer-runnable-examples]: ../../../backend/workers/miners/antminer/USAGE.md#runnable-examples
 <!-- docs@tether.io: antminer-runnable-examples → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/antminer/USAGE.md#runnable-examples -->
 
-[whatsminer-runnable-examples]: ../../../backend/workers/miners/whatsminer/USAGE.md#runnable-examples
-<!-- docs@tether.io: whatsminer-runnable-examples → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/whatsminer/USAGE.md#runnable-examples -->
+[whatsminer-mdk-worker]: https://github.com/whatsminer/whatsminer-mdk-worker
+<!-- docs@tether.io: external link — preserve URL -->
+
+[backend-core]: ../../../backend/core/README.md
+<!-- docs@tether.io: no parity link -->
 
 [avalon-runnable-example]: ../../../backend/workers/miners/avalon/USAGE.md#runnable-example
 <!-- docs@tether.io: avalon-runnable-example → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/avalon/USAGE.md#runnable-example -->

@@ -1,4 +1,4 @@
-# lib-stats
+# Lib-stats
 
 Telemetry aggregation library. Provides a set of composable statistical operations that device Workers use to compute time-bucketed metrics (hashrate averages, power totals, group counts, etc.).
 

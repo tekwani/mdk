@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-mcp",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "MDK MCP Server",
   "main": "server.js",
   "keywords": [
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@tetherto/mdk-worker": "^0.7.0",
+    "@tetherto/mdk-worker": "^0.8.0",
     "async": "3.2.6",
     "debug": "4.4.1",
     "zod": "^4.0.0"
@@ -30,8 +30,7 @@
     "brace-expansion": "5.0.9",
     "@hono/node-server": "2.0.12",
     "hono": ">=4.12.34",
-    "fast-uri@>=3.0.0 <3.1.5": "3.1.5",
-    "fast-uri@>=4.0.0 <4.1.2": "4.1.2"
+    "fast-uri": "4.1.4"
   },
   "devDependencies": {
     "brittle": "3.18.0",

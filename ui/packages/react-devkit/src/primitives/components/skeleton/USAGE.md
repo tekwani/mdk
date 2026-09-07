@@ -4,23 +4,23 @@ A pulsing placeholder used to indicate loading content. Supports rectangular and
 
 ## Exports
 
-| Name | Description |
-| ---- | ----------- |
+| Name            | Description |
+| --------------- | ----------- |
 | `SkeletonBlock` | A single skeleton element with configurable dimensions and border radius |
 
 ## `SkeletonBlock` Props
 
 All props are optional.
 
-| Prop | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `width` | `number \| string` | — | Width in pixels (number) or any CSS value (string) |
-| `height` | `number \| string` | — | Height in pixels (number) or any CSS value (string) |
-| `borderRadius` | `number \| string` | — | Border radius; ignored when `circle` is true |
-| `circle` | `boolean` | `false` | Renders a perfect circle using `height` as the diameter |
-| `className` | `string` | — | Additional class for the element |
+| Prop           | Status   | Type               | Default | Description                                             |
+| -------------- | -------- | ------------------ | ------- | ------------------------------------------------------- |
+| `width`        | Optional | `number \| string` | —       | Width in pixels (number) or any CSS value (string)      |
+| `height`       | Optional | `number \| string` | —       | Height in pixels (number) or any CSS value (string)     |
+| `borderRadius` | Optional | `number \| string` | —       | Border radius; ignored when `circle` is true            |
+| `circle`       | Optional | `boolean`          | `false` | Renders a perfect circle using `height` as the diameter |
+| `className`    | Optional | `string`           | —       | Additional class for the element                        |
 
-All other `div` HTML attributes are forwarded.
+`SkeletonBlockProps` doesn't extend native `div` attributes, so only the props above are accepted.
 
 ## Example
 
@@ -39,4 +39,4 @@ import { SkeletonBlock } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- Passing a number to `width`, `height`, or `borderRadius` automatically appends `'px'`.
+- Passing a number to `width`, `height`, or `borderRadius` automatically appends `'px'`

@@ -5,11 +5,11 @@ clicks anywhere on the label focus the associated input.
 
 ## Props
 
-| Prop        | Type     | Required | Default | Description                                  |
-| ----------- | -------- | -------- | ------- | -------------------------------------------- |
-| `htmlFor`   | `string` | no       | —       | Id of the input being labelled.              |
-| `className` | `string` | no       | —       | Additional class names.                      |
-| `children`  | `ReactNode` | no    | —       | Label content.                               |
+| Prop        | Status   | Type        | Default | Description                    |
+| ----------- | -------- | ----------- | ------- | ------------------------------ |
+| `htmlFor`   | Optional | `string`    | —       | Id of the input being labelled |
+| `className` | Optional | `string`    | —       | Additional class names         |
+| `children`  | Optional | `ReactNode` | —       | Label content                  |
 
 All other native `<label>` attributes are forwarded.
 
@@ -22,5 +22,5 @@ All other native `<label>` attributes are forwarded.
 
 ## Notes
 
-- Pair with `Input`, `Select`, `Checkbox`, `Switch`, etc. via `htmlFor`.
-- Inside an MDK `<Form>` use `<FormLabel>` instead — it auto-links to the field.
+- Pair with `Input`, `Select`, `Checkbox`, `Switch`, etc. via `htmlFor`
+- Inside an MDK `<Form>` use `<FormLabel>` instead — it auto-links to the field

@@ -7,7 +7,7 @@ Core infrastructure packages for MDK. These packages form the coordination layer
 | Package | NPM name | Description |
 |---------|----------|-------------|
 | [`kernel/`](./kernel/README.md) | `@tetherto/mdk-kernel` | Orchestration Kernel — DHT discovery, command dispatch, telemetry, health monitoring |
-| [`mdk/`](./mdk/README.md) | `@tetherto/mdk` | Bootstrap utilities: `getKernel()`, `startGateway()`, `waitForDiscovery()` |
+| [`mdk/`](./mdk/README.md) | `@tetherto/mdk-core` | Bootstrap utilities: `getKernel()`, `startGateway()`, `waitForDiscovery()` |
 | [`mdk-worker/`](./mdk-worker/lib/worker-runtime.js) | `@tetherto/mdk-worker` | Worker Runtime: hosts a Worker Plugin's devices behind one HRPC channel to Kernel |
 | [`gateway/`](./gateway/README.md) | `@tetherto/mdk-gateway` | HTTP server — fleet aggregation, MCP endpoint |
 | [`client/`](./client/README.md) | `@tetherto/mdk-client` | Client — connects Gateway to Kernel over HRPC |
@@ -16,10 +16,10 @@ Core infrastructure packages for MDK. These packages form the coordination layer
 
 ## Dependency graph
 
-```
+```text
 @tetherto/mdk-gateway
   └── @tetherto/mdk-client   (HRPC to Kernel)
-  └── @tetherto/mdk          (bootstrap helpers)
+  └── @tetherto/mdk-core     (bootstrap helpers)
         └── @tetherto/mdk-kernel  (kernel)
 
 @tetherto/mdk-worker          (Worker Runtime, hosts a plugin's devices behind one HRPC channel)

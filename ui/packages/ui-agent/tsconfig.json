@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "jsx": "react-jsx",
+    "rootDir": "./src",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "declarationDir": "./dist",
+    "noEmit": false,
+    "outDir": "./dist"
+  },
+  // The recorded SSE fixtures are `.json`, which `src/**/*` does not match on its
+  // own — under `composite` that is a hard TS6307 rather than a silent miss.
+  "include": ["src/**/*", "src/**/*.json"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+}

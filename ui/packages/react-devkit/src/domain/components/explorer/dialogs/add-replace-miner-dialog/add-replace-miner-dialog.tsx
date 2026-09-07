@@ -11,7 +11,6 @@ type AddReplaceMinerDialogProps = {
   currentDialogFlow?: string
   isDirectToMaintenanceMode?: boolean
   minersType?: string
-  isContainerEmpty?: boolean
 }
 
 /**

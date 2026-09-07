@@ -6,7 +6,7 @@ docs@tether_slug: guides/containers
 
 ## Overview
 
-MDK drives each container system through its own Worker. These guides are task-focused and independent, you only need the one for the hardware you 
+MDK drives each container system through its own Worker. These guides are task-focused and independent, you only need the one for the hardware you
 operate.
 
 > [!NOTE]
@@ -23,8 +23,8 @@ The authoritative model list for every Worker is the generated [supported-hardwa
 
 Every guide assumes:
 
-- Node.js >=24 (LTS)
-- npm >=11
+- [Node.js][node] >=24 (LTS)
+- npm 11 (< 12)
 - Dependencies installed (`npm run setup` from the repo root)
 - Commands are run from the repo root
 - Outbound network access for Kernel discovery
@@ -53,11 +53,14 @@ For the deployment path:
 
 ## Links
 
+[node]: https://nodejs.org/
+<!-- docs@tether.io: external link — preserve URL -->
+
 [terminology]: ../../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->
 
-[catalogue-containers]: ../../../backend/workers/docs/supported-hardware.md#containers
-<!-- docs@tether.io: catalogue-containers → reference/supported-hardware#containers -->
+[catalogue-containers]: ../../../backend/workers/docs/supported-hardware.md
+<!-- docs@tether.io: catalogue-containers → reference/supported-hardware -->
 
 [supported-hardware]: ../../reference/supported-hardware.md
 <!-- docs@tether.io: supported-hardware → reference/supported-hardware -->

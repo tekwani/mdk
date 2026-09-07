@@ -5,17 +5,17 @@ and border-radius variants. Indeterminate state via `checked="indeterminate"`.
 
 ## Props
 
-| Prop                 | Type                                            | Required | Default     | Description                                |
-| -------------------- | ----------------------------------------------- | -------- | ----------- | ------------------------------------------ |
-| `checked`            | `boolean \| "indeterminate"`                    | no       | —           | Controlled checked state.                  |
-| `defaultChecked`     | `boolean`                                       | no       | —           | Uncontrolled initial checked state.        |
-| `onCheckedChange`    | `(checked: CheckedState) => void`               | no       | —           | Change handler.                            |
-| `size`               | `"xs" \| "sm" \| "md" \| "lg"`                   | no       | `"md"`     | Size variant.                              |
-| `color`              | `ComponentColor`                                | no       | `"primary"` | Color when checked.                        |
-| `radius`             | `BorderRadius`                                  | no       | `"none"`    | Border radius variant.                     |
-| `disabled`           | `boolean`                                       | no       | `false`     | Disable the input.                         |
-| `className`          | `string`                                        | no       | —           | Root class names.                          |
-| `indicatorClassName` | `string`                                        | no       | —           | Indicator (check icon) class names.        |
+| Prop                 | Status   | Type                              | Default     | Description                        |
+| -------------------- | -------- | --------------------------------- | ----------- | ---------------------------------- |
+| `checked`            | Optional | `boolean \| "indeterminate"`      | —           | Controlled checked state           |
+| `defaultChecked`     | Optional | `boolean`                         | —           | Uncontrolled initial checked state |
+| `onCheckedChange`    | Optional | `(checked: CheckedState) => void` | —           | Change handler                     |
+| `size`               | Optional | `"xs" \| "sm" \| "md" \| "lg"`    | `"md"`      | Size variant                       |
+| `color`              | Optional | `ComponentColor`                  | `"primary"` | Color when checked                 |
+| `radius`             | Optional | `BorderRadius`                    | `"none"`    | Border radius variant              |
+| `disabled`           | Optional | `boolean`                         | `false`     | Disable the input                  |
+| `className`          | Optional | `string`                          | —           | Root class names                   |
+| `indicatorClassName` | Optional | `string`                          | —           | Indicator (check icon) class names |
 
 ## Example
 
@@ -29,5 +29,5 @@ const [checked, setChecked] = useState(false);
 
 ## Notes
 
-- Always pair with a `<Label>` for accessibility.
-- Re-exports `CheckedState` from Radix for convenience.
+- Always pair with a `<Label>` for accessibility
+- Re-exports `CheckedState` from Radix for convenience

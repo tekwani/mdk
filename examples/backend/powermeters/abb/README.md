@@ -56,7 +56,7 @@ other actions, and troubleshooting.
 
 ### Committed (source)
 
-```
+```text
 examples/backend/powermeters/abb/
 ├── README.md
 ├── index.js                      # Kernel + ABB Worker + mock + registration
@@ -65,7 +65,7 @@ examples/backend/powermeters/abb/
 
 ### Generated (ignored)
 
-```
+```text
 $TMPDIR/mdk-site-abb/kernel/         # Kernel Corestore
 ```
 

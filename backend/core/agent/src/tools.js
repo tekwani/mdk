@@ -7,21 +7,10 @@ import { z } from 'zod'
  * See docs/TOOLS.md for the authoring guide.
  */
 
-// Bump only on a breaking change to the descriptor or result contract. Consumers that author
-// tools against this package pin it, so a widened vocabulary stays additive.
-//
-// v2 made `total` required on a list result: a v1 server returning summary/count/items has
-// every list call rejected by the result check, which is a named skip rather than a tool that
-// looks admitted and fails on use.
 export const TOOL_CONTRACT_VERSION = 'v2'
 
-// What a tool that declares no version is taken to speak: the version the field was introduced
-// at, not whatever the current one happens to be. Tracking the current version would read every
-// tool authored before versioning as speaking the newest contract — the case the gate exists to
-// withhold.
 const UNVERSIONED_CONTRACT = 'v1'
 
-// The verb also fixes the result shape, so the model learns one expectation per verb.
 export const VERB = Object.freeze({
   COUNT: 'count',
   LIST: 'list',
@@ -32,13 +21,10 @@ export const VERB = Object.freeze({
   ACT: 'act'
 })
 
-// Device family and the like are parameters rather than entities, so the tool count stays
-// bounded by verbs x entities instead of growing with the question space.
 export const ENTITY = Object.freeze({
   SITE: 'site', DEVICE: 'device', WORKER: 'worker', POOL: 'pool'
 })
 
-// Shared across tools so the model learns each vocabulary once.
 export const AXIS = Object.freeze({
   family: ['miner', 'container', 'powermeter', 'sensor', 'pool', 'all'],
   state: ['all', 'online', 'offline', 'error'],
@@ -58,8 +44,6 @@ export const AXIS = Object.freeze({
 export const RESULT = Object.freeze({
   [VERB.COUNT]: Object.freeze({ summary: 'text', count: 'count' }),
   [VERB.LIST]: Object.freeze({ summary: 'text', count: 'count', total: 'count', items: 'array' }),
-  // One value under one key. Keying the value by the attribute asked for would make the model
-  // guess which field to read, which is the routing problem again, one level down.
   [VERB.GET]: Object.freeze({ summary: 'text', ref: 'text', attr: 'text', value: 'any' }),
   [VERB.RANK]: Object.freeze({ summary: 'text', metric: 'text', order: 'text', items: 'array', unavailable: 'count' }),
   [VERB.SUMMARIZE]: Object.freeze({ summary: 'text', totals: 'object' }),
@@ -152,27 +136,19 @@ const CAPABILITY_RANK = { small: 0, mid: 1, large: 2 }
  */
 export const VERB_FLOOR = Object.freeze({ [VERB.DIAGNOSE]: CAPABILITY.MID })
 
-// Collection verbs read in the plural (count_devices), single-item verbs in the singular.
 const NAME_PATTERN = new RegExp(`^(${Object.values(VERB).join('|')})_(${Object.values(ENTITY).join('|')})s?$`)
 
-// Not `annotations`: the MCP SDK parses that with a closed schema, so a client strips keys it
-// does not know. `_meta` is an open record and survives. `readOnlyHint` stays in annotations,
-// being a declared MCP field.
 export const AGENT_META_KEY = 'x-mdk-agent'
 
 export const agentMeta = (tool) => tool?._meta?.[AGENT_META_KEY]
 
-// `useWhen` is the routing index: the model matches the operator's words against these.
 export const AgentMetaSchema = z.object({
   enabled: z.literal(true),
   answers: z.string().min(1),
   useWhen: z.array(z.string().min(1)).min(2).max(6),
   notFor: z.array(z.string()).default([]),
-  // Exclusions specific to this tool, merged into the shared boundary block. `notFor` points
-  // at a sibling tool; this says no tool here answers that at all.
   outOfScope: z.array(z.string()).default([]),
   returns: z.string().min(1),
-  // Never defaulted: an undeclared floor would fall through to the weakest model.
   minCapability: z.enum([CAPABILITY.SMALL, CAPABILITY.MID, CAPABILITY.LARGE]),
   contract: z.string().min(1).default(UNVERSIONED_CONTRACT)
 })
@@ -196,14 +172,11 @@ export function validateTool (tool) {
     errors.push(`_meta["${AGENT_META_KEY}"] invalid: ${parsed.error.issues.map((i) => `${i.path.join('.') || '(root)'} ${i.message}`).join('; ')}`)
   }
 
-  // A verb with an inherent floor outranks whatever the author declared, so a reasoning tool
-  // cannot be published to a model that will answer it confidently and wrongly.
   const floor = VERB_FLOOR[verbOf(name)]
   if (floor && parsed.success && CAPABILITY_RANK[parsed.data.minCapability] < CAPABILITY_RANK[floor]) {
     errors.push(`a ${verbOf(name)}_* tool needs minCapability "${floor}" or higher, not "${parsed.data.minCapability}"`)
   }
 
-  // Declared, so the approval gate keys off the tool rather than a hardcoded name list.
   const hints = tool?.annotations ?? {}
   if (typeof hints.readOnlyHint !== 'boolean') errors.push('annotations.readOnlyHint must be declared true or false')
   if (name?.startsWith(`${VERB.ACT}_`) && hints.readOnlyHint !== false) {
@@ -214,8 +187,6 @@ export function validateTool (tool) {
   return { ok: errors.length === 0, errors, meta: parsed.success ? parsed.data : undefined }
 }
 
-// Free text is where a small model invents a value, so a param must be one of three closed
-// kinds. Shared with the renderer, which must agree on what is renderable.
 function classifyParam (spec) {
   if (Array.isArray(spec?.enum) && spec.enum.length > 0) return 'enum'
   if (spec?.type === 'integer' && Number.isFinite(spec.minimum) && Number.isFinite(spec.maximum) &&
@@ -227,15 +198,12 @@ function classifyParam (spec) {
 function validateParams (inputSchema) {
   const errors = []
   const props = inputSchema?.properties ?? {}
-  // Only an array is a required list. A bare string would spread into its characters and mask
-  // a single-letter parameter as required, skipping its default check.
   const required = new Set(Array.isArray(inputSchema?.required) ? inputSchema.required : [])
   for (const [param, spec] of Object.entries(props)) {
     const kind = classifyParam(spec)
     if (!kind) {
       errors.push(`param "${param}" must be an enum, a bounded integer, or an id reference (x-mdk-ref) — never free text`)
     }
-    // Enum values render separated by "|", so one containing it would read as two values.
     if (kind === 'enum' && spec.enum.some((v) => String(v).includes('|'))) {
       errors.push(`param "${param}" has an enum value containing "|", which the prompt cannot render unambiguously`)
     }
@@ -251,8 +219,6 @@ function validateParams (inputSchema) {
  * reason. A tool whose capability floor exceeds the model is withheld rather than misused.
  */
 export function admitTools (tools = [], { capability = CAPABILITY.SMALL } = {}) {
-  // An unrecognised capability would rank as undefined, and every comparison against it is
-  // false — the floor check would pass for all tools and admit ones this model cannot use.
   if (!(capability in CAPABILITY_RANK)) {
     throw new Error(`admitTools: unknown capability "${capability}" (expected ${Object.values(CAPABILITY).join(', ')})`)
   }
@@ -276,7 +242,6 @@ export function admitTools (tools = [], { capability = CAPABILITY.SMALL } = {}) 
       skipped.push({ name: tool.name, reason: `needs a ${meta.minCapability} model` })
       continue
     }
-    // The parsed meta, so the renderer sees schema defaults rather than undefined.
     admitted.push({ ...tool, _meta: { ...tool._meta, [AGENT_META_KEY]: meta } })
   }
   return { admitted, skipped }
@@ -291,7 +256,6 @@ export function admitTools (tools = [], { capability = CAPABILITY.SMALL } = {}) 
 export function renderTools (tools = []) {
   return tools.map((tool) => {
     const meta = agentMeta(tool)
-    // Carrying the block is not enough: notFor is defaulted by admitTools, not by the author.
     if (!meta || !Array.isArray(meta.useWhen) || !Array.isArray(meta.notFor)) {
       throw new TypeError(`renderTools: "${tool?.name ?? tool}" is not an admitted tool (_meta["${AGENT_META_KEY}"] missing or not normalized) — pass admitTools().admitted`)
     }
@@ -315,9 +279,6 @@ export function renderTools (tools = []) {
  */
 export function renderCoverage (tools = [], { notCovered = NOT_COVERED } = {}) {
   const declared = tools.flatMap((tool) => agentMeta(tool)?.outOfScope ?? [])
-  // Deduped across both sources, not just within the declared ones: a tool that restates a
-  // standing exclusion would otherwise have it printed twice, and a prompt that repeats itself
-  // reads to a small model as emphasis it was never meant to carry.
   const lines = [...new Set([...notCovered, ...declared])]
   if (!lines.length) return ''
   return [
@@ -336,7 +297,6 @@ function renderParams (inputSchema) {
     if (kind === 'enum') type = `[${spec.enum.join('|')}]`
     else if (kind === 'int') type = `<int ${spec.minimum}..${spec.maximum}>`
     else if (kind === 'ref') type = `<${spec['x-mdk-ref']} id>`
-    // A placeholder here would read to the model as a value to copy.
     else throw new Error(`renderTools: param "${param}" is not admissible; render only admitTools().admitted`)
     return `${param}=${type}${spec.default !== undefined ? `=${JSON.stringify(spec.default)}` : ''}`
   }).join(', ')

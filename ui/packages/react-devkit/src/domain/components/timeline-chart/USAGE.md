@@ -5,21 +5,21 @@ legend. Supports streaming updates via `newData`.
 
 ## Props
 
-| Prop            | Type                  | Required | Default              | Description                                            |
-| --------------- | --------------------- | -------- | -------------------- | ------------------------------------------------------ |
-| `initialData`   | `TimelineChartData`   | yes      | —                    | Initial timeline data.                                 |
-| `newData`       | `TimelineChartData`   | no       | —                    | Streaming updates appended to the initial data.        |
-| `skipUpdates`   | `boolean`             | no       | `false`              | Ignore `newData`.                                      |
-| `range`         | `{ start; end }`      | no       | —                    | Visible time window.                                   |
-| `axisTitleText` | `{ x; y }`            | no       | `{ x: "Time", y: "" }` | Axis title strings.                                   |
-| `isLoading`     | `boolean`             | no       | `false`              | Show loader.                                           |
-| `title`         | `string`              | no       | —                    | Chart title.                                           |
-| `height`        | `number`              | no       | —                    | Chart pixel height.                                    |
+| Prop            | Status   | Type                | Default                | Description           |
+| --------------- | -------- | ------------------- | ---------------------- | --------------------- |
+| `initialData`   | Required | `TimelineChartData` | —                      | Initial timeline data |
+| `newData`       | Optional | `TimelineChartData` | —                      | Streaming updates appended to the initial data |
+| `skipUpdates`   | Optional | `boolean`           | `false`                | Ignore `newData`      |
+| `range`         | Optional | `{ min: Date \| number; max: Date \| number }` | —                      | Visible time window   |
+| `axisTitleText` | Optional | `{ x; y }`          | `{ x: "Time", y: "" }` | Axis title strings    |
+| `isLoading`     | Optional | `boolean`           | `false`                | Show loader           |
+| `title`         | Optional | `string`            | —                      | Chart title           |
+| `height`        | Optional | `number`            | —                      | Chart pixel height    |
 
 ## Example
 
 ```tsx
-<TimelineChart initialData={data} range={{ start, end }} title="State" />
+<TimelineChart initialData={data} range={{ min, max }} title="State" />
 ```
 
 ## Data contracts

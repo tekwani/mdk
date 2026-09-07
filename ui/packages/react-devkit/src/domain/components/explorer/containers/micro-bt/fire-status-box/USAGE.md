@@ -4,9 +4,9 @@ Safety-status card for a MicroBT container showing smoke detector, water-ingress
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `{ smokeDetector, waterIngressDetector, coolingFanStatus }` | no | — | Raw sensor values from the device. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `{ smokeDetector: string \| number, waterIngressDetector: string \| number, coolingFanStatus: string \| number }` | — | Raw sensor values from the device |
 
 ## Minimal example
 

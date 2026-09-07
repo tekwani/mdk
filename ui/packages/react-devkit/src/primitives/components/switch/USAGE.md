@@ -4,17 +4,17 @@ Toggle switch built on Radix UI. Controlled or uncontrolled.
 
 ## Props
 
-| Prop              | Type                              | Required | Default     | Description                       |
-| ----------------- | --------------------------------- | -------- | ----------- | --------------------------------- |
-| `checked`         | `boolean`                         | no       | —           | Controlled checked state.         |
-| `defaultChecked`  | `boolean`                         | no       | —           | Uncontrolled initial state.       |
-| `onCheckedChange` | `(checked: boolean) => void`      | no       | —           | Change handler.                   |
-| `size`            | `"sm" \| "md" \| "lg"`             | no       | `"md"`      | Size variant.                     |
-| `color`           | `ComponentColor`                  | no       | `"default"` | Color when checked.               |
-| `radius`          | `BorderRadius`                    | no       | `"none"`    | Border radius variant.            |
-| `disabled`        | `boolean`                         | no       | `false`     | Disable the switch.               |
-| `className`       | `string`                          | no       | —           | Root class names.                 |
-| `thumbClassName`  | `string`                          | no       | —           | Thumb (knob) class names.         |
+| Prop              | Status   | Type                         | Default     | Description                |
+| ----------------- | -------- | ---------------------------- | ----------- | -------------------------- |
+| `checked`         | Optional | `boolean`                    | —           | Controlled checked state   |
+| `defaultChecked`  | Optional | `boolean`                    | —           | Uncontrolled initial state |
+| `onCheckedChange` | Optional | `(checked: boolean) => void` | —           | Change handler             |
+| `size`            | Optional | `"sm" \| "md" \| "lg"`       | `"md"`      | Size variant               |
+| `color`           | Optional | `ComponentColor`             | `"default"` | Color when checked         |
+| `radius`          | Optional | `BorderRadius`               | `"none"`    | Border radius variant      |
+| `disabled`        | Optional | `boolean`                    | `false`     | Disable the switch         |
+| `className`       | Optional | `string`                     | —           | Root class names           |
+| `thumbClassName`  | Optional | `string`                     | —           | Thumb (knob) class names   |
 
 ## Example
 
@@ -29,6 +29,6 @@ const [enabled, setEnabled] = useState(false);
 
 ## Notes
 
-- Pair with a `Label` (via `htmlFor` / `id`) for accessibility.
+- Pair with a `Label` (via `htmlFor` / `id`) for accessibility
 - Prefer `Switch` for boolean state where the change applies immediately;
-  use `Checkbox` for selections inside a form.
+  use `Checkbox` for selections inside a form

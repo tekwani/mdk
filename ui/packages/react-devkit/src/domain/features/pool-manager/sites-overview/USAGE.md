@@ -9,14 +9,14 @@ primitive, drop down to `SitesOverviewStatusCardList`.
 
 ## Props
 
-| Prop              | Type                          | Required | Default | Description                                                   |
-| ----------------- | ----------------------------- | -------- | ------- | ------------------------------------------------------------- |
-| `units`           | `ProcessedContainerUnit[]`    | yes      | —       | Sites to render (already normalised through `useSitesOverviewData`). |
-| `poolConfig`      | `PoolConfigData[]`            | yes      | —       | Pool configurations powering each card's pool summary.        |
-| `isLoading`       | `boolean`                     | no       | `false` | Show a skeleton placeholder while site data is fetching.      |
-| `error`           | `unknown`                     | no       | —       | Surface a "could not load sites" message when defined.        |
-| `backButtonClick` | `VoidFunction`                | yes      | —       | Called when the operator clicks the "Pool Manager" link.      |
-| `onCardClick`     | `(unitId: string) => void`    | yes      | —       | Called with the clicked unit id — typically navigates.        |
+| Prop              | Status   | Type                       | Default | Description                                                                                           |
+| ----------------- | -------- | -------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| `units`           | Required | `ProcessedContainerUnit[]` | —       | Sites to render (already normalized through `useSitesOverviewData`)                                   |
+| `poolConfig`      | Required | `PoolConfigData[]`         | —       | Pool configurations powering each card's pool summary                                                 |
+| `backButtonClick` | Required | `VoidFunction`             | —       | Called when the operator clicks the "Pool Manager" link                                               |
+| `onCardClick`     | Required | `(unitId: string) => void` | —       | Called with the clicked unit id — typically navigates                                                 |
+| `isLoading`       | Optional | `boolean`                  | `false` | Show a skeleton placeholder while site data is fetching                                               |
+| `error`           | Optional | `unknown`                  | —       | Shows a "Failed to load data" alert when defined (together with the internal pool-config fetch error) |
 
 ## Minimal example
 
@@ -34,13 +34,13 @@ primitive, drop down to `SitesOverviewStatusCardList`.
 
 - `ProcessedContainerUnit` — produced by the
   `useSitesOverviewData` hook in
-  [`foundation/components/pool-manager/hooks/use-sites-overview-data`](../../../components/pool-manager/hooks/use-sites-overview-data.ts).
-- `PoolConfigData` — exported from `@tetherto/mdk-react-devkit`.
+  [`foundation/components/pool-manager/hooks/use-sites-overview-data`](../../../components/pool-manager/hooks/use-sites-overview-data.ts)
+- `PoolConfigData` — exported from `@tetherto/mdk-react-devkit`
 
 ## Notes
 
 - The page renders loading / error / empty states internally; you only need
-  to forward the appropriate flags from your data hook.
+  to forward the appropriate flags from your data hook
 - The component has no internal data fetching — wire it to your data hook of
   choice (e.g. `useSitesOverviewData` + TanStack Query) and forward the
-  resulting `units`, `isLoading`, and `error`.
+  resulting `units`, `isLoading`, and `error`

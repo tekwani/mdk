@@ -4,14 +4,14 @@ Trigger button + modal dialog revealing a `PoolDetailsCard`.
 
 ## Props
 
-| Prop           | Type               | Required | Default | Description             |
-| -------------- | ------------------ | -------- | ------- | ----------------------- |
-| `details`      | `PoolDetailItem[]` | yes      | —       | Detail rows.            |
-| `triggerLabel` | `string`           | no       | —       | Trigger button label.   |
-| `title`        | `string`           | no       | —       | Dialog title.           |
-| `description`  | `string`           | no       | —       | Dialog body description.|
-| `disabled`     | `boolean`          | no       | `false` | Disable the trigger.    |
-| `className`    | `string`           | no       | —       | Additional class names. |
+| Prop           | Status   | Type               | Default | Description             |
+| -------------- | -------- | ------------------ | ------- | ----------------------- |
+| `details`      | Required | `PoolDetailItem[]` | —       | Detail rows             |
+| `triggerLabel` | Optional | `string`           | —       | Trigger button label    |
+| `title`        | Optional | `string`           | —       | Dialog title            |
+| `description`  | Optional | `string`           | —       | Dialog body description |
+| `disabled`     | Optional | `boolean`          | `false` | Disable the trigger     |
+| `className`    | Optional | `string`           | —       | Additional class names  |
 
 ## Example
 
@@ -21,4 +21,4 @@ Trigger button + modal dialog revealing a `PoolDetailsCard`.
 
 ## Notes
 
-- Uses MDK's `Dialog`; no portal wiring needed.
+- Uses MDK's `Dialog`; no portal wiring needed

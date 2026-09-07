@@ -34,6 +34,12 @@ class PoolService extends EventEmitter {
     this.prefix = `${this.wtype}-${ctx.rack}`
     this.loadConf = ctx.loadConf ?? this._defaultLoadConf.bind(this)
 
+    // Aborts any in-flight fetch* HTTP call/rate-limit sleep the instant stop()
+    // runs — stop() tears down http_0 (baseUrl reset to '') right after, and
+    // without this a request already in flight fails with a confusing
+    // "Only absolute URLs are supported" instead of a clean abort.
+    this._abortController = new AbortController()
+
     this.data = {
       statsData: {},
       workersData: { ts: 0, workers: [] },
@@ -324,7 +330,15 @@ class PoolService extends EventEmitter {
     return this.conf.baseUrl
   }
 
+  // Concrete pools (ocean, f2pool) thread this into their API client so a
+  // fetch* call in flight when stop() runs aborts instead of racing the
+  // facility teardown below.
+  get abortSignal () {
+    return this._abortController.signal
+  }
+
   stop (cb) {
+    this._abortController.abort()
     if (!this._ownsFacilities || !this._initialized) {
       return cb()
     }

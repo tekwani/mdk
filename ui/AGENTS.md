@@ -22,7 +22,11 @@ next level of detail:
 5. **CLI reference (consumer apps)** — [`packages/cli/README.md`](packages/cli/README.md).
    Every `mdk-ui` subcommand. Agents in downstream projects should use these
    commands rather than scanning the source.
-6. **Run the shell template end-to-end** —
+6. **Operator agent chat** —
+   [`packages/ui-agent/README.md`](packages/ui-agent/README.md). `<CoPilot />`
+   is a one-line drop-in, but it needs a gateway carrying the agent plugin and
+   an MCP tool server behind it; the README walks the whole chain.
+7. **Run the shell template end-to-end** —
    [`docs/AGENT_FIRST.md#run-the-mdk-ui-shell-template-end-to-end`](docs/AGENT_FIRST.md#run-the-mdk-ui-shell-template-end-to-end).
    The in-repo `@tetherto/mdk-gateway` backend, Google OAuth setup, the Vite proxy, and
    common first-run errors. Read before suggesting `npm run dev` on a scaffold.

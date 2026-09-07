@@ -20,6 +20,7 @@ Use these guides to choose a site deployment shape.
 ## Next steps
 
 - Understand the trade-offs before you choose your [deployment topology][deployment-topologies]
+- Measure real CPU, RAM, disk, and latency for your own hardware and device count with [the benchmark harness][benchmark-your-site]
 - Browse the [functions][mdk-functions] that wire together the [Kernel][kernel-concept], [device Workers][workers-concept], and the [Gateway][gateway-concept] HTTP
 
 ## Links
@@ -35,6 +36,9 @@ Use these guides to choose a site deployment shape.
 
 [all-workers]: run-all-workers-site.md
 <!-- docs@tether.io: all-workers → guides/deployment/run-all-workers-site -->
+
+[benchmark-your-site]: benchmark-your-site.md
+<!-- docs@tether.io: benchmark-your-site → guides/deployment/benchmark-your-site -->
 
 [mdk-functions]: ../../../backend/core/mdk/README.md
 <!-- docs@tether.io: mdk-functions → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/README.md -->

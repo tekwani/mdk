@@ -33,7 +33,7 @@ export type DeviceExplorerProps = {
 
 /**
  * Top-level device explorer: filter toolbar + searchable, sortable table of
- * miners or cabinets. Designed to be controlled by URL state in the host app.
+ * miners, containers, or cabinets. Designed to be controlled by URL state in the host app.
  *
  * @category tables
  * @kernelCapability device-management
@@ -50,7 +50,8 @@ export type DeviceExplorerProps = {
  *   searchTags={searchTags}
  *   onSearchTagsChange={setSearchTags}
  *   onFiltersChange={setFilters}
- *   getFormattedDate={formatDate}
+ *   getFormattedDate={(date) => formatDate(date)}
+ *   renderAction={(device) => <RowActionMenu device={device} />}
  * />
  * ```
  * @tier agent-ready

@@ -25,8 +25,8 @@ const path = require('path')
 const os = require('os')
 const DHT = require('hyperdht')
 const { getKernel, waitForDiscovery } = require('@tetherto/mdk-core')
-const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
-const wmMock = require('@tetherto/mdk-worker-whatsminer/mock/server')
+const { startAvalonWorker } = require('@tetherto/mdk-worker-avalon')
+const avMockServer = require('@tetherto/mdk-worker-avalon/mock/server')
 
 const MOCK_PORT = 14032
 
@@ -45,7 +45,7 @@ function envelope (action, payload, deviceId) {
 }
 
 async function main () {
-  wmMock.createServer({ port: MOCK_PORT, host: '127.0.0.1', type: 'm56s', serial: 'WM-001', password: 'admin' })
+  avMockServer.createServer({ port: MOCK_PORT, host: '127.0.0.1', type: 'a1346', serial: 'AV-001' })
 
   // Generate a key pair for the authorized client (your Gateway's identity).
   // In production: load a persistent key pair instead of generating one each run.
@@ -59,12 +59,12 @@ async function main () {
     }
   })
 
-  const worker = await startWhatsminerWorker({
-    workerId: 'whatsminer-m56s-auth-demo',
-    model: 'm56s',
+  const worker = await startAvalonWorker({
+    workerId: 'avalon-a1346-auth-demo',
+    model: 'a1346',
     storeDir: path.join(os.tmpdir(), 'mdk', 'auth-whitelist', 'worker-store'),
     seedDevices: [{
-      info: { serialNum: 'WM-001', container: 'rack-1' },
+      info: { serialNum: 'AV-001', container: 'rack-1' },
       opts: { address: '127.0.0.1', port: MOCK_PORT, password: 'admin' }
     }]
   })

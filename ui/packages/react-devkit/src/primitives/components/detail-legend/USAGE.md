@@ -6,11 +6,11 @@ An enhanced chart legend that displays color swatches, current values, units, an
 
 ### `DetailLegend`
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `items` | `DetailLegendItem[]` | yes | — | Legend items to render |
-| `onToggle` | `(label: string, index: number) => void` | no | — | Fired when a legend item is clicked |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop        | Status   | Type                 | Default | Description                           |
+| ----------- | -------- | -------------------- | ------- | ------------------------------------- |
+| `items`     | Required | `DetailLegendItem[]` | —       | Legend items to render                |
+| `onToggle`  | Optional | `(label: string, index: number) => void` | —       | Fired when a legend item is clicked   |
+| `className` | Optional | `string`             | —       | Additional class for the root element |
 
 ### `DetailLegendItem`
 
@@ -55,5 +55,5 @@ const [hiddenSets, setHiddenSets] = useState<Record<number, boolean>>({})
 
 ## Notes
 
-- Returns `null` when `items` is empty or undefined.
-- `percentChange` of `0` is treated as "no change" and the indicator is not rendered.
+- Returns `null` when `items` is empty or undefined
+- `percentChange` of `0` is treated as "no change" and the indicator is not rendered

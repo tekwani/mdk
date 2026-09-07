@@ -1,0 +1,794 @@
+{
+  "package": "@tetherto/mdk-ui-agent",
+  "generator": "scripts/check-api-surface.mts",
+  "entrypoints": {
+    ".": [
+      {
+        "name": "abortTurn",
+        "kind": "function"
+      },
+      {
+        "name": "AGENT_CONTRACT_VERSION",
+        "kind": "const"
+      },
+      {
+        "name": "AGENT_ERROR",
+        "kind": "const"
+      },
+      {
+        "name": "AGENT_LABELS",
+        "kind": "const"
+      },
+      {
+        "name": "AGENT_NAME",
+        "kind": "const"
+      },
+      {
+        "name": "AGENT_ROUTE_PREFIX",
+        "kind": "const"
+      },
+      {
+        "name": "AgentApiError",
+        "kind": "class"
+      },
+      {
+        "name": "AgentConfigOptions",
+        "kind": "type"
+      },
+      {
+        "name": "AgentErrorCode",
+        "kind": "type"
+      },
+      {
+        "name": "AgentEvent",
+        "kind": "type"
+      },
+      {
+        "name": "AgentTransportOptions",
+        "kind": "type"
+      },
+      {
+        "name": "AgentTurnState",
+        "kind": "type"
+      },
+      {
+        "name": "APPROVAL_IDLE_TIMEOUT_MS",
+        "kind": "const"
+      },
+      {
+        "name": "ChatMessage",
+        "kind": "type"
+      },
+      {
+        "name": "ChatUIEntry",
+        "kind": "function"
+      },
+      {
+        "name": "ChatUIEntryProps",
+        "kind": "type"
+      },
+      {
+        "name": "clipToBoundary",
+        "kind": "function"
+      },
+      {
+        "name": "Conversation",
+        "kind": "type"
+      },
+      {
+        "name": "CONVERSATION_STORAGE_KEY",
+        "kind": "const"
+      },
+      {
+        "name": "ConversationActions",
+        "kind": "type"
+      },
+      {
+        "name": "ConversationState",
+        "kind": "type"
+      },
+      {
+        "name": "ConversationStorage",
+        "kind": "type"
+      },
+      {
+        "name": "conversationStore",
+        "kind": "const"
+      },
+      {
+        "name": "ConversationStore",
+        "kind": "type"
+      },
+      {
+        "name": "ConversationStoreOptions",
+        "kind": "type"
+      },
+      {
+        "name": "CoPilot",
+        "kind": "function"
+      },
+      {
+        "name": "COPILOT_POSITION",
+        "kind": "const"
+      },
+      {
+        "name": "CoPilotPosition",
+        "kind": "type"
+      },
+      {
+        "name": "CoPilotProps",
+        "kind": "type"
+      },
+      {
+        "name": "createConversationStore",
+        "kind": "function"
+      },
+      {
+        "name": "createSession",
+        "kind": "function"
+      },
+      {
+        "name": "createTurnState",
+        "kind": "function"
+      },
+      {
+        "name": "decideApproval",
+        "kind": "function"
+      },
+      {
+        "name": "deleteSession",
+        "kind": "function"
+      },
+      {
+        "name": "deriveTitle",
+        "kind": "function"
+      },
+      {
+        "name": "describeAgentError",
+        "kind": "function"
+      },
+      {
+        "name": "DoneEvent",
+        "kind": "type"
+      },
+      {
+        "name": "ERR_STREAM_IDLE",
+        "kind": "const"
+      },
+      {
+        "name": "ERR_STREAM_TRUNCATED",
+        "kind": "const"
+      },
+      {
+        "name": "ErrorEvent",
+        "kind": "type"
+      },
+      {
+        "name": "EVENT",
+        "kind": "const"
+      },
+      {
+        "name": "EventType",
+        "kind": "type"
+      },
+      {
+        "name": "failTurn",
+        "kind": "function"
+      },
+      {
+        "name": "FIRST_EVENT_IDLE_TIMEOUT_MS",
+        "kind": "const"
+      },
+      {
+        "name": "formatClock",
+        "kind": "function"
+      },
+      {
+        "name": "formatConversationMeta",
+        "kind": "function"
+      },
+      {
+        "name": "formatConversationSummary",
+        "kind": "function"
+      },
+      {
+        "name": "formatDay",
+        "kind": "function"
+      },
+      {
+        "name": "formatDuration",
+        "kind": "function"
+      },
+      {
+        "name": "formatMessageCount",
+        "kind": "function"
+      },
+      {
+        "name": "GENERIC_TURN_ERROR",
+        "kind": "const"
+      },
+      {
+        "name": "humanizeToolName",
+        "kind": "function"
+      },
+      {
+        "name": "isAgentEvent",
+        "kind": "function"
+      },
+      {
+        "name": "isRejectionResult",
+        "kind": "function"
+      },
+      {
+        "name": "isSmallTalk",
+        "kind": "function"
+      },
+      {
+        "name": "isTerminal",
+        "kind": "function"
+      },
+      {
+        "name": "isTurnSettled",
+        "kind": "function"
+      },
+      {
+        "name": "isWireEvent",
+        "kind": "function"
+      },
+      {
+        "name": "LeakedToolCall",
+        "kind": "type"
+      },
+      {
+        "name": "MAX_CONVERSATIONS",
+        "kind": "const"
+      },
+      {
+        "name": "MAX_MESSAGES_PER_CONVERSATION",
+        "kind": "const"
+      },
+      {
+        "name": "MAX_PERSISTED_TOOL_TEXT_CHARS",
+        "kind": "const"
+      },
+      {
+        "name": "mergeConversations",
+        "kind": "function"
+      },
+      {
+        "name": "MESSAGE_ROLE",
+        "kind": "const"
+      },
+      {
+        "name": "MessageRole",
+        "kind": "type"
+      },
+      {
+        "name": "newConversation",
+        "kind": "function"
+      },
+      {
+        "name": "OPERATOR_NAME",
+        "kind": "const"
+      },
+      {
+        "name": "parseFrame",
+        "kind": "function"
+      },
+      {
+        "name": "parseLeakedToolCall",
+        "kind": "function"
+      },
+      {
+        "name": "PendingApproval",
+        "kind": "type"
+      },
+      {
+        "name": "PendingApprovalEvent",
+        "kind": "type"
+      },
+      {
+        "name": "readAgentStream",
+        "kind": "function"
+      },
+      {
+        "name": "ReadAgentStreamOptions",
+        "kind": "type"
+      },
+      {
+        "name": "readFrames",
+        "kind": "function"
+      },
+      {
+        "name": "ReadFramesOptions",
+        "kind": "type"
+      },
+      {
+        "name": "reduceTurn",
+        "kind": "function"
+      },
+      {
+        "name": "STREAM_IDLE_TIMEOUT_MS",
+        "kind": "const"
+      },
+      {
+        "name": "StreamIdleError",
+        "kind": "class"
+      },
+      {
+        "name": "streamTurn",
+        "kind": "function"
+      },
+      {
+        "name": "StreamTurnOptions",
+        "kind": "type"
+      },
+      {
+        "name": "TERMINAL_EVENTS",
+        "kind": "const"
+      },
+      {
+        "name": "TerminalEventType",
+        "kind": "type"
+      },
+      {
+        "name": "TokenEvent",
+        "kind": "type"
+      },
+      {
+        "name": "TokenSource",
+        "kind": "type"
+      },
+      {
+        "name": "TOOL_STATUS",
+        "kind": "const"
+      },
+      {
+        "name": "ToolArgs",
+        "kind": "type"
+      },
+      {
+        "name": "ToolCallEvent",
+        "kind": "type"
+      },
+      {
+        "name": "toolLabel",
+        "kind": "function"
+      },
+      {
+        "name": "ToolLabels",
+        "kind": "type"
+      },
+      {
+        "name": "ToolResultEvent",
+        "kind": "type"
+      },
+      {
+        "name": "ToolStatus",
+        "kind": "type"
+      },
+      {
+        "name": "ToolStep",
+        "kind": "type"
+      },
+      {
+        "name": "TURN_STATUS",
+        "kind": "const"
+      },
+      {
+        "name": "TurnStatus",
+        "kind": "type"
+      },
+      {
+        "name": "unwrapWholeAnswerFence",
+        "kind": "function"
+      },
+      {
+        "name": "useAgentChat",
+        "kind": "hook"
+      },
+      {
+        "name": "UseAgentChatOptions",
+        "kind": "type"
+      },
+      {
+        "name": "UseAgentChatResult",
+        "kind": "type"
+      },
+      {
+        "name": "useAgentConfig",
+        "kind": "hook"
+      },
+      {
+        "name": "useConversations",
+        "kind": "hook"
+      },
+      {
+        "name": "UseConversationsResult",
+        "kind": "type"
+      },
+      {
+        "name": "uuid",
+        "kind": "function"
+      },
+      {
+        "name": "WireEvent",
+        "kind": "type"
+      }
+    ],
+    "./core": [
+      {
+        "name": "abortTurn",
+        "kind": "function"
+      },
+      {
+        "name": "AGENT_CONTRACT_VERSION",
+        "kind": "const"
+      },
+      {
+        "name": "AGENT_ERROR",
+        "kind": "const"
+      },
+      {
+        "name": "AGENT_ROUTE_PREFIX",
+        "kind": "const"
+      },
+      {
+        "name": "AgentApiError",
+        "kind": "class"
+      },
+      {
+        "name": "AgentErrorCode",
+        "kind": "type"
+      },
+      {
+        "name": "AgentEvent",
+        "kind": "type"
+      },
+      {
+        "name": "AgentTransportOptions",
+        "kind": "type"
+      },
+      {
+        "name": "AgentTurnState",
+        "kind": "type"
+      },
+      {
+        "name": "APPROVAL_IDLE_TIMEOUT_MS",
+        "kind": "const"
+      },
+      {
+        "name": "ChatMessage",
+        "kind": "type"
+      },
+      {
+        "name": "clipToBoundary",
+        "kind": "function"
+      },
+      {
+        "name": "Conversation",
+        "kind": "type"
+      },
+      {
+        "name": "CONVERSATION_STORAGE_KEY",
+        "kind": "const"
+      },
+      {
+        "name": "ConversationActions",
+        "kind": "type"
+      },
+      {
+        "name": "ConversationState",
+        "kind": "type"
+      },
+      {
+        "name": "ConversationStorage",
+        "kind": "type"
+      },
+      {
+        "name": "conversationStore",
+        "kind": "const"
+      },
+      {
+        "name": "ConversationStore",
+        "kind": "type"
+      },
+      {
+        "name": "ConversationStoreOptions",
+        "kind": "type"
+      },
+      {
+        "name": "createConversationStore",
+        "kind": "function"
+      },
+      {
+        "name": "createSession",
+        "kind": "function"
+      },
+      {
+        "name": "createTurnState",
+        "kind": "function"
+      },
+      {
+        "name": "decideApproval",
+        "kind": "function"
+      },
+      {
+        "name": "deleteSession",
+        "kind": "function"
+      },
+      {
+        "name": "deriveTitle",
+        "kind": "function"
+      },
+      {
+        "name": "describeAgentError",
+        "kind": "function"
+      },
+      {
+        "name": "DoneEvent",
+        "kind": "type"
+      },
+      {
+        "name": "ERR_STREAM_IDLE",
+        "kind": "const"
+      },
+      {
+        "name": "ERR_STREAM_TRUNCATED",
+        "kind": "const"
+      },
+      {
+        "name": "ErrorEvent",
+        "kind": "type"
+      },
+      {
+        "name": "EVENT",
+        "kind": "const"
+      },
+      {
+        "name": "EventType",
+        "kind": "type"
+      },
+      {
+        "name": "failTurn",
+        "kind": "function"
+      },
+      {
+        "name": "FIRST_EVENT_IDLE_TIMEOUT_MS",
+        "kind": "const"
+      },
+      {
+        "name": "formatClock",
+        "kind": "function"
+      },
+      {
+        "name": "formatConversationMeta",
+        "kind": "function"
+      },
+      {
+        "name": "formatConversationSummary",
+        "kind": "function"
+      },
+      {
+        "name": "formatDay",
+        "kind": "function"
+      },
+      {
+        "name": "formatDuration",
+        "kind": "function"
+      },
+      {
+        "name": "formatMessageCount",
+        "kind": "function"
+      },
+      {
+        "name": "GENERIC_TURN_ERROR",
+        "kind": "const"
+      },
+      {
+        "name": "humanizeToolName",
+        "kind": "function"
+      },
+      {
+        "name": "isAgentEvent",
+        "kind": "function"
+      },
+      {
+        "name": "isRejectionResult",
+        "kind": "function"
+      },
+      {
+        "name": "isSmallTalk",
+        "kind": "function"
+      },
+      {
+        "name": "isTerminal",
+        "kind": "function"
+      },
+      {
+        "name": "isTurnSettled",
+        "kind": "function"
+      },
+      {
+        "name": "isWireEvent",
+        "kind": "function"
+      },
+      {
+        "name": "LeakedToolCall",
+        "kind": "type"
+      },
+      {
+        "name": "MAX_CONVERSATIONS",
+        "kind": "const"
+      },
+      {
+        "name": "MAX_MESSAGES_PER_CONVERSATION",
+        "kind": "const"
+      },
+      {
+        "name": "MAX_PERSISTED_TOOL_TEXT_CHARS",
+        "kind": "const"
+      },
+      {
+        "name": "mergeConversations",
+        "kind": "function"
+      },
+      {
+        "name": "MESSAGE_ROLE",
+        "kind": "const"
+      },
+      {
+        "name": "MessageRole",
+        "kind": "type"
+      },
+      {
+        "name": "newConversation",
+        "kind": "function"
+      },
+      {
+        "name": "parseFrame",
+        "kind": "function"
+      },
+      {
+        "name": "parseLeakedToolCall",
+        "kind": "function"
+      },
+      {
+        "name": "PendingApproval",
+        "kind": "type"
+      },
+      {
+        "name": "PendingApprovalEvent",
+        "kind": "type"
+      },
+      {
+        "name": "readAgentStream",
+        "kind": "function"
+      },
+      {
+        "name": "ReadAgentStreamOptions",
+        "kind": "type"
+      },
+      {
+        "name": "readFrames",
+        "kind": "function"
+      },
+      {
+        "name": "ReadFramesOptions",
+        "kind": "type"
+      },
+      {
+        "name": "reduceTurn",
+        "kind": "function"
+      },
+      {
+        "name": "STREAM_IDLE_TIMEOUT_MS",
+        "kind": "const"
+      },
+      {
+        "name": "StreamIdleError",
+        "kind": "class"
+      },
+      {
+        "name": "streamTurn",
+        "kind": "function"
+      },
+      {
+        "name": "StreamTurnOptions",
+        "kind": "type"
+      },
+      {
+        "name": "TERMINAL_EVENTS",
+        "kind": "const"
+      },
+      {
+        "name": "TerminalEventType",
+        "kind": "type"
+      },
+      {
+        "name": "TokenEvent",
+        "kind": "type"
+      },
+      {
+        "name": "TokenSource",
+        "kind": "type"
+      },
+      {
+        "name": "TOOL_STATUS",
+        "kind": "const"
+      },
+      {
+        "name": "ToolArgs",
+        "kind": "type"
+      },
+      {
+        "name": "ToolCallEvent",
+        "kind": "type"
+      },
+      {
+        "name": "toolLabel",
+        "kind": "function"
+      },
+      {
+        "name": "ToolLabels",
+        "kind": "type"
+      },
+      {
+        "name": "ToolResultEvent",
+        "kind": "type"
+      },
+      {
+        "name": "ToolStatus",
+        "kind": "type"
+      },
+      {
+        "name": "ToolStep",
+        "kind": "type"
+      },
+      {
+        "name": "TURN_STATUS",
+        "kind": "const"
+      },
+      {
+        "name": "TurnStatus",
+        "kind": "type"
+      },
+      {
+        "name": "unwrapWholeAnswerFence",
+        "kind": "function"
+      },
+      {
+        "name": "uuid",
+        "kind": "function"
+      },
+      {
+        "name": "WireEvent",
+        "kind": "type"
+      }
+    ],
+    "./chat-page": [
+      {
+        "name": "ChatUIEntry",
+        "kind": "function"
+      },
+      {
+        "name": "ChatUIEntryProps",
+        "kind": "type"
+      },
+      {
+        "name": "default",
+        "kind": "function"
+      }
+    ],
+    "./panel": [
+      {
+        "name": "CoPilotPanel",
+        "kind": "function"
+      },
+      {
+        "name": "CoPilotPanelProps",
+        "kind": "type"
+      }
+    ]
+  }
+}

@@ -4,13 +4,13 @@ A filter button that opens a popover containing a multi-select `Cascader`. Displ
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `options` | `CascaderOption[]` | yes | — | Hierarchical filter options (same shape as `Cascader`) |
-| `onChange` | `(selections: CascaderValue[]) => void` | yes | — | Fired with all selected filter paths when selection changes |
-| `localFilters` | `LocalFilters` | no | — | Current filter values as a key/value map (controls the Cascader) |
-| `filterKey` | `string` | no | `'default'` | Key used to force re-mount the Cascader when filters are reset |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop           | Status   | Type               | Default     | Description                                                      |
+| -------------- | -------- | ------------------ | ----------- | ---------------------------------------------------------------- |
+| `options`      | Required | `CascaderOption[]` | —           | Hierarchical filter options (same shape as `Cascader`)           |
+| `onChange`     | Required | `(selections: CascaderValue[]) => void` | —           | Fired with all selected filter paths when selection changes      |
+| `localFilters` | Optional | `LocalFilters`     | —           | Current filter values as a key/value map (controls the Cascader) |
+| `filterKey`    | Optional | `string`           | `'default'` | Key used to force re-mount the Cascader when filters are reset   |
+| `className`    | Optional | `string`           | —           | Additional class for the root element                            |
 
 ### `LocalFilters`
 
@@ -60,5 +60,5 @@ const handleChange = (selections: CascaderValue[]) => {
 
 ## Notes
 
-- `ListViewFilter` always operates in `multiple` mode on the underlying `Cascader`.
+- `ListViewFilter` always operates in `multiple` mode on the underlying `Cascader`
 - The badge count reflects the number of currently active filter selections. It is hidden when count is 0.

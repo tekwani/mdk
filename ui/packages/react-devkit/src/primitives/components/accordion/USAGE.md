@@ -6,29 +6,29 @@ Collapsible panel with a title trigger and animated content area. Exports both a
 
 ### `Accordion`
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `title` | `string` | no | `''` | Header label shown in the trigger button |
-| `isOpened` | `boolean` | no | `false` | Whether the panel starts expanded |
-| `isRow` | `boolean` | no | `false` | Lays out the content area as a flex row instead of column |
-| `unpadded` | `boolean` | no | `false` | Removes the default inner padding from the content area |
-| `noBorder` | `boolean` | no | `false` | Removes the bottom border from the trigger |
-| `solidBackground` | `boolean` | no | `false` | Applies a solid background to the accordion container |
-| `showToggleIcon` | `boolean` | no | `true` | Shows/hides the expand/collapse chevron icon |
-| `toggleIconPosition` | `'left' \| 'right'` | no | `'left'` | Side on which the toggle icon appears |
-| `customLabel` | `React.ReactNode` | no | — | Extra content (e.g. a badge) rendered in the trigger header |
-| `onValueChange` | `(value: string \| string[]) => void` | no | — | Fired when the open/close state changes |
-| `className` | `string` | no | — | Additional class for the root element |
-| `children` | `React.ReactNode` | no | — | Content rendered inside the panel |
+| Prop                 | Status   | Type                | Default  | Description                                                 |
+| -------------------- | -------- | ------------------- | -------- | ----------------------------------------------------------- |
+| `title`              | Optional | `string`            | `''`     | Header label shown in the trigger button                    |
+| `isOpened`           | Optional | `boolean`           | `false`  | Whether the panel starts expanded                           |
+| `isRow`              | Optional | `boolean`           | `false`  | Lays out the content area as a flex row instead of column   |
+| `unpadded`           | Optional | `boolean`           | `false`  | Removes the default inner padding from the content area     |
+| `noBorder`           | Optional | `boolean`           | `false`  | Removes the bottom border from the trigger                  |
+| `solidBackground`    | Optional | `boolean`           | `false`  | Applies a solid background to the accordion container       |
+| `showToggleIcon`     | Optional | `boolean`           | `true`   | Shows/hides the expand/collapse chevron icon                |
+| `toggleIconPosition` | Optional | `'left' \| 'right'` | `'left'` | Side on which the toggle icon appears                       |
+| `customLabel`        | Optional | `React.ReactNode`   | —        | Extra content (e.g. a badge) rendered in the trigger header |
+| `onValueChange`      | Optional | `(value: string \| string[]) => void` | —        | Fired when the open/close state changes   |
+| `className`          | Optional | `string`            | —        | Additional class for the root element                       |
+| `children`           | Optional | `React.ReactNode`   | —        | Content rendered inside the panel                           |
 
 ### `AccordionTrigger` (composable)
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `showToggleIcon` | `boolean` | no | `true` | Shows/hides the toggle icon |
-| `toggleIconPosition` | `'left' \| 'right'` | no | `'left'` | Icon placement |
-| `customLabel` | `React.ReactNode` | no | — | Slot for extra content in the trigger header |
-| `timestamp` | `string` | no | — | Optional timestamp string (available via props) |
+| Prop                 | Status   | Type                | Default  | Description                                     |
+| -------------------- | -------- | ------------------- | -------- | ----------------------------------------------- |
+| `showToggleIcon`     | Optional | `boolean`           | `true`   | Shows/hides the toggle icon                     |
+| `toggleIconPosition` | Optional | `'left' \| 'right'` | `'left'` | Icon placement                                  |
+| `customLabel`        | Optional | `React.ReactNode`   | —        | Slot for extra content in the trigger header    |
+| `timestamp`          | Optional | `string`            | —        | Timestamp string (available via props)          |
 
 ### `AccordionItem` / `AccordionContent`
 
@@ -64,5 +64,5 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@t
 
 ## Notes
 
-- `Accordion` wraps the primitives with `type="multiple"` and a single hard-coded item value; use `AccordionRoot` directly when you need multi-item control.
-- `toggleIconPosition="right"` swaps to `PlusIcon`/`MinusIcon` style; `"left"` uses `ChevronDown`/`ChevronRight`.
+- `Accordion` wraps the primitives with `type="multiple"` and a single hard-coded item value; use `AccordionRoot` directly when you need multi-item control
+- `toggleIconPosition="right"` swaps to `PlusIcon`/`MinusIcon` style; `"left"` uses `ChevronDown`/`ChevronRight`

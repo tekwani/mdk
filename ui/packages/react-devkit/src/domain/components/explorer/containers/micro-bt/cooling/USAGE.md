@@ -4,9 +4,9 @@ Cooling-system panel for a MicroBT container. Shows CDU cycle/circulation pump s
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `Device` | no | — | Live device object. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `Device` | — | Live device object |
 
 ## Minimal example
 

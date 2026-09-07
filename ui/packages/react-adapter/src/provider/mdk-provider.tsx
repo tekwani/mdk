@@ -43,8 +43,8 @@ export type MdkProviderProps = {
   fetcher?: Fetcher
   /**
    * Fired after the session is cleared because the backend reported it ended.
-   * Typically navigates to the host app's sign-in route. Previously accepted by
-   * `createMdkQueryClient` but with no way to reach it through this provider.
+   * Typically navigates to the host app's sign-in route. Forwarded to
+   * `createMdkQueryClient`, which is what actually fires it.
    */
   onSessionExpired?: () => void
   /**

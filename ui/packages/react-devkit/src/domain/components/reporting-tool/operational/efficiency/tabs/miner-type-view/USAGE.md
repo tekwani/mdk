@@ -1,20 +1,21 @@
-# MinerTypeView
+# EfficiencyMinerTypeView
 
-Miner-type-level efficiency tab inside `OperationsEfficiency`. Groups efficiency data by miner hardware model.
+Miner-type-level efficiency tab inside `OperationsEfficiency`. Groups efficiency data by miner hardware model. A thin
+wrapper around `EfficiencyBarView` with a fixed `title`.
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `log` | `MetricsEfficiencyLogEntry[]` | no | — | Efficiency log entries. |
-| `isLoading` | `boolean` | no | — | Loading state. |
-| `dateRange` | `EfficiencyDateRange` | no | — | Selected date range. |
-| `onDateRangeChange` | `(range) => void` | no | — | Date range change handler. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `chartInput` | Optional | `ToBarChartDataInput` | `{ series: [] }` | Bar chart series data |
+| `isEmpty` | Optional | `boolean` | `false` | Shows the empty state instead of the chart |
+| `isLoading` | Optional | `boolean` | `false` | Loading state |
+| `onTimeFrameChange` | Optional | `(start: Date, end: Date) => void` | — | Fired when the time-frame selector changes |
 
 ## Minimal example
 
 ```tsx
-import { MinerTypeView } from "@tetherto/mdk-react-devkit";
+import { EfficiencyMinerTypeView } from "@tetherto/mdk-react-devkit";
 
-<MinerTypeView isLoading={false} log={[]} />
+<EfficiencyMinerTypeView isLoading={false} />
 ```

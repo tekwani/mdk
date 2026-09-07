@@ -44,7 +44,7 @@ describe('useHeaderControls', () => {
   })
 
   it('merges stored entries missing newer keys over the defaults', () => {
-    // Simulates a stored entry written before the mos* -> app* key rename.
+    // Simulates a stored entry persisted before the app* preference keys existed.
     const stored = {
       poolMiners: false,
       poolHashrate: true,

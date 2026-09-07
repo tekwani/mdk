@@ -13,7 +13,7 @@ const { getKernel } = require('../../../backend/core/mdk')
 const { publishWorkerKey, keysDir } = require('../../../backend/core/mdk/lib/local-discovery')
 const { PORTS, HOST } = require('../mocks')
 
-const { startWhatsminerWorker } = require('../../../backend/workers/miners/whatsminer')
+const { startWhatsminerWorker } = require('./whatsminer-adapter')
 const { startAntminerWorker } = require('../../../backend/workers/miners/antminer')
 const { startAvalonWorker } = require('../../../backend/workers/miners/avalon')
 const { startAntspaceWorker } = require('../../../backend/workers/containers/antspace')
@@ -171,7 +171,10 @@ function startBitdeerMock (minerCount) {
 // package's plugin boot. workerId is fixed so the persistent store and RPC
 // seed are reused on every restart. `name` is the short CLI/argv token.
 const WORKER_SPECS = [
-  { name: 'whatsminer', workerId: 'whatsminer-worker', boot: startWhatsminerWorker, model: 'm56s', pkg: 'miners/whatsminer', seed: seedWhatsminers },
+  // whatsminer-mdk-worker is a third-party contract plugin (git dependency,
+  // no worker-infra conf/model plumbing) — `plain` skips the pkg/model/config-
+  // example wiring the other families get, same as mvp-site.
+  { name: 'whatsminer', workerId: 'whatsminer-worker', boot: startWhatsminerWorker, plain: true, seed: seedWhatsminers },
   { name: 'antminer', workerId: 'antminer-worker', boot: startAntminerWorker, model: 's19xp', pkg: 'miners/antminer', seed: seedAntminers },
   { name: 'avalon', workerId: 'avalon-worker', boot: startAvalonWorker, model: 'a1346', pkg: 'miners/avalon', seed: seedAvalonMiners },
   { name: 'antspace', workerId: 'antspace-worker', boot: startAntspaceWorker, model: 'hk3', pkg: 'containers/antspace', seed: seedAntspaceContainer },
@@ -192,26 +195,36 @@ function workerSpec (name) {
 
 // The Ocean worker runs on a 1m/5m cron — too slow to watch. Drive its real
 // fetch/save on a demo cadence so stats populate within seconds. Non-overlapping.
+// stop() clears the interval AND awaits a tick already in flight — clearInterval
+// alone only stops *future* ticks, so a tick mid-fetchStats would otherwise keep
+// running against HTTP resources the caller tears down right after.
 function drivePool (pool) {
-  let running = false
-  const tick = async () => {
-    if (running) return
-    running = true
-    try {
-      const now = new Date()
-      await pool.fetchWorkers(now)
-      await pool.fetchStats(now)
-      await pool.saveStats(now)
-    } catch (e) {
-      debug('pool tick error: %s', e.message)
-    } finally {
-      running = false
-    }
+  let inFlight = null
+  const tick = () => {
+    if (inFlight) return inFlight
+    inFlight = (async () => {
+      try {
+        const now = new Date()
+        await pool.fetchWorkers(now)
+        await pool.fetchStats(now)
+        await pool.saveStats(now)
+      } catch (e) {
+        debug('pool tick error: %s', e.message)
+      } finally {
+        inFlight = null
+      }
+    })()
+    return inFlight
   }
   tick()
   const timer = setInterval(tick, POOL_TICK_MS)
   timer.unref()
-  return timer
+  return {
+    stop: async () => {
+      clearInterval(timer)
+      if (inFlight) await inFlight
+    }
+  }
 }
 
 // --- Kernel + worker boot --------------------------------------------------------
@@ -285,18 +298,17 @@ async function bootWorker (spec, { kernel, kernelTopic, root, minerCount, mode =
 
   if (spec.pool) {
     // Scheduler-driven pool worker — no things to seed; just pace it.
-    const poolTimer = drivePool(handle.pool)
+    const poolDriver = drivePool(handle.pool)
     // unshift, not push: this must run before this worker's own handle.stop()
     // (already pushed above, at the top of this function, for every spec) —
     // otherwise a tick fires against a worker that's already mid-teardown.
-    if (kernel && Array.isArray(kernel._cleanup)) kernel._cleanup.unshift(() => clearInterval(poolTimer))
+    if (kernel && Array.isArray(kernel._cleanup)) kernel._cleanup.unshift(() => poolDriver.stop())
     debug('%s pool driver started', spec.workerId)
     return { ...handle, seeded: 0, mockHandle }
   }
 
   if (spec.plain) {
-    debug('%s booted on the bare worker runtime (%d device(s), sqlite: %s)',
-      spec.workerId, handle.deviceIds.length, handle.dbPath)
+    debug('%s booted on the bare worker runtime (%d device(s))', spec.workerId, handle.seeded)
     return { ...handle, mockHandle }
   }
 

@@ -56,25 +56,25 @@ test('resolveWorkerBoot throws when the resolved package has no matching factory
   const fakeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mdk-fake-repo-'))
   t.teardown(() => fs.rmSync(fakeRoot, { recursive: true, force: true }))
 
-  const pkgDir = path.join(fakeRoot, 'backend', 'workers', 'miners', 'whatsminer')
+  const pkgDir = path.join(fakeRoot, 'backend', 'workers', 'miners', 'antminer')
   fs.mkdirSync(pkgDir, { recursive: true })
   fs.writeFileSync(path.join(pkgDir, 'index.js'), 'module.exports = {}')
 
-  t.exception(() => resolveWorkerBoot(fakeRoot, 'miner-whatsminer'), /ERR_MDK_WORKER_EXPORT: startWhatsminerWorker/)
+  t.exception(() => resolveWorkerBoot(fakeRoot, 'miner-antminer'), /ERR_MDK_WORKER_EXPORT: startAntminerWorker/)
 })
 
 test('resolveWorkerBoot returns the spec and factory when the package exports it', (t) => {
   const fakeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mdk-fake-repo-'))
   t.teardown(() => fs.rmSync(fakeRoot, { recursive: true, force: true }))
 
-  const pkgDir = path.join(fakeRoot, 'backend', 'workers', 'miners', 'whatsminer')
+  const pkgDir = path.join(fakeRoot, 'backend', 'workers', 'miners', 'antminer')
   fs.mkdirSync(pkgDir, { recursive: true })
   fs.writeFileSync(
     path.join(pkgDir, 'index.js'),
-    "module.exports = { startWhatsminerWorker: () => 'ok' }"
+    "module.exports = { startAntminerWorker: () => 'ok' }"
   )
 
-  const { spec, factory } = resolveWorkerBoot(fakeRoot, 'miner-whatsminer')
-  t.is(spec, WORKER_BOOTS['miner-whatsminer'])
+  const { spec, factory } = resolveWorkerBoot(fakeRoot, 'miner-antminer')
+  t.is(spec, WORKER_BOOTS['miner-antminer'])
   t.is(factory(), 'ok')
 })

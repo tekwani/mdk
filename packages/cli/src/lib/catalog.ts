@@ -15,15 +15,19 @@ export interface CatalogPlugin {
   /**
    * Location inside the MDK checkout, for a package that ships with MDK but is
    * not on npm yet. When the CLI runs from the checkout, the project depends on
-   * it via a `file:` reference to that checkout path — `npm install` symlinks
-   * it straight into `node_modules/<package>`, exactly as it would a published
-   * package. No project folder is created for it: `workers/*` and `plugins/*`
-   * are reserved for packages the user actually owns (`mdk create ...`).
+   * it via `addPathBackedDependency`: a relative `file:` link to the checkout
+   * path (whether that path sits inside the project folder or elsewhere in the
+   * monorepo) — never by appending the path to `workspaces`, and never via bare
+   * `*` (npm would treat that as a registry range outside a parent workspace).
+   * `npm install` links it into `node_modules/<package>`, exactly as it would a
+   * published package. No project folder is created for it: `workers/*` and
+   * `plugins/*` are reserved for packages the user actually owns
+   * (`mdk create ...`).
    *
-   * A `file:` link (rather than a copy) also keeps in-checkout relative
-   * resolution working: Node resolves a symlinked package from its real
-   * location, so a device mock finds its shared framework and a gateway
-   * plugin finds the deps in its own node_modules.
+   * Linking (rather than copying) also keeps in-checkout relative resolution
+   * working: Node resolves a symlinked package from its real location, so a
+   * device mock finds its shared framework and a gateway plugin finds the deps
+   * in its own node_modules.
    */
   repoPath?: string;
 }
@@ -43,59 +47,27 @@ export interface CatalogWorker extends CatalogPlugin {
 }
 
 /**
- * Worker plugins offered by `mdk onboard`.
- *
- * Entries with a `repoPath` are real and runnable. The rest are placeholders for
- * packages we have not published, kept so the shape of the catalog is visible —
- * selecting one writes a valid spec entry but its install will 404 and its
- * device config has to be filled in by hand.
+ * Worker plugins offered by `mdk onboard`. Every entry today has a `repoPath`
+ * and is real/runnable from the checkout — the field stays optional for a
+ * future entry that isn't (selecting one without a `repoPath` would still
+ * write a valid spec entry, but its install would 404 and its device config
+ * would need to be filled in by hand).
  */
 export const WORKER_CATALOG: CatalogWorker[] = [
   {
-    value: '@tetherto/mdk-worker-antminer',
-    label: 'mdk-worker-antminer',
-    hint: 'Bitmain Antminer S19/S21 — bundled, runs against a simulator',
-    repoPath: join('backend', 'workers', 'miners', 'antminer'),
+    value: '@tetherto/mdk-worker-demo',
+    label: 'mdk-worker-demo',
+    hint: 'plugin-authoring demo (hypothetical v3 firmware) — bundled, runs against a simulator',
+    repoPath: join('backend', 'workers', 'samples', 'demo-worker'),
     mock: true,
-    deviceOpts: {
-      // The mock rejects a type outside s19xp|s19xp_h|s21|s21pro and picks its
-      // route table from it; the plugin strips a `miner-am-` prefix off the same
-      // value to key model-specific response parsing. `s19xp` satisfies both.
-      //
-      // It is also the only one of the four that stays healthy against the mock:
-      // for the others the plugin reads power from a `/miner_power` endpoint the
-      // mock does not implement, so every poll records a device error. The
-      // tradeoff is that an S19XP reports no power figure (and so no
-      // efficiency) — that is the model's own API, not a gap in this config.
-      type: 's19xp',
-      // The plugin's connect() reads `address` where the mock reads `host`. Both
-      // name the same loopback device, so they are written as a matched pair.
-      address: '127.0.0.1',
-      username: 'root',
-      password: 'root',
-      // Passed explicitly because the plugin's efficiency table is keyed by the
-      // prefixed model name (`miner-am-s19xp`), which the mock would reject —
-      // without it the reported efficiency would silently be 0.
-      nominalEfficiencyWThs: 21,
-    },
-  },
-  {
-    value: '@tetherto/mdk-worker-powermeter',
-    label: 'mdk-worker-powermeter',
-    hint: 'power meters (stub — not published yet)',
-  },
-  {
-    value: '@org/mdk-worker-modbus',
-    label: 'mdk-worker-modbus',
-    hint: 'generic Modbus devices (stub — not published yet)',
   },
 ];
 
 /**
- * Gateway plugins offered by `mdk onboard`. Entries with a `repoPath` are real
- * and runnable from the MDK checkout; the rest are placeholders for packages we
- * have not published — selecting one writes a valid spec entry but its install
- * will 404.
+ * Gateway plugins offered by `mdk onboard`. Every entry today has a `repoPath`
+ * and is real/runnable from the MDK checkout — the field stays optional for a
+ * future entry that isn't (selecting one without a `repoPath` would still
+ * write a valid spec entry, but its install would 404).
  */
 export const GATEWAY_CATALOG: CatalogPlugin[] = [
   {
@@ -105,14 +77,10 @@ export const GATEWAY_CATALOG: CatalogPlugin[] = [
     repoPath: join('backend', 'plugins', 'agent'),
   },
   {
-    value: '@tetherto/mdk-plugin-summary',
-    label: 'mdk-plugin-summary',
-    hint: 'fleet summary (stub — not published yet)',
-  },
-  {
-    value: '@tetherto/mdk-plugin-alerts',
-    label: 'mdk-plugin-alerts',
-    hint: 'alerting (stub — not published yet)',
+    value: '@tetherto/mdk-plugin-demo',
+    label: 'mdk-plugin-demo',
+    hint: 'demo-worker fleet summary + history aggregation — bundled',
+    repoPath: join('backend', 'plugins', 'demo'),
   },
 ];
 
@@ -142,7 +110,7 @@ function findInCheckout(repoPath: string): string | null {
 export interface ResolvedCatalogPackage {
   /** npm package name — what `mdk.yaml` references and what lands in node_modules. */
   packageName: string;
-  /** True when the package is `file:`-linked from the checkout rather than the registry. */
+  /** True when the package is linked from the checkout rather than the registry. */
   bundled: boolean;
   /** Set when the entry wanted the checkout but the CLI is running standalone. */
   unavailable?: boolean;
@@ -152,9 +120,8 @@ export interface ResolvedCatalogPackage {
 
 /**
  * Decides how a selected catalog entry (worker or gateway plugin) should be
- * installed. A bundled package is declared as a `file:`-linked dependency
- * pointing at its checkout path; everything else is installed from the
- * registry.
+ * installed. A bundled package is path-backed with a relative `file:` dep to
+ * its checkout directory; everything else is installed from the registry.
  */
 export function resolveCatalogPackage(entry: CatalogPlugin): ResolvedCatalogPackage {
   const packageName = entry.value;

@@ -23,8 +23,8 @@ The example verifies its own arithmetic and exits, so there is nothing to clean 
 
 ## Prerequisites
 
-- Node.js >=24 (LTS)
-- npm >=11
+- [Node.js][node] >=24 (LTS)
+- npm 11 (< 12)
 
 <Steps>
 
@@ -145,6 +145,9 @@ None. The example removes its own state directory on start and exits when the ch
 - See the whole stack instead of one route by [running a mining site end to end][run-a-site]
 
 ## Links
+
+[node]: https://nodejs.org/
+<!-- docs@tether.io: external link — preserve URL -->
 
 [terminology]: ../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->

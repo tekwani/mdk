@@ -40,7 +40,7 @@ function scriptedModel (texts) {
           { type: 'text-start', id: '0' },
           { type: 'text-delta', id: '0', delta: text },
           { type: 'text-end', id: '0' },
-          { type: 'finish', finishReason: 'stop', usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } }
+          { type: 'finish', finishReason: { unified: 'stop' }, usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } }
         ])
       }
     }
@@ -114,4 +114,77 @@ test('the tool result is fed back as a user message after the assistant turn', a
   const roles = history.map((m) => m.role)
   t.alike(roles, ['user', 'assistant', 'user'])
   t.ok(history.at(-1).content.at(0).text.includes('{"miners":15}'), 'the raw tool output reaches the model')
+})
+
+// --- what the turn leaves behind for the NEXT turn ---------------------------
+//
+// Distinct from everything above, which pins what the model sees *within* one turn. The loop
+// also returns the exchange for the session to persist. Recording only the prose answer left
+// history saying "the reply to `reboot X` is a sentence", and by the third repeat the model
+// obliged — claiming the reboot ran, with no tool call behind it.
+
+// Drains the loop and returns its return value: the messages the session should keep.
+async function turnHistory (texts, { approve = true, tools = TOOLS, prompt = 'how is the site?' } = {}) {
+  const loop = runToolLoop({
+    model: scriptedModel(texts),
+    system: 'You are an operator agent.',
+    messages: [{ role: 'user', content: prompt }],
+    tools,
+    mcp: MCP
+  })
+  let sent
+  for (;;) {
+    const { value, done } = await loop.next(sent)
+    sent = undefined
+    if (done) return value
+    if (value.type === EVENT.PENDING_APPROVAL) sent = approve
+  }
+}
+
+test('the turn hands back the tool call and its result for the session to keep', async (t) => {
+  const kept = await turnHistory([SPACED_CALL, '15 miners.'])
+
+  t.alike(kept.map((m) => m.role), ['assistant', 'user'], 'the call, then what it answered')
+  t.is(kept[0].content, SPACED_CALL, 'the call is kept verbatim, as the model emitted it')
+  t.ok(kept[1].content.includes('get_site_overview'), 'the result names the tool it came from')
+  t.ok(kept[1].content.includes('{"miners":15}'), 'and carries what the tool said')
+})
+
+test('a turn that called nothing leaves no tool exchange behind', async (t) => {
+  const kept = await turnHistory(['Just chatting.'])
+  t.alike(kept, [], 'nothing to record when no tool ran')
+})
+
+test('a rejected write is recorded as rejected, not as a result', async (t) => {
+  // Otherwise history shows a write that looks like it went through, which is the pattern the
+  // model then repeats.
+  const kept = await turnHistory(['{"tool": "act_device", "args": {"id": "antminer-3"}}', 'Cancelled.'], {
+    approve: false,
+    tools: WRITE_TOOLS,
+    prompt: 'reboot antminer-3'
+  })
+
+  t.is(kept.length, 2)
+  t.ok(kept[1].content.includes('did NOT run'), 'the record says plainly that nothing happened')
+})
+
+test('a long tool result is clamped before it is kept', async (t) => {
+  // list_devices on a real fleet is kilobytes; persisting those verbatim every turn crowds out
+  // the instructions that keep routing working.
+  const big = { callTool: async () => ({ text: 'x'.repeat(5000), isError: false }) }
+  const loop = runToolLoop({
+    model: scriptedModel([SPACED_CALL, '15 miners.']),
+    system: 'You are an operator agent.',
+    messages: [{ role: 'user', content: 'how is the site?' }],
+    tools: TOOLS,
+    mcp: big
+  })
+  let kept
+  for (;;) {
+    const { value, done } = await loop.next()
+    if (done) { kept = value; break }
+  }
+
+  t.ok(kept[1].content.length < 700, 'kept short enough to live in the transcript')
+  t.ok(kept[1].content.includes('truncated'), 'and says it was cut, so nothing reads as complete')
 })

@@ -4,10 +4,10 @@ Headline card that summarises miner statistics (hash rate, efficiency, temperatu
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `params` | `MinersSummaryParam[]` | yes | — | Array of `{ label, value }` pairs. `value` is a pre-formatted display string including units. |
-| `className` | `string` | no | — | Additional CSS class on the root element. |
+| Prop        | Status   | Type                   | Default | Description |
+| ----------- | -------- | ---------------------- | ------- | ----------- |
+| `params`    | Required | `MinersSummaryParam[]` | —       | Array of `{ label, value }` pairs. `value` is a pre-formatted display string including units. |
+| `className` | Optional | `string`               | —       | Additional CSS class on the root element |
 
 ## Minimal example
 

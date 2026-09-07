@@ -4,37 +4,37 @@ An input that stores typed or selected values as removable tag chips, with an op
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `value` | `string[]` | no | `[]` | Controlled list of tag values |
-| `onTagsChange` | `(tags: string[]) => void` | no | — | Fired when tags are added or removed |
-| `onInputChange` | `(value: string) => void` | no | — | Fired on every keystroke; useful for async option loading |
-| `onSubmit` | `(tags: string[]) => void` | no | — | Fired when the user presses Enter |
-| `options` | `TagInputOption[]` | no | `[]` | Dropdown options (string or `{ value, label, disabled? }`) |
-| `placeholder` | `string` | no | `'Search...'` | Input placeholder when no tags are selected |
-| `size` | `'sm' \| 'md' \| 'lg'` | no | `'lg'` | Controls input height |
-| `disabled` | `boolean` | no | `false` | Disables the input |
-| `allowCustomTags` | `boolean` | no | `true` | Allows adding arbitrary typed text as a tag via Enter |
-| `filterOptions` | `(options: TagInputOption[], query: string) => TagInputOption[]` | no | case-insensitive includes | Custom option filter function |
-| `variant` | `'default' \| 'search'` | no | `'search'` | `'search'` shows a magnifying-glass icon (doubles as a clear-all button) |
-| `label` | `string` | no | — | Label rendered above the input |
-| `id` | `string` | no | auto-generated | HTML id for the input element |
-| `className` | `string` | no | — | Additional class for the inner `<input>` |
-| `wrapperClassName` | `string` | no | — | Additional class for the root wrapper |
-| `dropdownMinHeight` | `string` | no | — | CSS min-height for the dropdown panel |
-| `dropdownMaxHeight` | `string` | no | `'12rem'` | CSS max-height for the dropdown panel |
-| `renderDropdown` | `(props: TagInputDropdownProps) => React.ReactNode` | no | — | Replaces the built-in dropdown with custom content |
+| Prop                | Status   | Type                         | Default | Description                                             |
+| ------------------- | -------- | ---------------------------- | ------- | ------------------------------------------------------- |
+| `value`             | Optional | `string[]`                   | `[]`    | Controlled list of tag values                           |
+| `onTagsChange`      | Optional | `(tags: string[]) => void`   | —       | Fired when tags are added or removed                    |
+| `onInputChange`     | Optional | `(value: string) => void`    | —     | Fired on every keystroke; useful for async option loading |
+| `onSubmit`          | Optional | `(tags: string[]) => void`   | —       | Fired when the user presses Enter                       |
+| `options`           | Optional | `TagInputOption[]`           | `[]` | Dropdown options (string or `{ value, label, disabled? }`) |
+| `placeholder`       | Optional | `string`                     | `'Search...'` | Input placeholder when no tags are selected       |
+| `size`              | Optional | `'sm' \| 'md' \| 'lg'`       | `'lg'`  | Controls input height                                   |
+| `disabled`          | Optional | `boolean`                    | `false` | Disables the input                                      |
+| `allowCustomTags`   | Optional | `boolean`                    | `true`  | Allows adding arbitrary typed text as a tag via Enter   |
+| `filterOptions`     | Optional | `(options: TagInputOption[], query: string) => TagInputOption[]` | case-insensitive includes | Custom option filter function |
+| `variant`           | Optional | `'default' \| 'search'`      | `'search'` | `'search'` shows a magnifying-glass icon (doubles as a clear-all button) |
+| `label`             | Optional | `string`                     | —       | Label rendered above the input                          |
+| `id`                | Optional | `string`                     | auto-generated | HTML id for the input element                    |
+| `className`         | Optional | `string`                     | —       | Additional class for the inner `<input>`                |
+| `wrapperClassName`  | Optional | `string`                     | —       | Additional class for the root wrapper                   |
+| `dropdownMinHeight` | Optional | `string`                     | —       | CSS min-height for the dropdown panel                   |
+| `dropdownMaxHeight` | Optional | `string`                     | `'12rem'` | CSS max-height for the dropdown panel                 |
+| `renderDropdown`    | Optional | `(props: TagInputDropdownProps) => React.ReactNode` | —       | Replaces the built-in dropdown with custom content |
 
 ### `TagInputRef` (imperative handle)
 
 When `ref` is forwarded to `TagInput`, it exposes:
 
-| Method | Description |
-| ------ | ----------- |
-| `clearInputValue()` | Clears the text input |
-| `focus()` | Focuses the input |
-| `blur()` | Blurs the input |
-| `getInputValue()` | Returns the current input string |
+| Method              | Description                      |
+| ------------------- | -------------------------------- |
+| `clearInputValue()` | Clears the text input            |
+| `focus()`           | Focuses the input                |
+| `blur()`            | Blurs the input                  |
+| `getInputValue()`   | Returns the current input string |
 
 ## Example
 
@@ -76,6 +76,6 @@ const [tags, setTags] = useState<string[]>([])
 
 ## Notes
 
-- Selecting an option that is already tagged removes it (toggle behaviour).
-- Pressing Backspace on an empty input removes the last tag.
-- The search-variant clear icon only appears when there are active tags.
+- Selecting an option that is already tagged removes it (toggle behavior)
+- Pressing Backspace on an empty input removes the last tag
+- The search-variant clear icon only appears when there are active tags

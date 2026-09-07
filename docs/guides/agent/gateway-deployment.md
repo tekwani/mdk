@@ -39,7 +39,7 @@ Once published, that directory is `node_modules/@tetherto/mdk-plugin-agent`; in 
 
 ```js
 const path = require('path')
-const { startGateway } = require('@tetherto/mdk/backend/core/mdk')
+const { startGateway } = require('@tetherto/mdk-core')
 
 await startGateway({
   kernel,

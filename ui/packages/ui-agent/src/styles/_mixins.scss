@@ -1,0 +1,27 @@
+/* Local mixins: the two shapes that repeat across the panel's own partials. */
+
+/**
+ * A column that scrolls inside the panel rather than growing it.
+ *
+ * Both scrolling regions — the transcript and the conversations list — need the
+ * same four properties, and `min-height: 0` is the load-bearing one: without it a
+ * flex child refuses to shrink below its content and the panel grows instead of
+ * scrolling. A mixin rather than `@extend` because nothing in this repo extends
+ * (see `docs/STYLING.md`), and an `@extend` reaching across `@use` boundaries into
+ * a `@layer`-wrapped sheet is exactly where its output order stops being obvious.
+ */
+@mixin scroll_column {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/** The muted, centred line a list or transcript shows when it has nothing in it. */
+@mixin empty_note {
+  margin: auto 0;
+  color: var(--mdk-agent-text-muted);
+  text-align: center;
+}

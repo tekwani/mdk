@@ -397,6 +397,26 @@ test('act_device passes the mode only when setting a power mode', async (t) => {
   t.ok(mode.summary.includes('sleep'))
 })
 
+test('act_device reports how the write ended, and never reads an unsent one as sent', async (t) => {
+  const client = mixedFleet()
+  const tools = captureTools(client)
+  const reboot = async () => JSON.parse((await tools.act_device({ ref: 'antminer-0', action: 'reboot' })).content[0].text)
+
+  client.sendCommand = async () => ({ error: 'envelope rejected' })
+  const failed = await reboot()
+  t.is(failed.outcome, 'failed', 'a kernel error is not a successful write')
+  t.ok(failed.summary.includes('envelope rejected'), 'and the reason reaches the operator')
+
+  client.sendCommand = async () => ({ status: 'QUEUED' })
+  t.is((await reboot()).outcome, 'queued', 'a wire status is spoken as itself')
+
+  client.sendCommand = async () => ({ status: 202 })
+  t.is((await reboot()).outcome, '202', 'a status of a type we did not expect is surfaced, not called sent')
+
+  client.sendCommand = async () => ({})
+  t.is((await reboot()).outcome, 'sent', 'only a reply carrying no status at all falls back to sent')
+})
+
 // ---------------------------------------------------------------------------
 // CLI components: spawnDescriptor and COMPONENTS
 // ---------------------------------------------------------------------------

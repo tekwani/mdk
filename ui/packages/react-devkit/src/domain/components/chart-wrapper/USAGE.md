@@ -8,18 +8,18 @@ Wrapper that handles three states for a chart's content area:
 
 ## Props
 
-| Prop                    | Type                            | Required | Default              | Description                              |
-| ----------------------- | ------------------------------- | -------- | -------------------- | ---------------------------------------- |
-| `children`              | `ReactNode`                     | no       | —                    | Chart content.                           |
-| `data`                  | `Record<string, unknown> \| unknown[]` | no | —                  | Line-chart data (datasets list).         |
-| `dataset`               | `Record<string, unknown> \| unknown[]` | no | —                  | Bar-chart dataset.                       |
-| `isLoading`             | `boolean`                       | no       | `false`              | Show loader.                             |
-| `customLoader`          | `ReactNode`                     | no       | `<Loader />`         | Replace the default loader.              |
-| `showNoDataPlaceholder` | `boolean`                       | no       | `true`               | Toggle empty placeholder.                |
-| `customNoDataMessage`   | `string \| ReactNode`           | no       | —                    | Custom empty content.                    |
-| `minHeight`             | `number`                        | no       | `400`                | Min height (px).                         |
-| `loadingMinHeight`      | `number`                        | no       | `minHeight`          | Min height for the loading state.        |
-| `className`             | `string`                        | no       | —                    | Additional class names.                  |
+| Prop                    | Status   | Type                                   | Default      | Description                      |
+| ----------------------- | -------- | -------------------------------------- | ------------ | -------------------------------- |
+| `children`              | Optional | `ReactNode`                            | —            | Chart content                    |
+| `data`                  | Optional | `Record<string, unknown> \| unknown[]` | —            | Line-chart data (datasets list)  |
+| `dataset`               | Optional | `Record<string, unknown> \| unknown[]` | —            | Bar-chart dataset                |
+| `isLoading`             | Optional | `boolean`                              | `false`      | Show loader                      |
+| `customLoader`          | Optional | `ReactNode`                            | `<Loader />` | Replace the default loader       |
+| `showNoDataPlaceholder` | Optional | `boolean`                              | `true`       | Toggle empty placeholder         |
+| `customNoDataMessage`   | Optional | `string \| ReactNode`                  | —            | Custom empty content             |
+| `minHeight`             | Optional | `number`                               | `400`        | Min height (px)                  |
+| `loadingMinHeight`      | Optional | `number`                               | `minHeight`  | Min height for the loading state |
+| `className`             | Optional | `string`                               | —            | Additional class names           |
 
 ## Example
 

@@ -1,6 +1,7 @@
 ---
-Capacity and metrics template
-: Size MDK Workers for a given host and device count by measuring CPU, RAM, disk, cycle headroom, and latency against pass/fail thresholds
+title: Capacity and metrics template
+description: Size MDK Workers for a given host and device count by measuring CPU, RAM, disk, cycle headroom, and latency against pass/fail thresholds
+docs@tether_slug: guides/deployment/capacity-metrics-template
 ---
 
 ## Overview
@@ -10,6 +11,9 @@ This template turns measured runs into **sizing answers**: given your hardware a
 Fill each profile with what is running, record host resources and end-to-end latencies, then derive per-device cost, cycle headroom, and pass/fail status. Use the same percentile set, soak rules, and load definition across profiles so rows stay comparable.
 
 Absolute numbers without reference hardware, device baseline, and a zero-device floor are not enough to size a site. Prefer formulas (`RAM ≈ base + n × per-device`) and headroom ratios over one-off tables.
+
+> [!NOTE]
+> The [benchmark harness][benchmark-harness] fills this template in from measured runs automatically. Fill it in by hand only for a topology it doesn't cover yet.
 
 ## What a filled profile should answer
 
@@ -23,7 +27,7 @@ Absolute numbers without reference hardware, device baseline, and a zero-device 
 
 ## Reference hardware
 
-Record one hardware block per profile. 
+Record one hardware block per profile.
 
 ### Hardware block (per profile)
 
@@ -283,3 +287,8 @@ Use the same checklist for every profile so results stay comparable.
 12. Compute storage growth per Worker store from the soak (size at start vs. now, divided by elapsed time); label 6/12-month projections **indicative**
 13. Apply pass/fail thresholds; copy summary into the comparison matrix and relevant sweep tables
 14. Note failures, timeouts, config drift, and which single variable changed vs the previous profile
+
+## Links
+
+[benchmark-harness]: benchmark-your-site.md
+<!-- docs@tether.io: benchmark-harness → guides/deployment/benchmark-your-site -->

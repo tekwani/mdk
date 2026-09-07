@@ -109,7 +109,7 @@ test harness or wire up a mock Kernel; both are out of scope for this template.
 
 ## Project layout
 
-```
+```text
 src/
   main.tsx               React entrypoint, wraps app in <MdkProvider>
   App.tsx                Authenticated shell: topbar + sidebar + <Outlet/>

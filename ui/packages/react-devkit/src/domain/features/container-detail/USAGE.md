@@ -8,16 +8,16 @@ every container detail tab mounts into.
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `name` | `ReactNode` | yes | — | Container display name shown in the header |
-| `tabs` | `{ key: string; label: string }[]` | yes | — | Ordered tabs for this container model (resolved by the page) |
-| `activeTab` | `string` | yes | — | Currently active tab key |
-| `onTabChange` | `(tab: string) => void` | yes | — | Fired with the next tab key when the operator switches tabs |
-| `onBack` | `() => void` | yes | — | Fired when the back link is clicked (the page decides where to go) |
-| `backLabel` | `ReactNode` | no | `"Explorer"` | Back-link label |
-| `children` | `ReactNode` | no | — | The active tab's body (real content or `<ContainerDetailPlaceholder>`) |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop          | Status   | Type                               | Default      | Description                                                            |
+| ------------- | -------- | ---------------------------------- | ------------ | ---------------------------------------------------------------------- |
+| `tabs`        | Required | `{ key: string; label: string }[]` | —            | Ordered tabs for this container model (resolved by the page)           |
+| `activeTab`   | Required | `string`                           | —            | Currently active tab key                                               |
+| `onTabChange` | Required | `(tab: string) => void`            | —            | Fired with the next tab key when the operator switches tabs            |
+| `onBack`      | Required | `() => void`                       | —            | Fired when the back link is clicked (the page decides where to go)     |
+| `name`        | Optional | `ReactNode`                        | —            | Container display name shown in the header; omit when the host already renders the name elsewhere (e.g. the shell's `PageLayout`) |
+| `backLabel`   | Optional | `ReactNode`                        | `"Explorer"` | Back-link label                                                        |
+| `children`    | Optional | `ReactNode`                        | —            | The active tab's body (real content or `<ContainerDetailPlaceholder>`) |
+| `className`   | Optional | `string`                           | —            | Additional class for the root element                                  |
 
 ## Example
 
@@ -50,8 +50,8 @@ const tabs = getSupportedContainerTabs(thing?.type).map((key) => ({
 
 - The shell does not fetch data or own routing — the page resolves the tab
   list from the foundation tab matrix, reads `:id` / `:tab` / `backUrl` from the
-  URL, and passes navigation callbacks in.
+  URL, and passes navigation callbacks in
 - Tab bodies are supplied as `children`; use `<ContainerDetailPlaceholder>` for
-  tabs whose real content has not been built yet.
+  tabs whose real content has not been built yet
 - When `tabs` is empty (an unknown / unsupported container type) the shell
-  renders an empty state instead of the tab strip.
+  renders an empty state instead of the tab strip

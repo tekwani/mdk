@@ -20,6 +20,14 @@ const report = (over = {}) => ({
   ...over
 })
 
+// A score is only comparable to another taken under the same standing instruction, so the
+// charter comes off the report. Reading today's constant instead would re-stamp an old run with
+// a charter it never saw, which is the whole failure this is here to prevent.
+test('the headline names the charter the run answered under', (t) => {
+  t.ok(formatReport(report({ charter: 'v7' })).includes('charter v7'), 'the report says which charter, not which one is current')
+  t.absent(/charter/.test(formatReport(report())), 'and a report that never recorded one claims nothing')
+})
+
 test('the headline is the pass rate, and a clean run says nothing more', (t) => {
   const out = formatReport(report({ failed: 0, passed: 10, byCheck: {} }))
   t.ok(out.includes('10/10 passed (100%)'))

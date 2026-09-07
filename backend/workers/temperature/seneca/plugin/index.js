@@ -1,7 +1,7 @@
 'use strict'
 
 const debug = require('debug')('mdk:worker:seneca')
-const ModbusFacility = require('svc-facs-modbus')
+const ModbusFacility = require('@tetherto/svc-facs-modbus')
 const SenecaSensor = require('../lib/seneca.sensor')
 
 // getClient is stateless per call — one facility serves every device context.

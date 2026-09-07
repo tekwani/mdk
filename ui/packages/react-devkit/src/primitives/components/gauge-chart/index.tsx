@@ -43,14 +43,13 @@ export type GaugeChartProps = {
 /**
  * GaugeChart - Presentational gauge / speedometer chart.
  *
- * Implementation note: this component used to wrap the `react-gauge-chart`
- * NPM package, but that package is published only as CommonJS with a broken
- * `module` field that points at the same CJS file. That made it crash under
- * ESM bundlers that don't add a `__esModule ? .default : module` interop
- * shim (Webpack 4, raw esbuild, certain SSR setups, etc.) with React's
- * "Element type is invalid" error. We replaced it with a pure-SVG internal
- * implementation (see `./gauge-svg.tsx`) so the component is bundler- and
- * runtime-agnostic and has zero third-party runtime dependencies.
+ * Implementation note: the gauge is drawn by a pure-SVG internal implementation
+ * (see `./gauge-svg.tsx`), so the component is bundler- and runtime-agnostic and
+ * carries no third-party runtime dependency. The gauge packages on NPM are
+ * published CommonJS-only with a `module` field pointing at the same CJS file,
+ * which crashes under ESM bundlers that add no `__esModule ? .default : module`
+ * interop shim (Webpack 4, raw esbuild, some SSR setups) with React's
+ * "Element type is invalid" error.
  *
  * @example
  * ```tsx

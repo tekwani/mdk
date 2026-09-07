@@ -22,6 +22,7 @@ const MDK_PACKAGES = [
   '@tetherto/mdk-ui-foundation',
   '@tetherto/mdk-react-adapter',
   '@tetherto/mdk-react-devkit',
+  '@tetherto/mdk-ui-agent',
 ] as const
 
 /**

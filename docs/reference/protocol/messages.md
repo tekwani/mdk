@@ -59,8 +59,8 @@ A concrete request and response pair, end to end:
 ## Next steps
 
 - Learn more about actions and command targeting:
-  - The [Kernel README][kernel-protocol] holds the full action catalogue (worker discovery, scheduled polling, command dispatch, kernel queries, and the 
-write action lifecycle) and [command targeting rules][kernel-command-control] (`payload.scope`'s `device`, `worker`, and `rack` values, and the 
+  - The [Kernel README][kernel-protocol] holds the full action catalogue (worker discovery, scheduled polling, command dispatch, kernel queries, and the
+write action lifecycle) and [command targeting rules][kernel-command-control] (`payload.scope`'s `device`, `worker`, and `rack` values, and the
 1024-target cap)
   - [Approval-gated writes][control-plane-writes] details the write action lifecycle's full cross-layer flow, and use [the write-actions how-to][write-actions] to submit and approve actions from a Gateway consumer
 - [How MDK works][architecture]: for the architectural narrative explaining when each action fires
@@ -90,9 +90,6 @@ write action lifecycle) and [command targeting rules][kernel-command-control] (`
 
 [kernel-modules]: ../kernel/modules.md
 <!-- docs@tether.io: kernel-modules → reference/kernel/modules -->
-
-[terminology]: ../glossary.md
-<!-- docs@tether.io: terminology → reference/glossary -->
 
 [build-a-worker]: ../../guides/workers/build-a-worker.md
 <!-- docs@tether.io: build-a-worker → guides/workers/build-a-worker -->

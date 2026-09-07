@@ -6,11 +6,11 @@ A thin re-export of `@radix-ui/react-slider`. Use it to render an accessible ran
 
 All Radix UI `@radix-ui/react-slider` named exports are re-exported as-is:
 
-| Name | Description |
-| ---- | ----------- |
-| `Root` | Slider container with ARIA attributes |
-| `Track` | The slider rail |
-| `Range` | The filled portion of the track |
+| Name    | Description                                 |
+| ------- | ------------------------------------------- |
+| `Root`  | Slider container with ARIA attributes       |
+| `Track` | The slider rail                             |
+| `Range` | The filled portion of the track             |
 | `Thumb` | The draggable handle; renders one per value |
 
 For the full prop reference see the [Radix UI Slider docs](https://www.radix-ui.com/primitives/docs/components/slider).

@@ -1,6 +1,6 @@
 # MDK monorepo docs
 
-Use this page to route to the docs you need. 
+Use this page to route to the docs you need.
 
 ## Getting started options
 
@@ -17,7 +17,7 @@ The monorepo is organized into three development domains:
 - [Workers](../backend/workers/README.md) — protocol translators for data sources, e.g., miners, pools, power meters, sensors, containers
 - [UI toolkit](../ui/README.md) — headless state and API contracts, React bindings, mining-domain components, and application scaffolding
 
-> Per-artefact facts live next to code under `*/packages/**/<artefact>/`, not in `docs/`. 
+> Per-artefact facts live next to code under `*/packages/**/<artefact>/`, not in `docs/`.
 > Workers ship `mdk-contract.json` (existing runtime contract); UI ships `dist/registry.json` (generated from JSDoc tags on source).
 
 ## Pick your role
