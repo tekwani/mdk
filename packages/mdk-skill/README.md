@@ -32,9 +32,8 @@ dist/skills/                # assembled suite — build output, gitignored, neve
 [`skills/mdk-ui-component/references/ui-registry.json`](./src/skills/mdk-ui-component/references/ui-registry.json) is generated, not hand-authored. It is a verbatim copy of the devkit's
 `dist/registry.json`, written by [`docs/scripts/sync-ui-registry.mjs`](../../docs/scripts/sync-ui-registry.mjs). Regenerate it with
 `npm run generate:ui-registry` from the repo root, which rebuilds the devkit registry and rewrites this file. Hand-edits do not survive the next run,
-and a stale copy tells coding agents to use component props that no longer exist. The
-[`docs-freshness`](../../.github/workflows/docs-freshness.yml) workflow watches this file and its devkit source on PRs and
-warns, rather than blocks, when it drifts.
+and a stale copy tells coding agents to use component props that no longer exist. No CI workflow watches this file and its devkit source for drift
+yet, so regenerating after a devkit change is on the contributor.
 
 Skills are assembled and installed **flat** — clients discover
 `<skills-dir>/<name>/SKILL.md` one level deep, and each skill's `description`

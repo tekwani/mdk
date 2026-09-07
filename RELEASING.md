@@ -14,9 +14,8 @@ Copy this into the PR or release ticket for each release.
 - [ ] Run installs in all three domains to refresh lockfiles: [`ui/`](./ui/README.md), [`backend/core/`](./backend/core/README.md), [`backend/workers/`](./backend/workers/README.md)
 - [ ] Confirm no unexpected changes in [`package-lock.json`](./package-lock.json) files
 - [ ] Regenerate the generated pages: `npm run regenerate-docs`, then commit anything it changes
-- [ ] Confirm nothing is left stale: `npm run regenerate-docs -- --check` passes — run this explicitly rather than relying on
-      the [`docs-freshness`](.github/workflows/docs-freshness.yml) CI workflow, which only triggers on a PR that touches the
-      specific source/generated paths it watches, and warns on drift rather than blocking
+- [ ] Confirm nothing is left stale: `npm run regenerate-docs -- --check` passes — run this explicitly; there is no CI
+      workflow enforcing this yet, so it's on you
 - [ ] Update [`README.md`](./README.md) — version badge and any inline version references
 - [ ] Add entry for `v<version>` in [`CHANGELOG.md`](./CHANGELOG.md)
 - [ ] Add release notes file at `docs/reference/release-notes/<version>-release.md`

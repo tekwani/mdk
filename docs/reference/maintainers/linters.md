@@ -2,8 +2,8 @@
 
 Maintainer-facing inventory of the lint tooling that guards this monorepo's documentation. Two layers:
 
-- 🚧 Project-specific IA gates 🚧 — five **proposed** gates defined in [`ia.md`](ia.md#qa-gates) (`check:contract`, `check:facets-fresh`, `check:agent-ready`, `check:port-signals`, `check:integrations-fresh`). **If adopted**, they would enforce the contract between code, the docs catalogue, and the port pipeline. The regen-and-diff half of `check:integrations-fresh`, plus `check:plugin-reference-fresh`, now ship as the warn-only `docs-freshness` workflow; the remaining gates are not wired, engineering decides per-gate, and docs maintainers absorb the upkeep manually for any gate not adopted.
-- **Generated-page freshness** — [`npm run regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) reports when a page written by a script no longer matches its sources. The [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow runs it on pull requests and warns rather than blocks.
+- 🚧 Project-specific IA gates 🚧 — five **proposed** gates defined in [`ia.md`](ia.md#qa-gates) (`check:contract`, `check:facets-fresh`, `check:agent-ready`, `check:port-signals`, `check:integrations-fresh`). **If adopted**, they would enforce the contract between code, the docs catalogue, and the port pipeline. The regen-and-diff half of `check:integrations-fresh`, plus `check:plugin-reference-fresh`, have their generators implemented, but no CI workflow runs them yet; the remaining gates are not wired, engineering decides per-gate, and docs maintainers absorb the upkeep manually for any gate not adopted.
+- **Generated-page freshness** — [`npm run regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) reports when a page written by a script no longer matches its sources. No CI workflow runs it yet — it's a manual step for contributors touching generated pages.
 - **General docs hygiene** — the rest of this file. Link verification, anchor validation, spelling. These guard the docs themselves, not the IA contract.
 
 ## Nightly and PR diff link verification — linkinator
@@ -145,7 +145,7 @@ This wraps [`scripts/check-example-paths.mjs`](../../../scripts/check-example-pa
 - `_skip_notes` — mandatory sibling object, one entry per `skipFiles`/`skipPaths` pattern, explaining why. The checker refuses to run if any skip entry lacks a note. An unexplained skip is a silent false negative waiting to happen — the same lesson the linkinator skip list already enforces by convention; here it's enforced by the script itself.
 - Placeholders are dropped automatically, not via the skip list: any candidate token immediately followed by `<`, `>`, `*`, `{`, `}`, or `…` (for example `examples/run-<scenario>.js` or `` examples/run-*.js ``) is treated as unresolved template text, not a real path.
 
-**CI wiring** — [`.github/workflows/example-paths.yml`](../../../.github/workflows/example-paths.yml). Nightly only, deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split: the `example-paths` job (`schedule` + `workflow_dispatch`) runs `npm run check:example-paths`, and on failure opens or (if one is already open) comments on a tracking issue labelled `example-paths`, then exits non-zero so the run shows red. There is no PR gate — this check is not wired into the PR path.
+**CI wiring** — none yet. There is no workflow running `npm run check:example-paths`; it's a manual step for now, hand-run the same way as `link-check` above.
 
 ## 🚧 Spelling — Vale
 
@@ -154,24 +154,17 @@ Vale catches accidental misspellings and enforces a project word list. Configure
 ## Style — Markdownlint
 
 [`markdownlint-cli2`](https://github.com/DavidAnson/markdownlint-cli2) enforces structural consistency — heading hierarchy, list indentation, fenced code block style, reference-link
-hygiene. The ruleset in [`.markdownlint-cli2.jsonc`](../../../.markdownlint-cli2.jsonc) is kept identical to the mdk-docs ruleset so both repos lint the same way; only the globs
-differ, covering `docs/**/*.md` and the root `README.md`.
+hygiene. The intended ruleset — `.markdownlint-cli2.jsonc`, kept identical to the mdk-docs ruleset so both repos lint the same way, globs differing to cover `docs/**/*.md` and the
+root `README.md` — has not been committed to this repo yet, so `npm run lint:md` currently has no config to find and does not lint anything.
 
-Full sweep, from the repo root:
-
-```bash
-npm run lint:md
-```
-
-Diff-scoped, the same set CI lints on a pull request:
+Diff-scoped, the same set CI would lint on a pull request once the config lands:
 
 ```bash
 VERIFY_BASE_REF=origin/main npm run lint:md:pr
 ```
 
-**CI wiring** — the `lint-markdown` job in [`ci.yml`](../../../.github/workflows/ci.yml) runs [`scripts/lint-md-pr.sh`](../../../scripts/lint-md-pr.sh) on every pull request against
-the changed `docs/**/*.md` and `README.md`. It runs independently of the changed-area detection, because a docs-only pull request skips every domain suite. A diff with no matching
-files passes without linting.
+**CI wiring** — none yet. [`scripts/lint-md-pr.sh`](../../../scripts/lint-md-pr.sh) exists and mirrors the mdk-docs `lint-markdown` job, but there is no `lint-markdown` job in
+[`ci.yml`](../../../.github/workflows/ci.yml) calling it, and it also depends on the missing `.markdownlint-cli2.jsonc` above.
 
 `MD053` (unused link reference definitions) is enforced rather than disabled. It counts the same three reference-link forms the port pipeline resolves — full, collapsed, and shortcut
 — so a definition it flags contributes nothing to ported output and is dead weight in the `## Links` footer. One case diverges: a definition referenced only from an HTML comment is

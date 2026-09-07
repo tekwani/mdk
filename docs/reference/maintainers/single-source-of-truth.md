@@ -340,9 +340,8 @@ The copy is verbatim on purpose. Trimming it to what the skill reads today would
 
 ### Freshness in CI
 
-[`.github/workflows/docs-freshness.yml`](../../../.github/workflows/docs-freshness.yml) runs report mode on pull requests that touch either the sources or the generated
-pages. It installs the UI workspace and treats a skipped target as a failure, since there a skip means the install broke rather than that someone is working light. It annotates the pull request and never blocks it: a device contract can land in one pull request and the regenerated page in the next, and a hard failure would
-force an unrelated docs commit into an engineering change. The pages stay wrong for readers until someone regenerates, so treat the warning as work owed rather than noise.
+There is no CI workflow enforcing this yet — running [`npm run regenerate-docs -- --check`](#checking-without-changing-anything) after touching either the
+sources or the generated pages is on the contributor. The pages stay wrong for readers until someone regenerates, so treat a stale page as work owed rather than noise.
 
 ## Next steps
 

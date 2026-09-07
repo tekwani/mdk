@@ -182,21 +182,20 @@ stay under [`maintainers/`](./README.md) and never graduate to user-facing `docs
 
 ### `check:plugin-reference-fresh`
 
-> Implemented, warn-only. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js)
+> Generator implemented; no CI enforcement yet. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js)
 > (run `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` in [`backend/core/plugins`](../../../backend/core/plugins/README.md) for this generator alone)
 > reads each default plugin's `mdk-plugin.json` and regenerates the route tables in
-> [`backend/core/plugins/README.md`](../../../backend/core/plugins/README.md). The
-> [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow runs the regen-and-diff check on pull requests.
+> [`backend/core/plugins/README.md`](../../../backend/core/plugins/README.md). Running `npm run regenerate-docs -- --check` reports drift, but no
+> workflow runs that check on pull requests today — it's a manual step.
 
-Freshness gate for the generated default-plugin route tables. The `docs-freshness` workflow runs `npm run regenerate-docs -- --check`, which
+Freshness gate for the generated default-plugin route tables. `npm run regenerate-docs -- --check`
 regenerates, compares against the last commit, restores the tree, and reports a non-empty diff in [`backend/core/plugins/README.md`](../../../backend/core/plugins/README.md). It catches one kind
 of drift:
 
 1. **Tables stale after a manifest change** — a route added, removed, or re-described in a default plugin's `mdk-plugin.json` is not reflected
 in the generated tables.
 
-The check annotates the pull request and does not block it, because a manifest change and its regenerated tables may legitimately land in separate
-pull requests. The pages stay wrong for readers until someone regenerates, so the warning is work owed rather than noise.
+Nothing blocks a PR on this today; the pages stay wrong for readers until someone regenerates, so running the check by hand is on the contributor.
 
 **Why it matters:** the default-plugin route tables are the published API surface for the Gateway's built-in endpoints. A table that lags the
 manifest documents routes that no longer exist or omits ones that do. Only the default plugins in [`backend/core/plugins/`](../../../backend/core/plugins/README.md) are covered; plugins
