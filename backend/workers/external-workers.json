@@ -1,0 +1,11 @@
+[
+  {
+    "name": "whatsminer-mdk-worker",
+    "brand": "Whatsminer",
+    "provider": "microbt",
+    "family": "miner",
+    "repoUrl": "https://github.com/whatsminer/whatsminer-mdk-worker",
+    "ref": "a47fa82020454f9bfa9963ccaaa319b7948e8aa2",
+    "contractPath": "mdk-contract.json"
+  }
+]

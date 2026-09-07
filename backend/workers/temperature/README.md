@@ -1,4 +1,4 @@
-# workers/temperature
+# Workers/temperature
 
 Temperature and humidity sensor Workers. These Workers connect to environmental sensors and report ambient conditions through the MDK Protocol. Used to monitor container and rack-level temperatures independent of the miners' chip temperature sensors.
 
@@ -18,7 +18,7 @@ Temperature and humidity sensor Workers. These Workers connect to environmental 
 
 Typically one sensor per container, placed at the air/liquid inlet:
 
-```
+```text
 container-A
 ├── 10x miners
 ├── ABB B23 power meter
@@ -28,7 +28,7 @@ container-A
 ## Quick Start
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startSenecaWorker } = require('@tetherto/mdk-worker-seneca')
 
 const kernel = await getKernel()

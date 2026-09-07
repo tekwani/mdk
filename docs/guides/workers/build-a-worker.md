@@ -17,7 +17,7 @@ This guide is for partners who want to integrate their own hardware, firmware, o
 Worker plugin package from their own public or private repository — no fork of this monorepo and no PR into
 `tetherto/mdk` required.
 
-It walks through building a Worker from scratch, end to end: 
+It walks through building a Worker from scratch, end to end:
 
 - The [device client][demo-worker-client]
 - The [`mdk-contract.json`][contract-schema]
@@ -39,7 +39,7 @@ and handler files; `WorkerRuntimeV2` loads them directly rather than requiring a
 This guide generalizes one real, runnable reference implementation already in this repo:
 [`backend/workers/samples/demo-worker/`][demo-worker]. It proves this pattern works with **zero**
 dependency on this monorepo's optional worker-infra services (provisioning stores, alert templates, stats
-aggregation), just [`WorkerRuntimeV2`][worker-runtime-v2] and the directory-loaded Worker plugin shape. 
+aggregation), just [`WorkerRuntimeV2`][worker-runtime-v2] and the directory-loaded Worker plugin shape.
 This guide adds production-oriented validation, recovery, and security boundaries that the deliberately small sample does not implement.
 
 > [!NOTE]
@@ -76,6 +76,7 @@ This tree is [`demo-worker`][demo-worker]'s own layout with its vendor name repl
 ## Prerequisites
 
 - Node.js `>=24` (all MDK core packages declare this `engines` constraint)
+- npm 11 (< 12)
 - A device or firmware API you can talk to from Node — HTTP, TCP, Modbus, MQTT, serial, whatever your hardware speaks
 - Comfort with plain async JS — no MDK-specific framework knowledge is required to write the device client
 - A basic understanding of [how MDK works][architecture], the [Worker install pattern][install-pattern], and the

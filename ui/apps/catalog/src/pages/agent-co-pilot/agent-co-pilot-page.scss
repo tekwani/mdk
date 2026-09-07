@@ -1,0 +1,16 @@
+.agent-co-pilot-page {
+  &__prompts {
+    margin: 0;
+    padding-left: 20px;
+
+    li + li {
+      margin-top: 6px;
+    }
+  }
+
+  /* The page variant fills its container, so the demo gives it one. */
+  &__frame {
+    height: 560px;
+    max-width: 720px;
+  }
+}

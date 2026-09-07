@@ -6,10 +6,9 @@
  * helpers (JSX renderers, devkit-core consumers) live in
  * `@tetherto/mdk-react-devkit`.
  *
- * The mining query dialect used to live here too — the `t-*` tags, `*_aggr`
- * field names and Mongo selector composers. It now sits under
- * `../presets/mining/dialect`, so this directory holds only helpers that are
- * genuinely backend-agnostic.
+ * The mining query dialect — the `t-*` tags, `*_aggr` field names and Mongo
+ * selector composers — sits under `../presets/mining/dialect`, so this directory
+ * holds only helpers that are genuinely backend-agnostic.
  */
 
 export * from './auth-utils'

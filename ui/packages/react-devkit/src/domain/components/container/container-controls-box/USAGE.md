@@ -4,17 +4,15 @@ Control panel for a single container providing start/stop actions, operating mod
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `Device` | no | — | The container device object. |
-| `isBatch` | `boolean` | no | `false` | When `true`, operates on `selectedDevices` instead of a single `data` record. |
-| `isCompact` | `boolean` | no | `false` | Renders a compact variant suitable for sidebars. |
-| `selectedDevices` | `Device[]` | no | `[]` | Devices included in a batch operation. |
-| `pendingSubmissions` | `PendingSubmission[]` | no | `[]` | In-flight command queue; disables conflicting actions. |
-| `alarmsDataItems` | `TimelineItemData[]` | no | `[]` | Active alarm feed items to display inline. |
-| `tailLogData` | `UnknownRecord[]` | no | — | Recent log tail entries. |
-| `powerModesLog` | `UnknownRecord` | no | — | Historical power-mode change log. |
-| `onNavigate` | `(path: string) => void` | yes | — | Navigation callback used by alarm row click-throughs. |
+| Prop                 | Status   | Type                     | Default | Description                                                                  |
+| -------------------- | -------- | ------------------------ | ------- | ---------------------------------------------------------------------------- |
+| `onNavigate`         | Required | `(path: string) => void` | —       | Navigation callback used by alarm row click-throughs                         |
+| `data`               | Optional | `Device`                 | —       | The container device object                                                  |
+| `isBatch`            | Optional | `boolean`                | `false` | When `true`, operates on `selectedDevices` instead of a single `data` record |
+| `selectedDevices`    | Optional | `Device[]`               | `[]`    | Devices included in a batch operation                                        |
+| `pendingSubmissions` | Optional | `PendingSubmission[]`    | `[]`    | In-flight command queue; disables conflicting actions                        |
+| `alarmsDataItems`    | Optional | `TimelineItemData[]`     | `[]`    | Active alarm feed items to display inline                                    |
+| `tailLogData`        | Optional | `UnknownRecord[]`        | —       | Recent log tail entries                                                      |
 
 ## Minimal example
 
@@ -26,4 +24,5 @@ import { ContainerControlsBox } from "@tetherto/mdk-react-devkit";
 
 ## Notes
 
-- Reads `devicesStore` and `actionsStore` internally — seed those stores via the adapter's `useDevices` / `useActions` hooks in your app.
+- Reads `devicesStore` and `actionsStore` internally — seed those stores via the adapter's `useDevices` / `useActions` hooks in your app
+- `isCompact` and `powerModesLog` are declared on `ContainerControlsBoxProps` but have no effect: neither is destructured by the component, and the power-mode log actually rendered comes from an internal `useState` populated from `tailLogData`, not from the `powerModesLog` prop

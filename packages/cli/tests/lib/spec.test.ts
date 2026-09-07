@@ -75,18 +75,17 @@ describe('buildStackSpec', () => {
       gatewayPort: 3847,
       kernelPort: 3848,
       workerBasePort: 3850,
-      workerPackages: ['@tetherto/mdk-worker-antminer'],
+      workerPackages: ['@tetherto/mdk-worker-demo'],
       gatewayPackages: [],
     });
     const worker = spec.spec.workers[0];
-    expect(worker.name).toBe('antminer-a');
-    expect(worker.package).toBe('@tetherto/mdk-worker-antminer');
+    expect(worker.name).toBe('demo-a');
+    expect(worker.package).toBe('@tetherto/mdk-worker-demo');
     expect(worker.port).toBe(3850);
     const config = worker.config as { mock: boolean; devices: Array<{ id: string; opts: Record<string, unknown> }> };
     expect(config.mock).toBe(true);
-    expect(config.devices[0].id).toBe(deviceId('antminer-a'));
+    expect(config.devices[0].id).toBe(deviceId('demo-a'));
     expect(config.devices[0].opts.port).toBe(MOCK_PORT_BASE);
-    expect(config.devices[0].opts.type).toBe('s19xp');
   });
 
   it('gives an unknown worker package an editable starter config', () => {

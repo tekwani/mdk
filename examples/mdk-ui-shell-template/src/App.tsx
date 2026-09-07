@@ -1,5 +1,6 @@
 import { useTokenPolling } from '@tetherto/mdk-react-adapter'
 import { AppHeader, MdkWordmark, Sidebar } from '@tetherto/mdk-react-devkit'
+import { CoPilot } from '@tetherto/mdk-ui-agent'
 import { useMemo } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 
@@ -70,6 +71,17 @@ export const App = () => {
           </main>
         </div>
       </div>
+
+      {/*
+        The operator co-pilot. Mounted once here rather than on a route, so it
+        stays available whichever page is showing — it answers about the fleet,
+        not about the page. Delete this line to remove it.
+
+        It needs the Gateway's `/agent/*` routes, which the agent plugin serves:
+        add `@tetherto/mdk-plugin-agent` to your stack's `mdk.yaml`. Without it
+        the panel opens and reports that the agent is not configured.
+      */}
+      <CoPilot />
     </div>
   )
 }

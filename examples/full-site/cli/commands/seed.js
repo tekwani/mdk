@@ -15,14 +15,15 @@ async function waitForDeviceRegistered (root, workerId, deviceId, { timeoutMs = 
   return false
 }
 
-// seed <whatsminer|antminer|avalon|...> [--container <id>] [--pos <pdu_socket>] [--port <p>]
+// seed <antminer|avalon|...> [--container <id>] [--pos <pdu_socket>] [--port <p>]
 // Check the local Kernel + worker are alive, delegate registration to
 // backend/provision, then restart the worker (the device set is fixed at
-// construction, so registerThing takes effect on restart).
+// construction, so registerThing takes effect on restart). whatsminer is not
+// a seedable type — see backend/provision.js.
 async function seed (ctx, { args, flags }) {
   const type = args[0]
   const spec = SEED_TYPES[type]
-  if (!spec) throw new Error(`ERR_UNKNOWN_SEED_TYPE: ${type || ''} (whatsminer|antminer|avalon|antspace|bitdeer|abb|satec|schneider)`)
+  if (!spec) throw new Error(`ERR_UNKNOWN_SEED_TYPE: ${type || ''} (antminer|avalon|antspace|bitdeer|abb|satec|schneider)`)
 
   requireRunning(ctx, 'kernel')
   requireRunning(ctx, spec.workerId)

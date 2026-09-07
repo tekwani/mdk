@@ -15,8 +15,8 @@ a remote Kernel over HRPC (cross-host deployments), and as a standalone process 
 
 ## Prerequisites
 
-- Node.js >=24 (LTS)
-- npm >=11
+- [Node.js][node] >=24 (LTS)
+- npm 11 (< 12)
 - Commands are run from the repository root
 - A Kernel instance running and reachable, or `kernelKey: false` to start without a Kernel connection (development only)
 
@@ -30,7 +30,7 @@ Most teams embed `startGateway()` in their own Node.js application rather than r
 This is the standard production path.
 
 ```js
-const { getKernel, startGateway } = require('@tetherto/mdk/backend/core/mdk')
+const { getKernel, startGateway } = require('@tetherto/mdk-core')
 
 const kernel = await getKernel()
 const server = await startGateway({ kernel, port: 3000 })
@@ -59,7 +59,7 @@ see the [key resolution order][gateway-readme].)
 On the host running Kernel, start Kernel and print its public key:
 
 ```js
-const { getKernel } = require('@tetherto/mdk/backend/core/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 
 const kernel = await getKernel()
 console.log('Kernel listener key:', kernel.getPublicKey().toString('hex'))
@@ -70,7 +70,7 @@ Share that hex string with the Gateway host.
 #### 2.2 Start the Gateway with `kernelKey`
 
 ```js
-const { startGateway } = require('@tetherto/mdk/backend/core/mdk')
+const { startGateway } = require('@tetherto/mdk-core')
 
 const server = await startGateway({
   kernelKey: '<kernel-listener-pubkey-hex>',
@@ -118,6 +118,9 @@ npm start
 - Choose a [deployment shape][deployment-topologies]
 
 ## Links
+
+[node]: https://nodejs.org/
+<!-- docs@tether.io: external link — preserve URL -->
 
 [terminology]: ../../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->

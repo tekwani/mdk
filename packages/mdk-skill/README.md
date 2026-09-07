@@ -14,11 +14,11 @@ routed as an ordered chain in [`mdk/SKILL.md`](./src/skills/mdk/SKILL.md).
 
 ```text
 src/
-├── skills/                 # hand-authored suite content (flat: one dir per skill)
+├── skills/                 # suite content (flat: one dir per skill), hand-authored except where noted
 │   ├── mdk/                #   router + suite-wide references/
 │   ├── mdk-worker-plugin/  #   worker plugin workflow + scripts/assets
 │   ├── mdk-gateway-plugin/     #   Gateway plugin workflow (scaffold via `mdk create plugin`)
-│   ├── mdk-ui-component/   #   dashboard page workflow + ui-registry
+│   ├── mdk-ui-component/   #   dashboard page workflow + ui-registry (generated)
 │   └── mdk-deployment/     #   mdk.yaml / mdk run workflow
 ├── mdk-contract.schema.json  # derived contract schema (owned here; see its $comment)
 ├── sources.map.json        # source-of-truth -> bundle mapping
@@ -28,6 +28,13 @@ src/
 └── install.mjs             # CLI wrapper: dist/skills/* -> .cursor|.claude/skills/
 dist/skills/                # assembled suite — build output, gitignored, never hand-edited
 ```
+
+[`skills/mdk-ui-component/references/ui-registry.json`](./src/skills/mdk-ui-component/references/ui-registry.json) is generated, not hand-authored. It is a verbatim copy of the devkit's
+`dist/registry.json`, written by [`docs/scripts/sync-ui-registry.mjs`](../../docs/scripts/sync-ui-registry.mjs). Regenerate it with
+`npm run generate:ui-registry` from the repo root, which rebuilds the devkit registry and rewrites this file. Hand-edits do not survive the next run,
+and a stale copy tells coding agents to use component props that no longer exist. The
+[`docs-freshness`](../../.github/workflows/docs-freshness.yml) workflow watches this file and its devkit source on PRs and
+warns, rather than blocks, when it drifts.
 
 Skills are assembled and installed **flat** — clients discover
 `<skills-dir>/<name>/SKILL.md` one level deep, and each skill's `description`

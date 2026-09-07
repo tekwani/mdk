@@ -4,7 +4,7 @@
     {
       "source": "packages/mdk-skill/src/skills",
       "dest": ".",
-      "note": "Hand-authored suite content: router + mdk-worker-plugin, mdk-gateway-plugin, mdk-ui-component, mdk-deployment (full workflows)."
+      "note": "Hand-authored suite content: router + mdk-worker-plugin, mdk-gateway-plugin, mdk-ui-component, mdk-deployment (full workflows). One file in this tree is generated, not hand-authored: skills/mdk-ui-component/references/ui-registry.json is copied verbatim from ui/packages/react-devkit/dist/registry.json by docs/scripts/sync-ui-registry.mjs. Regenerate it with `npm run generate:ui-registry` from the repo root; never hand-edit it."
     },
     {
       "source": "packages/mdk-skill/src/mdk-contract.schema.json",

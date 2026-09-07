@@ -8,22 +8,25 @@ upstream domain components can keep their data wrangling local.
 
 ## Props
 
-| Prop              | Type                              | Required | Default | Description                                              |
-| ----------------- | --------------------------------- | -------- | ------- | -------------------------------------------------------- |
-| `title`           | `string`                          | no       | —       | Chart title.                                             |
-| `data`            | `LineChartCardData`               | no       | —       | Pre-shaped chart data.                                   |
-| `rawData`         | `unknown`                         | no       | —       | Raw data; pair with `dataAdapter`.                       |
-| `dataAdapter`     | `(rawData) => LineChartCardData`  | no       | —       | Transforms `rawData` into chart data.                    |
-| `timelineOptions` | `TimelineOption[]`                | no       | —       | Range selector options.                                  |
-| `timeline`        | `string`                          | no       | —       | Controlled timeline.                                     |
-| `defaultTimeline` | `string`                          | no       | first option | Default timeline for uncontrolled mode.              |
-| `onTimelineChange`| `(value: string) => void`         | no       | —       | Called when user selects a new timeline.                 |
-| `detailLegends`   | `boolean`                         | no       | `false` | Show detailed legend (current value + delta per series). |
-| `isLoading`       | `boolean`                         | no       | `false` | Show loading state.                                      |
-| `shouldResetZoom` | `boolean`                         | no       | `true`  | Reset zoom when timeline changes.                        |
-| `chartProps`      | `Partial<LineChartProps>`         | no       | —       | Pass-through props for the underlying `LineChart`.       |
-| `minHeight`       | `number \| string`                | no       | `350`   | Minimum chart height.                                    |
-| `className`       | `string`                          | no       | —       | Additional class names.                                  |
+| Prop               | Status   | Type                                  | Default      | Description                                                             |
+| ------------------ | -------- | ------------------------------------- | ------------ | ----------------------------------------------------------------------- |
+| `title`            | Optional | `string`                              | —            | Chart title                                                             |
+| `data`             | Optional | `LineChartCardData`                   | —            | Pre-shaped chart data                                                   |
+| `rawData`          | Optional | `unknown`                             | —            | Raw data; pair with `dataAdapter`                                       |
+| `dataAdapter`      | Optional | `(rawData) => LineChartCardData`      | —            | Transforms `rawData` into chart data                                    |
+| `timelineOptions`  | Optional | `TimelineOption[]`                    | —            | Range selector options                                                  |
+| `timeline`         | Optional | `string`                              | —            | Controlled timeline                                                     |
+| `defaultTimeline`  | Optional | `string`                              | first option | Default timeline for uncontrolled mode                                  |
+| `onTimelineChange` | Optional | `(value: string) => void`             | —            | Called when user selects a new timeline                                 |
+| `detailLegends`    | Optional | `boolean`                             | `false`      | Show detailed legend (current value + delta per series)                 |
+| `isLoading`        | Optional | `boolean`                             | `false`      | Show loading state                                                      |
+| `shouldResetZoom`  | Optional | `boolean`                             | `true`       | Reset zoom when timeline changes                                        |
+| `chartProps`       | Optional | `Partial<LightWeightLineChartProps>`  | —            | Pass-through props for the underlying `LineChart`                       |
+| `chartRef`         | Optional | `MutableRefObject<IChartApi \| null>` | —            | Ref to the lightweight-charts `IChartApi` instance                      |
+| `minHeight`        | Optional | `number \| string`                    | `350`        | Minimum chart height                                                    |
+| `headerAction`     | Optional | `ReactNode`                           | —            | Action rendered on the right of the card header (e.g. an expand toggle) |
+| `titleExtra`       | Optional | `ReactNode`                           | —            | Node rendered next to the title (e.g. an info tooltip)                  |
+| `className`        | Optional | `string`                              | —            | Additional class names                                                  |
 
 ## Minimal example
 
@@ -44,7 +47,7 @@ the same directory for the full shape.
 
 ## Notes
 
-- Wrapped in `withErrorBoundary` — chart-level crashes won't blow up the page.
+- Wrapped in `withErrorBoundary` — chart-level crashes won't blow up the page
 - For mining-domain charts, pair `<LineChartCard>` with adapter chart hooks
   (`useHashrateChartData`, `useSiteConsumptionChartData`) — the hooks
-  return the `ChartCardData` payload pre-shaped.
+  return the `ChartCardData` payload pre-shaped

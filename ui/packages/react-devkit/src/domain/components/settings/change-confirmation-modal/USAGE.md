@@ -4,15 +4,15 @@ Generic confirmation dialog that presents a summary of pending changes before ap
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `open` | `boolean` | yes | — | Controls whether the dialog is visible. |
-| `title` | `string` | yes | — | Dialog header title. |
-| `onConfirm` | `VoidFunction` | yes | — | Called when the user clicks the confirm button. |
-| `onClose` | `VoidFunction` | yes | — | Called when the user cancels or dismisses the dialog. |
-| `children` | `ReactNode` | yes | — | Body content — use to describe the change being confirmed. |
-| `confirmText` | `string` | no | `"Confirm"` | Label for the confirm button. |
-| `destructive` | `boolean` | no | `false` | When `true`, the confirm button uses the danger variant. |
+| Prop          | Status   | Type           | Default     | Description                                               |
+| ------------- | -------- | -------------- | ----------- | --------------------------------------------------------- |
+| `open`        | Required | `boolean`      | —           | Controls whether the dialog is visible                    |
+| `title`       | Required | `string`       | —           | Dialog header title                                       |
+| `onConfirm`   | Required | `VoidFunction` | —           | Called when the user clicks the confirm button            |
+| `onClose`     | Required | `VoidFunction` | —           | Called when the user cancels or dismisses the dialog      |
+| `children`    | Required | `ReactNode`    | —           | Body content — use to describe the change being confirmed |
+| `confirmText` | Optional | `string`       | `"Confirm"` | Label for the confirm button                              |
+| `destructive` | Optional | `boolean`      | `false`     | When `true`, the confirm button uses the danger variant   |
 
 ## Minimal example
 
@@ -31,6 +31,6 @@ Generic confirmation dialog that presents a summary of pending changes before ap
 
 ## Notes
 
-- Closing via the backdrop is disabled to prevent accidental dismissal.
-- Use `destructive={true}` any time the action is irreversible (delete, reset, revoke).
-- For non-destructive confirmations such as applying setting changes, omit `destructive` or set it to `false`.
+- Closing via the backdrop is disabled to prevent accidental dismissal
+- Use `destructive={true}` any time the action is irreversible (delete, reset, revoke)
+- For non-destructive confirmations such as applying setting changes, omit `destructive` or set it to `false`

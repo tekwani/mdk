@@ -5,15 +5,15 @@ indicators, loading skeleton, and empty state.
 
 ## Props
 
-| Prop           | Type                       | Required | Default          | Description                                          |
-| -------------- | -------------------------- | -------- | ---------------- | ---------------------------------------------------- |
-| `label`        | `string`                   | no       | `"Active Alerts"` | Header label shown above the list.                  |
-| `isLoading`    | `boolean`                  | no       | `false`          | Show skeleton rows instead of items.                |
-| `className`    | `string`                   | no       | —                | Additional class names appended to the root.        |
-| `skeletonRows` | `number`                   | no       | `4`              | Number of skeleton rows shown when `isLoading`.     |
-| `emptyMessage` | `string`                   | no       | —                | Message rendered when no items.                     |
-| `items`        | `TIncidentRowProps[]`      | no       | `[]`             | Incident rows to render.                            |
-| `onItemClick`  | `(id: string) => void`     | no       | —                | Called with the incident id when a row is clicked.  |
+| Prop           | Status   | Type                   | Default           | Description                                       |
+| -------------- | -------- | ---------------------- | ----------------- | ------------------------------------------------- |
+| `label`        | Optional | `string`               | `"Active Alerts"` | Header label shown above the list                 |
+| `isLoading`    | Optional | `boolean`              | `false`           | Show skeleton rows instead of items               |
+| `className`    | Optional | `string`               | —                 | Additional class names appended to the root       |
+| `skeletonRows` | Optional | `number`               | `4`               | Number of skeleton rows shown when `isLoading`    |
+| `emptyMessage` | Optional | `string`               | —                 | Message rendered when no items                    |
+| `items`        | Optional | `TIncidentRowProps[]`  | `[]`              | Incident rows to render                           |
+| `onItemClick`  | Optional | `(id: string) => void` | —                 | Called with the incident id when a row is clicked |
 
 ## Minimal example
 
@@ -33,8 +33,8 @@ least an `id`, `severity` (`critical | warning | info`), and `title`.
 ## Notes
 
 - Designed for a side-panel placement, but works equally well as a section
-  inside a dashboard page.
+  inside a dashboard page
 - Rows are virtualized via `@tanstack/react-virtual` — the card stays
-  responsive even with thousands of incidents in `items`.
+  responsive even with thousands of incidents in `items`
 - Use `CurrentAlerts` / `HistoricalAlerts` instead when you need the full
-  filterable, sortable data-table experience.
+  filterable, sortable data-table experience

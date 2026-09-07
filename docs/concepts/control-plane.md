@@ -9,7 +9,7 @@ todo: "Gap — Gateway does not yet pass a persistent caller seed to the HRPC cl
 This page covers authenticated requests, live reads, command dispatch, and approval-gated writes. It spans
 the Gateway, Kernel, and Workers, but each layer owns a different responsibility.
 
-Use this page to understand which layer receives a request, which layer validates it, and when a write becomes a command. 
+Use this page to understand which layer receives a request, which layer validates it, and when a write becomes a command.
 
 > [!NOTE]
 > For package-level APIs and configuration, use the [Gateway README][gateway-readme], [Kernel README][kernel-readme], and [Worker README][worker-readme].

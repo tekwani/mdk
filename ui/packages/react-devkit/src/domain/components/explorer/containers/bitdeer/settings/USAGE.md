@@ -4,9 +4,9 @@ Settings tab for a Bitdeer container. Renders vendor-specific parameter display 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `UnknownRecord` | no | `{}` | Container settings payload from the API. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `UnknownRecord` | `{}` | Container settings payload from the API |
 
 ## Minimal example
 

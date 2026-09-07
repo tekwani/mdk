@@ -76,9 +76,38 @@ import { ProfileMenu, authStore } from '@tetherto/mdk-react-devkit'
 />
 ```
 
+## Props
+
+### `PendingActionsButton`
+
+| Prop        | Status   | Type     | Default | Description            |
+| ----------- | -------- | -------- | ------- | ---------------------- |
+| `onClick`   | Optional | `(event: MouseEvent<HTMLButtonElement>) => void` | toggles `actionsStore` sidebar | Click handler override |
+| `className` | Optional | `string` | —       | Additional class names |
+
+### `AlarmsBellButton`
+
+| Prop              | Status   | Type                                                                      | Default           | Description                       |
+| ----------------- | -------- | ------------------------------------------------------------------------- | ----------------- | --------------------------------- |
+| `counts`          | Optional | `{ critical?: number; high?: number; medium?: number }`                   | `{}`              | Severity-bucketed alarm counts rendered in the stacked badge |
+| `onClick`         | Optional | `(event: MouseEvent<HTMLButtonElement>) => void`                          | —                 | Click handler for the bell itself |
+| `onSeverityClick` | Optional | `(severity: AlarmSeverity, event: MouseEvent<HTMLButtonElement>) => void` | —                 | Makes each severity count its own button (severity-filtered deep-link); omitted renders plain text |
+| `label`           | Optional | `string`                                                                  | `"Active alarms"` | Accessible label                  |
+| `className`       | Optional | `string`                                                                  | —                 | Additional class names            |
+
+### `ProfileMenu`
+
+| Prop        | Status   | Type                | Default              | Description                                                    |
+| ----------- | -------- | ------------------- | -------------------- | -------------------------------------------------------------- |
+| `items`     | Required | `ProfileMenuItem[]` | —                    | Items rendered in the dropdown, top-to-bottom                  |
+| `user`      | Optional | `ReactNode`         | —                    | User label rendered at the top of the dropdown (e.g. an email) |
+| `icon`      | Optional | `ReactNode`         | `<UserAvatarIcon />` | Override the trigger icon                                      |
+| `label`     | Optional | `string`            | `"Profile menu"`     | Accessible label for the trigger button                        |
+| `className` | Optional | `string`            | —                    | Additional class names                                         |
+
 ## Notes
 
 - Both buttons own their styles in cascade layer `mdk`; consumer overrides
-  in `app` win without specificity hacks.
+  in `app` win without specificity hacks
 - The bell badge hides itself entirely when all counts are undefined — the
-  empty state is the loading state too.
+  empty state is the loading state too

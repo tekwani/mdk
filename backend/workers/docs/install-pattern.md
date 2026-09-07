@@ -98,7 +98,6 @@ The example files are checked in; the copied actives are gitignored, leaving roo
 | Worker | USAGE.md | examples | manifest entry |
 | --- | --- | --- | --- |
 | [`miners/antminer`](../miners/antminer/README.md) | [USAGE.md](../miners/antminer/USAGE.md) | [repo example](../../../examples/backend/miners/antminer/README.md) | [workers-manifest.yaml](workers-manifest.yaml) |
-| [`miners/whatsminer`](../miners/whatsminer/README.md) | [USAGE.md](../miners/whatsminer/USAGE.md) | [repo example](../../../examples/backend/miners/whatsminer/index.js) | [workers-manifest.yaml](workers-manifest.yaml) |
 | [`miners/avalon`](../miners/avalon/README.md) | [USAGE.md](../miners/avalon/USAGE.md) | [repo example](../../../examples/backend/miners/avalon/README.md)| [workers-manifest.yaml](workers-manifest.yaml) |
 | containers, minerpools, power-meter, temperature | _Phase 3+_ | varies under [`examples/backend/`](../../../examples/backend/README.md) | _Phase 3+_ |
 

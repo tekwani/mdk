@@ -1,7 +1,7 @@
 'use strict'
 
 const debug = require('debug')('mdk:worker:abb')
-const ModbusFacility = require('svc-facs-modbus')
+const ModbusFacility = require('@tetherto/svc-facs-modbus')
 const B2XPowerMeter = require('../lib/models/b2x.powermeter')
 const M1M20PowerMeter = require('../lib/models/m1m20.powermeter')
 const M4M20PowerMeter = require('../lib/models/m4m20.powermeter')

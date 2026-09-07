@@ -11,7 +11,7 @@ MDK is built around a three tier ownership model:
 - **Kernel is invariant** The Kernel provides small coordination layer every deployment runs unchanged: it routes validated commands to
   whichever Worker owns a device, and pulls telemetry back.
 - **Extensions are yours** [Worker plugins][workers-concept] wrap a device family; [Gateway plugins][gateway-concept] add
-  HTTP routes, aggregation, and auth. Both are code you write and own, isolated from the Kernel and from each other. Nothing above the Gateway is 
+  HTTP routes, aggregation, and auth. Both are code you write and own, isolated from the Kernel and from each other. Nothing above the Gateway is
   required: a deployment can dispatch commands and pull telemetry with just [`@tetherto/mdk-client`][client-concept].
 - **The UI devkit is optional** The [MDK App Toolkit][app-toolkit] is the supported path for teams that want one.
 
@@ -66,7 +66,7 @@ one device family (the contract declares the capability surface; the plugin's ha
 **[Gateway][gateway-concept]**: a container that hosts plugins and exposes them over HTTP. It is the active side of the
 Kernel connection (it dials Kernel, never the reverse). This is the tier where *user*-level authentication, aggregation,
 and business logic live. Aggregation here means the cross-Worker queries no single Worker can answer — site hashrate,
-average temperature, cross-rack efficiency — resolved in controller code, since Kernel computes none of them. Kernel's own 
+average temperature, cross-rack efficiency — resolved in controller code, since Kernel computes none of them. Kernel's own
 allowlist, when configured, gates which *connections* it accepts: a transport-level check, not a user identity.
 
 **[Workers][workers-concept]**: the integration handlers between physical hardware and Kernel, and the source of truth
@@ -85,7 +85,7 @@ the open web; HRPC's key-based addressing means a Worker or Gateway is reachable
 host or across a DHT, with no separate TLS/cert story and no public-facing port to secure. The trade-off is a caller must
 hold or discover the callee's public key before it can connect: there is no URL to type into a browser.
 
-In practice: a caller sends one request and receives one response over that channel; a dropped connection is the client's problem 
+In practice: a caller sends one request and receives one response over that channel; a dropped connection is the client's problem
 to recover from: the next call through [`@tetherto/mdk-client`][client-concept] reconnects; Kernel does not buffer or replay what it couldn't
 deliver while a link was down.
 
@@ -93,7 +93,7 @@ deliver while a link was down.
 
 Kernel's own store holds only its Worker registry, device capabilities, and the write-command log: never telemetry.
 Telemetry is Worker-owned: a Worker persists its own device history, and every telemetry read anywhere above it (Gateway
-plugin, dashboard, agent) is a live pull through that chain, not a read from a Kernel-side cache. 
+plugin, dashboard, agent) is a live pull through that chain, not a read from a Kernel-side cache.
 
 ## The stack
 

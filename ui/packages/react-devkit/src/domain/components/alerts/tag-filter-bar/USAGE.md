@@ -4,15 +4,15 @@ Cascader-based filter bar for the alerts table. Lets operators filter by tags, a
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `filterTags` | `string[]` | yes | — | Active tag filter values. |
-| `localFilters` | `AlertLocalFilters` | yes | — | Current local filter state. |
-| `onSearchTagsChange` | `(tags: string[]) => void` | yes | — | Called when tag filter changes. |
-| `onLocalFiltersChange` | `(filters: AlertLocalFilters) => void` | yes | — | Called when any local filter changes. |
-| `typeFiltersForSite` | `CascaderOption[]` | no | — | Site-specific type filter options. |
-| `placeholder` | `string` | no | — | Search input placeholder. |
-| `className` | `string` | no | — | Additional CSS class. |
+| Prop                   | Status   | Type                                   | Default | Description                          |
+| ---------------------- | -------- | -------------------------------------- | ------- | ------------------------------------ |
+| `filterTags`           | Required | `string[]`                             | —       | Active tag filter values             |
+| `localFilters`         | Required | `AlertLocalFilters`                    | —       | Current local filter state           |
+| `onSearchTagsChange`   | Required | `(tags: string[]) => void`             | —       | Called when tag filter changes       |
+| `onLocalFiltersChange` | Required | `(filters: AlertLocalFilters) => void` | —       | Called when any local filter changes |
+| `typeFiltersForSite`   | Optional | `CascaderOption[]`                     | —       | Site-specific type filter options    |
+| `placeholder`          | Optional | `string`                               | —       | Search input placeholder             |
+| `className`            | Optional | `string`                               | —       | Additional CSS class                 |
 
 ## Minimal example
 

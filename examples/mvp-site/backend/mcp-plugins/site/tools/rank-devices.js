@@ -31,7 +31,7 @@ module.exports = {
         : `No ${plural(family, 0)} reported ${metric}${unavailable ? ` (${unavailable} did not report)` : ''}.`,
       metric,
       order,
-      devices: top,
+      items: top,
       unavailable
     })
   }

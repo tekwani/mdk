@@ -1,0 +1,65 @@
+{
+  "name": "write-rejected",
+  "prompt": "Reboot demo-miner-a-0",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "act_device",
+      "args": {
+        "ref": "demo-miner-a-0",
+        "action": "reboot"
+      },
+      "turnId": "a5cc1b6e-d19f-415b-9722-93356622d692",
+      "seq": 0,
+      "ts": 0
+    },
+    {
+      "type": "pending_approval",
+      "name": "act_device",
+      "args": {
+        "ref": "demo-miner-a-0",
+        "action": "reboot"
+      },
+      "turnId": "a5cc1b6e-d19f-415b-9722-93356622d692",
+      "seq": 1,
+      "ts": 0,
+      "approvalId": "c6ff177d-2135-4edf-9fdb-2a11e7932940"
+    },
+    {
+      "type": "tool_result",
+      "name": "act_device",
+      "text": "(rejected by operator — not executed)",
+      "turnId": "a5cc1b6e-d19f-415b-9722-93356622d692",
+      "seq": 2,
+      "ts": 4
+    },
+    {
+      "type": "token",
+      "text": "Acknowled",
+      "turnId": "a5cc1b6e-d19f-415b-9722-93356622d692",
+      "seq": 3,
+      "ts": 555
+    },
+    {
+      "type": "token",
+      "text": "ged",
+      "turnId": "a5cc1b6e-d19f-415b-9722-93356622d692",
+      "seq": 4,
+      "ts": 592
+    },
+    {
+      "type": "token",
+      "text": ".",
+      "turnId": "a5cc1b6e-d19f-415b-9722-93356622d692",
+      "seq": 5,
+      "ts": 636
+    },
+    {
+      "type": "done",
+      "text": "Acknowledged.",
+      "turnId": "a5cc1b6e-d19f-415b-9722-93356622d692",
+      "seq": 6,
+      "ts": 677
+    }
+  ]
+}

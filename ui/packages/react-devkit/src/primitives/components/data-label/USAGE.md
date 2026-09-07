@@ -6,11 +6,11 @@ Invalid or missing dates render as `--/--/--`.
 
 ## Props
 
-| Prop        | Type           | Required | Default    | Description                   |
-| ----------- | -------------- | -------- | ---------- | ----------------------------- |
-| `startDate` | `Date \| null` | no       | —          | Range start.                  |
-| `endDate`   | `Date \| null` | no       | —          | Range end.                    |
-| `label`     | `string`       | no       | `"PERIOD"` | Header text before the colon. |
+| Prop        | Status   | Type           | Default    | Description |
+| ----------- | -------- | -------------- | ---------- | ----------- |
+| `startDate` | Optional | `Date \| null` | —          | Range start |
+| `endDate`   | Optional | `Date \| null` | —          | Range end   |
+| `label`     | Optional | `string`       | `"PERIOD"` | Header text before the colon |
 
 ## Example
 
@@ -23,6 +23,6 @@ const end = new Date(2025, 2, 15)
 
 ## Notes
 
-- Wrap your app in `<MdkProvider>` so the timezone store is available.
-- Styling uses the `mdk-data-label` BEM block; no size or color variants.
-- Use a dark toolbar background so default light text remains readable.
+- Wrap your app in `<MdkProvider>` so the timezone store is available
+- Styling uses the `mdk-data-label` BEM block; no size or color variants
+- Use a dark toolbar background so default light text remains readable

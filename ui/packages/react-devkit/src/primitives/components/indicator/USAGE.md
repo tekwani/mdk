@@ -4,14 +4,14 @@ A colored pill/badge used to display statuses, counts, or labels. Supports color
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `color` | `'red' \| 'gray' \| 'blue' \| 'yellow' \| 'green' \| 'purple' \| 'amber' \| 'slate'` | no | `'gray'` | Background color variant |
-| `size` | `ComponentSize` (`'sm' \| 'md' \| 'lg'`) | no | `'md'` | Controls padding and font size |
-| `vertical` | `boolean` | no | `false` | Stacks child elements vertically and adds extra spacing |
-| `children` | `React.ReactNode` | no | — | Content inside the indicator (text, icons, or multiple elements) |
-| `onClick` | `VoidFunction` | no | — | Makes the indicator clickable and adds hover styles |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop        | Status   | Type              | Default  | Description                                                      |
+| ----------- | -------- | ----------------- | -------- | ---------------------------------------------------------------- |
+| `color`     | Optional | `'red' \| 'gray' \| 'blue' \| 'yellow' \| 'green' \| 'purple' \| 'amber' \| 'slate'` | `'gray'` | Background color variant                                         |
+| `size`      | Optional | `ComponentSize` (`'sm' \| 'md' \| 'lg'`) | `'md'`   | Controls padding and font size                                   |
+| `vertical`  | Optional | `boolean`         | `false`  | Stacks child elements vertically and adds extra spacing          |
+| `children`  | Optional | `React.ReactNode` | —        | Content inside the indicator (text, icons, or multiple elements) |
+| `onClick`   | Optional | `VoidFunction`    | —        | Makes the indicator clickable and adds hover styles              |
+| `className` | Optional | `string`          | —        | Additional class for the root element                            |
 
 All other `div` HTML attributes are also forwarded.
 

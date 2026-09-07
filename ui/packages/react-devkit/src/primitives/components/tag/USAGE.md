@@ -4,11 +4,11 @@ A small inline label used to display categories, statuses, or metadata. Renders 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `color` | `'dark' \| 'red' \| 'green' \| 'amber' \| 'blue'` | no | `'dark'` | Color variant |
-| `children` | `React.ReactNode` | no | — | Tag content |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop        | Status   | Type              | Default  | Description   |
+| ----------- | -------- | ----------------- | -------- | ------------- |
+| `color`     | Optional | `'dark' \| 'red' \| 'green' \| 'amber' \| 'blue'` | `'dark'` | Color variant |
+| `children`  | Optional | `React.ReactNode` | —        | Tag content   |
+| `className` | Optional | `string`          | —        | Additional class for the root element |
 
 All other `span` HTML attributes are forwarded.
 

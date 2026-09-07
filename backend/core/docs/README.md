@@ -6,7 +6,7 @@ See the [architecture overview](../../../docs/concepts/architecture.md) to under
 |---|---|---|
 | `@tetherto/mdk-kernel` | Kernel | [`backend/core/kernel/`](../kernel/index.js) |
 | `@tetherto/mdk-gateway` | Gateway Node.js server | [`backend/core/gateway/`](../gateway/worker.js) |
-| `@tetherto/mdk` | Bootstrap utilities and SDK entry | [`backend/core/mdk/`](../mdk/index.js) |
+| `@tetherto/mdk-core` | Bootstrap utilities and SDK entry | [`backend/core/mdk/`](../mdk/index.js) |
 | `@tetherto/mdk-worker` | Worker Runtime: hosts a Worker Plugin's devices behind one HRPC channel to Kernel | [`backend/core/mdk-worker/`](../mdk-worker/lib/worker-runtime.js) |
 | `@tetherto/mdk-client` | Client / protocol transport | [`backend/core/client/`](../client/index.js) |
 | `@tetherto/mdk-mcp` | MCP server: exposes MDK data/actions to AI agents as tools | [`backend/core/mcp/`](../mcp/README.md) |
@@ -16,10 +16,10 @@ Each is detailed below.
 ## Kernel
 
 Lives in [`backend/core/kernel/`](../kernel/index.js). Discovers and registers Workers, dispatches commands through a crash-recoverable state machine,
- and pulls telemetry on a fixed schedule. The [Workers discovery model](../../workers/docs/architecture.md#discovery-model) covers local, same-process, 
+ and pulls telemetry on a fixed schedule. The [Workers discovery model](../../workers/docs/architecture.md#discovery-model) covers local, same-process,
  and DHT modes.
 
-Kernel is **pull-only and passive** — it never pushes to your app. You query it over HRPC using its public key, published to a key file 
+Kernel is **pull-only and passive** — it never pushes to your app. You query it over HRPC using its public key, published to a key file
 (`<tmpdir>/mdk/.kernel-key`) on start. It fans the query out to online Workers and aggregates the response.
 
 [Kernel](../kernel/README.md#architecture) is organized into sub-systems instantiated by modules:
@@ -34,7 +34,7 @@ Kernel is **pull-only and passive** — it never pushes to your app. You query i
 
 ## Gateway
 
-Lives in [`backend/core/gateway/`](../gateway/worker.js). The Gateway is where your business logic is defined. It's your Node.js server that connects to 
+Lives in [`backend/core/gateway/`](../gateway/worker.js). The Gateway is where your business logic is defined. It's your Node.js server that connects to
 Kernel over HRPC, sends typed queries and receives aggregated responses. You decide what happens to your telemetry data.
 
 ```js
@@ -48,7 +48,7 @@ await client.pullTelemetry(deviceId, { type: 'metrics' })
 await client.getCapabilities(deviceId)
 ```
 
-## MDK (`@tetherto/mdk`)
+## MDK (`@tetherto/mdk-core`)
 
 Lives in [`backend/core/mdk/`](../mdk/index.js). Bootstrap utilities and the SDK entry point. Exposes [`getKernel()`, `startGateway()`,
 and `waitForDiscovery()`](../mdk/index.js). Worker boot itself is per-package: each Worker exports its own boot function
@@ -61,7 +61,7 @@ Kernel. Every Worker package (miners, containers, power meters, …) constructs 
 
 ## Client (`@tetherto/mdk-client`)
 
-Lives in [`backend/core/client/`](../client/index.js). The protocol client that encodes MDK Protocol envelopes and shuttles `ACTIONS.*` requests/responses over 
+Lives in [`backend/core/client/`](../client/index.js). The protocol client that encodes MDK Protocol envelopes and shuttles `ACTIONS.*` requests/responses over
 HRPC (by the Kernel's public key). Gateways embed it to talk to Kernel.
 
 ## MCP server (`@tetherto/mdk-mcp`)

@@ -4,7 +4,7 @@ todo: "see docs/reference/maintainers/ia.md — check:plugin-reference-fresh and
 
 # @tetherto/mdk-plugins
 
-Default [Gateway](../gateway/README.md) plugins and the declarative plugin format for extending the MDK Gateway with 
+Default [Gateway](../gateway/README.md) plugins and the declarative plugin format for extending the MDK Gateway with
 custom HTTP routes.
 
 ## Overview
@@ -14,7 +14,7 @@ A plugin is a directory containing:
 - `mdk-plugin.json`: manifest declaring route identity, HTTP surface, and caching
 - One or more controller files — each exports `async function (req)`
 
-The Gateway registers `telemetry`, `site-hashrate`, and `site-monitor` automatically, and accepts additional plugin directories via 
+The Gateway registers `telemetry`, `site-hashrate`, and `site-monitor` automatically, and accepts additional plugin directories via
 `startGateway({ extraPluginDirs: [...] })`. The `auth` plugin ships here but is [neither registered nor wired](#the-bundled-auth-plugin).
 
 > [!TIP]
@@ -23,7 +23,7 @@ The Gateway registers `telemetry`, `site-hashrate`, and `site-monitor` automatic
 
 ## Manifest format
 
-Read a real manifest rather than a field table — every supported field is exercised across the shipping manifests, and they are validated at startup 
+Read a real manifest rather than a field table — every supported field is exercised across the shipping manifests, and they are validated at startup
 so they cannot drift:
 
 - [telemetry manifest](telemetry/mdk-plugin.json): `cache`, query `parameters`, `responses`, `constraints`, `errors`, and
@@ -31,8 +31,8 @@ named-export handlers (`./controllers/power-mode.js#timeline`)
 - [site-plugin manifest](../../../examples/full-site/plugins/site/mdk-plugin.json): a `POST` with a `requestBody`, path
 `parameters`, and `safety`
 
-What is required and what is rejected is defined by `_validateManifest` in [`plugin-loader.js`](../gateway/workers/lib/plugin-loader.js): `name`, 
-`version`, and a non-empty `routes` array, plus per route an `id`, a `handler`, an allowed `http.method` (`GET`/`POST`/`PUT`/`DELETE`/`PATCH`), an 
+What is required and what is rejected is defined by `_validateManifest` in [`plugin-loader.js`](../gateway/workers/lib/plugin-loader.js): `name`,
+`version`, and a non-empty `routes` array, plus per route an `id`, a `handler`, an allowed `http.method` (`GET`/`POST`/`PUT`/`DELETE`/`PATCH`), an
 `http.path`, and unique route ids. Path parameters in `{param}` form are normalized to Fastify's `:param`.
 
 Beyond the validated fields, three are read:
@@ -59,12 +59,12 @@ See [the guide's Stream routes step](../../../docs/guides/gateway/plugins.md#str
 The following have no reader:
 
 - `constraints`, `errors`, and `safety` record intent for humans and agents reading the manifest
-- [`auth` and `permissions`](../../../docs/guides/gateway/plugins.md#auth-and-permissions) may be used to document what a route expects, 
+- [`auth` and `permissions`](../../../docs/guides/gateway/plugins.md#auth-and-permissions) may be used to document what a route expects,
 and pair each declaration with the matching check in the controller that serves it
 
 ## Controllers
 
-A controller exports `async function (req)` and returns a value that is serialized as a `200` JSON response. Use `"handler": 
+A controller exports `async function (req)` and returns a value that is serialized as a `200` JSON response. Use `"handler":
 "./file.js#namedExport"` for a non-default export. Any shipping controller shows the shape — for example,
 [`hashrate.js`](telemetry/controllers/hashrate.js).
 
@@ -87,19 +87,19 @@ module once per plugin rather than per controller
 
 ## Default plugins
 
-These plugins ship with MDK: `telemetry`, `site-hashrate`, and `site-monitor`. They are registered on Gateway startup by 
-[`http.node.wrk.js`](../gateway/workers/http.node.wrk.js); `auth` is not, and mounting it needs work first 
+These plugins ship with MDK: `telemetry`, `site-hashrate`, and `site-monitor`. They are registered on Gateway startup by
+[`http.node.wrk.js`](../gateway/workers/http.node.wrk.js); `auth` is not, and mounting it needs work first
 ([the bundled auth plugin](#the-bundled-auth-plugin)).
 
 > [!Note]
 > Every route below is served without authentication: the Gateway applies no token check of its own; [protecting a route is
 > controller responsibility](../../../docs/guides/gateway/plugins.md#auth-and-permissions).
 
-The tables are generated from every `mdk-plugin.json` in this directory by 
-[`docs/scripts/generate-plugin-reference.js`](../../../docs/scripts/generate-plugin-reference.js), so they cover the shipped plugins only. Routes you 
+The tables are generated from every `mdk-plugin.json` in this directory by
+[`docs/scripts/generate-plugin-reference.js`](../../../docs/scripts/generate-plugin-reference.js), so they cover the shipped plugins only. Routes you
 add through `extraPluginDirs` are owned by their own manifests and are not listed here.
 
-<!-- BEGIN GENERATED: default-plugins. DO NOT EDIT. Regenerate with `npm run generate:plugin-reference`. Source: backend/core/plugins/*/mdk-plugin.json -->
+<!-- BEGIN GENERATED: default-plugins. DO NOT EDIT. Generated by docs/scripts/generate-plugin-reference.js: run `npm run generate:plugin-reference` from backend/core/plugins. Source: backend/core/plugins/*/mdk-plugin.json -->
 
 ### `auth`
 
@@ -148,16 +148,16 @@ add through `extraPluginDirs` are owned by their own manifests and are not liste
 [`auth/controllers/ext-data.js`](auth/controllers/ext-data.js) all still declare a second `services` handler parameter and call `ctx.authLib` or
 `ctx.dataProxy` on it, but [`plugin-adapter.js`](../gateway/workers/lib/plugin-adapter.js) invokes every handler with `req` alone, so
 `services` arrives `undefined` — all three throw a `TypeError` on that, which the worker's `onError` hook returns as HTTP 400
-- [`auth/controllers/userinfo.js`](auth/controllers/userinfo.js) returns `req._info.user`. Nothing populates `_info`, which 
+- [`auth/controllers/userinfo.js`](auth/controllers/userinfo.js) returns `req._info.user`. Nothing populates `_info`, which
 [`plugin-adapter.js`](../gateway/workers/lib/plugin-adapter.js) defaults to `{}`, so the route answers with an empty body
 
-Authentication is [yours to supply](../../../docs/guides/gateway/plugins.md#auth-and-permissions): bring an identity layer and implement the checks 
+Authentication is [yours to supply](../../../docs/guides/gateway/plugins.md#auth-and-permissions): bring an identity layer and implement the checks
 your routes need inside their controllers.
 
 ## Mounting plugins
 
 ```js
-const { startGateway } = require('@tetherto/mdk')
+const { startGateway } = require('@tetherto/mdk-core')
 
 await startGateway({
   kernel,
@@ -169,21 +169,12 @@ await startGateway({
 
 ### Manifest validation errors
 
-The loader validates every manifest and handler at startup and throws on the first problem:
-
-| Error | Cause |
-| --- | --- |
-| `ERR_PLUGIN_MANIFEST_MISSING` | No `mdk-plugin.json` found in the plugin directory |
-| `ERR_PLUGIN_MANIFEST_INVALID` | JSON parse error, or missing required field (`name`, `version`, or `routes`) |
-| `ERR_PLUGIN_ROUTE_DUPLICATE_ID` | Two routes in the same manifest share the same `id` |
-| `ERR_PLUGIN_HANDLER_NOT_FOUND` | The `handler` file path does not exist or failed to load |
-| `ERR_PLUGIN_HANDLER_NOT_FUNCTION` | The handler file exports something other than a function |
-
-The codes and the checks behind them live in [`plugin-loader.js`](../gateway/workers/lib/plugin-loader.js).
+The loader validates every manifest and handler at startup and throws on the first problem. The
+[Gateway's own error reference](../gateway/README.md#errors) lists the codes and their fixes.
 
 ## Directory layout
 
-```
+```text
 plugins/
 ├── auth/
 │   ├── mdk-plugin.json
@@ -229,13 +220,15 @@ plugins/
 
 ## Regenerating the default-plugin tables
 
-The default-plugin route tables under [Default plugins](#default-plugins) are generated from the manifests. Regenerate and commit them 
+The default-plugin route tables under [Default plugins](#default-plugins) are generated from the manifests. Regenerate and commit them
 whenever a default plugin's routes change:
 
 ```bash
 cd backend/core/plugins
 npm run generate:plugin-reference
 ```
+
+That rewrites the route tables and touches nothing else.
 
 ## Next steps
 

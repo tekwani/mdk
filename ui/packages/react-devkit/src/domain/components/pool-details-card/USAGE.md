@@ -5,12 +5,12 @@ available" placeholder.
 
 ## Props
 
-| Prop        | Type               | Required | Default | Description                          |
-| ----------- | ------------------ | -------- | ------- | ------------------------------------ |
-| `details`   | `PoolDetailItem[]` | yes      | —       | Detail rows to render.               |
-| `label`     | `string`           | no       | —       | Header label.                        |
-| `underline` | `boolean`          | no       | `false` | Render an underline under the label. |
-| `className` | `string`           | no       | —       | Additional class names.              |
+| Prop        | Status   | Type               | Default | Description                         |
+| ----------- | -------- | ------------------ | ------- | ----------------------------------- |
+| `details`   | Required | `PoolDetailItem[]` | —       | Detail rows to render               |
+| `label`     | Optional | `string`           | —       | Header label                        |
+| `underline` | Optional | `boolean`          | `false` | Render an underline under the label |
+| `className` | Optional | `string`           | —       | Additional class names              |
 
 ## Example
 

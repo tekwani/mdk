@@ -8,10 +8,9 @@ import type { EndpointMap } from './runtime'
  * client carries.
  *
  * Paths are **templates**: a `:name` segment is substituted by `resolvePath`,
- * which URL-encodes the value. Previously the dynamic paths were assembled by
- * string concatenation at each call site, which meant the endpoint table alone
- * did not describe the API surface — and a forgotten `encodeURIComponent` was a
- * silent injection bug.
+ * which URL-encodes the value. Templates rather than string concatenation at the
+ * call site: this table alone describes the whole API surface, and encoding
+ * happens in one place instead of relying on every caller to remember it.
  *
  * @remarks
  * Not every `/auth/*` path here is illustrative: `site` and `featureConfig` are served by the default

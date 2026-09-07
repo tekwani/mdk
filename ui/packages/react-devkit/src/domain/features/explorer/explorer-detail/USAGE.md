@@ -10,11 +10,11 @@ Write actions queue into the actions draft store; submission stays gated behind 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `deviceType` | `DeviceExplorerDeviceType` (`"container" \| "miner" \| "cabinet"`) | yes | — | The active Explorer tab — selects which per-type panel renders. |
-| `onNavigate` | `(path: string) => void` | no | no-op | Router navigate used by alarm rows to deep-link into the alert. |
-| `isCompact` | `boolean` | no | `true` | Compact layout for the narrower Explorer detail column. |
+| Prop         | Status   | Type                     | Default | Description                                                    |
+| ------------ | -------- | ------------------------ | ------- | -------------------------------------------------------------- |
+| `deviceType` | Required | `DeviceExplorerDeviceType` (`"container" \| "miner" \| "cabinet"`) | —       | The active Explorer tab — selects which per-type panel renders |
+| `onNavigate` | Optional | `(path: string) => void` | no-op   | Router navigate used by alarm rows to deep-link into the alert |
+| `isCompact`  | Optional | `boolean`                | `true`  | Compact layout for the narrower Explorer detail column         |
 
 ## Minimal example
 

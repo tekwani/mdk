@@ -5,13 +5,13 @@ with mining-specific data shaping.
 
 ## Props
 
-| Prop          | Type                       | Required | Default                   | Description                                  |
-| ------------- | -------------------------- | -------- | ------------------------- | -------------------------------------------- |
-| `data`        | `PowerModeTimelineEntry[]` | no       | `[]`                      | Initial power-mode entries.                  |
-| `dataUpdates` | `PowerModeTimelineEntry[]` | no       | `[]`                      | Streaming updates.                           |
-| `isLoading`   | `boolean`                  | no       | `false`                   | Show loading state.                          |
-| `timezone`    | `string`                   | no       | `"UTC"`                   | IANA timezone string.                        |
-| `title`       | `string`                   | no       | `CHART_TITLES.POWER_MODE_TIMELINE` | Chart title.                          |
+| Prop          | Status   | Type                       | Default | Description                |
+| ------------- | -------- | -------------------------- | ------- | -------------------------- |
+| `data`        | Optional | `PowerModeTimelineEntry[]` | `[]`    | Initial power-mode entries |
+| `dataUpdates` | Optional | `PowerModeTimelineEntry[]` | `[]`    | Streaming updates          |
+| `isLoading`   | Optional | `boolean`                  | `false` | Show loading state         |
+| `timezone`    | Optional | `string`                   | `"UTC"` | IANA timezone string       |
+| `title`       | Optional | `string`                   | `CHART_TITLES.POWER_MODE_TIMELINE` | Chart title |
 
 ## Example
 

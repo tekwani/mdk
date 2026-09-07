@@ -8,13 +8,13 @@ the parent resolves.
 
 ## Props
 
-| Prop         | Type                                            | Required | Default | Description                                                  |
-| ------------ | ----------------------------------------------- | -------- | ------- | ------------------------------------------------------------ |
-| `isOpen`     | `boolean`                                       | yes      | —       | Controls modal visibility.                                   |
-| `onClose`    | `() => void`                                    | yes      | —       | Called when the modal is dismissed (× button or backdrop).   |
-| `onSubmit`   | `(values: { pool: PoolSummary }) => Promise<void>` | yes   | —       | Called with the selected pool when the form is submitted.    |
-| `miners`     | `Device[]`                                      | yes      | —       | Miners to display in the selection table.                    |
-| `poolConfig` | `PoolConfigData[]`                              | yes      | —       | Available pool configurations to populate the pool selector. |
+| Prop         | Status   | Type                                               | Default | Description                                 |
+| ------------ | -------- | -------------------------------------------------- | ------- | ------------------------------------------- |
+| `isOpen`     | Required | `boolean`                                          | —       | Controls modal visibility                   |
+| `onClose`    | Required | `() => void`                                       | —       | Called when the modal is dismissed (× button or backdrop) |
+| `onSubmit`   | Required | `(values: { pool: PoolSummary }) => Promise<void>` | —       | Called with the selected pool when the form is submitted |
+| `miners`     | Required | `Device[]`                                         | —       | Miners to display in the selection table     |
+| `poolConfig` | Required | `PoolConfigData[]`                                 | —       | Available pool configurations to populate the pool selector |
 
 ## Minimal example
 
@@ -45,12 +45,12 @@ export const Example = () => {
 
 ## Data contracts
 
-- `Device` — [`foundation/types/device.ts`](../../../types/device.ts); only `id`, `code`, `tags`, `info.container`, `info.poolConfig`, and `last.snap.stats.status` are read.
-- `PoolConfigData` — [`foundation/components/pool-manager/hooks/use-pool-configs.ts`](../hooks/use-pool-configs.ts); the hook parses `poolUrls` into typed `PoolEndpoint[]` and resolves pool metadata.
-- `PoolSummary` — [`foundation/components/pool-manager/types.ts`](../types.ts); returned in `onSubmit`.
+- `Device` — [`foundation/types/device.ts`](../../../types/device.ts); only `id`, `code`, `tags`, `info.container`, `info.poolConfig`, and `last.snap.stats.status` are read
+- `PoolConfigData` — [`foundation/components/pool-manager/hooks/use-pool-configs.ts`](../hooks/use-pool-configs.ts); the hook parses `poolUrls` into typed `PoolEndpoint[]` and resolves pool metadata
+- `PoolSummary` — [`foundation/components/pool-manager/types.ts`](../types.ts); returned in `onSubmit`
 
 ## Notes
 
-- The modal does not fetch data itself — pass pre-fetched `miners` and `poolConfig` from the parent.
-- The credential template preview section is gated by the `SHOW_CREDENTIAL_TEMPLATE` constant in [`pool-manager-constants.ts`](../pool-manager-constants.ts).
-- Use `PoolManagerMinerExplorer` when you need a full miner-selection workflow before opening this modal.
+- The modal does not fetch data itself — pass pre-fetched `miners` and `poolConfig` from the parent
+- The credential template preview section is gated by the `SHOW_CREDENTIAL_TEMPLATE` constant in [`pool-manager-constants.ts`](../pool-manager-constants.ts)
+- Use `PoolManagerMinerExplorer` when you need a full miner-selection workflow before opening this modal

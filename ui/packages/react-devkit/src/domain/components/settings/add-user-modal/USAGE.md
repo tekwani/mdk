@@ -4,13 +4,13 @@ Modal form for inviting a new user to the system. Captures name, email address, 
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `open` | `boolean` | yes | — | Controls whether the dialog is visible. |
-| `onClose` | `VoidFunction` | yes | — | Called when the user dismisses the modal (cancel or backdrop). |
-| `roles` | `RoleOption[]` | yes | — | List of assignable roles rendered in the role select drop-down. |
-| `onSubmit` | `(data: { name: string; email: string; role: string }) => Promise<void>` | yes | — | Async handler called with validated form values on submission. |
-| `isSubmitting` | `boolean` | no | `false` | Disables the submit button and shows a loading label while the parent is saving. |
+| Prop           | Status   | Type           | Default | Description                                                                     |
+| -------------- | -------- | -------------- | ------- | ------------------------------------------------------------------------------- |
+| `open`         | Required | `boolean`      | —       | Controls whether the dialog is visible                                          |
+| `onClose`      | Required | `VoidFunction` | —       | Called when the user dismisses the modal (cancel or backdrop)                   |
+| `roles`        | Required | `RoleOption[]` | —       | List of assignable roles rendered in the role select drop-down                  |
+| `onSubmit`     | Required | `(data: { name: string; email: string; role: string }) => Promise<void>` | —       | Async handler called with validated form values on submission                   |
+| `isSubmitting` | Optional | `boolean`      | `false` | Disables the submit button and shows a loading label while the parent is saving |
 
 ## Minimal example
 
@@ -28,6 +28,6 @@ Modal form for inviting a new user to the system. Captures name, email address, 
 
 ## Notes
 
-- The form resets automatically after a successful submission.
-- `roles` must be populated before opening the modal — an empty list will leave the role select empty with no options.
-- Closing via the backdrop is disabled (`closeOnClickOutside={false}`) to prevent accidental dismissal mid-form.
+- The form resets automatically after a successful submission
+- `roles` must be populated before opening the modal — an empty list will leave the role select empty with no options
+- Closing via the backdrop is disabled (`closeOnClickOutside={false}`) to prevent accidental dismissal mid-form

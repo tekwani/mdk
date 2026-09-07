@@ -1,0 +1,93 @@
+{
+  "name": "read-summarize",
+  "prompt": "How is the site doing?",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "summarize_site",
+      "args": {},
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 0,
+      "ts": 0
+    },
+    {
+      "type": "tool_result",
+      "name": "summarize_site",
+      "text": "{\n  \"summary\": \"2 devices across 1 workers — 2 online, 0 offline.\",\n  \"totals\": {\n    \"workers\": {\n      \"total\": 1,\n      \"online\": 1,\n      \"offline\": 0\n    },\n    \"devices\": {\n      \"total\": 2,\n      \"online\": 2,\n      \"offline\": 0,\n      \"byFamily\": {\n        \"miner\": {\n          \"total\": 2,\n          \"online\": 2\n        }\n      }\n    }\n  }\n}",
+      "isError": false,
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 1,
+      "ts": 13
+    },
+    {
+      "type": "token",
+      "text": "There",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 2,
+      "ts": 859
+    },
+    {
+      "type": "token",
+      "text": " is",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 3,
+      "ts": 892
+    },
+    {
+      "type": "token",
+      "text": " one",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 4,
+      "ts": 925
+    },
+    {
+      "type": "token",
+      "text": " worker",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 5,
+      "ts": 962
+    },
+    {
+      "type": "token",
+      "text": " and",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 6,
+      "ts": 998
+    },
+    {
+      "type": "token",
+      "text": " two",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 7,
+      "ts": 1030
+    },
+    {
+      "type": "token",
+      "text": " miners",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 8,
+      "ts": 1070
+    },
+    {
+      "type": "token",
+      "text": " online",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 9,
+      "ts": 1104
+    },
+    {
+      "type": "token",
+      "text": ".",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 10,
+      "ts": 1137
+    },
+    {
+      "type": "done",
+      "text": "There is one worker and two miners online.",
+      "turnId": "65f92b27-4983-4f49-90b4-6e02b6d4d87a",
+      "seq": 11,
+      "ts": 1178
+    }
+  ]
+}

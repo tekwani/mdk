@@ -30,12 +30,18 @@ export function isTerminal (ev) {
 }
 
 // One schema per event; the discriminated union on `type` is the contract. Objects are
-// non-strict, so an event carrying the gateway's wire envelope still validates.
+// non-strict, so an event carrying the gateway's wire envelope still validates — and, for the
+// same reason, an undeclared key is stripped rather than rejected. A field the producer emits
+// but the schema omits survives every validity check and vanishes from parsed output, so
+// declaring every field is what keeps it readable downstream.
 const argsObject = z.record(z.unknown())
 
 const TokenEvent = z.object({ type: z.literal(EVENT.TOKEN), text: z.string() })
 const ToolCallEvent = z.object({ type: z.literal(EVENT.TOOL_CALL), name: z.string(), args: argsObject })
-const ToolResultEvent = z.object({ type: z.literal(EVENT.TOOL_RESULT), name: z.string(), text: z.string(), isError: z.boolean().optional() })
+// approvalWaitMs: how long the operator held the turn at the approval prompt. Present only on a
+// gated call, and only so a consumer can take it back off the wall clock — the ts gap between a
+// tool_call and its tool_result otherwise reports a human reading a card as the tool being slow.
+const ToolResultEvent = z.object({ type: z.literal(EVENT.TOOL_RESULT), name: z.string(), text: z.string(), isError: z.boolean().optional(), contractViolation: z.string().optional(), approvalWaitMs: z.number().optional() })
 const PendingApprovalEvent = z.object({ type: z.literal(EVENT.PENDING_APPROVAL), name: z.string(), args: argsObject })
 const ErrorEvent = z.object({ type: z.literal(EVENT.ERROR), error: z.string() })
 const DoneEvent = z.object({ type: z.literal(EVENT.DONE), text: z.string().optional(), usage: z.record(z.unknown()).optional() })

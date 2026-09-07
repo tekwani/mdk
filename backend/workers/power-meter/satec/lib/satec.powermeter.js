@@ -2,7 +2,7 @@
 
 const { PowerMeter } = require('../../../../core/mdk')
 const { series } = require('async')
-const { FUNCTION_CODES, PROTOCOL } = require('svc-facs-modbus/lib/constants')
+const { FUNCTION_CODES, PROTOCOL } = require('@tetherto/svc-facs-modbus/lib/constants')
 const { promiseTimeout } = require('@bitfinex/lib-js-util-promise')
 const {
   POWER_MULTIPLIER,

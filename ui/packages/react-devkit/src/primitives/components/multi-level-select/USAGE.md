@@ -6,24 +6,24 @@ Grouped select control with collapsible sections, built on the MDK `Select` prim
 
 All sub-components are accessed through the `MultiLevelSelect` namespace.
 
-| Export | Description |
-| ------ | ----------- |
-| `MultiLevelSelect.Root` | Select root (controls open state and value). |
-| `MultiLevelSelect.Trigger` | Button that opens the dropdown. |
-| `MultiLevelSelect.Value` | Displays the currently selected value. |
-| `MultiLevelSelect.Content` | Floating list panel. |
-| `MultiLevelSelect.Item` | Selectable option. |
-| `MultiLevelSelect.Section` | Collapsible group of items with a section header. |
+| Export                     | Description                                      |
+| -------------------------- | ------------------------------------------------ |
+| `MultiLevelSelect.Root`    | Select root (controls open state and value)      |
+| `MultiLevelSelect.Trigger` | Button that opens the dropdown                   |
+| `MultiLevelSelect.Value`   | Displays the currently selected value            |
+| `MultiLevelSelect.Content` | Floating list panel                              |
+| `MultiLevelSelect.Item`    | Selectable option                                |
+| `MultiLevelSelect.Section` | Collapsible group of items with a section header |
 
 ## Props — MultiLevelSelect.Section
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `sectionTitle` | `ReactNode` | yes | — | Title displayed in the section header. |
-| `children` | `ReactNode` | no | — | `MultiLevelSelect.Item` elements in the section. |
-| `open` | `boolean` | no | — | Controlled open state. |
-| `defaultOpen` | `boolean` | no | `false` | Initial open state (uncontrolled). |
-| `onToggle` | `(open: boolean) => void` | no | — | Called when the section is expanded or collapsed. |
+| Prop           | Status   | Type                      | Default | Description                                      |
+| -------------- | -------- | ------------------------- | ------- | ------------------------------------------------ |
+| `sectionTitle` | Required | `ReactNode`               | —       | Title displayed in the section header            |
+| `children`     | Optional | `ReactNode`               | —       | `MultiLevelSelect.Item` elements in the section  |
+| `open`         | Optional | `boolean`                 | —       | Controlled open state                            |
+| `defaultOpen`  | Optional | `boolean`                 | `false` | Initial open state (uncontrolled)                |
+| `onToggle`     | Optional | `(open: boolean) => void` | —       | Called when the section is expanded or collapsed |
 
 ## Example
 
@@ -43,5 +43,5 @@ All sub-components are accessed through the `MultiLevelSelect` namespace.
 
 ## Notes
 
-- `MultiLevelSelect.Root`, `Trigger`, `Value`, `Content`, and `Item` are pass-through re-exports of the base `Select` primitives.
-- `MultiLevelSelect.Section` supports both controlled (`open` + `onToggle`) and uncontrolled (`defaultOpen`) patterns.
+- `MultiLevelSelect.Root`, `Trigger`, `Value`, `Content`, and `Item` are pass-through re-exports of the base `Select` primitives
+- `MultiLevelSelect.Section` supports both controlled (`open` + `onToggle`) and uncontrolled (`defaultOpen`) patterns

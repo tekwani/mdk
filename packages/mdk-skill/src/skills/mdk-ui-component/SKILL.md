@@ -46,6 +46,23 @@ its shape for a new page, then delete it once you don't need the example
 
 ## Workflow
 
+```mermaid
+flowchart TD
+  intent["Plain-language intent"]
+  route{"/api route returns the metric?"}
+  gateway["mdk-gateway-plugin: create the route"]
+  registry["Pick components from ui-registry.json"]
+  contract["Match labels/units to the worker mdk-contract.json"]
+  build["Build the hook, panel, and page"]
+  wire["Wire the route in routes.ts"]
+
+  intent --> route
+  route -->|no| gateway --> registry
+  route -->|yes| registry
+  registry --> contract
+  contract --> build --> wire
+```
+
 ### 1. Pick the visual from the registry
 
 Open [`references/ui-registry.json`](./references/ui-registry.json) (this skill). Use

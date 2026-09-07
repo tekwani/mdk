@@ -4,9 +4,9 @@ Summary card for a MicroBT-equipped container showing the circulation pump statu
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `Device` | no | — | Live device object. Returns `null` when omitted. |
+| Prop   | Status   | Type     | Default | Description |
+| ------ | -------- | -------- | ------- | ----------- |
+| `data` | Optional | `Device` | —       | Live device object. Returns `null` when omitted. |
 
 ## Minimal example
 
@@ -18,5 +18,5 @@ import { MicroBTWidgetBox } from "@tetherto/mdk-react-devkit";
 
 ## Notes
 
-- Returns `null` when `data` is falsy, safe to render while loading.
-- Reads `container_specific.cdu` from the device for pump/fan state.
+- Returns `null` when `data` is falsy, safe to render while loading
+- Reads `container_specific.cdu` from the device for pump/fan state

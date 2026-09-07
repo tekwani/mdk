@@ -35,12 +35,6 @@ function ensureConfigFromExamples (dir) {
 // `<prefix>-<model>-<rack>` so persistent stores and RPC seeds are stable
 // per rack. Pool workers take no model — one logical pool per rack.
 const WORKER_BOOTS = {
-  'miner-whatsminer': {
-    pkg: 'workers/miners/whatsminer',
-    factory: 'startWhatsminerWorker',
-    prefix: 'whatsminer',
-    models: { M30SP: 'm30sp', M30SPP: 'm30spp', M53S: 'm53s', M56S: 'm56s', M63: 'm63' }
-  },
   'miner-antminer': {
     pkg: 'workers/miners/antminer',
     factory: 'startAntminerWorker',

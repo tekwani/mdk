@@ -4,25 +4,25 @@ Accessible radio buttons built on Radix UI `@radix-ui/react-radio-group`. Provid
 
 ## `RadioGroup` Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `orientation` | `'horizontal' \| 'vertical'` | no | `'vertical'` | Layout direction |
-| `noGap` | `boolean` | no | `false` | Removes the default gap between radio items |
-| `className` | `string` | no | — | Additional class |
+| Prop          | Status   | Type      | Default      | Description      |
+| ------------- | -------- | --------- | ------------ | ---------------- |
+| `orientation` | Optional | `'horizontal' \| 'vertical'` | `'vertical'` | Layout direction |
+| `noGap`       | Optional | `boolean` | `false`      | Removes the default gap between radio items |
+| `className`   | Optional | `string`  | —            | Additional class |
 
 All Radix `RadioGroupPrimitive.Root` props (e.g. `defaultValue`, `value`, `onValueChange`, `disabled`) are also accepted.
 
 ## `Radio` Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `value` | `string` | yes | — | Value associated with this option |
-| `size` | `ComponentSize` (`'sm' \| 'md' \| 'lg'`) | no | `'md'` | Size variant |
-| `color` | `ComponentColor` | no | `'primary'` | Color variant when checked |
-| `radius` | `BorderRadius` | no | `'full'` | Border radius (`'full'` for circle) |
-| `label` | `string` | no | — | Text label rendered inside the item |
-| `children` | `React.ReactNode` | no | — | Custom content (takes precedence over `label`) |
-| `indicatorClassName` | `string` | no | — | Additional class for the inner indicator dot |
+| Prop                 | Status   | Type              | Default     | Description                                    |
+| -------------------- | -------- | ----------------- | ----------- | ---------------------------------------------- |
+| `value`              | Required | `string`          | —           | Value associated with this option              |
+| `size`               | Optional | `ComponentSize` (`'sm' \| 'md' \| 'lg'`) | `'md'`      | Size variant                                   |
+| `color`              | Optional | `ComponentColor`  | `'primary'` | Color variant when checked                     |
+| `radius`             | Optional | `BorderRadius`    | `'full'`    | Border radius (`'full'` for circle)            |
+| `label`              | Optional | `string`          | —           | Text label rendered inside the item            |
+| `children`           | Optional | `React.ReactNode` | —           | Custom content (takes precedence over `label`) |
+| `indicatorClassName` | Optional | `string`          | —           | Additional class for the inner indicator dot   |
 
 All Radix `RadioGroupPrimitive.Item` props are also accepted.
 

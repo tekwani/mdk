@@ -3,7 +3,7 @@
 /**
  * MDK Kernel — Telemetry Flow
  *
- * Starts a real Whatsminer M56S worker backed by the hardware simulator,
+ * Starts a real Avalon A1346 worker backed by the hardware simulator,
  * subscribes to the scheduler-driven telemetry pull loop (every 3 s),
  * prints live metrics on each tick, and lists ready-to-run hp-rpc-cli
  * commands for every telemetry query type and state.pull.
@@ -18,8 +18,8 @@
 const path = require('path')
 const os = require('os')
 const { getKernel, waitForDiscovery } = require('@tetherto/mdk-core')
-const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
-const wmMock = require('@tetherto/mdk-worker-whatsminer/mock/server')
+const { startAvalonWorker } = require('@tetherto/mdk-worker-avalon')
+const avMockServer = require('@tetherto/mdk-worker-avalon/mock/server')
 
 const MOCK_PORT = 14031
 
@@ -38,16 +38,16 @@ function e (action, payload, deviceId) {
 }
 
 async function main () {
-  wmMock.createServer({ port: MOCK_PORT, host: '127.0.0.1', type: 'm56s', serial: 'WM-001', password: 'admin' })
+  avMockServer.createServer({ port: MOCK_PORT, host: '127.0.0.1', type: 'a1346', serial: 'AV-001' })
 
   // Short pull interval so live output is visible quickly
   const kernel = await getKernel({ telemetryPullMs: 3000 })
-  const worker = await startWhatsminerWorker({
-    workerId: 'whatsminer-m56s-telemetry-flow',
-    model: 'm56s',
+  const worker = await startAvalonWorker({
+    workerId: 'avalon-a1346-telemetry-flow',
+    model: 'a1346',
     storeDir: path.join(os.tmpdir(), 'mdk', 'telemetry-flow', 'worker-store'),
     seedDevices: [{
-      info: { serialNum: 'WM-001', container: 'rack-1' },
+      info: { serialNum: 'AV-001', container: 'rack-1' },
       opts: { address: '127.0.0.1', port: MOCK_PORT, password: 'admin' }
     }]
   })

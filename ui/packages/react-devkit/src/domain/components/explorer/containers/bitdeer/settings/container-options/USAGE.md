@@ -4,9 +4,9 @@
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `UnknownRecord` | no | — | Container settings payload; both components derive state from `cooling_system` fields. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `UnknownRecord` | — | Container settings payload; both components derive state from `cooling_system` fields |
 
 ## Minimal example
 

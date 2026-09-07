@@ -15,7 +15,7 @@ class OceanMinerpoolManager extends MinerpoolManager {
     await super.init(POOL_TYPE)
 
     this.accounts = this.conf.ocean.accounts
-    this.oceanApi = new OceanMinerpoolApi(this.http_0)
+    this.oceanApi = new OceanMinerpoolApi(this.http_0, this.abortSignal)
   }
 
   getHttpUrl () {

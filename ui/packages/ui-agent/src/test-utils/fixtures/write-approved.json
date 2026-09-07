@@ -1,0 +1,150 @@
+{
+  "name": "write-approved",
+  "prompt": "Reboot demo-miner-a-0",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "act_device",
+      "args": {
+        "ref": "demo-miner-a-0",
+        "action": "reboot"
+      },
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 0,
+      "ts": 0
+    },
+    {
+      "type": "pending_approval",
+      "name": "act_device",
+      "args": {
+        "ref": "demo-miner-a-0",
+        "action": "reboot"
+      },
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 1,
+      "ts": 0,
+      "approvalId": "450412e2-63ee-4a1c-afa6-b317c918cfc6"
+    },
+    {
+      "type": "tool_result",
+      "name": "act_device",
+      "text": "{\n  \"summary\": \"Reboot on demo-miner-a-0: queued.\",\n  \"ref\": \"demo-miner-a-0\",\n  \"action\": \"reboot\",\n  \"outcome\": \"queued\",\n  \"result\": {\n    \"commandId\": \"bbc69f50-0534-4f5d-81c6-684602573edd\",\n    \"status\": \"QUEUED\"\n  }\n}",
+      "isError": false,
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 2,
+      "ts": 14
+    },
+    {
+      "type": "token",
+      "text": "The",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 3,
+      "ts": 881
+    },
+    {
+      "type": "token",
+      "text": " reboot",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 4,
+      "ts": 915
+    },
+    {
+      "type": "token",
+      "text": " command",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 5,
+      "ts": 948
+    },
+    {
+      "type": "token",
+      "text": " has",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 6,
+      "ts": 983
+    },
+    {
+      "type": "token",
+      "text": " been",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 7,
+      "ts": 1019
+    },
+    {
+      "type": "token",
+      "text": " queued",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 8,
+      "ts": 1056
+    },
+    {
+      "type": "token",
+      "text": " for",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 9,
+      "ts": 1090
+    },
+    {
+      "type": "token",
+      "text": " demo",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 10,
+      "ts": 1126
+    },
+    {
+      "type": "token",
+      "text": "-",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 11,
+      "ts": 1170
+    },
+    {
+      "type": "token",
+      "text": "miner",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 12,
+      "ts": 1197
+    },
+    {
+      "type": "token",
+      "text": "-",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 13,
+      "ts": 1234
+    },
+    {
+      "type": "token",
+      "text": "a",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 14,
+      "ts": 1272
+    },
+    {
+      "type": "token",
+      "text": "-",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 15,
+      "ts": 1305
+    },
+    {
+      "type": "token",
+      "text": "0",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 16,
+      "ts": 1340
+    },
+    {
+      "type": "token",
+      "text": ".",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 17,
+      "ts": 1374
+    },
+    {
+      "type": "done",
+      "text": "The reboot command has been queued for demo-miner-a-0.",
+      "turnId": "b9ee88e2-3c8f-458f-a1b6-e5c6dbbc29c9",
+      "seq": 18,
+      "ts": 1408
+    }
+  ]
+}

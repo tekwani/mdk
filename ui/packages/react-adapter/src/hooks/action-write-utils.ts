@@ -70,8 +70,8 @@ export const extractSubmitError = (data: unknown): string | null => {
  *
  * Both key lists come from `@tetherto/mdk-ui-foundation`, declared beside the
  * mutations that cause the invalidation — query keys are the data layer's
- * business, and the copies that used to live here would have silently stopped
- * matching if an endpoint's key shape changed.
+ * business — a copy kept here would silently stop matching the moment an
+ * endpoint's key shape changed.
  */
 export const invalidateAfterActionWrite = async (queryClient: QueryClient): Promise<void> => {
   await Promise.all(

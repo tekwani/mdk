@@ -12,7 +12,6 @@ const LIB_TYPES = {
   GATEWAY: 'core/gateway',
   ANTMINER: 'workers/miners/antminer',
   AVALON: 'workers/miners/avalon',
-  WHATSMINER: 'workers/miners/whatsminer',
   BITDEER: 'workers/containers/bitdeer',
   ANTSPACE: 'workers/containers/antspace',
   ABB: 'workers/power-meter/abb',

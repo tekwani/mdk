@@ -4,16 +4,16 @@ Modal for editing an existing user's name, email, and role. Shows a role-permiss
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `open` | `boolean` | yes | — | Controls dialog visibility. |
-| `onClose` | `VoidFunction` | yes | — | Called when the dialog closes. |
-| `user` | `SettingsUser` | yes | — | The user being edited. |
-| `roles` | `RoleOption[]` | yes | — | Available role options. |
-| `rolePermissions` | `Record<string, Record<string, PermLevel>>` | yes | — | Permission levels per role. |
-| `permissionLabels` | `Record<string, string>` | yes | — | Display labels for permission keys. |
-| `onSubmit` | `(data) => Promise<void>` | yes | — | Save handler. |
-| `isSubmitting` | `boolean` | no | — | Show loading on submit button. |
+| Prop               | Status   | Type                      | Default | Description                        |
+| ------------------ | -------- | ------------------------- | ------- | ---------------------------------- |
+| `open`             | Required | `boolean`                 | —       | Controls dialog visibility         |
+| `onClose`          | Required | `VoidFunction`            | —       | Called when the dialog closes      |
+| `user`             | Required | `SettingsUser`            | —       | The user being edited              |
+| `roles`            | Required | `RoleOption[]`            | —       | Available role options             |
+| `rolePermissions`  | Required | `Record<string, Record<string, PermLevel>>` | —       | Permission levels per role         |
+| `permissionLabels` | Required | `Record<string, string>`  | —       | Display labels for permission keys |
+| `onSubmit`         | Required | `(data) => Promise<void>` | —       | Save handler                       |
+| `isSubmitting`     | Optional | `boolean`                 | `false` | Show loading on submit button      |
 
 ## Minimal example
 

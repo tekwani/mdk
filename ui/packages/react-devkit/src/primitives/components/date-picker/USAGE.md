@@ -5,15 +5,15 @@ picker includes presets and a modal-style popover with Clear / Apply actions.
 
 ## `DatePicker` props
 
-| Prop                | Type                            | Required | Default        | Description                       |
-| ------------------- | ------------------------------- | -------- | -------------- | --------------------------------- |
-| `selected`          | `Date`                          | no       | —              | Selected date.                    |
-| `onSelect`          | `(date?: Date) => void`         | no       | —              | Setter.                           |
-| `placeholder`       | `string`                        | no       | `"Pick a date"`| Trigger button placeholder.       |
-| `dateFormat`        | `string`                        | no       | `"MM/dd/yyyy"` | `date-fns` format string.         |
-| `disabled`          | `boolean`                       | no       | `false`        | Disable the trigger.              |
-| `triggerClassName`  | `string`                        | no       | —              | Class names on the trigger button.|
-| `calendarClassName` | `string`                        | no       | —              | Class names on the day-picker.    |
+| Prop                | Status   | Type                    | Default         | Description                       |
+| ------------------- | -------- | ----------------------- | --------------- | --------------------------------- |
+| `selected`          | Optional | `Date`                  | —               | Selected date                     |
+| `onSelect`          | Optional | `(date?: Date) => void` | —               | Setter                            |
+| `placeholder`       | Optional | `string`                | `"Pick a date"` | Trigger button placeholder        |
+| `dateFormat`        | Optional | `string`                | `"MM/dd/yyyy"`  | `date-fns` format string          |
+| `disabled`          | Optional | `boolean`               | `false`         | Disable the trigger               |
+| `triggerClassName`  | Optional | `string`                | —               | Class names on the trigger button |
+| `calendarClassName` | Optional | `string`                | —               | Class names on the day-picker     |
 
 ## `DateRangePicker` props
 

@@ -80,10 +80,12 @@ function _sanitizeId (id) {
   return id.replace(/[^a-zA-Z0-9]+/g, '_')
 }
 
+// A write states both hints. Unstated safety defaults to readOnlyHint: false (fail-safe as write)
+// so the tool carries a declared boolean mutability hint required by validateTool.
 function _annotationsFromSafety (safety) {
   if (safety === 'read-only') return { readOnlyHint: true }
-  if (safety === 'write') return { destructiveHint: true }
-  return undefined
+  if (safety === 'write') return { readOnlyHint: false, destructiveHint: true }
+  return { readOnlyHint: false }
 }
 
 // Converts a loaded gateway plugin's HTTP routes (backend/core/gateway/workers/lib/plugin-loader.js

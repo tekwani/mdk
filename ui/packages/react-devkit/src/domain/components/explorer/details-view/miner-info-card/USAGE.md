@@ -4,10 +4,10 @@ Info card for a single miner: serial number, model, firmware version, physical l
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `InfoItem[]` | no | — | Array of label/value pairs to display. |
-| `label` | `string` | no | `"Miner info"` | Card heading label. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `InfoItem[]` | — | Array of label/value pairs to display |
+| `label` | Optional | `string` | `"Miner info"` | Card heading label |
 
 ## Minimal example
 

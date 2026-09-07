@@ -15,6 +15,10 @@ Kernel is extended by building Worker and Gateway capabilities:
 | That declaration is read by | Kernel today (routing, validation); no other reader exists in this repo today | The Gateway loader (routes, auth flag) |
 | Job | Speak one device family's native protocol; expose it as telemetry + commands | Add an HTTP route: aggregate, authenticate, or otherwise sit between a caller and `@tetherto/mdk-client` |
 
+> [!NOTE]
+> ["Worker Plugin"][glossary] refers to the **Worker Plugin** package on disk
+> ([`mdk-contract.json`][contract-schema] plus its handler files.
+
 ## `mdk-plugin.json` gets the same treatment, for Gateway plugins
 
 A Gateway plugin's manifest declares its routes (`id`, `handler`, `http.method`/`http.path`, response schema,
@@ -52,6 +56,12 @@ to underneath.
 
 [architecture]: architecture.md
 <!-- docs@tether.io: architecture → concepts/architecture -->
+
+[glossary]: ../reference/glossary.md
+<!-- docs@tether.io: glossary → reference/glossary -->
+
+[contract-schema]: ../../backend/core/mdk-worker/mdk-contract.schema.json
+<!-- docs@tether.io: contract-schema → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/mdk-contract.schema.json -->
 
 [storage-model]: the-storage-model.md
 <!-- docs@tether.io: storage-model → concepts/the-storage-model -->

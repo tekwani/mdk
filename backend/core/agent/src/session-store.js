@@ -152,7 +152,6 @@ export class MemorySessionStore {
     return removed
   }
 
-  // Survives at exactly ttlMs; pinned by test.
   #expired (record) {
     return this.now() - record.updatedAt > this.ttlMs
   }

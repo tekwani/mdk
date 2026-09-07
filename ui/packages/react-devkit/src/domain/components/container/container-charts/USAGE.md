@@ -4,24 +4,24 @@ Multi-series time-series chart panel used by container detail views to display t
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `title` | `string` | no | — | Panel heading. |
-| `chartCombinations` | `ContainerChartCombinationOption[]` | yes | — | Ordered list of chart groups to render. |
-| `data` | `unknown` | yes | — | Raw telemetry payload forwarded to adapter functions. |
-| `timelineOptions` | `{ label: string; value: string }[]` | no | — | Time-range selector buttons (e.g. 1H / 24H / 7D). |
-| `defaultTimeline` | `string` | no | — | Initially selected timeline value. |
-| `onTimelineChange` | `(value: string) => void` | no | — | Callback when the user switches the time range. |
-| `pairIndices` | `readonly number[]` | no | — | For paired layouts: which series index to show side-by-side. |
-| `isLoading` | `boolean` | no | `false` | Shows skeleton loading state when `true`. |
-| `className` | `string` | no | — | Additional CSS class on the root element. |
-| `borderColorResolver` | `ContainerChartsDatasetBorderColorResolver` | no | — | Override line border colour per dataset. |
-| `customOptions` | `ChartOptions<"line">` | no | — | Chart.js option overrides merged onto the base config. |
+| Prop                          | Status   | Type                                        | Default              | Description                                       |
+| ----------------------------- | -------- | ------------------------------------------- | -------------------- | ------------------------------------------------- |
+| `combinations`                | Required | `ContainerChartCombinationOption[]`         | —                    | Options for the combination selector              |
+| `featureEnabled`              | Optional | `boolean`                                   | `true`               | When `false`, shows an empty state (feature gate) |
+| `disabledMessage`             | Optional | `string`                                    | `'Container Charts feature is not enabled'` | Message shown when `featureEnabled` is `false`    |
+| `isLoadingCombinations`       | Optional | `boolean`                                   | `false`              | Loading state for combination options             |
+| `title`                       | Optional | `string`                                    | `'Container Charts'` | Section heading                                   |
+| `selectedCombination`         | Optional | `string \| null`                            | —                    | Controlled selected combination value             |
+| `defaultSelectedCombination`  | Optional | `string \| null`                            | `null`               | Initial selection when uncontrolled               |
+| `onSelectedCombinationChange` | Optional | `(value: string \| null) => void`           | —                    | Called when the selected combination changes      |
+| `chartRawData`                | Optional | `ChartEntry[] \| null`                      | `null`               | Raw overview stats rows passed to chart adapters  |
+| `isLoadingCharts`             | Optional | `boolean`                                   | `false`              | Loading state for the chart panels                |
+| `getDatasetBorderColor`       | Optional | `ContainerChartsDatasetBorderColorResolver` | —                    | Optional per-dataset line colors after adapters run (e.g. demo or host branding) |
 
 ## Minimal example
 
 ```tsx
 import { ContainerCharts } from "@tetherto/mdk-react-devkit";
 
-<ContainerCharts chartCombinations={[]} data={null} isLoading={false} />
+<ContainerCharts combinations={[]} />
 ```

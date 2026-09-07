@@ -17,7 +17,7 @@ npm install @tetherto/mdk-worker-avalon
 ## Usage
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startAvalonWorker } = require('@tetherto/mdk-worker-avalon')
 
 const kernel = await getKernel()

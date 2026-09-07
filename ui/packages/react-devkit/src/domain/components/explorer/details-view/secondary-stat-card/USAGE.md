@@ -4,11 +4,11 @@ Compact stat tile rendered alongside a primary stat to provide supporting contex
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `name` | `string` | no | — | Stat label (e.g. `"Efficiency"`). |
-| `value` | `string \| number` | no | — | Stat value to display. |
-| `className` | `string` | no | — | Additional CSS class name. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `name` | Optional | `string` | `''` | Stat label (e.g. `"Efficiency"`) |
+| `value` | Optional | `string \| number` | `''` | Stat value to display |
+| `className` | Optional | `string` | — | Additional CSS class name |
 
 ## Minimal example
 

@@ -4,11 +4,11 @@ Card showing primary and secondary statistics for a single miner: efficiency, ha
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `primaryStats` | `StatItem[]` | yes | — | Primary statistics (efficiency, hashrate, temperature, frequency, consumption). |
-| `secondaryStats` | `StatItem[]` | yes | — | Secondary statistics displayed in a grid below. |
-| `showSecondaryStats` | `boolean` | yes | — | Whether to show the secondary stats section. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `primaryStats` | Optional | `StatItem[]` | — | Primary statistics (efficiency, hashrate, temperature, frequency, consumption) |
+| `secondaryStats` | Optional | `StatItem[]` | — | Secondary statistics displayed in a supporting grid |
+| `showSecondaryStats` | Optional | `boolean` | `true` | Whether to show the secondary stats section |
 
 **StatItem shape:** `{ name?: string; value?: number | string; unit?: string }`
 

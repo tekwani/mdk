@@ -1,4 +1,4 @@
-# workers/minerpools
+# Workers/minerpools
 
 Mining pool API Workers. These Workers connect to mining pool REST APIs and expose pool-level telemetry (hashrate, active workers, balance, earnings) through the MDK Protocol. This allows the fleet operator to correlate on-site device performance with pool-reported stats.
 
@@ -32,7 +32,7 @@ Pool Workers do not participate in command dispatch — they only respond to `te
 ## Quick Start
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startOceanPoolWorker } = require('@tetherto/mdk-worker-ocean')
 
 const kernel = await getKernel()

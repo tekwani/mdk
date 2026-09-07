@@ -2,7 +2,8 @@
 
 Maintainer-facing inventory of the lint tooling that guards this monorepo's documentation. Two layers:
 
-- 🚧 Project-specific IA gates 🚧 — five **proposed** gates defined in [`ia.md`](ia.md#qa-gates) (`check:contract`, `check:facets-fresh`, `check:agent-ready`, `check:port-signals`, `check:integrations-fresh`). **If adopted**, they would enforce the contract between code, the docs catalogue, and the port pipeline. None are wired today; engineering decides per-gate, and docs maintainers absorb the upkeep manually for any gate not adopted.
+- 🚧 Project-specific IA gates 🚧 — five **proposed** gates defined in [`ia.md`](ia.md#qa-gates) (`check:contract`, `check:facets-fresh`, `check:agent-ready`, `check:port-signals`, `check:integrations-fresh`). **If adopted**, they would enforce the contract between code, the docs catalogue, and the port pipeline. The regen-and-diff half of `check:integrations-fresh`, plus `check:plugin-reference-fresh`, now ship as the warn-only `docs-freshness` workflow; the remaining gates are not wired, engineering decides per-gate, and docs maintainers absorb the upkeep manually for any gate not adopted.
+- **Generated-page freshness** — [`npm run regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) reports when a page written by a script no longer matches its sources. The [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow runs it on pull requests and warns rather than blocks.
 - **General docs hygiene** — the rest of this file. Link verification, anchor validation, spelling. These guard the docs themselves, not the IA contract.
 
 ## Nightly and PR diff link verification — linkinator
@@ -57,7 +58,7 @@ CI checks, exactly.
 
 [Linkinator](https://github.com/JustinBeckwith/linkinator) checks Markdown files for broken links and (optionally) broken heading anchors. Two cadences run today, both off the same config: a **nightly cron at 02:00 UTC** (full sweep) and a **PR diff gate** that scopes the linkinator crawl to only the changed `.md` files — both via [`.github/workflows/link-check.yml`](../../../.github/workflows/link-check.yml). See [CI wiring](#ci-wiring) for the split. The [`check:directory-links`](#stale-directory-skip-entries--checkdirectory-links) sub-check always runs in full on both cadences, regardless of diff scope — see that section for why.
 
-Pin `linkinator@^7.6.0` or newer. Earlier versions silently passed same-page fragment links even when the heading didn't exist; fixed in [#771](https://github.com/JustinBeckwith/linkinator/pull/771) and shipped in 7.6.0.
+Pin linkinator to an **exact** version in [`scripts/link-check.mjs`](../../../scripts/link-check.mjs) (currently `linkinator@7.6.1`), not a `^` range. Fragment checking is version-sensitive: earlier builds silently passed anchor links even when the heading didn't exist (fixed in [#771](https://github.com/JustinBeckwith/linkinator/pull/771), shipped in 7.6.0). A caret range does not protect you, because `npx --yes linkinator@^7.6.0` reuses whatever matching 7.6.x a runner already has cached rather than re-resolving, so CI can run a stale, buggy build while a fresher local cache runs the fixed one. That skew is exactly how a broken anchor passed CI while `npm run link-check` caught it locally. An exact pin forces one build everywhere.
 
 ### How it works
 
@@ -123,7 +124,7 @@ One linkinator quirk worth knowing when reading reports: a **valid** fragment is
 - If the PR changes the config or either checker script ([`scripts/link-check.mjs`](../../../scripts/link-check.mjs), [`scripts/check-directory-links.mjs`](../../../scripts/check-directory-links.mjs)) or the workflow itself, it falls back to a **full** `npm run link-check` sweep (no file-list argument), since a weakened skip rule or a change to how either check works can expose breakage outside the diff.
 - **Known gap:** the linkinator half of the diff gate only validates links *originating from* changed files. A PR that renames a heading breaks inbound `#anchor` references in *other* (unchanged) files, which this job won't see — the nightly full sweep is the backstop for that. Treat the PR gate as a fast first line, not a replacement for the nightly.
 
-## 🚧 Nightly example-path verification (CI wiring not yet implemented)
+## Nightly example-path verification
 
 To hand run ahead of the nightly, from the repo root:
 
@@ -133,9 +134,9 @@ npm run check:example-paths
 
 This wraps [`scripts/check-example-paths.mjs`](../../../scripts/check-example-paths.mjs), a plain Node script with no new dependency — the same shape as `link-check` being a thin wrapper over one tool and one config.
 
-**What it checks.** Linkinator only resolves Markdown links (`[text](target)`). A bare `examples/...` path named in prose or inside a fenced code block — `node examples/backend/miners/whatsminer/index.js` in a ```bash``` fence, for instance — is invisible to it by design allowing dead references in prose and fences, not links. `check:example-paths` closes that gap by walking every tracked `.md` file (`git ls-files '*.md'`), extracting `examples/...`-shaped tokens from the raw text, and confirming each one resolves to a real file or directory.
+**What it checks.** Linkinator only resolves Markdown links (`[text](target)`). A bare `examples/...` path named in prose or inside a fenced code block — `node examples/backend/miners/antminer/index.js` in a ```bash``` fence, for instance — is invisible to it by design allowing dead references in prose and fences, not links. `check:example-paths` closes that gap by walking every tracked `.md` file (`git ls-files '*.md'`), extracting `examples/...`-shaped tokens from the raw text, and confirming each one resolves to a real file or directory.
 
-**Resolve-relative-then-root.** A candidate path is checked two ways: relative to the directory of the Markdown file that names it, then relative to the repo root. A miss on both is a finding. This matters because some packages document their own bundled examples using a path that's only correct relative to the package itself — [`backend/workers/miners/whatsminer/USAGE.md`](../../../backend/workers/miners/whatsminer/USAGE.md) names its runtime-parity example relative to itself, which resolves to [`backend/workers/miners/whatsminer/examples/run-runtime-parity.js`](../../../backend/workers/miners/whatsminer/examples/run-runtime-parity.js) (a root-relative miss, a file-relative hit).
+**Resolve-relative-then-root.** A candidate path is checked two ways: relative to the directory of the Markdown file that names it, then relative to the repo root. A miss on both is a finding. This matters because a package can document its own bundled examples using a path that's only correct relative to the package itself — e.g. a hypothetical `backend/workers/miners/<vendor>/USAGE.md` naming a script in its own `examples/` subdirectory (say a `run-runtime-parity.js` file) by joining just those two segments: a root-relative miss (the repo root has no such top-level directory), a file-relative hit (the package's own `examples/` subdirectory does contain it).
 
 **Skip policy — [`example-paths.config.json`](../../../example-paths.config.json) at repo root**, mirroring [`linkinator.config.json`](../../../linkinator.config.json)'s shape:
 
@@ -144,15 +145,42 @@ This wraps [`scripts/check-example-paths.mjs`](../../../scripts/check-example-pa
 - `_skip_notes` — mandatory sibling object, one entry per `skipFiles`/`skipPaths` pattern, explaining why. The checker refuses to run if any skip entry lacks a note. An unexplained skip is a silent false negative waiting to happen — the same lesson the linkinator skip list already enforces by convention; here it's enforced by the script itself.
 - Placeholders are dropped automatically, not via the skip list: any candidate token immediately followed by `<`, `>`, `*`, `{`, `}`, or `…` (for example `examples/run-<scenario>.js` or `` examples/run-*.js ``) is treated as unresolved template text, not a real path.
 
-**CI wiring** — not implemented. A nightly-only job (deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split), running `npm run check:example-paths` and opening or commenting on an `example-paths`-labelled tracking issue on failure, would mirror `link-check.yml`'s nightly job. No PR gate is planned either way — this check would stay nightly-only even once wired. Runs locally on demand today; CI wiring is a follow-on.
+**CI wiring** — [`.github/workflows/example-paths.yml`](../../../.github/workflows/example-paths.yml). Nightly only, deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split: the `example-paths` job (`schedule` + `workflow_dispatch`) runs `npm run check:example-paths`, and on failure opens or (if one is already open) comments on a tracking issue labelled `example-paths`, then exits non-zero so the run shows red. There is no PR gate — this check is not wired into the PR path.
 
 ## 🚧 Spelling — Vale
 
 Vale catches accidental misspellings and enforces a project word list. Configured via `.vale.ini` at the repo root when present. Runs locally on demand today; CI wiring is a follow-on.
 
-## 🚧 Style — Markdownlint (deferred)
+## Style — Markdownlint
 
-[`markdownlint-cli2`](https://github.com/DavidAnson/markdownlint-cli2) would enforce structural consistency (heading hierarchy, list indentation, fenced code block style). Not wired today; revisit when style drift across the corpus becomes a real friction.
+[`markdownlint-cli2`](https://github.com/DavidAnson/markdownlint-cli2) enforces structural consistency — heading hierarchy, list indentation, fenced code block style, reference-link
+hygiene. The ruleset in [`.markdownlint-cli2.jsonc`](../../../.markdownlint-cli2.jsonc) is kept identical to the mdk-docs ruleset so both repos lint the same way; only the globs
+differ, covering `docs/**/*.md` and the root `README.md`.
+
+Full sweep, from the repo root:
+
+```bash
+npm run lint:md
+```
+
+Diff-scoped, the same set CI lints on a pull request:
+
+```bash
+VERIFY_BASE_REF=origin/main npm run lint:md:pr
+```
+
+**CI wiring** — the `lint-markdown` job in [`ci.yml`](../../../.github/workflows/ci.yml) runs [`scripts/lint-md-pr.sh`](../../../scripts/lint-md-pr.sh) on every pull request against
+the changed `docs/**/*.md` and `README.md`. It runs independently of the changed-area detection, because a docs-only pull request skips every domain suite. A diff with no matching
+files passes without linting.
+
+`MD053` (unused link reference definitions) is enforced rather than disabled. It counts the same three reference-link forms the port pipeline resolves — full, collapsed, and shortcut
+— so a definition it flags contributes nothing to ported output and is dead weight in the `## Links` footer. One case diverges: a definition referenced only from an HTML comment is
+resolved by the port pipeline but invisible to `MD053`, so those carry an inline `markdownlint-disable-next-line MD053` naming the reason. See
+[`single-source-of-truth.md`](single-source-of-truth.md) for the routing-comment vocabulary those definitions carry.
+
+`MD028` (blank line between adjacent blockquotes) is the one rule disabled beyond the shared mdk-docs set. Guides here author GFM alerts directly, and a `> [!NOTE]` followed by a
+`> [!WARNING]` is deliberate. CommonMark and the port pipeline both read the blank line as separating two blockquotes, so satisfying the rule means inserting a separator that changes
+nothing on GitHub and ships to the site as a stray `{/* */}`. Write adjacent alerts with a blank line between them.
 
 ## See also
 

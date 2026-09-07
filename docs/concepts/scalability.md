@@ -105,7 +105,7 @@ Workers, because only one Worker is ever registered as the owner of a given devi
 
 ## Where state lives as you grow
 
-Each Kernel keeps its own [separate store][storage-model]: a multi-Kernel deployment means multiple independent stores, 
+Each Kernel keeps its own [separate store][storage-model]: a multi-Kernel deployment means multiple independent stores,
 not one shared or federated one.
 
 ## Failure behavior

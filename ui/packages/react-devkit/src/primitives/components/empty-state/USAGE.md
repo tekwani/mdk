@@ -4,12 +4,12 @@ Placeholder shown when a list, table or panel has no data to display.
 
 ## Props
 
-| Prop          | Type                                       | Required | Default     | Description                                              |
-| ------------- | ------------------------------------------ | -------- | ----------- | -------------------------------------------------------- |
-| `description` | `ReactNode`                                | yes      | —           | Message shown below the image.                           |
-| `image`       | `"default" \| "simple" \| ReactNode`        | no       | `"default"` | Built-in illustration, simple icon, or custom node.      |
-| `size`        | `"sm" \| "md" \| "lg"`                      | no       | `"md"`      | Controls icon size and spacing.                          |
-| `className`   | `string`                                   | no       | —           | Root class names.                                        |
+| Prop          | Status   | Type                                 | Default     | Description                    |
+| ------------- | -------- | ------------------------------------ | ----------- | ------------------------------ |
+| `description` | Required | `ReactNode`                          | —           | Message shown below the image  |
+| `image`       | Optional | `"default" \| "simple" \| ReactNode` | `"default"` | Built-in illustration, simple icon, or custom node |
+| `size`        | Optional | `"sm" \| "md" \| "lg"`               | `"md"`      | Controls icon size and spacing |
+| `className`   | Optional | `string`                             | —           | Root class names               |
 
 ## Example
 
@@ -23,5 +23,5 @@ Placeholder shown when a list, table or panel has no data to display.
 
 ## Notes
 
-- Use inside the body of tables and cards, not as the root of a page.
-- Pass a custom `image` (e.g. a brand illustration) to replace the icon.
+- Use inside the body of tables and cards, not as the root of a page
+- Pass a custom `image` (e.g. a brand illustration) to replace the icon

@@ -11,6 +11,7 @@
       "annotations": { "readOnlyHint": true },
       "agent": {
         "enabled": true,
+        "contract": "v2",
         "minCapability": "small",
         "answers": "How many workers and devices exist and how many are online.",
         "useWhen": ["how is the site doing", "give me a site overview", "is anything down"],
@@ -30,6 +31,7 @@
       "annotations": { "readOnlyHint": true },
       "agent": {
         "enabled": true,
+        "contract": "v2",
         "minCapability": "small",
         "answers": "How many devices there are, by family and state.",
         "useWhen": ["how many miners are there", "number of offline devices", "how many powermeters"],
@@ -45,6 +47,7 @@
       "annotations": { "readOnlyHint": true },
       "agent": {
         "enabled": true,
+        "contract": "v2",
         "minCapability": "small",
         "answers": "Which devices match a family and state.",
         "useWhen": ["list the miners", "which devices are offline", "show me the powermeters"],
@@ -60,6 +63,7 @@
       "annotations": { "readOnlyHint": true },
       "agent": {
         "enabled": true,
+        "contract": "v2",
         "minCapability": "small",
         "answers": "One attribute of one named device.",
         "useWhen": ["what is that miner's temperature", "what can I do to this device", "is that device online"],
@@ -75,6 +79,7 @@
       "annotations": { "readOnlyHint": true },
       "agent": {
         "enabled": true,
+        "contract": "v2",
         "minCapability": "small",
         "answers": "Which devices lead or trail on a metric.",
         "useWhen": ["which miner has the lowest power", "hottest miners", "top 3 by hashrate"],
@@ -90,6 +95,7 @@
       "annotations": { "readOnlyHint": false },
       "agent": {
         "enabled": true,
+        "contract": "v2",
         "minCapability": "small",
         "answers": "A state-changing action on one device.",
         "useWhen": ["reboot that miner", "restart the device", "set that miner to sleep"],

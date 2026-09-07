@@ -3,7 +3,7 @@
 Boots a complete mining site end-to-end through the MDK stack and serves
 it to the MDK UI — entirely over the HRPC RPC listener.
 
-```
+```text
 Kernel ──HRPC──> Gateway (mdkClient + site plugin) ──> MDK UI
  │
  ├── whatsminer-worker  startWhatsminerWorker  → N Whatsminer mocks     (container-antspace / Antspace HK3)
@@ -19,7 +19,7 @@ Kernel ──HRPC──> Gateway (mdkClient + site plugin) ──> MDK UI
  └── f2pool-worker      startF2poolWorker      → 1 F2Pool mock          (REST)
 ```
 
-The site is **3N miners in 2 containers + 3 site powermeters (ABB + SATEC + Schneider) + 2 inlet temperature sensors (Seneca) + 2 mining pools 
+The site is **3N miners in 2 containers + 3 site powermeters (ABB + SATEC + Schneider) + 2 inlet temperature sensors (Seneca) + 2 mining pools
 (Ocean + F2Pool)** (default N=10 → 30 miners).
 
 ## What makes this example "real"
@@ -46,7 +46,7 @@ drive the kit (`@tetherto/mdk` + `@tetherto/mdk-client`) — and **[`cli/`](./cl
 the helper that runs it (a process-manager REPL). The two entrypoints, [`start.js`](./start.js)
 and [`cli.js`](./cli.js), sit at the root.
 
-```
+```text
 examples/full-site/
 ├── start.js                 # entrypoint: single-process boot (Kernel + Workers + Gateway + UI)
 ├── cli.js                   # entrypoint: interactive multi-process REPL (see "Interactive CLI")
@@ -75,9 +75,11 @@ examples/full-site/
 - Node.js >= 24
 - A one-time `npm run setup` (see below). The example boots the **real**
   packages from [`backend/core`](../../backend/core/README.md) and [`backend/workers`](../../backend/workers/README.md), and its UI imports the
-  devkit packages from the repo-root [`ui/`](../../ui/README.md) workspace — each with its own
-  `node_modules`
-  > As the repo is federated with no root workspaces, a plain `npm install` is not supported
+  devkit packages from the repo-root [`ui/`](../../ui/README.md) workspace
+  > The repo root is an npm workspace: every `backend/core/*` and `backend/workers/*` package is a member, so a plain
+  > `npm install` at the root installs and links them together (their dependencies hoist to the root `node_modules`, so a
+  > member having no `node_modules/` of its own is normal). `ui/` is a **separate** nested workspace outside the root and
+  > needs its own install — which is why the example still has a single `npm run setup` that covers both.
 
 ## Run
 
@@ -100,14 +102,14 @@ with a small miner count:
 node cli.js
 ```
 
-```
+```text
 mdk> up --miners 3 --no-ui
 ```
 
 Watch for each component printing `<name> up` (mocks, kernel, every worker, gateway),
 ending in `Site up.`. Once you see that, stop the smoke test at the `mdk>` prompt:
 
-```
+```text
 mdk> down
 mdk> exit
 ```
@@ -137,7 +139,7 @@ site requires `rm -rf .mdk-data` once** (new Worker IDs and container names).
 
 #### Stop the example site
 
-Stop with `Ctrl+C` in the same terminal that you ran `node start.js`. 
+Stop with `Ctrl+C` in the same terminal that you ran `node start.js`.
 
 > Re-running it afterward resumes the same site from `.mdk-data/`.
 
@@ -169,7 +171,7 @@ cd examples/full-site
 node cli.js
 ```
 
-```
+```text
 mdk> up --miners 3 --no-ui
 mdk> status
 mdk> seed whatsminer
@@ -299,12 +301,12 @@ usage with Claude Desktop or the MCP SDK.
 
 **Symptom**: The CLI starts but `up` fails immediately with:
 
-```
+```text
 kernel exited (ERR_PROC_EXITED: kernel (code 1, signal null))
 Error: Invalid device file, was moved unsafely
 ```
 
-**Cause**: The `.mdk-data` directory contains RocksDB files with embedded path metadata from a previous location. This happens when the repo is moved, 
+**Cause**: The `.mdk-data` directory contains RocksDB files with embedded path metadata from a previous location. This happens when the repo is moved,
 copied, cloned to a new location, or when switching between multiple clones of the same repo.
 
 **Fix**: Remove the persisted state directory:

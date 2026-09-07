@@ -4,15 +4,15 @@ Top-level settings page that composes all per-section settings cards (header con
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `dangerActions` | `ActionButtonProps[]` | no | — | Danger-zone action buttons (reset, delete). |
-| `headerControlsProps` | `HeaderControlsSettingsProps` | no | — | Props forwarded to `HeaderControlsSettings`. |
-| `rbacControlProps` | `RBACControlSettingsProps` | no | — | Props forwarded to `RBACControlSettings`. |
-| `importExportProps` | `ImportExportSettingsProps` | no | — | Props forwarded to `ImportExportSettings`. |
-| `featureFlagsProps` | `FeatureFlagsSettingsProps` | no | — | Props forwarded to `FeatureFlagsSettings`. |
-| `showFeatureFlags` | `boolean` | no | — | Whether to show the feature-flags section. |
-| `className` | `string` | no | — | Additional CSS class. |
+| Prop                  | Status   | Type                          | Default | Description                                 |
+| --------------------- | -------- | ----------------------------- | ------- | ------------------------------------------- |
+| `dangerActions`       | Optional | `ActionButtonProps[]`         | —       | Danger-zone action buttons (reset, delete)  |
+| `headerControlsProps` | Optional | `HeaderControlsSettingsProps` | —       | Props forwarded to `HeaderControlsSettings` |
+| `rbacControlProps`    | Optional | `RBACControlSettingsProps`    | —       | Props forwarded to `RBACControlSettings`    |
+| `importExportProps`   | Optional | `ImportExportSettingsProps`   | —       | Props forwarded to `ImportExportSettings`   |
+| `featureFlagsProps`   | Optional | `FeatureFlagsSettingsProps`   | —       | Props forwarded to `FeatureFlagsSettings`   |
+| `showFeatureFlags`    | Optional | `boolean`                     | `false` | Whether to show the feature-flags section   |
+| `className`           | Optional | `string`                      | —       | Additional CSS class                        |
 
 ## Minimal example
 

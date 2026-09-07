@@ -23,6 +23,6 @@ test('WRK_TYPES maps to worker identifiers', (t) => {
 test('LIB_TYPES lists supported library package paths', (t) => {
   t.is(LIB_TYPES.Kernel, 'core/kernel')
   t.is(LIB_TYPES.GATEWAY, 'core/gateway')
-  t.ok(LIB_TYPES.ANTMINER && LIB_TYPES.WHATSMINER && LIB_TYPES.ANTSPACE)
+  t.ok(LIB_TYPES.ANTMINER && LIB_TYPES.AVALON && LIB_TYPES.ANTSPACE)
   t.ok(Object.keys(LIB_TYPES).length >= 10)
 })

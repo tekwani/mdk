@@ -5,16 +5,16 @@ Labeled key/value containers. `InfoContainer` renders a single labeled row;
 
 ## `InfoContainer` props
 
-| Prop    | Type                          | Required | Default | Description                            |
-| ------- | ----------------------------- | -------- | ------- | -------------------------------------- |
-| `title` | `string`                      | no       | —       | Row label.                             |
-| `value` | `string \| string[] \| number` | no      | —       | Row value (arrays render multi-line).  |
+| Prop    | Status   | Type     | Default | Description |
+| ------- | -------- | -------- | ------- | ----------- |
+| `title` | Optional | `string` | —       | Row label   |
+| `value` | Optional | `string \| string[] \| number` | — | Row value (arrays render multi-line) |
 
 ## `DeviceInfo` props
 
-| Prop   | Type         | Required | Default | Description       |
-| ------ | ------------ | -------- | ------- | ----------------- |
-| `data` | `InfoItem[]` | no       | —       | Rows to render.   |
+| Prop   | Status   | Type         | Default | Description    |
+| ------ | -------- | ------------ | ------- | -------------- |
+| `data` | Optional | `InfoItem[]` | —       | Rows to render |
 
 ## Example
 

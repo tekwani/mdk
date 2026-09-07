@@ -7,14 +7,14 @@ and the detail panel, and owns selection/routing state.
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `list` | `ReactNode` | yes | — | List column content (tab switch + device/container table) |
-| `detail` | `ReactNode` | no | — | Detail column content, shown in the sticky panel when `hasSelection` |
-| `hasSelection` | `boolean` | no | `false` | Splits into list (70%) + sticky detail (30%); otherwise list fills the width |
-| `title` | `string` | no | `"Explorer"` | Page heading |
-| `headerActions` | `ReactNode` | no | — | Controls shown next to the title (e.g. an export button) |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop            | Status   | Type        | Default | Description                                                                  |
+| --------------- | -------- | ----------- | ------- | ---------------------------------------------------------------------------- |
+| `list`          | Required | `ReactNode` | —       | List column content (tab switch + device/container table)                    |
+| `detail`        | Optional | `ReactNode` | —       | Detail column content, shown in the sticky panel when `hasSelection`         |
+| `hasSelection`  | Optional | `boolean`   | `false` | Splits into list (70%) + sticky detail (30%); otherwise list fills the width |
+| `title`         | Optional | `string`    | —       | Page heading; nothing renders when omitted                                   |
+| `headerActions` | Optional | `ReactNode` | —       | Controls shown next to the title (e.g. an export button)                     |
+| `className`     | Optional | `string`    | —       | Additional class for the root element                                        |
 
 ## Example
 
@@ -31,6 +31,6 @@ import { ExplorerLayout } from "@tetherto/mdk-react-devkit"
 ## Notes
 
 - The detail column is sticky on wide viewports and stacks below the list under
-  ~992px.
+  ~992px
 - The layout does not fetch data or own selection state — wire it in the shell
-  page to the explorer read hooks and URL/selection state.
+  page to the explorer read hooks and URL/selection state

@@ -4,17 +4,17 @@
 
 ## ContainerFansCard Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `fansData` | `{ enabled?: boolean; index: number }[]` | no | — | Array of fan state objects. Returns `null` when empty or absent. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `fansData` | Optional | `{ enabled?: boolean; index: number }[]` | — | Array of fan state objects. Renders an empty card when the array is empty; returns `null` when absent. |
 
 ## ContainerFanLegend Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `index` | `number \| null` | no | — | Fan number displayed as a label. |
-| `enabled` | `boolean` | no | `false` | Running state; controls icon and colour class. |
-| `className` | `string` | no | — | Additional CSS class. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `index` | Optional | `number \| null` | — | Fan number displayed as a label |
+| `enabled` | Optional | `boolean` | `false` | Running state; controls icon and colour class |
+| `className` | Optional | `string` | — | Additional CSS class |
 
 ## Minimal example
 

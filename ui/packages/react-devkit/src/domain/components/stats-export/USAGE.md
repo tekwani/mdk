@@ -5,12 +5,12 @@ while the corresponding handler is awaited.
 
 ## Props
 
-| Prop           | Type                  | Required | Default | Description                                |
-| -------------- | --------------------- | -------- | ------- | ------------------------------------------ |
-| `showLabel`    | `boolean`             | no       | `false` | Show the textual "Export" label.           |
-| `disabled`     | `boolean`             | no       | `false` | Disable the trigger.                       |
-| `onCsvExport`  | `() => Promise<void>` | yes      | —       | Awaited; spinner shown while pending.      |
-| `onJsonExport` | `() => Promise<void>` | yes      | —       | Awaited; spinner shown while pending.      |
+| Prop           | Status   | Type                  | Default | Description                          |
+| -------------- | -------- | --------------------- | ------- | ------------------------------------ |
+| `onCsvExport`  | Required | `() => Promise<void>` | —       | Awaited; spinner shown while pending |
+| `onJsonExport` | Required | `() => Promise<void>` | —       | Awaited; spinner shown while pending |
+| `hideLabel`    | Optional | `boolean`             | `false` | Hides the textual "Export" label     |
+| `disabled`     | Optional | `boolean`             | `false` | Disable the trigger                  |
 
 ## Example
 

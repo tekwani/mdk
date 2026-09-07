@@ -30,12 +30,12 @@ sequence automatically. Workers are **not** auto-chained: a Worker's boot functi
 `kernel._cleanup` yourself if you want Kernel shutdown to cascade to it:
 
 ```js
-const { getKernel, startGateway } = require('@tetherto/mdk/backend/core/mdk')
-const { startWhatsminerWorker } = require('@tetherto/mdk-worker-whatsminer')
+const { getKernel, startGateway } = require('@tetherto/mdk-core')
+const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
 
 const kernel = await getKernel()
 
-const { runtime, stop } = await startWhatsminerWorker({ workerId: 'whatsminer-rack-1', model: 'm56s', storeDir: './data/whatsminer' })
+const { runtime, stop } = await startAntminerWorker({ workerId: 'antminer-rack-1', model: 's19xp', storeDir: './data/antminer' })
 await kernel.registerWorker(runtime.getPublicKey())
 kernel._cleanup.push(stop) // cascade Worker shutdown from Kernel
 
@@ -53,11 +53,11 @@ lifecycle rules.
 
 ### Explicit teardown in tests or scripted runs
 
-Short-lived processes — integration tests, one-shot scripts — never receive `SIGINT`. Call `shutdown(kernel)` directly 
+Short-lived processes — integration tests, one-shot scripts — never receive `SIGINT`. Call `shutdown(kernel)` directly
 to drain the full cleanup chain. Pass the `kernel` object returned by `getKernel()`; passing a server object stops only the Gateway.
 
 ```js
-const { getKernel, startGateway, shutdown } = require('@tetherto/mdk/backend/core/mdk')
+const { getKernel, startGateway, shutdown } = require('@tetherto/mdk-core')
 
 const kernel = await getKernel()
 await startGateway({ kernel })
@@ -78,7 +78,7 @@ See [`shutdown` API reference][mdk-readme-shutdown].
 Use `onShutdown` when you need to close resources outside an MDK boot object — for example, a database connection or a log buffer.
 
 ```js
-const { onShutdown } = require('@tetherto/mdk/backend/core/mdk')
+const { onShutdown } = require('@tetherto/mdk-core')
 
 onShutdown(async () => {
   await db.close()
@@ -101,7 +101,7 @@ See [`onShutdown` API reference][mdk-readme-onshutdown].
 
 ## Next steps
 
-- [`@tetherto/mdk` README][mdk-readme]: full API reference
+- [`@tetherto/mdk-core` README][mdk-readme]: full API reference
 - [Run the Gateway][run-gateway]
 
 [mdk-readme]: ../../../backend/core/mdk/README.md

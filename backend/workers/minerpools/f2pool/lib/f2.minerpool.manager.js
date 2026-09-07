@@ -16,7 +16,7 @@ class F2MinerpoolManager extends MinerpoolManager {
 
     this.accounts = this.conf.f2pool.accounts
     this.apiSecret = this.conf.f2pool.apiSecret
-    this.f2poolApi = new F2MinerpoolApi(this.http_0, this.apiSecret)
+    this.f2poolApi = new F2MinerpoolApi(this.http_0, this.apiSecret, this.abortSignal)
   }
 
   getHttpUrl () {

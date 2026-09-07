@@ -46,9 +46,11 @@ Follow the [single-process site example][single-example]:
 [all-workers]: run-all-workers-site.md
 <!-- docs@tether.io: all-workers → guides/deployment/run-all-workers-site -->
 
+<!-- markdownlint-disable-next-line MD053 -- referenced from the maintainer comment above; the porter resolves it, MD053 cannot see it -->
 [get-started-run]: ../../tutorials/run-a-site.md
 <!-- docs@tether.io: get-started-run → tutorials/run-a-site -->
 
+<!-- markdownlint-disable-next-line MD053 -- referenced from the maintainer comment above; the porter resolves it, MD053 cannot see it -->
 [mvp-site-example]: ../../../examples/mvp-site/README.md
 <!-- docs@tether.io: mvp-site-example → https://github.com/tetherto/mdk/tree/main/examples/mvp-site -->
 

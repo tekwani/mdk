@@ -16,23 +16,23 @@ composable parts for full control, or `SimplePopover` for the common case.
 
 ## `Popover` (root) props
 
-| Prop           | Type                  | Required | Default | Description                  |
-| -------------- | --------------------- | -------- | ------- | ---------------------------- |
-| `open`         | `boolean`             | no       | —       | Controlled open state.       |
-| `defaultOpen`  | `boolean`             | no       | `false` | Uncontrolled initial state.  |
-| `onOpenChange` | `(open: boolean) => void` | no   | —       | Open-state change handler.   |
-| `modal`        | `boolean`             | no       | `false` | Trap focus inside the panel. |
+| Prop           | Status   | Type      | Default | Description                 |
+| -------------- | -------- | --------- | ------- | --------------------------- |
+| `open`         | Optional | `boolean` | —       | Controlled open state       |
+| `defaultOpen`  | Optional | `boolean` | `false` | Uncontrolled initial state  |
+| `onOpenChange` | Optional | `(open: boolean) => void` | —       | Open-state change handler   |
+| `modal`        | Optional | `boolean` | `false` | Trap focus inside the panel |
 
 ## `PopoverContent` props
 
-| Prop          | Type                                    | Required | Default     | Description                              |
-| ------------- | --------------------------------------- | -------- | ----------- | ---------------------------------------- |
-| `side`        | `"top" \| "right" \| "bottom" \| "left"` | no       | `"bottom"`  | Side relative to the trigger.            |
-| `align`       | `"start" \| "center" \| "end"`           | no       | `"center"`  | Alignment along the side.                |
-| `sideOffset`  | `number`                                | no       | `8`         | Distance from the trigger (px).          |
-| `showArrow`   | `boolean`                               | no       | `false`     | Render a directional arrow.              |
-| `showClose`   | `boolean`                               | no       | `false`     | Render a close (×) button.               |
-| `className`   | `string`                                | no       | —           | Content class names.                     |
+| Prop         | Status   | Type                                     | Default    | Description                    |
+| ------------ | -------- | ---------------------------------------- | ---------- | ------------------------------ |
+| `side`       | Optional | `"top" \| "right" \| "bottom" \| "left"` | `"bottom"` | Side relative to the trigger   |
+| `align`      | Optional | `"start" \| "center" \| "end"`           | `"center"` | Alignment along the side       |
+| `sideOffset` | Optional | `number`                                 | `8`        | Distance from the trigger (px) |
+| `showArrow`  | Optional | `boolean`                                | `false`    | Render a directional arrow     |
+| `showClose`  | Optional | `boolean`                                | `false`    | Render a close (×) button      |
+| `className`  | Optional | `string`                                 | —          | Content class names            |
 
 ## Example
 
@@ -55,5 +55,5 @@ For the common trigger-plus-panel case, prefer `SimplePopover`:
 
 ## Notes
 
-- `PopoverContent` automatically portals to `document.body`.
-- For tooltips that appear on hover, use `<Tooltip>` instead.
+- `PopoverContent` automatically portals to `document.body`
+- For tooltips that appear on hover, use `<Tooltip>` instead

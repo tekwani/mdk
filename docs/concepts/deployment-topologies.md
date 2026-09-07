@@ -7,9 +7,9 @@ This page explains the three supported deployment shapes and when to pick each.
 
 ## Overview
 
-MDK's runtime pieces — the [Kernel][architecture], the Gateway, and one or more Workers — can run together 
-in a single process or be split across several. This is a **packaging and operations** choice, and it's 
-independent of how MDK [scales logically][scaling] (adding Workers, adding sites). 
+MDK's runtime pieces — the [Kernel][architecture], the Gateway, and one or more Workers — can run together
+in a single process or be split across several. This is a **packaging and operations** choice, and it's
+independent of how MDK [scales logically][scaling] (adding Workers, adding sites).
 
 > [!NOTE]
 > If Kernel, Worker, manager, or thing are unfamiliar, read the [`glossary.md`][glossary] first.
@@ -93,7 +93,7 @@ Pick **microservices** when:
 
 The microservices shape is built on [`backend/core/mdk/worker.js`][worker-entry], a shared process entry compatible with pm2, Docker, or a direct `node worker.js`. It is driven by environment variables (`SERVICE`, and for a Worker `WORKER`/`TYPE`/`RACK`) rather than CLI flags. One [`worker.js`][worker-entry] runs per service, and the supervisor (pm2 or Docker) owns its lifecycle and resource limits. The [standalone `worker.js` install pattern][install-pattern] defines the per-Worker mechanics.
 
-The single-process and local shapes both call the programmatic APIs directly: `getKernel()` and `startGateway()` from [`@tetherto/mdk`][mdk-readme],
+The single-process and local shapes both call the programmatic APIs directly: `getKernel()` and `startGateway()` from [`@tetherto/mdk-core`][mdk-readme],
 and each Worker's own boot function (there is no single generic `startWorker`). Local mode passes `discovery: { mode: 'local' }` to `getKernel()` and
 publishes each Worker's RPC key to the same shared directory with `publishWorkerKey()`. The [local Worker discovery][worker-discovery-local] section
 covers how both sides resolve that directory and how Kernel picks up keys as they appear.
@@ -115,7 +115,7 @@ Topology is orthogonal to scale. [Logical scaling][scaling] is about *how many* 
 <!-- docs@tether.io: architecture → concepts/architecture -->
 
 [architecture-workers]: architecture.md#the-three-tiers
-<!-- docs@tether.io: architecture-workers → concepts/architecture#workers -->
+<!-- docs@tether.io: architecture-workers → concepts/architecture#the-three-tiers -->
 
 [gateway-kernel-connection]: ../../backend/core/gateway/README.md#kernel-connection
 <!-- docs@tether.io: gateway-kernel-connection → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#kernel-connection -->

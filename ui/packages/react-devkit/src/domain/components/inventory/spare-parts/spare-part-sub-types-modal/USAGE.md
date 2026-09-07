@@ -11,16 +11,16 @@ without losing their in-progress form.
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `isOpen` | `boolean` | — | Whether the modal is open |
-| `onClose` | `() => void` | — | Called when the modal requests to close |
-| `partTypes` | `{ value: string; label: string }[]` | — | Part-type tabs |
-| `activePartTypeId` | `string` | — | The selected part type (controlled by the parent) |
-| `onPartTypeChange` | `(id: string) => void` | — | Called when the active tab changes (fetch that type's subtypes here) |
-| `subTypes` | `string[]` | — | Subtype names for the active part type |
-| `onAddSubType` | `(name: string) => Promise<{ error?: string } \| void>` | — | Add handler; return `{ error }` to surface a field error |
-| `isLoading` | `boolean` | — | Renders a loader instead of the body |
+| Prop               | Status   | Type                                                    | Default | Description                                                          |
+| ------------------ | -------- | ------------------------------------------------------- | ------- | -------------------------------------------------------------------- |
+| `isOpen`           | Required | `boolean`                                               | —       | Whether the modal is open                                            |
+| `onClose`          | Required | `() => void`                                            | —       | Called when the modal requests to close                              |
+| `partTypes`        | Required | `{ value: string; label: string }[]`                    | —       | Part-type tabs                                                       |
+| `activePartTypeId` | Required | `string`                                                | —       | The selected part type (controlled by the parent)                    |
+| `onPartTypeChange` | Required | `(id: string) => void`                                  | —       | Called when the active tab changes (fetch that type's subtypes here) |
+| `subTypes`         | Required | `string[]`                                              | —       | Subtype names for the active part type                               |
+| `onAddSubType`     | Required | `(name: string) => Promise<{ error?: string } \| void>` | —       | Add handler; return `{ error }` to surface a field error             |
+| `isLoading`        | Optional | `boolean`                                               | —       | Renders a loader instead of the body                                 |
 
 ## Example
 
@@ -44,5 +44,5 @@ import { SparePartSubTypesModal } from '@tetherto/mdk-react-devkit/domain'
 ## Notes
 
 - The active part type is controlled by the parent: change `activePartTypeId` and supply the
-  matching `subTypes` in `onPartTypeChange`.
-- The add form validates a non-empty name and clears on successful add.
+  matching `subTypes` in `onPartTypeChange`
+- The add form validates a non-empty name and clears on successful add

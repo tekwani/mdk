@@ -9,7 +9,7 @@ type RemoveMinerDialogProps = {
 }
 
 /**
- * Confirmation modal for removing a miner from a slot with an optional reason capture.
+ * Confirmation modal for removing a miner from a slot. Renders nothing when `isRemoveMinerFlow` is `false`.
  *
  * @category widgets
  * @domain device-management

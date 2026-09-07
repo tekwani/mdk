@@ -4,15 +4,16 @@ Stacked-area chart of miner-state counts (online / offline / faulted) over the s
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `MinersActivityData` | yes | — | Time-series data for online/offline/faulted counts. |
-| `large` | `boolean` | yes | — | Use tall variant. |
-| `isLoading` | `boolean` | yes | — | Show loading state. |
-| `isError` | `boolean` | yes | — | Show error state. |
-| `error` | `MinerActivityChartErrorProp \| null` | yes | — | Error details to display. |
-| `showLabel` | `boolean` | yes | — | Show axis labels. |
-| `isDemoMode` | `boolean` | yes | — | Use demo/mock data. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `MinersActivityData` | `{}` | Time-series data for online/offline/faulted counts |
+| `large` | Optional | `boolean` | `false` | Use tall variant |
+| `isLoading` | Optional | `boolean` | `false` | Show loading state |
+| `isError` | Optional | `boolean` | `false` | Show error state |
+| `error` | Optional | `MinerActivityChartErrorProp \| null` | `null` | Error details to display |
+| `showLabel` | Optional | `boolean` | `true` | Show axis labels |
+| `isDemoMode` | Optional | `boolean` | `false` | Use demo/mock data |
+| `variant` | Optional | `MinersActivityVariant` | `'indicators'` | Visual style for the per-status items; `indicators` renders coloured dots and `tiles` renders tinted status tiles |
 
 ## Minimal example
 

@@ -45,15 +45,25 @@ added later without touching the core. Dependency flow:
   library. [`src/primitives/`](./packages/react-devkit/src/primitives/) exports generic primitives on Radix UI with BEM
   + SCSS tokens; [`src/domain/`](./packages/react-devkit/src/domain/) exports mining-domain components and
   hooks.
+- **[`packages/ui-agent`](./packages/ui-agent/README.md)** (`@tetherto/mdk-ui-agent`) — the operator agent
+  chat, as one drop-in (`<CoPilot />`). Talks to the agent gateway plugin
+  over SSE. Keeps its own layering inside the package — headless `core/`,
+  `hooks/`, presentational `components/` — because the deliverable is a
+  single injectable unit; it borrows `Button`, `Loader` and `createIcon`
+  from the devkit and themes off `--mdk-color-*` tokens. `private: true`,
+  workspace-linked only. `core/` is importable on its own (`./core`
+  subpath, also re-exported from the package root) — reach for it instead
+  of reimplementing SSE/transport/conversation-store logic elsewhere in
+  the workspace.
 - **[`packages/cli`](./packages/cli/README.md)** (`@tetherto/mdk-ui-cli`, bin `mdk-ui`) — agent-first
   CLI: registry discovery, doc/example fetching, page scaffolding,
   typecheck/lint helpers.
 - **[`packages/fonts`](./packages/fonts/README.md)** (`@tetherto/mdk-fonts`) — JetBrains Mono assets.
 - **[`apps/catalog`](./apps/catalog/README.md)** — Vite/React showcase wrapped in `<MdkProvider>`.
 
-All three TS packages ship pre-built `dist/` so consumers don't compile
-our source. Run `npm run build` once on a fresh checkout. Build details
-in [`docs/BUILD.md`](docs/BUILD.md).
+The TS packages ship pre-built `dist/` so consumers don't compile our
+source. Run `npm run build` once on a fresh checkout. Build details in
+[`docs/BUILD.md`](docs/BUILD.md).
 
 ### State management
 

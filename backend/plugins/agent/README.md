@@ -12,8 +12,8 @@ The manifest's `setup` block asks for these values, read from `config.agent` at 
 
 | Key | Status | Type | Default | Description |
 | --- | --- | --- | --- | --- |
-| `agent.provider` | Required | `object` | None | The model the agent talks to. See the [provider shape](#provider-shape) |
-| `agent.mcp` | Optional | `object` | None | The MCP tool server the agent calls fleet tools through. Omitting this, or its `url`, still loads the plugin: the agent runs as a grounded chat with no fleet tools (see [Troubleshooting](#troubleshooting)) |
+| `agent.provider` | Required | `object` | None | The model the agent talks to, per the [provider shape](#provider-shape) |
+| `agent.mcp` | Optional | `object` | None | The MCP tool server the agent calls fleet tools through. Omitting this, or its `url`, still loads the plugin: the agent runs as a grounded chat with no fleet tools, and [why that happens](#troubleshooting) has its own entry. |
 | `agent.approvalTimeoutMs` | Optional | `number` | `120000` | How long a paused write waits for a decision before it resolves to rejected |
 
 ### Provider shape
@@ -46,13 +46,22 @@ A session id and its approvals are only reachable by the identity that created t
 forbidden, so existence never leaks.
 
 [`tests/plugin.test.js`](tests/plugin.test.js) is the executable spec for this contract: envelope stamping, the approval
-pause and resume order, the timeout-rejects path, and the per-identity isolation rules above.
+pause and resume order, the timeout-rejects path, and per-identity isolation across sessions and approvals.
+
+## Errors
+
+| Code | Fires when | Fix |
+| --- | --- | --- |
+| `ERR_AGENT_UNAVAILABLE` | `config.agent` is missing entirely, or the agent failed to construct — a bad provider config, or the MCP server was unreachable at startup (`503`) | Add the `agent` block to this plugin's config, or fix the provider/MCP config the underlying error names |
+| `ERR_AGENT_SESSION_NOT_FOUND` | The session id doesn't exist, or belongs to a different caller than the one making the request (`404`) | Create a new session, or confirm you're using the identity that created this one |
+| `ERR_AGENT_TURN_ACTIVE` | A message or delete is sent to a session while its previous turn is still streaming or paused on an approval (`409`) | Wait for the current turn to finish, or decide its pending approval, before sending another |
+| `ERR_AGENT_APPROVAL_NOT_FOUND` | The approval id doesn't exist for that session — already decided, timed out, or never existed (`404`) | Check whether it already resolved; approvals also auto-reject after `agent.approvalTimeoutMs` |
+| `ERR_AGENT_MESSAGE_TEXT_REQUIRED` | `agent.session.message`'s `text` field is missing, not a string, or empty after trimming (`400`) | Send a non-empty `text` string |
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Every route answers `503 ERR_AGENT_UNAVAILABLE` | `config.agent` is missing entirely | Add the `agent` block to this plugin's config |
 | Sessions and messages work, but the agent never calls a tool | `agent.mcp` (or its `url`) is omitted | Set `agent.mcp.url` to a reachable MCP server; [`createAgent`](../../core/agent/README.md) only connects to MCP when `config.mcp.url` is set, and without it the agent runs as a grounded chat with no fleet tools |
 
 ## Next steps

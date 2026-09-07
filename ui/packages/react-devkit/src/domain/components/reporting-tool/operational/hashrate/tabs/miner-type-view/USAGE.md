@@ -6,14 +6,13 @@ multi-select filter and a date-range picker that drives the host query.
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `log` | `HashrateGroupedLog` | no | `[]` | Hashrate log grouped by miner type (`groupBy=miner`). |
-| `isLoading` | `boolean` | no | `false` | Drives the chart spinner. |
-| `error` | `unknown` | no | - | Drives the chart error state. |
-| `dateRange` | `HashrateDateRange` | no | - | Selected date range. |
-| `onDateRangeChange` | `(range) => void` | no | - | Fires when the user picks a new range. |
-| `onReset` | `VoidFunction` | no | - | Optional reset handler. |
+| Prop                | Status   | Type                 | Default | Description                                          |
+| ------------------- | -------- | -------------------- | ------- | ---------------------------------------------------- |
+| `log`               | Optional | `HashrateGroupedLog` | `[]`    | Hashrate log grouped by miner type (`groupBy=miner`) |
+| `isLoading`         | Optional | `boolean`            | `false` | Drives the chart spinner                             |
+| `dateRange`         | Optional | `HashrateDateRange`  | —       | Selected date range                                  |
+| `onDateRangeChange` | Optional | `(range) => void`    | —       | Fires when the user picks a new range                |
+| `onReset`           | Optional | `VoidFunction`       | —       | Optional reset handler                               |
 
 ## Minimal example
 

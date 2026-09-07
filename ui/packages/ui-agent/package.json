@@ -1,0 +1,92 @@
+{
+  "name": "@tetherto/mdk-ui-agent",
+  "type": "module",
+  "version": "0.8.0",
+  "private": true,
+  "description": "Injectable operator Co-pilot chat UI for the MDK agent gateway plugin. Streams the six-event agent contract over SSE and renders it as a docked panel or a full-page route.",
+  "sideEffects": [
+    "*.css",
+    "*.scss"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
+    },
+    "./chat-page": {
+      "types": "./dist/entries/chat-page.d.ts",
+      "import": "./dist/entries/chat-page.js",
+      "default": "./dist/entries/chat-page.js"
+    },
+    "./panel": {
+      "types": "./dist/components/co-pilot-panel.d.ts",
+      "import": "./dist/components/co-pilot-panel.js",
+      "default": "./dist/components/co-pilot-panel.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "rimraf dist tsconfig.tsbuildinfo tsconfig.build.tsbuildinfo && npm run check:styles && npm run build:ts && npm run build:scss",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "build:scss": "vite build",
+    "check:styles": "node scripts/check-style-forwards.mjs",
+    "clean": "rimraf dist node_modules .turbo",
+    "dev": "concurrently -n ts,scss -c cyan,magenta \"npm run dev:ts\" \"npm run dev:scss\"",
+    "dev:ts": "tsc --watch -p tsconfig.build.json",
+    "dev:scss": "vite build --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "eslint . --fix",
+    "test": "vitest run --config vitest.config.js",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --config vitest.config.js --coverage",
+    "typecheck": "tsc --noEmit",
+    "watch": "npm run dev",
+    "watch:ts": "npm run dev:ts",
+    "watch:scss": "npm run dev:scss"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "@tetherto/mdk-react-adapter": "*",
+    "@tetherto/mdk-react-devkit": "*",
+    "@tetherto/mdk-ui-foundation": "*",
+    "highlight.js": "^11.11.1",
+    "lodash": "^4.18.1",
+    "lowlight": "^3.3.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.59.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/lodash": "^4.17.24",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "@vitest/coverage-v8": "^4.1.2",
+    "happy-dom": "^20.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "sass": "^1.83.0",
+    "vitest": "^4.1.2"
+  }
+}

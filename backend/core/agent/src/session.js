@@ -1,65 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { streamText } from 'ai'
-import { runToolLoop } from './loop.js'
-import { DEFAULT_LIMITS } from './constants.js'
+import { runToolLoop, describeCallError, deadline, UNSPEAKABLE_FALLBACK } from './loop.js'
+import { DEFAULT_LIMITS, REQUEST_TIMEOUT_MS } from './constants.js'
 import { SESSION_GONE } from './session-store.js'
 import { EVENT } from './events.js'
-
-// The charter — the agent's standing instruction, sent to the model as the system
-// prompt on every request. Five blocks, ordered most-stable first:
-//   IDENTITY → HONESTY → GROUNDING → VOCABULARY → STYLE
-// Routing knowledge (which tool for which question) does NOT live here — it lives in
-// the tool descriptions, so it evolves with the tool set. Update policy: fix at the
-// strongest layer first (tool code > schema > description > charter); every charter
-// edit re-runs the eval battery; additions should pay for themselves by deletion.
-const DEFAULT_SYSTEM = `You are the MDK operator assistant for a cryptocurrency mining site.
-You answer the operator's questions with live fleet data from tools, and perform
-approval-gated actions when asked.
-
-HONESTY — what you do at your limits:
-- If no tool covers the question, call nothing. Say plainly that you don't have that
-  ability yet and offer the closest thing you can do — one sentence each.
-- Never call a tool speculatively, hoping its result might happen to contain the answer.
-- If a tool ran but its result lacks the answer, say what you checked and what was
-  missing. Never estimate, infer, or invent a value.
-- Do a thing or decline it — never announce that you are about to do it.
-- If the message is not a question or instruction about the fleet — a greeting, thanks, or
-  something you cannot make sense of — call no tool. Reply in one line and ask what they
-  need. Never run a tool to fill the silence.
-
-GROUNDING — where facts come from:
-- Every fleet question a tool covers gets a tool call — even if an earlier answer in
-  this conversation seems to cover it. Never answer fleet state from memory.
-- Report only values present in the tool result. Never name an item the tool did not
-  return.
-- Use the tool that answers the question directly. Never count, filter, or classify a
-  raw dump yourself when a tool returns the number or list itself. Only if no such
-  tool exists may you count — and then list the items first and count what you listed.
-
-MDK VOCABULARY — three different things, never mixed:
-- WORKER: a process that manages a group of devices; ids end in "-worker". Not a device.
-- DEVICE: a unit managed by a worker; ids never end in "-worker".
-- MINER: a device of type miner ONLY (antminer-N, avalon-N, whatsminer-N). Containers,
-  site sensors, powermeters and pools are devices too, but they are NOT miners.
-- Worker count, device count and miner count are three different numbers. Asked for
-  one, never report another.
-- An unqualified "device" — or a general question like "is anything down?" — means ALL
-  device types: use type "all". Narrow to a type only when the operator names it.
-- "Up" means ready. "Down", "offline", "not up" mean NOT ready. If a result shows
-  notReady > 0, then something IS down — name it. Never say everything is up while
-  any notReady count is above zero.
-- If a question could mean two different things and the answers would differ, take the
-  widest reading and state your assumption in the answer. Ask a clarifying question
-  only before a write action.
-
-STYLE — the shape of the final answer:
-- Facts and action results: ONE short plain sentence. No preamble, no "Here is…".
-- List requests — asking which items exist or what there is (list, show, give me, name
-  them, which ones, what devices do we have, what is there): output EVERY matching item,
-  one per line, and nothing else. Never collapse a list into a count, and never answer
-  with the state of one item when asked what exists.
-- Never mention tools or how you got the answer — not even on failure. Speak in the
-  operator's terms.`
+import { CHARTER } from './charter.js'
 
 /**
  * One conversation. Turns each user message into a streamed sequence of typed events (see
@@ -76,16 +21,14 @@ export class Session {
   constructor ({ provider, system, limits = {}, userId = 'local', tools = [], mcp = null, notCovered, store = null, id, messages = [] } = {}) {
     if (!provider) throw new Error('Session needs a provider')
     this.provider = provider
-    this.system = system ?? DEFAULT_SYSTEM
+    this.system = system ?? CHARTER
     this.limits = limits
     this.userId = userId
     this.tools = tools
     this.mcp = mcp
-    // Undefined keeps the default boundary; an array replaces it, and [] drops the block.
     this.notCovered = notCovered
     this.store = store
     this.messages = messages
-    // Unguessable: the id travels in URLs, and the counter it replaced collided across processes.
     this.id = id ?? randomUUID()
   }
 
@@ -130,9 +73,6 @@ export class Session {
     }
   }
 
-  // Tool-enabled turn: run the loop, forwarding any approval decision back into it
-  // (a pending_approval event yields out; the consumer's .next(decision) flows back in),
-  // and capture the final answer into history.
   async * toolTurn () {
     const loop = runToolLoop({
       model: this.provider.model(),
@@ -142,36 +82,49 @@ export class Session {
       mcp: this.mcp,
       notCovered: this.notCovered,
       maxSteps: this.limits.maxSteps ?? DEFAULT_LIMITS.maxSteps,
-      maxOutputTokens: this.limits.maxOutputTokens ?? DEFAULT_LIMITS.maxOutputTokens
+      maxOutputTokens: this.limits.maxOutputTokens ?? DEFAULT_LIMITS.maxOutputTokens,
+      requestTimeoutMs: this.limits.requestTimeoutMs ?? REQUEST_TIMEOUT_MS
     })
     let answer = ''
     let errored = false
     let sent
+    // What the loop ran on the way to its answer. Undefined if the turn was abandoned before
+    // the loop returned, which the finally block treats as "no trace".
+    let toolExchange
     try {
       while (true) {
         const { value: ev, done } = await loop.next(sent)
         sent = undefined
-        if (done) break
+        if (done) { toolExchange = ev; break }
         if (ev.type === EVENT.TOKEN) answer += ev.text
         else if (ev.type === EVENT.ERROR) errored = true
         sent = yield ev // whatever the consumer passes to .next() (e.g. an approval bool)
       }
     } finally {
-      // A failed turn — and one the consumer walked away from — leaves no trace: drop the
-      // unanswered user message, so history never carries a prompt the agent did not answer.
-      if (errored || !answer) this.messages.pop()
-      else this.messages.push({ role: 'assistant', content: answer })
+      // A suppressed answer is discarded with the turn, exactly like an error, because it is not
+      // something the assistant said. Recorded instead, it taught the model that giving up is a
+      // valid shape for a turn: one fallback in the history was answered with another, and a
+      // ten-turn conversation collapsed into six consecutive "could not complete that request"
+      // — while the same questions answered correctly in a fresh session.
+      if (errored || !answer || answer === UNSPEAKABLE_FALLBACK) this.messages.pop()
+      // The tool exchange goes in ahead of the answer, so the transcript reads the way the turn
+      // actually happened: asked → called a tool → got a result → answered. Recording only the
+      // answer taught the model that a bare sentence is the whole job, and by the third repeat
+      // of a write it would claim the action had run without calling anything.
+      else this.messages.push(...(toolExchange ?? []), { role: 'assistant', content: answer })
     }
   }
 
-  // Plain chat turn (no tools): stream the model directly.
   async * chatTurn () {
+    const timeoutMs = this.limits.requestTimeoutMs ?? REQUEST_TIMEOUT_MS
+    const signal = deadline(timeoutMs)
     const result = streamText({
       model: this.provider.model(),
       system: this.system,
       messages: this.messages,
       maxOutputTokens: this.limits.maxOutputTokens ?? DEFAULT_LIMITS.maxOutputTokens,
-      maxRetries: this.limits.maxRetries ?? 2
+      maxRetries: this.limits.maxRetries ?? 2,
+      abortSignal: signal
     })
     let assistant = ''
     let errored = false
@@ -183,8 +136,6 @@ export class Session {
             assistant += t
             yield { type: EVENT.TOKEN, text: t }
           } else if (part.type === 'error') {
-            // error is terminal — stop here so no done follows (contract invariant 1),
-            // matching the tool loop's behaviour on a stream error.
             errored = true
             yield { type: EVENT.ERROR, error: String(part.error) }
             return
@@ -192,7 +143,12 @@ export class Session {
         }
       } catch (err) {
         errored = true
-        yield { type: EVENT.ERROR, error: String(err?.message ?? err) }
+        yield { type: EVENT.ERROR, error: describeCallError(err, timeoutMs) }
+        return
+      }
+      if (signal?.aborted) {
+        errored = true
+        yield { type: EVENT.ERROR, error: describeCallError(signal.reason, timeoutMs) }
         return
       }
     } finally {

@@ -54,6 +54,10 @@ export default defineConfig(({ mode }) => {
       '/oauth': gatewayUrl,
       '/api': gatewayUrl,
       '/pub': gatewayUrl,
+      // The co-pilot's SSE stream. The Gateway sends no CORS headers and its
+      // stream route hijacks the reply, so a CORS hook could not decorate it
+      // even if one existed — the panel has to reach the backend same-origin.
+      '/agent': gatewayUrl,
     },
   },
   css: {

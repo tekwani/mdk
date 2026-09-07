@@ -6,13 +6,13 @@ A React class component that catches rendering errors in its subtree and display
 
 ### `ErrorBoundary`
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `children` | `React.ReactNode` | yes | — | Subtree to protect |
-| `fallback` | `React.ReactNode` | no | — | Custom UI to render when an error is caught. If omitted, a default error panel with an expandable stack trace is shown. |
-| `componentName` | `string` | no | — | Name shown in the default fallback heading (e.g. "Error in MyChart") |
-| `onError` | `(error: Error, errorInfo: React.ErrorInfo) => void` | no | — | Fired when an error is caught (useful for error reporting) |
-| `className` | `string` | no | — | Additional class for the default fallback container |
+| Prop            | Status   | Type              | Default | Description                                                          |
+| --------------- | -------- | ----------------- | ------- | -------------------------------------------------------------------- |
+| `children`      | Required | `React.ReactNode` | —       | Subtree to protect                                                   |
+| `fallback`      | Optional | `React.ReactNode` | —       | Custom UI to render when an error is caught. If omitted, a default error panel with an expandable stack trace is shown. |
+| `componentName` | Optional | `string`          | —       | Name shown in the default fallback heading (e.g. "Error in MyChart") |
+| `onError`       | Optional | `(error: Error, errorInfo: React.ErrorInfo) => void` | —       | Fired when an error is caught (useful for error reporting)           |
+| `className`     | Optional | `string`          | —       | Additional class for the default fallback container                  |
 
 ### `withErrorBoundary`
 
@@ -49,4 +49,4 @@ const SafeChart = withErrorBoundary(LiveChart, "LiveChart", (err) => logToSentry
 ## Notes
 
 - React error boundaries only catch errors during rendering, lifecycle methods, and constructors of class components. They do not catch async errors or event handlers.
-- The default fallback panel renders an expandable `<details>` element containing the component stack trace.
+- The default fallback panel renders an expandable `<details>` element containing the component stack trace

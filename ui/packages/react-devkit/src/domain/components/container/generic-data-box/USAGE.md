@@ -4,10 +4,10 @@ Reusable labelled stat box for container summary panels. Renders a vertical list
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `DataItem[]` | no | `[]` | Array of stat rows to display. |
-| `fallbackValue` | `unknown` | no | — | Value rendered when a row's `value` is `undefined`. |
+| Prop            | Status   | Type         | Default | Description |
+| --------------- | -------- | ------------ | ------- | ----------- |
+| `data`          | Optional | `DataItem[]` | `[]`    | Array of stat rows to display |
+| `fallbackValue` | Optional | `unknown`    | —       | Value rendered when a row's `value` is `undefined` |
 
 `DataItem` fields: `label`, `value`, `units?`, `unit?`, `isHighlighted?`, `color?`, `flash?`.
 

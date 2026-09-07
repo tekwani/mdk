@@ -44,24 +44,25 @@ Must be rendered inside `<MdkProvider>`.
 
 ## Props
 
-| Prop | Type | Notes |
-|------|------|-------|
-| `poolConfig` | `PoolConfigData[]` | Shared by every sub-view. |
-| `stats` | `DashboardStats` | Dashboard stat blocks. |
-| `isStatsLoading` | `boolean` | Dashboard stats loading flag. |
-| `alerts` | `Alert[]` | Recent-alerts list on the dashboard. |
-| `onViewAllAlerts` | `() => void` | Dashboard "View All Alerts". |
-| `miners` | `Device[]` | Miner Explorer rows. |
-| `units` | `ProcessedContainerUnit[]` | Sites Overview cards. |
-| `isSitesLoading` | `boolean` | Sites Overview loading flag. |
-| `sitesError` | `unknown` | Sites Overview error. |
-| `siteDevices` | `Device[]` | Resolves the selected unit for Site Detail. |
-| `siteDetailDataOptions` | `SiteOverviewDetailsDataOptions` | PDU / connected-miner data forwarded to Site Detail. |
-| `isSiteDetailLoading` | `boolean` | Site Detail loading flag. |
-| `initialView` | `PoolManagerView` | Starting view (uncontrolled). Defaults to `dashboard`. |
-| `view` | `PoolManagerView` | Controlled view — syncs internal state whenever it changes. |
-| `onViewChange` | `(view) => void` | Lets the page lazy-fetch per view. |
-| `onSiteSelect` | `(unitId) => void` | Fired when a site card opens — wire Site Detail data off this. |
+| Prop                    | Status   | Type                        | Default       | Description                                     |
+| ----------------------- | -------- | --------------------------- | ------------- | ----------------------------------------------- |
+| `poolConfig`            | Required | `PoolConfigData[]`          | —             | Shared by every sub-view (Pools, Miner Explorer, Sites) |
+| `stats`                 | Optional | `DashboardStats`            | —             | Dashboard stat blocks                            |
+| `isStatsLoading`        | Optional | `boolean`                   | —             | Dashboard stats loading flag                     |
+| `alerts`                | Optional | `Alert[]`                   | —             | Recent alerts for the dashboard list             |
+| `onViewAllAlerts`       | Optional | `VoidFunction`              | —             | Dashboard "View All Alerts" handler (e.g. navigate to `/alerts`) |
+| `miners`                | Optional | `ListThingsDevice[]`        | `[]`          | Miners for the Miner Explorer view               |
+| `units`                 | Optional | `ProcessedContainerUnit[]`  | `[]`         | Normalized site units for the Sites Overview view |
+| `isSitesLoading`        | Optional | `boolean`                   | —             | Sites Overview loading flag                      |
+| `sitesError`            | Optional | `unknown`                   | —             | Sites Overview error                             |
+| `siteDevices`           | Optional | `ContainerUnit[]`           | `[]`          | Raw container devices used to resolve the selected unit for Site Detail |
+| `siteDetailDataOptions` | Optional | `SiteOverviewDetailsDataOptions`  | —  | Extra data-fetch knobs forwarded to the Site Detail container |
+| `isSiteDetailLoading`   | Optional | `boolean`                   | —             | Site Detail loading flag                         |
+| `initialView`           | Optional | `PoolManagerView`           | `'dashboard'` | Starting view (uncontrolled)                     |
+| `view`                  | Optional | `PoolManagerView`           | —             | Controlled view — syncs internal state whenever it changes |
+| `onViewChange`          | Optional | `(view: PoolManagerView) => void` | —  | Notified whenever the active view changes (lets the page lazy-fetch) |
+| `onSiteSelect`          | Optional | `(unitId: string) => void`  | —        | Notified with the selected unit id when a site card is opened |
+| `className`             | Optional | `string`                    | —             | Additional class names                           |
 
 ## Loading & error states
 
@@ -73,7 +74,7 @@ straight through.
 ## Controlled vs. uncontrolled view
 
 - **Uncontrolled** — pass only `initialView` (or nothing) and let `<PoolManager>`
-  own navigation internally via its dashboard blocks and back buttons.
+  own navigation internally via its dashboard blocks and back buttons
 - **Controlled** — pass `view` (typically derived from a `?view=` URL query
   param) and handle `onViewChange` to write it back. The component syncs its
   internal state to `view` whenever it changes.

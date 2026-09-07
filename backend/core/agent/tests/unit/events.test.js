@@ -4,8 +4,16 @@
 
 import test from 'brittle'
 import {
-  EVENT, CONTRACT_VERSION, TERMINAL_EVENTS, isTerminal, isAgentEvent
+  EVENT, CONTRACT_VERSION, TERMINAL_EVENTS, isTerminal, isAgentEvent, AgentEventSchema
 } from '../../src/events.js'
+
+const CONTRACT_BREACH = {
+  type: EVENT.TOOL_RESULT,
+  name: 'count_devices',
+  text: '…did not satisfy its contract',
+  isError: true,
+  contractViolation: 'missing "count" (count)'
+}
 
 // One canonical example of every event the agent emits (loop.js + session.js), including
 // the two tool_result variants and the three done variants.
@@ -14,6 +22,7 @@ const CANONICAL = [
   { type: EVENT.TOOL_CALL, name: 'count_devices', args: { family: 'miner' } },
   { type: EVENT.TOOL_RESULT, name: 'count_devices', text: '{"summary":"15"}', isError: false },
   { type: EVENT.TOOL_RESULT, name: 'act_device', text: '(rejected by operator — not executed)' }, // no isError
+  CONTRACT_BREACH,
   { type: EVENT.PENDING_APPROVAL, name: 'act_device', args: { ref: 'antminer-3', action: 'reboot' } },
   { type: EVENT.ERROR, error: 'model server unreachable' },
   { type: EVENT.DONE, text: '15 miners.' },
@@ -33,6 +42,17 @@ test('the contract exposes exactly the six frozen event types', (t) => {
 
 test('isAgentEvent accepts every canonical event the agent emits', (t) => {
   for (const ev of CANONICAL) t.ok(isAgentEvent(ev), `${ev.type} accepted`)
+})
+
+// Pin survival and type: a consumer parsing events with AgentEventSchema (or forwarding
+// parsed.data) relies on declared fields surviving validation with their expected type.
+test('a validated event keeps every field the contract declares', (t) => {
+  const parsed = AgentEventSchema.safeParse(CONTRACT_BREACH)
+
+  t.ok(parsed.success)
+  t.is(parsed.data.contractViolation, CONTRACT_BREACH.contractViolation,
+    'a consumer forwarding parsed.data still knows why the result was rejected')
+  t.absent(isAgentEvent({ ...CONTRACT_BREACH, contractViolation: 42 }), 'a non-string reason is not a valid event')
 })
 
 test('isAgentEvent rejects malformed and unknown events', (t) => {

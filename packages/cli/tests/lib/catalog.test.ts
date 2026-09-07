@@ -10,8 +10,8 @@ import {
 
 describe('findCatalogWorker', () => {
   it('finds a known worker by its package value', () => {
-    const entry = findCatalogWorker('@tetherto/mdk-worker-antminer');
-    expect(entry?.label).toBe('mdk-worker-antminer');
+    const entry = findCatalogWorker('@tetherto/mdk-worker-demo');
+    expect(entry?.label).toBe('mdk-worker-demo');
   });
 
   it('returns undefined for an unknown package', () => {
@@ -21,19 +21,22 @@ describe('findCatalogWorker', () => {
 
 describe('resolveCatalogPackage', () => {
   it('resolves a plain (non-bundled) entry with no repoPath as not bundled', () => {
-    const entry = WORKER_CATALOG.find((w) => !w.repoPath);
-    expect(entry).toBeDefined();
-    const resolved = resolveCatalogPackage(entry as CatalogWorker);
+    const entry: CatalogWorker = {
+      value: '@org/mdk-worker-stub',
+      label: 'mdk-worker-stub',
+      hint: 'stub — not published',
+    };
+    const resolved = resolveCatalogPackage(entry);
     expect(resolved.bundled).toBe(false);
     expect(resolved.unavailable).toBeUndefined();
-    expect(resolved.packageName).toBe(entry?.value);
+    expect(resolved.packageName).toBe(entry.value);
   });
 
-  it('resolves the bundled antminer entry from this monorepo checkout', () => {
-    const entry = findCatalogWorker('@tetherto/mdk-worker-antminer');
+  it('resolves the bundled demo-worker entry from this monorepo checkout', () => {
+    const entry = findCatalogWorker('@tetherto/mdk-worker-demo');
     const resolved = resolveCatalogPackage(entry as CatalogWorker);
     expect(resolved.bundled).toBe(true);
-    expect(resolved.checkoutDir).toMatch(/backend[/\\]workers[/\\]miners[/\\]antminer$/);
+    expect(resolved.checkoutDir).toMatch(/backend[/\\]workers[/\\]samples[/\\]demo-worker$/);
   });
 
   it('resolves the bundled agent gateway plugin from this checkout', () => {
@@ -42,6 +45,14 @@ describe('resolveCatalogPackage', () => {
     const resolved = resolveCatalogPackage(entry!);
     expect(resolved.bundled).toBe(true);
     expect(resolved.checkoutDir).toMatch(/backend[/\\]plugins[/\\]agent$/);
+  });
+
+  it('resolves the bundled demo gateway plugin from this checkout', () => {
+    const entry = findCatalogGatewayPlugin('@tetherto/mdk-plugin-demo');
+    expect(entry).toBeDefined();
+    const resolved = resolveCatalogPackage(entry!);
+    expect(resolved.bundled).toBe(true);
+    expect(resolved.checkoutDir).toMatch(/backend[/\\]plugins[/\\]demo$/);
   });
 
   it('findCatalogGatewayPlugin returns undefined for an unknown package', () => {

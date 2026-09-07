@@ -1,8 +1,10 @@
 'use strict'
 
 // Dependency check run by start.js / cli.js before any cross-package require.
-// The repo is federated (no root workspaces): each backend package has its own
-// node_modules, and the UI imports built repo-root ui/packages/*.
+// Backend packages are members of the repo-root npm workspace, so their deps
+// hoist to the root node_modules and each member is symlinked there under its
+// package name — a member with no node_modules/ of its own is still installed.
+// The UI imports built repo-root ui/packages/*, a separate nested workspace.
 
 const fs = require('fs')
 const path = require('path')
@@ -14,7 +16,7 @@ const BACKEND_PACKAGES = [
   'backend/core/mdk',
   'backend/core/client',
   'backend/core/gateway',
-  'backend/workers/miners/whatsminer',
+  'backend/core/mdk-worker',
   'backend/workers/miners/antminer',
   'backend/workers/miners/avalon',
   'backend/workers/containers/antspace',
@@ -29,22 +31,41 @@ const BACKEND_PACKAGES = [
 
 const SETUP_HINT = 'run "npm run setup" in examples/full-site once to install and build everything'
 
-// Backend packages are root npm workspaces — `npm install` hoists their deps
-// into the repo-root node_modules rather than a per-package node_modules, and
-// symlinks the package itself in there under its package name. So "installed"
-// means either a local node_modules (non-hoisted case) or a resolvable
-// workspace symlink pointing back at the package.
-function isBackendPkgInstalled (pkg) {
-  const pkgDir = path.join(REPO_ROOT, pkg)
-  if (fs.existsSync(path.join(pkgDir, 'node_modules'))) return true
+// Read a package's declared name without going through module resolution.
+function pkgName (pkgDir) {
   try {
-    const { name } = require(path.join(pkgDir, 'package.json'))
-    const linkPath = path.join(REPO_ROOT, 'node_modules', ...name.split('/'))
-    if (!fs.existsSync(linkPath)) return false
-    return fs.realpathSync(linkPath) === fs.realpathSync(pkgDir)
+    return JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8')).name || null
+  } catch {
+    return null
+  }
+}
+
+// Does <repo root>/node_modules/<name> link back to this package? That link is
+// what `npm install` at the repo root creates for every workspace member.
+function isWorkspaceLinked (pkgDir) {
+  const name = pkgName(pkgDir)
+  if (!name) return false
+  try {
+    return fs.realpathSync(path.join(REPO_ROOT, 'node_modules', name)) === fs.realpathSync(pkgDir)
   } catch {
     return false
   }
+}
+
+// Two install shapes both count as installed:
+//   - a local node_modules/    — a standalone `npm install --prefix <pkg>`
+//   - a root workspace link    — `npm install` at the repo root, which hoists a
+//                                member's deps to the root instead of its own dir
+//
+// Filesystem-only, deliberately. Module resolution is gated by a package's
+// "exports" map, so require.resolve('<name>/package.json') throws
+// ERR_PACKAGE_PATH_NOT_EXPORTED for any package whose map omits "./package.json"
+// — @tetherto/mdk-gateway's does — and would report a correctly linked package
+// as missing, with a `npm run setup` hint that could never fix it.
+function isBackendPkgInstalled (pkg) {
+  const pkgDir = path.join(REPO_ROOT, pkg)
+  if (fs.existsSync(path.join(pkgDir, 'node_modules'))) return true
+  return isWorkspaceLinked(pkgDir)
 }
 
 function missingBackendDeps () {

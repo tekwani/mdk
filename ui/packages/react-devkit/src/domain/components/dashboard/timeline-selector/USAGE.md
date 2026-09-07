@@ -7,13 +7,13 @@ hashrate / consumption / power-mode chart hooks.
 
 ## Props
 
-| Prop        | Type                          | Required | Default              | Description                                       |
-| ----------- | ----------------------------- | -------- | -------------------- | ------------------------------------------------- |
-| `value`     | `string`                      | yes      | —                    | Current timeline (e.g. `'1m'`, `'5m'`).           |
-| `onChange`  | `(next: string) => void`      | yes      | —                    | Called whenever the user picks a new option.     |
-| `options`   | `TimelineOption[]`            | no       | `getTimelineOptions()` | Override the list — useful for localised labels. |
-| `label`     | `string`                      | no       | `"Time range"`       | aria-label / placeholder text.                   |
-| `className` | `string`                      | no       | —                    | Class hook on the trigger element.               |
+| Prop        | Status   | Type                     | Default                | Description                                     |
+| ----------- | -------- | ------------------------ | ---------------------- | ----------------------------------------------- |
+| `value`     | Required | `string`                 | —                      | Current timeline (e.g. `'1m'`, `'5m'`)          |
+| `onChange`  | Required | `(next: string) => void` | —                      | Called whenever the user picks a new option     |
+| `options`   | Optional | `TimelineOption[]`       | `getTimelineOptions()` | Override the list — useful for localized labels |
+| `label`     | Optional | `string`                 | `"Time range"`         | aria-label / placeholder text                   |
+| `className` | Optional | `string`                 | —                      | Class hook on the trigger element               |
 
 ## Example
 

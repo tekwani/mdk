@@ -18,7 +18,7 @@ npm install @tetherto/mdk-worker-schneider
 ## Usage
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startSchneiderWorker } = require('@tetherto/mdk-worker-schneider')
 
 const kernel = await getKernel()

@@ -4,13 +4,13 @@ Bulk-controls card for applying start/stop/mode changes to multiple selected con
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `isBatch` | `boolean` | no | `true` | Whether in batch (multi-select) mode. |
-| `isCompact` | `boolean` | no | — | Compact layout for tighter spaces. |
-| `connectedMiners` | `unknown` | no | — | Array of currently connected miners. |
-| `alarmsDataItems` | `TimelineItemData[]` | no | — | Alarm timeline entries to display. |
-| `onNavigate` | `(path: string) => void` | no | — | Navigation callback for alarm deep-links. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `isBatch` | Optional | `boolean` | `true` | Whether in batch (multi-select) mode |
+| `isCompact` | Optional | `boolean` | — | Compact layout for tighter spaces |
+| `connectedMiners` | Optional | `unknown` | — | Array of currently connected miners |
+| `alarmsDataItems` | Optional | `TimelineItemData[]` | — | Alarm timeline entries to display |
+| `onNavigate` | Optional | `(path: string) => void` | — | Navigation callback for alarm deep-links |
 
 ## Minimal example
 

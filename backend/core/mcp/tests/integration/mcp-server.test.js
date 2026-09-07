@@ -10,7 +10,11 @@ const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js')
 const { createMcpServer } = require('../../server')
 
 const FIXTURES_DIR = path.join(os.tmpdir(), 'mdk-mcp-server-test-' + Date.now())
-let nextPort = 41730
+// Below the ephemeral range (Linux defaults to 32768-60999) on purpose: these are fixed
+// listen ports, and the suite opens loopback client connections whose source ports are
+// drawn from that range, so a base inside it lets a client socket squat the next port a
+// test is about to bind and fail it with EADDRINUSE.
+let nextPort = 21730
 
 function writeFixture (dir, files) {
   fs.mkdirSync(dir, { recursive: true })

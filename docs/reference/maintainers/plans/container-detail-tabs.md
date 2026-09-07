@@ -102,8 +102,8 @@ plumbing — check what exists first.
 - **Port from:** `.../Tabs/SettingsTab/SettingsTab.tsx`.
 - **Reuse:** the 4 per-model settings components exist. **Sneaky bit:** the
   threshold `onSave` is **unwired** — wiring it to voting is the real work.
-- **Lands:** threshold payload builder/types → foundation; `useContainerSettings`
-  + save mutation → adapter; existing components stay presentational.
+- **Lands:** threshold payload builder/types → foundation; `useContainerSettings` +
+  save mutation → adapter; existing components stay presentational.
 - **Done:** editing+saving a threshold on a real container creates a pending
   voting action; catalog demo per model seeded.
 
@@ -176,6 +176,8 @@ states (loading / empty / error / populated).
 **Edit that example** (add pages with `mdk-ui add page`); do not revive the old
 `ui/packages/cli/templates/mdk-ui-shell/` generate path.
 
+The frontend step below needs `ui/`'s packages already built — [Loop A](#loop-a--catalog-fast-component-loop-no-backend) covers that one-time step.
+
 ```bash
 # 1. Backend — the in-repo Gateway on :3000 (one-time), per the template README:
 cd backend/core/gateway && ./setup-config.sh
@@ -185,11 +187,10 @@ cd backend/core/gateway && ./setup-config.sh
 #   See docs/guides/gateway/plugins.md.
 npm install && npm start          # http://localhost:3000
 
-# 2. Regenerate + run the shell app (one command builds + regenerates):
-cd ui
-npm run generate:shell            # = build + rimraf apps/mdk-ui-shell + mdk-ui create mdk-ui-shell
-cd apps/mdk-ui-shell
+# 2. Frontend — the checked-in shell app:
+cd examples/mdk-ui-shell-template
 cp .env.example .env              # already points VITE at http://localhost:3000
+npm install
 npm run dev                       # http://localhost:3030
 ```
 

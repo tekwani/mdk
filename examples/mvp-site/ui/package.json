@@ -1,7 +1,7 @@
 {
   "name": "@tetherto/mdk-mvp-site-ui",
   "type": "module",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -26,6 +26,6 @@
     "vite": "^6.3.5"
   },
   "overrides": {
-    "nanoid": "3.3.18"
+    "nanoid@<3.3.18": ">=3.3.18 <4.0.0"
   }
 }

@@ -1,7 +1,7 @@
 'use strict'
 
 const debug = require('debug')('mdk:worker:schneider')
-const ModbusFacility = require('svc-facs-modbus')
+const ModbusFacility = require('@tetherto/svc-facs-modbus')
 const P3U30PowerMeter = require('../lib/models/p3u30.powermeter')
 const PM5340PowerMeter = require('../lib/models/pm5340.powemeter')
 

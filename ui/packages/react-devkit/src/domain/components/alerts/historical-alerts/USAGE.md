@@ -8,16 +8,16 @@ an embedded `DateRangePicker`.
 
 ## Props
 
-| Prop                | Type                                              | Required | Default | Description                          |
-| ------------------- | ------------------------------------------------- | -------- | ------- | ------------------------------------ |
-| `alerts`            | `Alert[]`                                         | no       | `[]`    | Pre-fetched historical alert entries.|
-| `isLoading`         | `boolean`                                         | no       | `false` | Show DataTable loading overlay.      |
-| `localFilters`      | `AlertLocalFilters`                               | yes      | —       | Shared with `CurrentAlerts`.         |
-| `filterTags`        | `string[]`                                        | yes      | —       | Shared with `CurrentAlerts`.         |
-| `dateRange`         | `{ start: number; end: number }`                  | yes      | —       | Controlled date range.               |
-| `onDateRangeChange` | `(range: { start: number; end: number }) => void` | yes      | —       | Setter for the date range.           |
-| `onAlertClick`      | `(id?: string, uuid?: string) => void`            | no       | —       | Called when the user opens an alert. |
-| `className`         | `string`                                          | no       | —       | Additional class names.              |
+| Prop                | Status   | Type                                              | Default | Description                          |
+| ------------------- | -------- | ------------------------------------------------- | ------- | ------------------------------------ |
+| `localFilters`      | Required | `AlertLocalFilters`                               | —       | Shared with `CurrentAlerts`          |
+| `filterTags`        | Required | `string[]`                                        | —       | Shared with `CurrentAlerts`          |
+| `dateRange`         | Required | `{ start: number; end: number }`                  | —       | Controlled date range                |
+| `onDateRangeChange` | Required | `(range: { start: number; end: number }) => void` | —       | Setter for the date range            |
+| `alerts`            | Optional | `Alert[]`                                         | `[]`    | Pre-fetched historical alert entries |
+| `isLoading`         | Optional | `boolean`                                         | `false` | Show DataTable loading overlay       |
+| `onAlertClick`      | Optional | `(id?: string, uuid?: string) => void`            | —       | Called when the user opens an alert  |
+| `className`         | Optional | `string`                                          | —       | Additional class names               |
 
 ## Minimal example
 
@@ -39,5 +39,5 @@ an embedded `DateRangePicker`.
 ## Notes
 
 - Calls `useTimezoneFormatter` from `@tetherto/mdk-react-adapter`; wrap your
-  app in `<MdkProvider>` so the timezone store is reachable.
-- `getRowId` returns the alert `uuid`.
+  app in `<MdkProvider>` so the timezone store is reachable
+- `getRowId` returns the alert `uuid`

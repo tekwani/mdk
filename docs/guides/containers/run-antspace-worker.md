@@ -51,7 +51,7 @@ Use [the Antspace README][antspace-readme] to confirm the `model` value for your
 Add this code to the Node.js service or script that runs the MDK Worker in your deployment. The snippet shows the minimum boot call seeding one Antspace container, replace the example address and credentials with your container's values:
 
 ```js
-const { getKernel } = require('@tetherto/mdk/backend/core/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startAntspaceWorker } = require('@tetherto/mdk-worker-antspace')
 
 const kernel = await getKernel()
@@ -74,7 +74,7 @@ await kernel.registerWorker(worker.runtime.getPublicKey())
 `seedDevices` only seeds a fresh, empty `storeDir`, once persisted, the device set survives restarts on its own. To add a container to an already-running fleet, send the `registerThing` command to the live Worker instead:
 
 ```js
-const { createMdkClient } = require('@tetherto/mdk/backend/core/client')
+const { createMdkClient } = require('@tetherto/mdk-client')
 
 const client = createMdkClient({ kernelKey: kernel.getPublicKey() })
 await client.connect()
@@ -106,9 +106,6 @@ If it does not print those values, or if the mock port is already in use, the ne
 - Review telemetry units, command shapes, and error codes, [the Antspace README][antspace-readme]
 
 ## Links
-
-[terminology]: ../../reference/glossary.md
-<!-- docs@tether.io: terminology → reference/glossary -->
 
 [container-guide-assumptions]: index.md#prerequisites
 <!-- docs@tether.io: container-guide-assumptions → guides/containers#prerequisites -->

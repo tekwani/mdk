@@ -4,15 +4,15 @@ A styled horizontal or vertical separator line, optionally containing a label. W
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `orientation` | `'horizontal' \| 'vertical'` | no | `'horizontal'` | Line direction |
-| `dashed` | `boolean` | no | `false` | Renders a dashed line |
-| `dotted` | `boolean` | no | `false` | Renders a dotted line (takes precedence over `dashed`) |
-| `children` | `React.ReactNode` | no | — | Label content rendered in the middle of the line (horizontal only) |
-| `align` | `'left' \| 'center' \| 'right'` | no | `'center'` | Horizontal alignment of the label |
-| `plain` | `boolean` | no | `false` | Renders the label without a surrounding border |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop          | Status   | Type                            | Default        | Description                                                        |
+| ------------- | -------- | ------------------------------- | -------------- | ------------------------------------------------------------------ |
+| `orientation` | Optional | `'horizontal' \| 'vertical'`    | `'horizontal'` | Line direction                                                     |
+| `dashed`      | Optional | `boolean`                       | `false`        | Renders a dashed line                                              |
+| `dotted`      | Optional | `boolean`                       | `false`        | Renders a dotted line (takes precedence over `dashed`)             |
+| `children`    | Optional | `React.ReactNode`               | —              | Label content rendered in the middle of the line (horizontal only) |
+| `align`       | Optional | `'left' \| 'center' \| 'right'` | `'center'`     | Horizontal alignment of the label                                  |
+| `plain`       | Optional | `boolean`                       | `false`        | Renders the label without a surrounding border                     |
+| `className`   | Optional | `string`                        | —              | Additional class for the root element                              |
 
 ## Example
 
@@ -34,5 +34,5 @@ import { Divider } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- Labels are ignored on vertical dividers.
-- `dotted` takes precedence over `dashed` when both are set.
+- Labels are ignored on vertical dividers
+- `dotted` takes precedence over `dashed` when both are set

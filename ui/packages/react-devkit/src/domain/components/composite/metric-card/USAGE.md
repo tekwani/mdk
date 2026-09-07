@@ -7,18 +7,18 @@ inline KPI strips where visual weight needs to be controlled.
 
 ## Props
 
-| Prop                | Type                          | Required | Default | Description                                                              |
-| ------------------- | ----------------------------- | -------- | ------- | ------------------------------------------------------------------------ |
-| `label`             | `string`                      | yes      | —       | Text label shown above the value.                                        |
-| `unit`              | `string`                      | yes      | —       | Unit suffix appended after the value (e.g. `"TH/s"`, `"W"`, `"USD"`).   |
-| `value`             | `number \| string \| null`    | yes      | —       | Metric value to display.                                                 |
-| `bgColor`           | `string`                      | no       | —       | Custom background colour (CSS colour string). Defaults to `BLACK_ALPHA_05`. |
-| `className`         | `string`                      | no       | —       | Additional class names appended to the root element.                     |
-| `noMinWidth`        | `boolean`                     | no       | `false` | Removes the default minimum width so the card shrinks to content.        |
-| `isHighlighted`     | `boolean`                     | no       | `false` | Renders the value in orange to draw attention.                           |
-| `isValueMedium`     | `boolean`                     | no       | `false` | Applies a medium-weight variant to the value typography.                 |
-| `showDashForZero`   | `boolean`                     | no       | `false` | Displays `—` instead of `0` when value is zero.                         |
-| `isTransparentColor`| `boolean`                     | no       | `false` | Renders the value in a low-opacity white for de-emphasised display.      |
+| Prop                 | Status   | Type                       | Default | Description                  |
+| -------------------- | -------- | -------------------------- | ------- | ---------------------------- |
+| `label`              | Required | `string`                   | —       | Text label shown above the value |
+| `unit`               | Required | `string`                   | —       | Unit suffix appended after the value (e.g. `"TH/s"`, `"W"`, `"USD"`) |
+| `value`              | Required | `number \| string \| null` | —       | Metric value to display |
+| `bgColor`            | Optional | `string`                   | `BLACK_ALPHA_05` | Custom background color (CSS color string) |
+| `className`          | Optional | `string`                   | —       | Additional class names appended to the root element |
+| `noMinWidth`         | Optional | `boolean`                  | `false` | Removes the default minimum width so the card shrinks to content |
+| `isHighlighted`      | Optional | `boolean`                  | `false` | Renders the value in orange to draw attention |
+| `isValueMedium`      | Optional | `boolean`                  | `false` | Applies a medium-weight variant to the value typography |
+| `showDashForZero`    | Optional | `boolean`                  | `false` | Displays `—` instead of `0` when value is zero |
+| `isTransparentColor` | Optional | `boolean`                  | `false` | Renders the value in a low-opacity white for de-emphasized display |
 
 ## Minimal example
 
@@ -28,7 +28,7 @@ inline KPI strips where visual weight needs to be controlled.
 
 ## Notes
 
-- When `value` is `null` the component renders the FALLBACK placeholder (`—`) from `@primitives`.
-- `showDashForZero` and `null` values both render the same FALLBACK string.
-- `isHighlighted` takes precedence over `isTransparentColor` for colour resolution.
-- The background colour is applied via a `--mdk-metric-card-bg` CSS custom property, allowing it to be overridden at the `@layer app` level.
+- When `value` is `null` the component renders the FALLBACK placeholder (`—`) from `@primitives`
+- `showDashForZero` and `null` values both render the same FALLBACK string
+- `isHighlighted` takes precedence over `isTransparentColor` for color resolution
+- The background color is applied via a `--mdk-metric-card-bg` CSS custom property, allowing it to be overridden at the `@layer app` level

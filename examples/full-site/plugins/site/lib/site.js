@@ -3,9 +3,24 @@
 // Shared helpers for the site plugin controllers. Every Kernel access goes through
 // the plugin's own mdkClient (lib/client.js) — controllers never reach further down.
 
+const { CONTAINER_ANTSPACE } = require('../../../backend/site')
+
+// Workers whose devices are demo-seeded into a specific real container
+// (backend/site.js's seed*() functions) rather than a synthetic per-worker
+// rack — adaptContractMiners has no channel back to that seed-time placement
+// (the external whatsminer-mdk-worker plugin carries no per-device info), so
+// it's restated here to keep whatsminer racked alongside antminer in
+// CONTAINER_ANTSPACE instead of spawning its own phantom container.
+const CONTRACT_MINER_CONTAINER = {
+  'whatsminer-worker': CONTAINER_ANTSPACE
+}
+
 // Fallback when a config pull fails or omits deviceFamily — keyed by stable workerId.
+// whatsminer-worker is deliberately absent: it hosts the third-party
+// whatsminer-mdk-worker plugin (no worker-infra services, so no config/list/
+// count support), so leaving it unclassified here routes it through
+// adaptContractMiners below instead of the worker-infra list path it can't answer.
 const WORKER_FAMILY = {
-  'whatsminer-worker': 'miner',
   'antminer-worker': 'miner',
   'avalon-worker': 'miner',
   'container-worker': 'container',
@@ -43,7 +58,7 @@ async function adaptContractMiners (mdkClient, worker) {
   const telemetry = (caps && caps.capabilities && caps.capabilities.telemetry) || []
   if (!telemetry.some((t) => t.name === 'hashrate_rt')) return null
 
-  const container = `rack-${worker.workerId.replace(/-worker$/, '')}`
+  const container = CONTRACT_MINER_CONTAINER[worker.workerId] || `rack-${worker.workerId.replace(/-worker$/, '')}`
   return Promise.all((worker.deviceIds || []).map(async (deviceId, i) => {
     const tel = await mdkClient.pullTelemetry(deviceId, { type: 'metrics' }).catch(() => null)
     const m = (tel && tel.metrics) || {}

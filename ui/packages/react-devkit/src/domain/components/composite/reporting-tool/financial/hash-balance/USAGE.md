@@ -4,17 +4,17 @@ Composite financial view for site hash revenue, network hashrate, hashprice, and
 
 ## HashBalance
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `HashRevenueResponse \| null` | no | — | Revenue / cost log and summary. |
-| `isLoading` | `boolean` | no | — | Show loading state. |
-| `isError` | `boolean` | no | — | Show error state. |
-| `errorMessage` | `string` | no | — | Error copy when `isError`. |
-| `initialDateRange` | `FinancialDateRange` | no | year-to-date | Initial period. |
-| `onDateRangeChange` | `(range, query) => void` | no | — | Fired when the user changes the period. |
-| `className` | `string` | no | — | Root layout class. |
-| `tabsClassName` | `string` | no | — | Tabs wrapper class. |
-| `tabsListClassName` | `string` | no | — | Tab list class. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `HashRevenueResponse \| null` | — | Revenue / cost log and summary |
+| `isLoading` | Optional | `boolean` | `false` | Show loading state |
+| `isError` | Optional | `boolean` | `false` | Show error state |
+| `errorMessage` | Optional | `string` | `'Error loading hash balance data. Please try again later.'` | Error copy when `isError` |
+| `initialDateRange` | Optional | `FinancialDateRange` | year-to-date | Initial period |
+| `onDateRangeChange` | Optional | `(range, query) => void` | — | Fired when the user changes the period |
+| `className` | Optional | `string` | — | Root layout class |
+| `tabsClassName` | Optional | `string` | — | Tabs wrapper class |
+| `tabsListClassName` | Optional | `string` | — | Tab list class |
 
 ```tsx
 import { HashBalance } from "@tetherto/mdk-react-devkit";
@@ -24,22 +24,22 @@ import { HashBalance } from "@tetherto/mdk-react-devkit";
 
 ## HashBalanceRevenuePanel
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `HashRevenueResponse \| null` | no | — | Same payload as `HashBalance`. |
-| `log` | `HashRevenueLogEntry[]` | no | — | Optional log override. |
-| `dateRange` | `FinancialDateRange` | yes | — | Active reporting window. |
-| `currency` | `HashBalanceCurrency` | yes | — | `USD` or `BTC` label for per-PH/day units. |
-| `onCurrencyChange` | `(currency) => void` | yes | — | Currency toggle handler. |
-| `isLoading` | `boolean` | no | — | Loading state. |
-| `timeframeType` | `TimeframeTypeValue \| null` | no | — | Year / month / week mode. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `HashRevenueResponse \| null` | — | Same payload as `HashBalance` |
+| `log` | Optional | `HashRevenueLogEntry[]` | — | Optional log override |
+| `dateRange` | Required | `FinancialDateRange` | — | Active reporting window |
+| `currency` | Required | `HashBalanceCurrency` | — | `USD` or `BTC` label for per-PH/day units |
+| `onCurrencyChange` | Required | `(currency) => void` | — | Currency toggle handler |
+| `isLoading` | Optional | `boolean` | `false` | Loading state |
+| `timeframeType` | Optional | `TimeframeTypeValue \| null` | `null` | Year / month / week mode |
 
 ## HashBalanceCostPanel
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `HashRevenueResponse \| null` | no | — | Same payload as `HashBalance`. |
-| `log` | `HashRevenueLogEntry[]` | no | — | Optional log override. |
-| `dateRange` | `FinancialDateRange` | yes | — | Active reporting window. |
-| `isLoading` | `boolean` | no | — | Loading state. |
-| `timeframeType` | `TimeframeTypeValue \| null` | no | — | Year / month / week mode. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `HashRevenueResponse \| null` | — | Same payload as `HashBalance` |
+| `log` | Optional | `HashRevenueLogEntry[]` | — | Optional log override |
+| `dateRange` | Required | `FinancialDateRange` | — | Active reporting window |
+| `isLoading` | Optional | `boolean` | `false` | Loading state |
+| `timeframeType` | Optional | `TimeframeTypeValue \| null` | `null` | Year / month / week mode |

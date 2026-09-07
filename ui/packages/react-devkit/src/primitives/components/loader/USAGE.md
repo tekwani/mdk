@@ -4,12 +4,12 @@ A pulsing dots loading animation. Use it as an inline loading indicator or insid
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `size` | `number` | no | `10` | Diameter of each dot in pixels |
-| `count` | `3 \| 5 \| 7` | no | `5` | Number of dots |
-| `color` | `'red' \| 'gray' \| 'blue' \| 'amber' \| 'orange'` | no | `'orange'` | Dot color variant |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop        | Status   | Type          | Default    | Description                           |
+| ----------- | -------- | ------------- | ---------- | ------------------------------------- |
+| `size`      | Optional | `number`      | `10`       | Diameter of each dot in pixels        |
+| `count`     | Optional | `3 \| 5 \| 7` | `5`        | Number of dots                        |
+| `color`     | Optional | `'red' \| 'gray' \| 'blue' \| 'amber' \| 'orange'` | `'orange'` | Dot color variant                     |
+| `className` | Optional | `string`      | —          | Additional class for the root element |
 
 All other `div` HTML attributes are forwarded.
 

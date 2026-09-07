@@ -12,7 +12,7 @@ const debug = require('debug')('mdk:example:full-site:mocks')
 
 const WORKERS = path.join(__dirname, '..', '..', 'backend', 'workers')
 
-const whatsminerMock = require(path.join(WORKERS, 'miners', 'whatsminer', 'mock', 'server'))
+const whatsminerMock = require('whatsminer-mdk-worker/mock/api-v3-server')
 const antminerMock = require(path.join(WORKERS, 'miners', 'antminer', 'mock', 'server'))
 const avalonMock = require(path.join(WORKERS, 'miners', 'avalon', 'mock', 'server'))
 const antspaceMock = require(path.join(WORKERS, 'containers', 'antspace', 'mock', 'server'))
@@ -59,12 +59,13 @@ function startMocks ({ minerCount }) {
   const handles = []
 
   for (let i = 0; i < minerCount; i++) {
+    // whatsminer-mdk-worker's mock takes a raw state override (no type/serial
+    // shorthand the retired in-repo mock had) — see mvp-site's startMocks.
     handles.push(whatsminerMock.createServer({
       host: HOST,
       port: PORTS.MINER_BASE + i,
-      type: 'm56s',
-      serial: `WM-${String(i).padStart(4, '0')}`,
-      password: 'admin'
+      password: 'admin',
+      state: { deviceInfo: { miner: { type: 'm56s', 'miner-sn': `WM-${String(i).padStart(4, '0')}` } } }
     }))
   }
   debug('started %d whatsminer mocks on %d..%d', minerCount, PORTS.MINER_BASE, PORTS.MINER_BASE + minerCount - 1)

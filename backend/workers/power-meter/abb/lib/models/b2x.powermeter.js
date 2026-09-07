@@ -3,7 +3,7 @@
 const ABBPowerMeter = require('../abb.powermeter')
 const { series } = require('async')
 const { buildAlarmConfig, parseAlarmConfig } = require('../utils')
-const { FUNCTION_CODES } = require('svc-facs-modbus/lib/constants')
+const { FUNCTION_CODES } = require('@tetherto/svc-facs-modbus/lib/constants')
 const { promiseTimeout } = require('@bitfinex/lib-js-util-promise')
 
 class B2XPowerMeter extends ABBPowerMeter {

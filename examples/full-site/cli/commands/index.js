@@ -20,7 +20,7 @@ const HELP = `MDK full-site CLI — commands:
                                    bring up the whole site (N per miner family, default 10 → 30 total)
   start mocks|kernel|gateway|ui|mcp-server      start one component
   start worker <whatsminer|antminer|avalon|antspace|bitdeer|abb|satec|schneider|seneca|minerpool|f2pool>
-  seed whatsminer|antminer|avalon [--container <id>] [--pos <pdu_socket>] [--port <p>]
+  seed antminer|avalon [--container <id>] [--pos <pdu_socket>] [--port <p>]
   seed antspace|bitdeer|abb|satec|schneider|seneca [--container <id>] [--port <p>]
   status                           query Kernel over HRPC: workers, devices, health
   keys                             print Kernel + worker RPC public keys

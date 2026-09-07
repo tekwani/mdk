@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('brittle')
-const { FUNCTION_CODES } = require('svc-facs-modbus/lib/constants')
+const { FUNCTION_CODES } = require('@tetherto/svc-facs-modbus/lib/constants')
 const SenecaSensor = require('../../lib/seneca.sensor')
 
 test('SenecaSensor requires getClient', (t) => {

@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-worker-ocean",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Ocean mining pool lib",
   "keywords": [
     "tether"
@@ -22,13 +22,13 @@
     "test:coverage": "NODE_ENV=test brittle --coverage 'tests/**/*.test.js'"
   },
   "dependencies": {
-    "@bitfinex/lib-js-util-base": "git+https://github.com/bitfinexcom/lib-js-util-base.git",
-    "@tetherto/hp-svc-facs-store": "git+https://github.com/tetherto/hp-svc-facs-store.git#v1.0.0"
+    "@bitfinex/lib-js-util-base": "^2.1.0",
+    "@tetherto/hp-svc-facs-store": "^1.0.0"
   },
   "devDependencies": {
     "brittle": "3.16.3",
     "date-fns": "3.6.0",
-    "fastify": "5.8.5",
+    "fastify": "5.12.1",
     "standard": "17.1.2",
     "yargs": "17.7.2"
   },

@@ -28,7 +28,6 @@ describe('AddReplaceMinerDialog', () => {
     currentDialogFlow: 'add',
     isDirectToMaintenanceMode: false,
     minersType: 'S19',
-    isContainerEmpty: false,
   }
 
   it('should render the dialog with the correct title when open is true', () => {

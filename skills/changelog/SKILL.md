@@ -29,6 +29,27 @@ Step 1). **Never** guess the version silently.
   - **Landed then refactored / renamed / superseded within the cycle → one entry for
     the final state only.** Never "added X (#1), then reworked X's API (#2)" — describe
     the X that actually ships, as a single entry.
+- **"New" is a claim to check, not an assumption.** Before writing that something was *added*,
+  *gained*, *now does* X, or gets a *new* Y, confirm it did not already exist at `BASE`:
+  `git show BASE:<path>` for a file, or `git grep <symbol> BASE -- <path>` for a symbol. If it
+  existed and merely changed, it belongs in `## Changed` describing *what* changed — never in
+  `## Added`. Two failure modes this catches, both of which read as confident and are simply false:
+  - **A pre-existing mechanism credited as new.** A method, poll, flag or dependency that was
+    already there, whose *behavior* changed. Describe the behavior change, not the mechanism.
+  - **The wrong cause credited for a real improvement.** Something that already existed gains one
+    property (a backoff, a guard, an extra field) and the entry credits the whole mechanism. Name
+    the property that actually changed.
+  Run this check per item as you write, not as a review pass — it is one command and it is the
+  single most common source of confidently wrong changelog entries.
+- **A figure is a claim to verify, not a default to strip.** A count, size, or duration pulled from the diff (a case
+  count, a file count, a percentage) is real information when it is accurate at `BASE..TARGET` — cutting it to sound
+  safer throws that information away. Verify it against the thing it names (`wc -l`, the file it counts, the report
+  that produced it), the same as any other claim, and keep it if it checks out. Only drop a figure that turns out
+  wrong, or that names a one-off run with no fixture or report behind it (a self-reported "N trials" no test suite
+  recorded) — the number isn't what disqualifies it, the absence of a reproducible source is.
+  Prefer the delta over a bare snapshot when both endpoints are checkable (`262 → 273`, not just `273`): a lone count
+  says nothing about direction or scale, but a before/after tells the reader what actually happened this release,
+  and stays true as a historical fact regardless of what the count is next time.
 - **Diff, don't paraphrase commit subjects.** Commit messages lie, squash, and
   omit. Read the real `git diff` for each area and describe what the code/docs
   actually do now. Commit history is only a map of *where* to look and *what to drop*.

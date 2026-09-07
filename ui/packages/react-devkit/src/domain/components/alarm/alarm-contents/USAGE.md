@@ -4,10 +4,10 @@ Renders the body region of an alarm card as a scrollable list of `AlarmRow` entr
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `alarmsData` | `TimelineItemData[] \| unknown` | yes | — | Alert entries to render. Passes each entry to an `AlarmRow`; falls back to `EmptyState` when array is empty or falsy. Accepts a raw `ReactNode` as a passthrough fallback. |
-| `onNavigate` | `(path: string) => void` | yes | — | Navigation callback forwarded to each `AlarmRow` for click-through routing. |
+| Prop         | Status   | Type                            | Default | Description                  |
+| ------------ | -------- | ------------------------------- | ------- | ---------------------------- |
+| `alarmsData` | Required | `TimelineItemData[] \| unknown` | —       | Alert entries to render. Passes each entry to an `AlarmRow`; falls back to `EmptyState` when array is empty or falsy. Accepts a raw `ReactNode` as a passthrough fallback. |
+| `onNavigate` | Required | `(path: string) => void`        | —       | Navigation callback forwarded to each `AlarmRow` for click-through routing |
 
 ## Minimal example
 
@@ -27,4 +27,4 @@ const alarms = [
 
 ## Notes
 
-- Accepts non-array values via the `unknown` union type — these are rendered as a `ReactNode` fallback, enabling progressive disclosure patterns.
+- Accepts non-array values via the `unknown` union type: these are rendered as a `ReactNode` fallback, enabling progressive disclosure patterns

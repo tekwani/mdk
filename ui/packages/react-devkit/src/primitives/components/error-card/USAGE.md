@@ -4,12 +4,12 @@ Displays one or more error messages in a card or inline style. Multi-line messag
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `error` | `string` | yes | — | Error message string. Use `\n` to split into multiple lines. |
-| `title` | `string` | no | `'Errors'` | Heading displayed above the error text |
-| `variant` | `'card' \| 'inline'` | no | `'card'` | `'card'` shows a bordered container; `'inline'` shows flat text |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop        | Status   | Type                 | Default    | Description                                                     |
+| ----------- | -------- | -------------------- | ---------- | --------------------------------------------------------------- |
+| `error`     | Required | `string`             | —          | Error message string. Use `\n` to split into multiple lines.    |
+| `title`     | Optional | `string`             | `'Errors'` | Heading displayed above the error text                          |
+| `variant`   | Optional | `'card' \| 'inline'` | `'card'`   | `'card'` shows a bordered container; `'inline'` shows flat text |
+| `className` | Optional | `string`             | —          | Additional class for the root element                           |
 
 ## Example
 

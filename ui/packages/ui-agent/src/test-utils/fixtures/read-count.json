@@ -1,0 +1,75 @@
+{
+  "name": "read-count",
+  "prompt": "How many miners are there?",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "count_devices",
+      "args": {
+        "family": "miner",
+        "state": "online"
+      },
+      "turnId": "6183e05c-d338-4d75-937d-b2982adaab04",
+      "seq": 0,
+      "ts": 0
+    },
+    {
+      "type": "tool_result",
+      "name": "count_devices",
+      "text": "{\n  \"summary\": \"2 online miners.\",\n  \"count\": 2,\n  \"family\": \"miner\",\n  \"state\": \"online\"\n}",
+      "isError": false,
+      "turnId": "6183e05c-d338-4d75-937d-b2982adaab04",
+      "seq": 1,
+      "ts": 2325
+    },
+    {
+      "type": "token",
+      "text": "There",
+      "turnId": "6183e05c-d338-4d75-937d-b2982adaab04",
+      "seq": 2,
+      "ts": 3073
+    },
+    {
+      "type": "token",
+      "text": " are",
+      "turnId": "6183e05c-d338-4d75-937d-b2982adaab04",
+      "seq": 3,
+      "ts": 3113
+    },
+    {
+      "type": "token",
+      "text": " two",
+      "turnId": "6183e05c-d338-4d75-937d-b2982adaab04",
+      "seq": 4,
+      "ts": 3150
+    },
+    {
+      "type": "token",
+      "text": " online",
+      "turnId": "6183e05c-d338-4d75-937d-b2982adaab04",
+      "seq": 5,
+      "ts": 3183
+    },
+    {
+      "type": "token",
+      "text": " miners",
+      "turnId": "6183e05c-d338-4d75-937d-b2982adaab04",
+      "seq": 6,
+      "ts": 3224
+    },
+    {
+      "type": "token",
+      "text": ".",
+      "turnId": "6183e05c-d338-4d75-937d-b2982adaab04",
+      "seq": 7,
+      "ts": 3257
+    },
+    {
+      "type": "done",
+      "text": "There are two online miners.",
+      "turnId": "6183e05c-d338-4d75-937d-b2982adaab04",
+      "seq": 8,
+      "ts": 3292
+    }
+  ]
+}

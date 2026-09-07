@@ -4,17 +4,17 @@ A Chart.js doughnut chart with a custom HTML legend, slice toggle, and percentag
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `data` | `DoughnutChartDataset[]` | yes | — | Array of labelled slices |
-| `unit` | `string` | no | `''` | Unit suffix appended to values in tooltips and legends |
-| `options` | `ChartJS<'doughnut'>['options']` | no | — | Chart.js options merged with defaults |
-| `cutout` | `string` | no | `'75%'` | Doughnut hole size as a percentage string |
-| `borderWidth` | `number` | no | `4` | Gap between segments in pixels |
-| `height` | `number` | no | `260` | Chart canvas height in pixels |
-| `legendPosition` | `Position` | no | `'top'` | Legend placement (`'top' \| 'bottom' \| 'left' \| 'right'`) |
-| `tooltip` | `ChartTooltipConfig` | no | — | Custom HTML tooltip (replaces the built-in tooltip) |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop             | Status   | Type                             | Default | Description                                                 |
+| ---------------- | -------- | -------------------------------- | ------- | ----------------------------------------------------------- |
+| `data`           | Required | `DoughnutChartDataset[]`         | —       | Array of labelled slices                                    |
+| `unit`           | Optional | `string`                         | `''`    | Unit suffix appended to values in tooltips and legends      |
+| `options`        | Optional | `ChartJS<'doughnut'>['options']` | —       | Chart.js options merged with defaults                       |
+| `cutout`         | Optional | `string`                         | `'75%'` | Doughnut hole size as a percentage string                   |
+| `borderWidth`    | Optional | `number`                         | `4`     | Gap between segments in pixels                              |
+| `height`         | Optional | `number`                         | `260`   | Chart canvas height in pixels                               |
+| `legendPosition` | Optional | `Position`                       | `'top'` | Legend placement (`'top' \| 'bottom' \| 'left' \| 'right'`) |
+| `tooltip`        | Optional | `ChartTooltipConfig`             | —       | Custom HTML tooltip (replaces the built-in tooltip)         |
+| `className`      | Optional | `string`                         | —       | Additional class for the root element                       |
 
 ### `DoughnutChartDataset`
 
@@ -48,5 +48,5 @@ import { DoughnutChart } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- Clicking a legend item toggles the corresponding slice on the chart and dims the legend button.
-- When the `data` reference changes (labels change), all hidden states reset automatically.
+- Clicking a legend item toggles the corresponding slice on the chart and dims the legend button
+- When the `data` reference changes (labels change), all hidden states reset automatically

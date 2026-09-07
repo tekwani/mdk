@@ -6,20 +6,20 @@ A generic card container with a header label, optional navigation link, and conf
 
 All props are optional.
 
-| Prop | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `label` | `React.ReactNode` | — | Header content shown above the card body |
-| `isDark` | `boolean` | `false` | Applies a dark background modifier |
-| `isFullWidth` | `boolean` | `false` | Stretches the card to full container width |
-| `isFullHeight` | `boolean` | `false` | Stretches the card to full container height |
-| `isRelative` | `boolean` | `false` | Sets `position: relative` on the container |
-| `isScrollable` | `boolean` | `false` | Enables vertical scroll on the card body |
-| `hasNoWrap` | `boolean` | `false` | Prevents content from wrapping |
-| `hasNoMargin` | `boolean` | `false` | Removes default margin |
-| `hasNoBorder` | `boolean` | `false` | Removes the card border |
-| `children` | `React.ReactNode` | — | Card body content |
-| `className` | `string` | — | Additional class for the root element |
-| `getNavigateOptions` | `(label: string) => { href?: string; target?: string }` | — | Returns a link `href`/`target` for the label when provided |
+| Prop                 | Status   | Type              | Default | Description                                                |
+| -------------------- | -------- | ----------------- | ------- | ---------------------------------------------------------- |
+| `label`              | Optional | `React.ReactNode` | —       | Header content shown above the card body                   |
+| `isDark`             | Optional | `boolean`         | `false` | Applies a dark background modifier                         |
+| `isFullWidth`        | Optional | `boolean`         | `false` | Stretches the card to full container width                 |
+| `isFullHeight`       | Optional | `boolean`         | `false` | Stretches the card to full container height                |
+| `isRelative`         | Optional | `boolean`         | `false` | Sets `position: relative` on the container                 |
+| `isScrollable`       | Optional | `boolean`         | `false` | Enables vertical scroll on the card body                   |
+| `hasNoWrap`          | Optional | `boolean`         | `false` | Prevents content from wrapping                             |
+| `hasNoMargin`        | Optional | `boolean`         | `false` | Removes default margin                                     |
+| `hasNoBorder`        | Optional | `boolean`         | `false` | Removes the card border                                    |
+| `children`           | Optional | `React.ReactNode` | —       | Card body content                                          |
+| `className`          | Optional | `string`          | —       | Additional class for the root element                      |
+| `getNavigateOptions` | Optional | `(label: string) => { href?: string; target?: string }` | —       | Returns a link `href`/`target` for the label when provided |
 
 ## Example
 
@@ -41,5 +41,5 @@ import { LabeledCard } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- If `label` is the string `'Miners with error'`, the label automatically receives an informational tooltip explaining that minor errors not affecting hashrate are excluded.
-- `getNavigateOptions` only activates when `label` is a plain string.
+- If `label` is the string `'Miners with error'`, the label automatically receives an informational tooltip explaining that minor errors not affecting hashrate are excluded
+- `getNavigateOptions` only activates when `label` is a plain string

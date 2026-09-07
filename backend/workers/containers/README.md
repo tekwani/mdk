@@ -1,4 +1,4 @@
-# workers/containers
+# Workers/containers
 
 Mining container orchestration Workers. Containers are physical enclosures that house miners and manage shared infrastructure (cooling, power distribution, network). Each container Worker controls the enclosure's management system independently from the miners inside it.
 
@@ -22,7 +22,7 @@ The miners inside a container each have their own separate Worker process (`work
 
 ## Topology Example
 
-```
+```text
 container-A (Antspace HK3)   ← managed by antspace Worker
 ├── WM56S-001                ← managed by whatsminer Worker
 ├── WM56S-002                ← managed by whatsminer Worker
@@ -34,7 +34,7 @@ container-A (Antspace HK3)   ← managed by antspace Worker
 ## Quick Start
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startAntspaceWorker } = require('@tetherto/mdk-worker-antspace')
 
 const kernel = await getKernel()

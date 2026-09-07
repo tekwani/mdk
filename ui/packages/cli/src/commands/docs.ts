@@ -47,10 +47,12 @@ export const runDocs = (opts: DocsCommandOptions): void => {
     out(`Kernel capabilities: ${component.kernelCapabilities.map((c) => `\`${c}\``).join(', ')}`)
   out('')
   out('## Props\n')
-  out('| Prop | Type | Required | Description |')
-  out('| --- | --- | --- | --- |')
+  out('| Prop | Status | Type | Default | Description |')
+  out('| --- | --- | --- | --- | --- |')
   for (const p of component.props) {
-    out(`| \`${p.name}\` | \`${p.type}\` | ${p.required ? 'yes' : 'no'} | ${p.description ?? ''} |`)
+    const status = p.required ? 'Required' : 'Optional'
+    const defaultValue = p.default ? `\`${p.default}\`` : '—'
+    out(`| \`${p.name}\` | ${status} | \`${p.type}\` | ${defaultValue} | ${p.description ?? ''} |`)
   }
 
   if (!component.usageDoc) {

@@ -19,11 +19,15 @@ npm install @tetherto/mdk-worker-bitdeer
 
 ## Usage
 
-`startBitdeerWorker(opts)` embeds an MQTT broker (one per worker process, default port `10883`, override with
-`opts.mqttPort`) that the containers publish into. Device specs are keyed by `containerId`, not address/port:
+`startBitdeerWorker(opts)` embeds an MQTT broker (one per worker process) that the containers publish into. Device
+specs are keyed by `containerId`, not address/port:
+
+| Option | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `opts.mqttPort` | Optional | `number` | `10883` | Port for the embedded MQTT broker |
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startBitdeerWorker } = require('@tetherto/mdk-worker-bitdeer')
 
 const kernel = await getKernel()

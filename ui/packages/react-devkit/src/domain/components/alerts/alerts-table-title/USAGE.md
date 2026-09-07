@@ -4,11 +4,11 @@ Title strip for an alerts table section with a heading and an optional count bad
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `title` | `ReactNode` | yes | — | Section heading. |
-| `subtitle` | `ReactNode` | no | — | Optional subtitle or count badge. |
-| `className` | `string` | no | — | Additional CSS class. |
+| Prop        | Status   | Type        | Default | Description                      |
+| ----------- | -------- | ----------- | ------- | -------------------------------- |
+| `title`     | Required | `ReactNode` | —       | Section heading                  |
+| `subtitle`  | Optional | `ReactNode` | —       | Optional subtitle or count badge |
+| `className` | Optional | `string`    | —       | Additional CSS class             |
 
 ## Minimal example
 

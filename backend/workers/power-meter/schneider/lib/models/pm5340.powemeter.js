@@ -1,7 +1,7 @@
 'use strict'
 
 const { series } = require('async')
-const { FUNCTION_CODES } = require('svc-facs-modbus/lib/constants')
+const { FUNCTION_CODES } = require('@tetherto/svc-facs-modbus/lib/constants')
 const { promiseTimeout } = require('@bitfinex/lib-js-util-promise')
 const SchneiderPowerMeter = require('../schneider')
 

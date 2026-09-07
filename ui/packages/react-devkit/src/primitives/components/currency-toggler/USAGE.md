@@ -4,12 +4,12 @@ A segmented button control for switching between currency options. Each item can
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `currencies` | `(string \| CurrencyItem)[]` | yes | — | List of currency options |
-| `value` | `string` | yes | — | Currently selected currency value |
-| `onChange` | `(currency: string) => void` | yes | — | Fired with the selected currency value when a button is clicked |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop         | Status   | Type                         | Default | Description                           |
+| ------------ | -------- | ---------------------------- | ------- | ------------------------------------- |
+| `currencies` | Required | `(string \| CurrencyItem)[]` | —       | List of currency options              |
+| `value`      | Required | `string`                     | —       | Currently selected currency value     |
+| `onChange`   | Required | `(currency: string) => void` | —       | Fired with the selected currency value when a button is clicked |
+| `className`  | Optional | `string`                     | —       | Additional class for the root element |
 
 ### `CurrencyItem`
 

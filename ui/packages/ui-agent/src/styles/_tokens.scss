@@ -1,0 +1,30 @@
+/**
+ * Package-scoped theming surface.
+ *
+ * Every value indirects through a `--mdk-agent-*` variable whose default is an
+ * existing `--mdk-color-*` token, so the panel inherits the devkit theme by
+ * default and a host can retheme just the Co-pilot without forking the
+ * stylesheet. Declared in `@layer base` alongside the devkit's own tokens.
+ */
+
+@layer base {
+  :root {
+    --mdk-agent-surface: var(--mdk-color-obsidian, #161514);
+    --mdk-agent-surface-raised: var(--mdk-color-gray-900, #1a1815);
+    --mdk-agent-border: var(--mdk-color-white-alpha-024, #ffffff24);
+    --mdk-agent-border-strong: var(--mdk-color-white-alpha-04, #ffffff40);
+    --mdk-agent-text: var(--mdk-color-text-secondary, #ffffffd9);
+    --mdk-agent-text-muted: var(--mdk-color-gray-400, #8e8e8e);
+    --mdk-agent-accent: var(--mdk-color-primary, #f7931a);
+    --mdk-agent-accent-contrast: var(--mdk-color-dark-black, #10100f);
+    --mdk-agent-success: var(--mdk-color-brick-green, #34c759);
+    --mdk-agent-danger: var(--mdk-color-brick-red, #ff3b30);
+
+    --mdk-agent-panel-width: 420px;
+    --mdk-agent-panel-height: 640px;
+    --mdk-agent-panel-inset: 24px;
+    --mdk-agent-radius: var(--mdk-radius, 0px);
+    --mdk-agent-font: var(--font-mono, ui-monospace, 'SF Mono', monospace);
+    --mdk-agent-z: 900;
+  }
+}

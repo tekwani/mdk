@@ -10,8 +10,8 @@ import { admitTools, CAPABILITY } from './tools.js'
  * The agent is long-lived and owns the shared provider connection and, when `config.mcp`
  * is given, the MCP tool connection. Sessions are cheap and per-conversation.
  *
- * Tools are admitted here and only here: every session and the prompt-cache warmup then share
- * one filtered, identically ordered list, which is what keeps their prompt prefix identical.
+ * Tools are admitted here and only here, so every session shares one filtered, identically
+ * ordered list — which is what keeps their prompt prefix identical.
  *
  * Returns { provider, mcp, tools, skipped, store, waitReady, createSession, resumeSession, close }.
  */
@@ -22,13 +22,9 @@ export async function createAgent (config = {}) {
   const limits = config.limits ?? {}
   const system = config.system
   const capability = config.capability ?? CAPABILITY.SMALL
-  // The boundary the model is told its tools do not cross. Left undefined it is NOT_COVERED,
-  // which describes a present-state fleet tool set; a tool set that covers more must say so,
-  // or the prompt tells the model to decline questions its own tools answer.
   const notCovered = config.notCovered
   const store = config.store ?? new MemorySessionStore()
 
-  // Without an MCP server the agent is a grounded chat; with one, sessions call fleet tools.
   let mcp = null
   let tools = []
   let skipped = []
@@ -63,6 +59,7 @@ export async function createAgent (config = {}) {
     mcp,
     tools,
     skipped,
+    system,
 
     waitReady (opts) {
       return provider.waitReady(opts)

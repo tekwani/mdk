@@ -309,8 +309,8 @@ Translation work per surface:
    (response fields per §3), the per-model tab matrix, the PDU/heatmap data shapes, and
    the exact voting payloads per action. Resolve §9 open questions. *(do first)*
 2. **Phase 1 — Data layer.** WS-A (reads) → WS-B (writes), with WS-C/WS-D hooks following.
-3. **Phase 2 — Pages, read-first slice.** WS-E (Container Widgets, generic cards first)
-   + WS-F (Explorer list + detail panel) + WS-G **Home + Charts tabs** → WS-H pages →
+3. **Phase 2 — Pages, read-first slice.** WS-E (Container Widgets, generic cards first) +
+   WS-F (Explorer list + detail panel) + WS-G **Home + Charts tabs** → WS-H pages →
    WS-I template. *This is the first demoable end-to-end slice.*
 4. **Phase 3 — Vendor parity + remaining tabs.** WS-E vendor boxes + DCS; WS-G PDU,
    Heatmap, Power Adjustment, Parameters, Alarm, Controls, Settings across all 6 models.
@@ -456,8 +456,8 @@ Recommended sprint backlog (Phase 0 + Phase 1 + the start of Phase 2):
 | 9 (start) | Explorer list + detail panel (scaffold against hooks as they land) | Dev D |
 | 6 (start) | Container Widgets grid + generic cards (scaffold) | Dev D / Dev C |
 
-**Realistic 2-week exit criteria:** Phase 0 done; #2–#5 complete and unit-tested;
-#14 done; #6 and #9 scaffolded and wired to live reads for at least the
+**Realistic 2-week exit criteria:** Phase 0 done; #2–#5 complete and unit-tested; #14
+done; #6 and #9 scaffolded and wired to live reads for at least the
 `container` + `miner` tabs (read-only, generic cards). That is a demoable
 read-only slice against the real BE — and it unblocks the parallel work that
 makes Phases 2–4 go faster.

@@ -96,6 +96,17 @@ const matches = (row, family, state) =>
 
 const plural = (family, n) => `${family === 'all' ? 'device' : family}${n === 1 ? '' : 's'}`
 
+/**
+ * A count with its noun attached, and zero spelled as a word.
+ *
+ * Written for how a 4B reads a summary rather than for brevity. "2 devices across 1 workers — 2
+ * online, 0 offline" was misread ten times in twelve: the plural disagreement on "1 workers"
+ * invites the salient 2, the online count is not attached to any noun so it lands on both, and a
+ * bare "0 offline" came back as "two devices are offline" — a zero reported as the total. Every
+ * number here is glued to what it counts, so there is nothing to reattach.
+ */
+const counted = (n, noun) => `${n === 0 ? 'no' : n} ${noun}${n === 1 ? '' : 's'}`
+
 const isEmpty = (v) => v == null || (typeof v === 'object' && !Object.keys(v).length)
 
 function readMetric (telemetry, metric) {
@@ -109,6 +120,9 @@ function readMetric (telemetry, metric) {
 // Fan out in bounded batches. A site runs to hundreds of devices, and one Promise.all over the
 // whole fleet would open that many HRPC calls at once.
 const TELEMETRY_CONCURRENCY = 8
+
+/** How many consecutive ports `listenFrom` will try before giving up. */
+const PORT_SCAN_ATTEMPTS = 20
 async function mapInBatches (items, fn) {
   const results = []
   for (let i = 0; i < items.length; i += TELEMETRY_CONCURRENCY) {
@@ -309,7 +323,8 @@ function registerAgentTools (server, client) {
         // Naming the offline devices here makes the rollup a defensible answer to "which
         // devices are down?" and costs list_devices some routing. Removing them was measured
         // and was worse on both counts: list_devices 89% -> 87%, polarity 100% -> 78%.
-        summary: `${rows.length} devices across ${workers.length} workers — ${rows.length - offline.length} online, ${offline.length} offline` +
+        summary: `This site has ${counted(workers.length, 'worker')} and ${counted(rows.length, 'device')}: ` +
+          `${counted(rows.length - offline.length, 'device')} online, ${counted(offline.length, 'device')} offline` +
           (offline.length ? ` (${offline.map((r) => r.deviceId).join(', ')})` : '') + '.',
         totals: {
           workers: { total: workers.length, online: readyWorkers, offline: workers.length - readyWorkers },
@@ -413,11 +428,11 @@ function registerAgentTools (server, client) {
       }
       if (attr === 'capabilities') {
         const caps = await client.getCapabilities(ref)
-        return json({ summary: isEmpty(caps) ? `${ref} reports no capabilities.` : `Capabilities of ${ref}.`, ref, attr, value: caps })
+        return json({ summary: isEmpty(caps) ? `${ref} reports no capabilities.` : `Capabilities of ${ref}.`, ref, attr, value: caps ?? null })
       }
       if (attr === 'state') {
         const state = await client.pullState(ref)
-        return json({ summary: isEmpty(state) ? `${ref} reports no state.` : `State of ${ref}.`, ref, attr, value: state })
+        return json({ summary: isEmpty(state) ? `${ref} reports no state.` : `State of ${ref}.`, ref, attr, value: state ?? null })
       }
       if (attr === 'power_modes') {
         const modes = powerModesFor(ref).supportedPowerModes ?? null
@@ -436,7 +451,7 @@ function registerAgentTools (server, client) {
         summary: isEmpty(telemetry) ? `${ref} reports no readings.` : `Live readings for ${ref}.`,
         ref,
         attr,
-        value: telemetry
+        value: telemetry ?? null
       })
     }
   )
@@ -524,44 +539,48 @@ function registerAgentTools (server, client) {
       }
       const params = action === 'set_power_mode' ? { mode } : {}
       const result = await client.sendCommand(ref, action, params)
+      const attempt = action === 'reboot' ? 'Reboot' : `Set power mode to ${mode}`
+      // The kernel returns { error } rather than throwing when an envelope is rejected or the
+      // transport is down, and serializes a thrown error's message verbatim — which is empty for
+      // an Error carrying none. Presence decides, not truthiness, or a blank reason reads as a
+      // successful write.
+      if (result?.error != null) {
+        const reason = typeof result.error === 'string' && result.error.trim() ? result.error : 'no reason given'
+        return json({ summary: `${attempt} on ${ref} could not be sent: ${reason}.`, ref, action, outcome: 'failed', result })
+      }
+      const status = result?.status == null ? null : String(result.status).trim().toLowerCase() || null
       return json({
-        summary: `${action === 'reboot' ? 'Reboot' : `Set power mode to ${mode}`} on ${ref}: ${result?.status ?? 'sent'}.`,
+        summary: `${attempt} on ${ref}: ${status ?? 'sent'}.`,
         ref,
         action,
-        outcome: String(result?.status ?? 'sent'),
+        outcome: status ?? 'sent',
         result
       })
     }
   )
 }
 
-// Try `port`, then walk upward on EADDRINUSE — a demo box often already has a prior
-// run (or something else) bound to the default port. Any other listen error is real
-// and should surface. Resolves with the port that actually got bound.
-const PORT_SCAN_ATTEMPTS = 20
-function listenOnFirstAvailablePort (server, port) {
+/**
+ * Bind `port`, stepping to the next free one if something already holds it, and resolve with
+ * whichever it got — the ready line reports that, not what was asked for.
+ *
+ * Localhost only. These tools include act_device — power modes and reboots — behind no auth,
+ * so the example must not offer them to the network.
+ */
+function listenFrom (server, port, attempts = PORT_SCAN_ATTEMPTS) {
   return new Promise((resolve, reject) => {
-    let candidate = port
-    let attempts = 0
-    const tryListen = () => {
+    const attempt = (candidate, left) => {
       const onError = (err) => {
-        server.removeListener('listening', onListening)
-        if (err.code === 'EADDRINUSE' && ++attempts < PORT_SCAN_ATTEMPTS) {
-          candidate += 1
-          tryListen()
-          return
-        }
+        if (err.code === 'EADDRINUSE' && left > 0) return attempt(candidate + 1, left - 1)
         reject(err)
       }
-      const onListening = () => {
+      server.once('error', onError)
+      server.listen(candidate, '127.0.0.1', () => {
         server.removeListener('error', onError)
         resolve(candidate)
-      }
-      server.once('error', onError)
-      server.once('listening', onListening)
-      server.listen(candidate, '127.0.0.1')
+      })
     }
-    tryListen()
+    attempt(port, attempts)
   })
 }
 
@@ -593,7 +612,7 @@ async function main () {
     }
   })
 
-  const boundPort = await listenOnFirstAvailablePort(httpServer, port)
+  const boundPort = await listenFrom(httpServer, port)
 
   const shutdown = async () => {
     await client.close()

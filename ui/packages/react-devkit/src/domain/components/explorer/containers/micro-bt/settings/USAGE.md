@@ -4,10 +4,10 @@ Settings form for a MicroBT container with vendor-specific operating limits (tem
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `data` | `Device` | no | — | Live device object. |
-| `containerSettings` | `{ thresholds?: Record<string, unknown> } \| null` | no | — | Container-level threshold overrides. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `data` | Optional | `Device` | — | Live device object |
+| `containerSettings` | Optional | `{ thresholds?: Record<string, unknown> } \| null` | `null` | Container-level threshold overrides |
 
 ## Minimal example
 

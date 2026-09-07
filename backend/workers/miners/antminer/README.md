@@ -20,7 +20,7 @@ npm install @tetherto/mdk-worker-antminer
 ## Usage
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
 
 const kernel = await getKernel()

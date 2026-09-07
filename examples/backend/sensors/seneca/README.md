@@ -55,7 +55,7 @@ other actions, and troubleshooting.
 
 ### Committed (source)
 
-```
+```text
 examples/backend/sensors/seneca/
 ├── README.md
 ├── index.js                      # Kernel + Seneca Worker + mock + registration
@@ -64,7 +64,7 @@ examples/backend/sensors/seneca/
 
 ### Generated (ignored)
 
-```
+```text
 $TMPDIR/mdk-site-seneca/kernel/      # Kernel Corestore
 ```
 

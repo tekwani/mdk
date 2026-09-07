@@ -13,16 +13,15 @@ prop bags.
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `defaultTab` | `HashrateTabValue` | no | `"site-view"` | Tab selected on first render. |
-| `siteView` | `HashrateSiteViewProps` | no | - | Props forwarded to the Site View tab. |
-| `minerTypeView` | `HashrateMinerTypeViewProps` | no | - | Props forwarded to the Miner Type View tab. |
-| `miningUnitView` | `HashrateMiningUnitViewProps` | no | - | Props forwarded to the Mining Unit View tab. |
+| Prop             | Status   | Type                          | Default       | Description                                 |
+| ---------------- | -------- | ----------------------------- | ------------- | ------------------------------------------- |
+| `defaultTab`     | Optional | `HashrateTabValue`            | `"site-view"` | Tab selected on first render                |
+| `siteView`       | Optional | `HashrateSiteViewProps`       | —             | Props forwarded to the Site View tab        |
+| `minerTypeView`  | Optional | `HashrateMinerTypeViewProps`  | —             | Props forwarded to the Miner Type View tab  |
+| `miningUnitView` | Optional | `HashrateMiningUnitViewProps` | —             | Props forwarded to the Mining Unit View tab |
 
-Each `*ViewProps` bag exposes `log`, `isLoading`, `error`, `dateRange`,
-`onDateRangeChange`, and `onReset`. The filter state (which miner types /
-mining units are selected) is owned internally by each tab.
+Each `*ViewProps` bag exposes `log`, `isLoading`, `dateRange`, `onDateRangeChange`, and `onReset`. The filter state
+(which miner types / mining units are selected) is owned internally by each tab.
 
 ## Minimal example
 

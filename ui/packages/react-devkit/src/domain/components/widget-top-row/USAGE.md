@@ -5,14 +5,14 @@ per-category alarm badges, and the current power reading (or an error tooltip).
 
 ## Props
 
-| Prop                | Type                                    | Required | Default | Description                            |
-| ------------------- | --------------------------------------- | -------- | ------- | -------------------------------------- |
-| `title`             | `string`                                | yes      | —       | Widget title.                          |
-| `power`             | `number`                                | no       | —       | Power reading; rendered in kilo-units. |
-| `unit`              | `string`                                | no       | —       | Power unit (e.g. `"kW"`).              |
-| `statsErrorMessage` | `string \| ErrorWithTimestamp[] \| null` | no      | —       | Error tooltip content; replaces power. |
-| `alarms`            | `Partial<Record<AlarmPropKey, AlarmInfoItem[]>>` | no | —    | Per-category alarm badges.             |
-| `className`         | `string`                                | no       | —       | Additional class names.                |
+| Prop                | Status   | Type                                             | Default | Description                           |
+| ------------------- | -------- | ------------------------------------------------ | ------- | ------------------------------------- |
+| `title`             | Required | `string`                                         | —       | Widget title                          |
+| `power`             | Optional | `number`                                         | —       | Power reading; rendered in kilo-units |
+| `unit`              | Optional | `string`                                         | —       | Power unit (e.g. `"kW"`)              |
+| `statsErrorMessage` | Optional | `string \| ErrorWithTimestamp[] \| null`         | —       | Error tooltip content; replaces power |
+| `alarms`            | Optional | `Partial<Record<AlarmPropKey, AlarmInfoItem[]>>` | —       | Per-category alarm badges             |
+| `className`         | Optional | `string`                                         | —       | Additional class names                |
 
 ## Example
 
@@ -23,4 +23,4 @@ per-category alarm badges, and the current power reading (or an error tooltip).
 ## Notes
 
 - Uses `useTimezoneFormatter` from `@tetherto/mdk-react-adapter`; wrap in
-  `<MdkProvider>`.
+  `<MdkProvider>`

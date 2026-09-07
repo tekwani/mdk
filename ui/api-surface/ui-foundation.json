@@ -1162,6 +1162,18 @@
       {
         "name": "VotingActionPayload",
         "kind": "type"
+      },
+      {
+        "name": "WEBAPP_DISPLAY_NAME",
+        "kind": "const"
+      },
+      {
+        "name": "WEBAPP_NAME",
+        "kind": "const"
+      },
+      {
+        "name": "WEBAPP_SHORT_NAME",
+        "kind": "const"
       }
     ],
     "./store": [

@@ -1,0 +1,35 @@
+{
+  "name": "tool-contract-violation",
+  "prompt": "List the miners.",
+  "synthetic": true,
+  "note": "Hand-written: a tool whose result breaks its verb's contract. Per contract invariant 6, contractViolation only ever appears with isError: true — its presence means the tool answered and the answer was malformed, its absence with isError means the call itself failed. Reproducing this live needs a deliberately broken MCP server, so it is authored here instead.",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "list_devices",
+      "args": { "family": "miner", "state": "all" },
+      "turnId": "3f5c1f6a-0000-4000-8000-000000000001",
+      "seq": 0,
+      "ts": 0
+    },
+    {
+      "type": "tool_result",
+      "name": "list_devices",
+      "text": "{\n  \"summary\": \"2 miners: demo-miner-a-0, demo-miner-a-1.\",\n  \"count\": 2,\n  \"items\": [\n    { \"deviceId\": \"demo-miner-a-0\" },\n    { \"deviceId\": \"demo-miner-a-1\" }\n  ]\n}",
+      "isError": true,
+      "contractViolation": "missing \"total\" (count)",
+      "turnId": "3f5c1f6a-0000-4000-8000-000000000001",
+      "seq": 1,
+      "ts": 214
+    },
+    { "type": "token", "text": "I could not read that reliably", "turnId": "3f5c1f6a-0000-4000-8000-000000000001", "seq": 2, "ts": 401 },
+    { "type": "token", "text": " — please try again.", "turnId": "3f5c1f6a-0000-4000-8000-000000000001", "seq": 3, "ts": 455 },
+    {
+      "type": "done",
+      "text": "I could not read that reliably — please try again.",
+      "turnId": "3f5c1f6a-0000-4000-8000-000000000001",
+      "seq": 4,
+      "ts": 508
+    }
+  ]
+}

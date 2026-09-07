@@ -14,7 +14,7 @@ npm install @tetherto/mdk-worker-ocean
 passed at boot, not a `registerThing`-provisioned device:
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startOceanPoolWorker } = require('@tetherto/mdk-worker-ocean')
 
 const kernel = await getKernel()
@@ -28,14 +28,14 @@ const worker = await startOceanPoolWorker({
 await kernel.registerWorker(worker.runtime.getPublicKey())
 ```
 
-| `opts` field | Type | Status | Notes |
-| --- | --- | --- | --- |
-| `workerId` | string | Required | One runtime process = one `workerId`. |
-| `rack` | string | Required | Rack identifier; also the pool store prefix. |
-| `storeDir` | string | Required | Persistent store directory. |
-| `conf.ocean.accounts` | string[] | Required | Ocean.xyz usernames to poll. |
-| `conf.ocean.apiUrl` | string | Optional | Defaults to the Ocean.xyz API base URL. |
-| `kernelTopic` | string | Optional | DHT discovery topic (hex); omit to register directly with `kernel.registerWorker()`. |
+| Option | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `workerId` | Required | `string` | None | One runtime process = one `workerId` |
+| `rack` | Required | `string` | None | Rack identifier; also the pool store prefix |
+| `storeDir` | Required | `string` | None | Persistent store directory |
+| `conf.ocean.accounts` | Required | `string[]` | None | Ocean.xyz usernames to poll |
+| `conf.ocean.apiUrl` | Optional | `string` | None; requests target an empty base URL if omitted | The Ocean.xyz API base URL; [`config/ocean.json.example`](config/ocean.json.example) ships `https://api.ocean.xyz` as a template value, not a code-level default |
+| `kernelTopic` | Optional | `string` | None | DHT discovery topic (hex); omit to register directly with `kernel.registerWorker()` |
 
 ## Telemetry
 
@@ -52,10 +52,22 @@ Uses the Ocean REST API over HTTPS. Authenticated with an API key in the request
 
 ## Multi-account resilience
 
-Each `conf.ocean.accounts` entry is polled independently. An unknown or inactive account
-returns an error body with no result; the Worker logs `ERR_STATS_FETCH <username>` and skips
-it (raising `ERR_ACCOUNT_DATA_MISSING` internally when earnings or hashrate are missing) rather
-than failing the whole stats cycle. Other accounts in the list still report normally.
+Each `conf.ocean.accounts` entry is polled independently. An unknown or inactive account returns an error body with
+no result; the Worker logs it and skips that account rather than failing the whole stats cycle. Other accounts in
+the list still report normally.
+
+## Errors
+
+| Code | Fires when | Fix |
+| --- | --- | --- |
+| `ERR_WORKER_ID_REQUIRED` | `opts.workerId` is missing from `startOceanPoolWorker(opts)` | Pass a `workerId` |
+| `ERR_RACK_REQUIRED` | `opts.rack` is missing | Pass a `rack` |
+| `ERR_STORE_DIR_REQUIRED` | `opts.storeDir` is missing | Pass a `storeDir` |
+| `ERR_POOL_REQUIRED` | The Worker Plugin's `connect` runs without a `pool` service already attached — an internal wiring failure, since `startOceanPoolWorker` always supplies one | Not user-facing; check the plugin wiring in [`boot.js`](plugin/boot.js) |
+| `ERR_STATS_FETCH` | An account's earnings or hash rate request to the Ocean.xyz API fails, including the case where the response is missing earnings or hash rate data. A yearly-balances failure is handled separately (`ERR_BALANCES_FETCH`) and never reaches this path. | Logged and that account skipped for the cycle; check the account name, or ignore if the account is intentionally paused |
+| `ERR_ACCOUNT_DATA_MISSING` | An account's earnings or hash rate response comes back empty | Surfaces as `ERR_STATS_FETCH` in the log, since the same catch handles both; the pool is likely still onboarding that account |
+| `ERR_WORKERS_FETCH` | The per-account worker list request to the Ocean.xyz API fails | Logged; that account contributes no workers to `workers_online` for the cycle |
+| `ERR_BALANCES_FETCH` | A monthly earnings request to the Ocean.xyz API fails while building the yearly balance history | Logged; that month's balance is recorded as `0` rather than left stale |
 
 ## Health
 

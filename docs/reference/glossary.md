@@ -18,6 +18,8 @@ This section explains the terms you need to familiarize yourself with, using an 
 | **Kernel** (Orchestration Kernel) | The pull-only kernel that owns the device registry, routes commands, and pulls telemetry on its own cadence — it performs no aggregation itself | [`backend/core/kernel/`][kernel-package] |
 | **Gateway** | The developer-owned entry point between non-Node clients (UI, AI agents) and Kernel. Mandatory whenever a non-Node consumer reaches the kernel; not used in the in-process Antminer-rack example below | [`backend/core/gateway/`][gateway-package] |
 | **Worker** | A device-family translator. Speaks the MDK Protocol upward to Kernel and the vendor's native API downward to one device family (one miner brand, one container type, one pool API). | [`backend/workers/`][worker-readme] |
+| **Worker Plugin** | The executable device integration: [`mdk-contract.json`][contract-schema] plus its handler files, loaded from a package directory by `WorkerRuntimeV2` | [`backend/workers/miners/antminer/plugin/index.js`][antminer-plugin] |
+| **Worker contract** | The declarative [`mdk-contract.json`][contract-schema] alone, as read, validated, published, rendered, or queried | [`backend/workers/miners/antminer/plugin/mdk-contract.json`][antminer-contract] |
 | **Driver class** | The JavaScript class a Worker exports, one per device family (for example `Antminer`, `Whatsminer`), not one per model. Drives every device that Worker registers. | [`backend/workers/miners/antminer/lib/antminer.js`][antminer-worker] |
 | **Thing** | One registered device instance. Created by sending a `registerThing` command to the Worker's provisioning service, not by calling a driver-class method directly. Identified by a generated `deviceId`. | [`backend/core/mdk/lib/services/provisioning.service.js`][provisioning-service] |
 | **MCP** (Model Context Protocol) | The protocol AI agents use to discover and call tools. `@tetherto/mdk-mcp` runs either as its own standalone process, or in-process inside the Gateway when a plugin's routes are auto-generated into tools | [`backend/core/mcp/`][mcp-package] |
@@ -47,7 +49,7 @@ flowchart TB
     AntminerWorker --> Miners
 ```
 
-The same shape repeats for every other device family (Whatsminer, container vendors, pool APIs). [Scalability][architecture-scaling] covers the 
+The same shape repeats for every other device family (Whatsminer, container vendors, pool APIs). [Scalability][architecture-scaling] covers the
 multi-Worker view, parallel Workers, and multi-site deployments.
 
 ## Hyperswarm RPC
@@ -80,10 +82,10 @@ script, and a remote service all connect the same way:
 createMdkClient({ kernelKey: key })
 ```
 
-The Noise handshake that HRPC performs on every connection authenticates by key, so Kernel's allowlist works identically whether the caller is on the 
+The Noise handshake that HRPC performs on every connection authenticates by key, so Kernel's allowlist works identically whether the caller is on the
 same machine or a remote host.
 
-This is consistent with the broader Holepunch ecosystem philosophy — everything is a peer addressed by public key. When the peer is on the same 
+This is consistent with the broader Holepunch ecosystem philosophy — everything is a peer addressed by public key. When the peer is on the same
 machine it routes locally over the local network interface; the application code sees no difference.
 
 ## Next steps
@@ -124,6 +126,12 @@ machine it routes locally over the local network interface; the application code
 
 [antminer-worker]: ../../backend/workers/miners/antminer/lib/antminer.js
 <!-- docs@tether.io: antminer-worker → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/antminer/lib/antminer.js -->
+
+[antminer-plugin]: ../../backend/workers/miners/antminer/plugin/index.js
+<!-- docs@tether.io: antminer-plugin → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/antminer/plugin/index.js -->
+
+[contract-schema]: ../../backend/core/mdk-worker/mdk-contract.schema.json
+<!-- docs@tether.io: contract-schema → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/mdk-contract.schema.json -->
 
 [provisioning-service]: ../../backend/core/mdk/lib/services/provisioning.service.js
 <!-- docs@tether.io: provisioning-service → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/lib/services/provisioning.service.js -->

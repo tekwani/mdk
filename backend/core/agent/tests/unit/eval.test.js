@@ -3,7 +3,8 @@ import { writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { EVENT } from '../../src/events.js'
-import { coverageGaps, compileExpect, loadBattery, probeTruth, runBattery, selectCases } from '../../src/eval.js'
+import { coverageGaps, compileExpect, isMultiTurn, loadBattery, probeTruth, runBattery, selectCases, spellNumber, stepsOf } from '../../src/eval.js'
+import { CHARTER, CHARTER_VERSION } from '../../src/charter.js'
 import { MemorySessionStore } from '../../src/session-store.js'
 
 const CASES = loadBattery()
@@ -51,10 +52,12 @@ test('the battery loads and every expectation compiles', (t) => {
   for (const c of CASES) {
     // A case naming a probed value the fleet does not expose must fail loudly, not silently
     // score every answer as correct.
-    try {
-      compileExpect(c.expect, truth, c.id)
-    } catch (err) {
-      if (!/is not a probed/.test(err.message)) t.fail(`${c.id}: ${err.message}`)
+    for (const step of stepsOf(c)) {
+      try {
+        compileExpect(step.expect, truth, c.id)
+      } catch (err) {
+        if (!/is not a probed/.test(err.message)) t.fail(`${c.id}: ${err.message}`)
+      }
     }
   }
   t.pass('every expectation is a recognised form')
@@ -127,6 +130,52 @@ test('the expectation grammar resolves against the fleet, not against literals',
   t.exception(() => compileExpect({ gibberish: 1 }, truth), /unrecognised expectation/)
 })
 
+// We ask the model for prose, and prose spells small numbers out. Scoring digits only marked
+// correct answers wrong — 37 of 99 failures on a full run, most of them count_devices.
+test('a number counts whether it is written in digits or in words', (t) => {
+  const truth = { miners: 2, devices: 24, big: 485 }
+
+  t.ok(compileExpect({ number: 'miners' }, truth).test('There are two online miners.'))
+  t.ok(compileExpect({ number: 'miners' }, truth).test('Two miners are up.'), 'and at the start of a sentence')
+  t.ok(compileExpect({ number: 'devices' }, truth).test('twenty-four devices'))
+  t.ok(compileExpect({ number: 'devices' }, truth).test('Twenty four devices'), 'hyphen or space')
+  t.absent(compileExpect({ number: 'miners' }, truth).test('There are seven miners.'), 'a different word is still wrong')
+  t.absent(compileExpect({ number: 'devices' }, truth).test('twenty devices'), 'and so is a prefix of the right one')
+  t.ok(compileExpect({ number: 'big' }, truth).test('485 devices'), 'digits still count')
+  t.is(spellNumber(485), null, 'past ninety-nine only digits are expected')
+  t.is(spellNumber(1.5), null, 'and a fraction is not spelled at all')
+})
+
+// The answers below are verbatim from a battery run that scored them as failures, every one
+// of them correct for the fleet under test. `pattern: "\\d"` was the only way to say "it
+// stated a count", and it means digits.
+test('a count written in words satisfies anyNumber', (t) => {
+  const states = compileExpect({ anyNumber: true }, {})
+
+  for (const answer of [
+    'Two miners are online.',
+    'There are zero containers offline.',
+    'Two devices across one worker are online.',
+    'Two workers and two devices are online.',
+    'There are 30 online miners.',
+    'Twenty-four devices are up.'
+  ]) {
+    t.ok(states.test(answer), answer)
+  }
+
+  t.absent(states.test('Everything looks fine.'), 'an answer with no count still fails')
+  t.absent(states.test('I do not have that ability yet.'), 'and so does a refusal')
+})
+
+// "none" contains "one", and a word-boundary miss here would quietly pass a case that says
+// nothing about a count.
+test('anyNumber does not find a number inside another word', (t) => {
+  const states = compileExpect({ anyNumber: true }, {})
+
+  t.absent(states.test('None of them are offline.'), '"none" is not "one"')
+  t.absent(states.test('Nothing is wrong.'), 'nor is "nothing"')
+})
+
 // The CLI prints a case count and runBattery decides what actually runs. Two copies of the
 // filter would let the header promise a number the run does not deliver.
 test('selectCases is the one filter behind both the reported count and the run', (t) => {
@@ -181,7 +230,10 @@ test('a correct run passes every check', async (t) => {
 
   t.is(report.failed, 0)
   t.is(report.passed, 1)
-  t.alike(report.byCheck, { route: 0, answer: 0, approval: 0, contract: 0 })
+  t.alike(report.byCheck, { route: 0, answer: 0, approval: 0, contract: 0, target: 0 })
+  // Without this the report is a score with nothing to compare it to: the charter it was taken
+  // under has to be in the artifact, not looked up whenever someone reads it back.
+  t.is(report.charter, CHARTER_VERSION, 'the report records the charter the run answered under')
 })
 
 test('each check fails on its own, so a report says what actually broke', async (t) => {
@@ -205,6 +257,31 @@ test('each check fails on its own, so a report says what actually broke', async 
 
   t.is((await run([call('act_device', {}), result('act_device', { summary: 'x', ref: 'a', action: 'reboot', outcome: 'ok' }), say('2')],
     { tool: 'act_device', approval: true })).approval, false, 'an ungated write fails the approval check')
+})
+
+// Asked to "reboot the site" — which is not a device — the model invented `site-worker` and
+// tried to act on it. The gate held and the tool refused, but nothing in the battery could see
+// it: only answers were scored against the fleet, never the arguments.
+test('acting on a device the fleet does not have fails the target check', async (t) => {
+  const run = async (ref, over = {}) => {
+    const report = await runBattery({
+      agent: stubAgent([
+        call('act_device', { ref, action: 'reboot' }),
+        result('act_device', { summary: 'x', ref, action: 'reboot', outcome: 'ok' }),
+        say('Done.')
+      ]),
+      mcp: stubMcp(),
+      cases: [{ id: 'c', q: 'Reboot it', tool: 'act_device', approval: true, expect: { pattern: '\\w' }, ...over }]
+    })
+    return report.results[0].checks
+  }
+
+  t.is((await run('site-worker', { target: 'minerIds' })).target, false, 'an invented id is caught')
+  t.is((await run('antminer-0', { target: 'minerIds' })).target, true, 'a real one passes')
+  t.is((await run('ANTMINER-0', { target: 'minerIds' })).target, true, 'and case is not the model\'s job to get right')
+  t.is((await run('site-worker')).target, true, 'a case that did not opt in is unaffected')
+  t.is((await run('site-worker', { target: 'nothingProbed' })).target, true,
+    'and a list the probe could not answer never fails the model for it')
 })
 
 // The loop enforces the result contract itself and reports the breach as a failed call, which
@@ -482,6 +559,45 @@ test('a slow question does not stall the workers behind it', async (t) => {
   t.ok(startedWhileSlowRan > 2, `the free worker carried on (${startedWhileSlowRan} started while c0 ran)`)
 })
 
+// A tool the agent was never shown is not a routing failure. Scoring it as one measures the
+// admission decision — the capability, or a server that does not offer the tool — and
+// reports the model getting wrong a question it could not have answered.
+test('cases about an unadmitted tool are set aside, not failed', async (t) => {
+  const cases = [
+    { id: 'diag', q: 'What is wrong?', tool: 'diagnose_site', expect: { pattern: 'w' } },
+    { id: 'count', q: 'How many miners?', tool: 'count_devices', expect: { number: 'miners' } }
+  ]
+  const events = [call('count_devices', {}), result('count_devices', { summary: '2.', count: 2 }), say('There are 2 miners.')]
+  const agent = { ...stubAgent(events), tools: [{ name: 'count_devices' }] }
+
+  const report = await runBattery({ agent, mcp: stubMcp(), cases })
+
+  t.is(report.runs, 1, 'only the admitted tool ran')
+  t.alike(report.skipped.map((s) => s.id), ['diag'])
+  t.ok(/not admitted at this capability/.test(report.skipped[0].reason), 'and says why')
+})
+
+// A case that permits several tools only needs one of them admitted to be worth running.
+test('a case is kept when any of its permitted tools is admitted', async (t) => {
+  const cases = [{ id: 'either', q: 'What should I look at?', tool: ['diagnose_site', 'count_devices'], expect: { pattern: 'w' } }]
+  const events = [call('count_devices', {}), result('count_devices', { summary: '2.', count: 2 }), say('Two miners.')]
+  const agent = { ...stubAgent(events), tools: [{ name: 'count_devices' }] }
+
+  const report = await runBattery({ agent, mcp: stubMcp(), cases })
+  t.is(report.runs, 1)
+  t.alike(report.skipped, [])
+})
+
+// Declining cases name no tool, so admission cannot decide them either way.
+test('a case that must be declined is never skipped for admission', async (t) => {
+  const cases = [{ id: 'decline', q: 'What is the bitcoin price?', tool: null, expect: { declined: true } }]
+  const agent = { ...stubAgent([say('I do not have access to prices.')]), tools: [{ name: 'count_devices' }] }
+
+  const report = await runBattery({ agent, mcp: stubMcp(), cases })
+  t.is(report.runs, 1)
+  t.is(report.passed, 1)
+})
+
 // The battery never resumes a session, so a full run would otherwise hold every case's history
 // in memory for its whole duration — nothing expires inside twenty minutes at a thirty-minute TTL.
 test('a battery run does not leave its sessions behind', async (t) => {
@@ -599,4 +715,146 @@ test('ifEmpty validates the branch this fleet does not take', (t) => {
       t.ok(/unrecognised expectation/.test(err.message), `caught on a ${name} fleet`)
     }
   }
+})
+
+// --- multi-turn cases --------------------------------------------------------
+//
+// Every single-turn case gets a fresh conversation, which is the condition routing is best
+// under. A `steps` case runs its turns through one session, which is where the interesting
+// failures live: a write that stops being gated on the third ask, a model imitating its own
+// earlier prose instead of calling a tool.
+
+// Replays a different scripted stream per turn, so a sequence can degrade the way a real one
+// does — and records the sessions it was asked for, to prove the turns shared one.
+const stubSequenceAgent = (perTurn) => {
+  const sessions = []
+  return {
+    sessions,
+    createSession: () => {
+      let turn = 0
+      const session = {
+        id: `s${sessions.length}`,
+        async * send () {
+          for (const ev of perTurn[Math.min(turn, perTurn.length - 1)]) yield ev
+          turn++
+        }
+      }
+      sessions.push(session)
+      return session
+    }
+  }
+}
+
+// The payload satisfies the `count` verb's contract — without a summary the case would fail on
+// the contract axis and never reach the routing question these tests are about.
+const COUNT_OK = [call('count_devices', { family: 'miner' }), result('count_devices', { summary: '15 miners.', count: 15 }), say('15 miners.')]
+const NOTHING = [say('15 miners.')] // answered without calling anything
+
+test('a case declares turns with steps instead of q', (t) => {
+  const single = { id: 'x', q: 'How many?', tool: 'count_devices', expect: { pattern: '\\w' } }
+  t.absent(isMultiTurn(single))
+  t.is(stepsOf(single).length, 1, 'a plain case is one step')
+  t.is(stepsOf(single)[0].q, 'How many?')
+
+  const multi = { id: 'y', steps: [single, single] }
+  t.ok(isMultiTurn(multi))
+  t.is(stepsOf(multi).length, 2)
+})
+
+test('every turn of a sequence runs through the same session', async (t) => {
+  // The whole point: a fresh session per turn would hide exactly what this shape is for.
+  const agent = stubSequenceAgent([COUNT_OK, COUNT_OK, COUNT_OK])
+  const cases = [{
+    id: 'seq',
+    steps: Array.from({ length: 3 }, () => ({ q: 'How many miners?', tool: 'count_devices', expect: { pattern: '\\bminer' } })),
+    tags: ['multi-turn']
+  }]
+
+  const report = await runBattery({ agent, mcp: stubMcp(), cases })
+  t.is(agent.sessions.length, 1, 'one conversation for the whole sequence')
+  t.is(report.passed, 1)
+})
+
+test('a sequence fails on the turn that broke, and says which', async (t) => {
+  // Passing twice and failing on the third is a different defect from failing outright, so the
+  // turn index is the signal — a report that only said "failed" would read like the model never
+  // worked at all.
+  const agent = stubSequenceAgent([COUNT_OK, COUNT_OK, NOTHING])
+  const cases = [{
+    id: 'seq-degrades',
+    steps: Array.from({ length: 3 }, () => ({ q: 'How many miners?', tool: 'count_devices', expect: { pattern: '\\bminer' } })),
+    tags: ['multi-turn']
+  }]
+
+  const report = await runBattery({ agent, mcp: stubMcp(), cases })
+  t.is(report.failed, 1)
+  const [run] = report.results ?? []
+  t.is(run?.failedAtTurn, 3, 'named the turn it broke on')
+  t.is(run?.totalTurns, 3)
+  t.absent(run?.checks.route, 'and why: it called nothing')
+})
+
+test('a sequence needs at least two turns', (t) => {
+  const path = join(tmpdir(), `battery-one-step-${Date.now()}.json`)
+  writeFileSync(path, JSON.stringify({
+    cases: [{ id: 'x', steps: [{ q: 'a', tool: null, expect: { pattern: '\\w' } }] }]
+  }))
+  try {
+    loadBattery(path)
+    t.fail('should have rejected a one-step sequence')
+  } catch (err) {
+    t.ok(/at least two turns/.test(err.message))
+  }
+})
+
+test('a case cannot have both q and steps', (t) => {
+  const path = join(tmpdir(), `battery-both-${Date.now()}.json`)
+  writeFileSync(path, JSON.stringify({
+    cases: [{ id: 'x', q: 'a', steps: [{ q: 'a', tool: null, expect: {} }, { q: 'b', tool: null, expect: {} }] }]
+  }))
+  try {
+    loadBattery(path)
+    t.fail('should have rejected a case with both')
+  } catch (err) {
+    t.ok(/"q" or "steps", not both/.test(err.message))
+  }
+})
+
+test('a step missing its expectation is caught at load, naming the turn', (t) => {
+  const path = join(tmpdir(), `battery-step-expect-${Date.now()}.json`)
+  writeFileSync(path, JSON.stringify({
+    cases: [{ id: 'x', steps: [{ q: 'a', tool: null, expect: { pattern: '\\w' } }, { q: 'b', tool: null }] }]
+  }))
+  try {
+    loadBattery(path)
+    t.fail('should have rejected the step with no expectation')
+  } catch (err) {
+    t.ok(/x step 2/.test(err.message), 'points at the turn, not just the case')
+  }
+})
+
+test('coverage counts every tool a sequence touches, not only its first', (t) => {
+  const cases = [{
+    id: 'seq',
+    steps: [
+      { q: 'a', tool: 'count_devices', expect: { pattern: '\\w' } },
+      { q: 'b', tool: 'act_device', expect: { pattern: '\\w' } }
+    ]
+  }]
+  const gaps = coverageGaps([{ name: 'count_devices' }, { name: 'act_device' }, { name: 'rank_devices' }], cases)
+  t.alike(gaps, ['rank_devices'], 'both tools in the sequence count as covered')
+})
+
+test('runBattery reports charter version or custom', async (t) => {
+  const agentNormal = {
+    createSession: async () => ({ id: 's1', system: CHARTER, send: async function * () { yield say('ok') } })
+  }
+  const agentCustom = {
+    createSession: async () => ({ id: 's2', system: 'Custom charter', send: async function * () { yield say('ok') } })
+  }
+  const report1 = await runBattery({ agent: agentNormal, mcp: stubMcp(), cases: [CASES[0]] })
+  t.is(report1.charter, CHARTER_VERSION, 'standard charter reports version string')
+
+  const report2 = await runBattery({ agent: agentCustom, mcp: stubMcp(), cases: [CASES[0]] })
+  t.is(report2.charter, 'custom', 'custom system prompt reports custom')
 })

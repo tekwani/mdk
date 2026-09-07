@@ -1,7 +1,7 @@
 'use strict'
 
 const mdkClient = require('../lib/client')
-const { collectDevices, json } = require('../lib/site')
+const { collectDevices, counted, json } = require('../lib/site')
 
 module.exports = {
   schema: {},
@@ -18,10 +18,13 @@ module.exports = {
       if (r.state === 'online') byFamily[r.family].online++
     }
     return json({
-      summary: `${rows.length} devices across ${workers.length} workers — ${rows.length - offline.length} online, ${offline.length} offline` +
+      summary: `This site has ${counted(workers.length, 'worker')} and ${counted(rows.length, 'device')}: ` +
+        `${counted(rows.length - offline.length, 'device')} online, ${counted(offline.length, 'device')} offline` +
         (offline.length ? ` (${offline.map((r) => r.deviceId).join(', ')})` : '') + '.',
-      workers: { total: workers.length, online: readyWorkers, offline: workers.length - readyWorkers },
-      devices: { total: rows.length, online: rows.length - offline.length, offline: offline.length, byFamily }
+      totals: {
+        workers: { total: workers.length, online: readyWorkers, offline: workers.length - readyWorkers },
+        devices: { total: rows.length, online: rows.length - offline.length, offline: offline.length, byFamily }
+      }
     })
   }
 }

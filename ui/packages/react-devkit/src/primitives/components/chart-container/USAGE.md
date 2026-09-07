@@ -4,23 +4,23 @@ A layout wrapper for charts that provides a title/header row, interactive legend
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `children` | `React.ReactNode` | yes | — | The chart element to render |
-| `title` | `string` | no | — | Chart heading (renders as `<h3>` unless `header` is provided) |
-| `header` | `React.ReactNode` | no | — | Replaces the default `title` heading with a custom element |
-| `legendData` | `LegendItem[]` | no | — | Color-keyed legend items; each item can be toggled |
-| `highlightedValue` | `HighlightedValueProps` | no | — | Large value/unit displayed alongside the legend |
-| `rangeSelector` | `RangeSelectorProps` | no | — | Radio-card time-range selector |
-| `loading` | `boolean` | no | — | Shows a centered `<Loader>` overlay |
-| `empty` | `boolean` | no | — | Hides the chart and shows `emptyMessage` |
-| `emptyMessage` | `string` | no | `'No data available'` | Message shown when `empty` is true |
-| `minMaxAvg` | `MinMaxAvg` | no | — | Built-in footer showing Min / Avg / Max values |
-| `timeRange` | `string` | no | — | Time range label shown in the footer |
-| `footer` | `React.ReactNode` | no | — | Custom footer content rendered below the chart |
-| `footerClassName` | `string` | no | — | Additional class for the footer area |
-| `onToggleDataset` | `(index: number) => void` | no | — | Fired when a legend item is clicked |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop               | Status   | Type                      | Default               | Description                                                   |
+| ------------------ | -------- | ------------------------- | --------------------- | ------------------------------------------------------------- |
+| `children`         | Required | `React.ReactNode`         | —                     | The chart element to render                                   |
+| `title`            | Optional | `string`                  | —                     | Chart heading (renders as `<h3>` unless `header` is provided) |
+| `header`           | Optional | `React.ReactNode`         | —                     | Replaces the default `title` heading with a custom element    |
+| `legendData`       | Optional | `LegendItem[]`            | —                     | Color-keyed legend items; each item can be toggled            |
+| `highlightedValue` | Optional | `HighlightedValueProps`   | —                     | Large value/unit displayed alongside the legend               |
+| `rangeSelector`    | Optional | `RangeSelectorProps`      | —                     | Radio-card time-range selector                                |
+| `loading`          | Optional | `boolean`                 | —                     | Shows a centered `<Loader>` overlay                           |
+| `empty`            | Optional | `boolean`                 | —                     | Hides the chart and shows `emptyMessage`                      |
+| `emptyMessage`     | Optional | `string`                  | `'No data available'` | Message shown when `empty` is true                            |
+| `minMaxAvg`        | Optional | `MinMaxAvg`               | —                     | Built-in footer showing Min / Avg / Max values                |
+| `timeRange`        | Optional | `string`                  | —                     | Time range label shown in the footer                          |
+| `footer`           | Optional | `React.ReactNode`         | —                     | Custom footer content rendered below the chart                |
+| `footerClassName`  | Optional | `string`                  | —                     | Additional class for the footer area                          |
+| `onToggleDataset`  | Optional | `(index: number) => void` | —                     | Fired when a legend item is clicked                           |
+| `className`        | Optional | `string`                  | —                     | Additional class for the root element                         |
 
 ### `LegendItem`
 
@@ -67,4 +67,4 @@ import { ChartContainer, BarChart } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- `minMaxAvg` and `timeRange` are only rendered when the chart is not loading or empty.
+- `minMaxAvg` and `timeRange` are only rendered when the chart is not loading or empty

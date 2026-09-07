@@ -4,15 +4,15 @@ Compact labelled status pill used inside BitMain container panels for boolean or
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `label` | `string` | no | — | Display label for the reading (e.g. `"Circulation Pump"`). |
-| `status` | `StatusType` | no | — | Status value that controls indicator colour (e.g. `"running"`, `"error"`, `"offline"`). |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `label` | Optional | `string` | — | Display label for the reading (e.g. `"Circulation Pump"`) |
+| `status` | Optional | `StatusType` | — | Status value that controls indicator colour (`"normal"`, `"warning"`, `"fault"`, `"unavailable"`) |
 
 ## Minimal example
 
 ```tsx
 import { StatusItem } from "@tetherto/mdk-react-devkit";
 
-<StatusItem label="Circulation Pump" status="running" />
+<StatusItem label="Circulation Pump" status="normal" />
 ```

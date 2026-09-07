@@ -1,6 +1,7 @@
 import '@tetherto/mdk-fonts/jetbrains-mono.css'
 import '@tetherto/mdk-react-devkit/styles.css'
 import '@tetherto/mdk-react-devkit/styles-domain.css'
+import '@tetherto/mdk-ui-agent/styles.css'
 import { MdkProvider } from '@tetherto/mdk-react-adapter'
 import { noAuth } from '@tetherto/mdk-ui-foundation'
 import ReactDOM from 'react-dom/client'

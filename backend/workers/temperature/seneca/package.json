@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-worker-seneca",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Sensor Temperature SENECA",
   "keywords": [
     "tether"
@@ -20,12 +20,12 @@
     "test:coverage": "NODE_ENV=test brittle --coverage 'tests/**/*.test.js'"
   },
   "dependencies": {
-    "@bitfinex/lib-js-util-promise": "git+https://github.com/bitfinexcom/lib-js-util-promise.git",
+    "@bitfinex/lib-js-util-promise": "^1.1.0",
     "async": "3.2.6",
-    "svc-facs-modbus": "git+https://github.com/tetherto/svc-facs-modbus.git"
+    "@tetherto/svc-facs-modbus": "^0.1.1"
   },
   "devDependencies": {
-    "@bitfinex/lib-js-util-base": "git+https://github.com/bitfinexcom/lib-js-util-base.git",
+    "@bitfinex/lib-js-util-base": "^2.1.0",
     "brittle": "3.16.3",
     "debug": "4.4.1",
     "modbus-stream": "0.46.0",

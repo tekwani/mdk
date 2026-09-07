@@ -13,12 +13,12 @@ return an `{ error }` to surface a message in the modal.
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `isOpen` | `boolean` | — | Whether the modal is open |
-| `onClose` | `() => void` | — | Called when the modal requests to close |
-| `onSubmit` | `(records: CSVRecord[]) => Promise<{ error?: string } \| void>` | — | Submit handler; return `{ error }` to show an inline error |
-| `isLoading` | `boolean` | — | Renders a loader instead of the form |
+| Prop        | Status   | Type         | Default | Description                                                |
+| ----------- | -------- | ------------ | ------- | ---------------------------------------------------------- |
+| `isOpen`    | Required | `boolean`    | —       | Whether the modal is open                                  |
+| `onClose`   | Required | `() => void` | —       | Called when the modal requests to close                    |
+| `onSubmit`  | Required | `(records: CSVRecord[]) => Promise<{ error?: string } \| void>` | —       | Submit handler; return `{ error }` to show an inline error |
+| `isLoading` | Optional | `boolean`    | —       | Renders a loader instead of the form                       |
 
 ## Example
 

@@ -67,7 +67,7 @@ machine-readable manifest the way the UI packages do; see
 
 ## Recommended flow (for agents)
 
-```
+```text
 suggest <intent>
   ├─ adapterHooks / stores hits? ── mdk-ui hooks / mdk-ui stores ──► wire state layer
   │

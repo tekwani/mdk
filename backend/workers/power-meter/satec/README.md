@@ -17,7 +17,7 @@ npm install @tetherto/mdk-worker-satec
 ## Usage
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startSatecWorker } = require('@tetherto/mdk-worker-satec')
 
 const kernel = await getKernel()

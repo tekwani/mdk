@@ -68,13 +68,6 @@ const EXAMPLES = [
   // ── Server: long-running; pass when successMarker appears, then SIGTERM ──
 
   {
-    script: 'miners/whatsminer/index.js',
-    description: 'Whatsminer M56S worker + Kernel (port 14028)',
-    mode: 'server',
-    successMarker: 'Ctrl+C to stop',
-    timeout: 60000
-  },
-  {
     script: 'containers/antspace/index.js',
     description: 'Antspace HK3 container worker + Kernel (port 8000)',
     mode: 'server',
@@ -280,10 +273,6 @@ function checkPrereqs () {
     {
       pkg: '@tetherto/mdk-kernel',
       hint: 'npm --prefix backend/core run install:packages'
-    },
-    {
-      pkg: '@tetherto/mdk-worker-whatsminer',
-      hint: 'npm --prefix backend/workers run install:packages'
     }
   ]
 

@@ -7,13 +7,13 @@ serializes whatever is currently in the TanStack Query cache.
 
 ## Props
 
-| Prop        | Type                                  | Required | Default            | Description                                                  |
-| ----------- | ------------------------------------- | -------- | ------------------ | ------------------------------------------------------------ |
-| `onExport`  | `(format: 'csv' \| 'json') => void`   | yes      | —                  | Invoked with the user's selection.                           |
-| `formats`   | `readonly ('csv' \| 'json')[]`        | no       | `['csv', 'json']`  | Restrict the menu to a subset of formats.                    |
-| `label`     | `string`                              | no       | `'Export'`         | Trigger label.                                               |
-| `disabled`  | `boolean`                             | no       | `false`            | Disable the button.                                          |
-| `className` | `string`                              | no       | —                  | Optional class hook on the trigger button.                   |
+| Prop        | Status   | Type                                | Default           | Description                              |
+| ----------- | -------- | ----------------------------------- | ----------------- | ---------------------------------------- |
+| `onExport`  | Required | `(format: 'csv' \| 'json') => void` | —                 | Invoked with the user's selection        |
+| `formats`   | Optional | `readonly ('csv' \| 'json')[]`      | `['csv', 'json']` | Restrict the menu to a subset of formats |
+| `label`     | Optional | `string`                            | `'Export'`        | Trigger label                            |
+| `disabled`  | Optional | `boolean`                           | `false`           | Disable the button                       |
+| `className` | Optional | `string`                            | —                 | Class hook on the trigger button         |
 
 ## Example
 
@@ -32,5 +32,5 @@ const { exportCsv, exportJson } = useDashboardExport()
 
 - The component is presentation-only. It does not decide *what* to
   serialize — the page-level handler reads from the cache (via
-  `useDashboardExport`) and triggers the download.
-- Pass `formats={['csv']}` if you want a single-format button.
+  `useDashboardExport`) and triggers the download
+- Pass `formats={['csv']}` if you want a single-format button

@@ -1,7 +1,7 @@
 'use strict'
 
 const { PowerMeter } = require('../../../../core/mdk')
-const { PROTOCOL } = require('svc-facs-modbus/lib/constants')
+const { PROTOCOL } = require('@tetherto/svc-facs-modbus/lib/constants')
 
 class ABBPowerMeter extends PowerMeter {
   constructor ({ getClient = null, ...opts }) {

@@ -4,12 +4,12 @@ Wraps a lazily-loaded component in `React.Suspense`, displaying a fallback spinn
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `Component` | `React.ComponentType<{ data?: T }>` | yes | — | The lazy-loaded component to render |
-| `data` | `T` | no | — | Data passed to the component as the `data` prop |
-| `fallback` | `React.ReactNode` | no | `<Spinner type={spinnerType} fullScreen />` | Custom fallback shown during loading |
-| `spinnerType` | `SpinnerProps['type']` | no | `'circle'` | Spinner style used for the default fallback |
+| Prop          | Status   | Type                                | Default    | Description                                     |
+| ------------- | -------- | ----------------------------------- | ---------- | ----------------------------------------------- |
+| `Component`   | Required | `React.ComponentType<{ data?: T }>` | —          | The lazy-loaded component to render             |
+| `data`        | Optional | `T`                                 | —          | Data passed to the component as the `data` prop |
+| `fallback`    | Optional | `React.ReactNode`                   | `<Spinner type={spinnerType} fullScreen />` | Custom fallback shown during loading            |
+| `spinnerType` | Optional | `SpinnerProps['type']`              | `'circle'` | Spinner style used for the default fallback     |
 
 ## Example
 
@@ -36,5 +36,5 @@ interface DeviceData { id: string; name: string }
 
 ## Notes
 
-- The wrapped component must accept a `{ data?: T }` prop signature.
-- For components with no data prop, `T` defaults to `Record<string, unknown>` so `data` is still optional.
+- The wrapped component must accept a `{ data?: T }` prop signature
+- For components with no data prop, `T` defaults to `Record<string, unknown>` so `data` is still optional

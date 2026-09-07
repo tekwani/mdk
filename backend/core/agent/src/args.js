@@ -1,5 +1,140 @@
+import { CAPABILITY } from './tools.js'
+import { CAPABILITY_LIMITS, DEFAULT_ENDPOINTS } from './constants.js'
+import { PROVIDER } from './provider.js'
+
+export const DEFAULT_API_KEY_ENV = 'MDK_AGENT_API_KEY'
+
 // Kept out of bin/, which has top-level await and process.exit and so cannot be imported by
 // any test — logic living there is unreachable rather than merely uncovered.
+
+/**
+ * Hosted endpoints we know the shape of. Anything else reaches the same code path through
+ * `--provider openai-compatible --base-url ...`; a preset only saves typing a URL and names
+ * the environment variable that endpoint's key conventionally lives in.
+ */
+export const HOSTED = Object.freeze({
+  openai: Object.freeze({
+    name: 'openai',
+    baseURL: 'https://api.openai.com/v1',
+    env: 'OPENAI_API_KEY'
+  })
+})
+
+function value (args, name) {
+  const raw = args[name]
+  if (raw === undefined) return undefined
+  if (typeof raw !== 'string' || !raw.trim()) throw new TypeError(`--${name} needs a value`)
+  return raw.trim()
+}
+
+function positiveInteger (args, name) {
+  const raw = args[name]
+  if (raw === undefined) return undefined
+  const n = typeof raw === 'string' || typeof raw === 'number' ? Number(raw) : NaN
+  if (!Number.isInteger(n) || n < 1) throw new TypeError(`--${name} must be a positive integer`)
+  return n
+}
+
+/**
+ * Describe a provider for display in the banner and /info CLI views.
+ */
+export function describeProvider (provider) {
+  if (provider.kind === PROVIDER.QVAC) return `qvac (${provider.mode})`
+  const label = provider.name ?? (() => {
+    try { return new URL(provider.baseURL).host } catch { return 'hosted' }
+  })()
+  return `${label} (hosted)`
+}
+
+/**
+ * Build the provider config. `--provider` names a known hosted endpoint, or `openai-compatible`
+ * with an explicit `--base-url`; absent, the agent stays on qvac.
+ *
+ * `env` is injected rather than read from process.env so this is testable without mutating the
+ * real environment — and so a test can never accidentally pick up a developer's live key.
+ *
+ * The key is read from the environment first and only then from `--api-key`: an argument is
+ * visible to every other process via `ps` and lands in shell history, so the flag is the
+ * convenience, not the recommendation.
+ *
+ * @param {Record<string, string|true>} args
+ * @param {Record<string, string|undefined>} env
+ * @returns {{kind: string, name?: string, mode?: string, baseURL: string, apiKey?: string, model: string, rpm?: number}}
+ * @throws {TypeError} on an unknown provider, a missing key, model or base url, a base url that
+ *   is not http(s), or a malformed `--rpm` — so the CLI reports it before connecting to anything.
+ */
+export function resolveProviderArgs (args = {}, env = {}) {
+  const rpm = positiveInteger(args, 'rpm') ?? 0
+  const kind = value(args, 'provider')
+  if (!kind || kind === PROVIDER.QVAC) {
+    return {
+      kind: PROVIDER.QVAC,
+      mode: value(args, 'mode') ?? 'external',
+      baseURL: value(args, 'base-url') ?? DEFAULT_ENDPOINTS.model,
+      model: value(args, 'model') ?? 'qwen3-4b',
+      rpm
+    }
+  }
+
+  const preset = Object.hasOwn(HOSTED, kind) ? HOSTED[kind] : (kind === PROVIDER.OPENAI_COMPATIBLE ? {} : null)
+  if (!preset) throw new TypeError(`unknown --provider "${kind}" (expected qvac, openai-compatible, ${Object.keys(HOSTED).join(', ')})`)
+
+  const baseURL = value(args, 'base-url') ?? preset.baseURL
+  if (!baseURL) throw new TypeError(`--provider ${kind} needs --base-url`)
+  const scheme = (() => {
+    try {
+      return new URL(baseURL).protocol
+    } catch {
+      return null
+    }
+  })()
+  if (!['http:', 'https:'].includes(scheme)) {
+    throw new TypeError(`--base-url must be an http or https url, got "${baseURL}"`)
+  }
+
+  const envVal = (k) => k && env[k] && env[k].trim() ? env[k].trim() : null
+  const apiKey = envVal(preset.env) ?? envVal(DEFAULT_API_KEY_ENV) ?? value(args, 'api-key')
+  if (!apiKey) throw new TypeError(`--provider ${kind} needs an api key — set ${preset.env ?? DEFAULT_API_KEY_ENV} or pass --api-key`)
+
+  const model = value(args, 'model')
+  if (!model) throw new TypeError(`--provider ${kind} needs --model`)
+
+  return { kind: PROVIDER.OPENAI_COMPATIBLE, name: preset.name, baseURL, apiKey, model, rpm }
+}
+
+/**
+ * Decide the capability and what a turn of it may spend.
+ *
+ * Nothing is inferred from the model id. A name is not evidence — an alias, a fine-tune or a
+ * local tag says nothing about what is behind it, and a wrong guess upward is the expensive
+ * direction. A bigger local model is declared, and the default is the floor.
+ *
+ * A hosted endpoint is the one exception, and it is read from the provider rather than the
+ * name: reaching for one is already the decision to use a frontier model.
+ *
+ * @param {Record<string, string|true>} args
+ * @param {{kind?: string}} [provider] the resolved provider, for the hosted default
+ * @returns {{capability: string, declared: boolean, limits: {maxSteps: number, maxOutputTokens: number}}}
+ * @throws {TypeError} on an unknown capability or a non-positive budget override.
+ */
+export function runtimeOptions (args = {}, provider = {}) {
+  const asked = value(args, 'capability')
+  const byProvider = provider.kind === PROVIDER.OPENAI_COMPATIBLE ? CAPABILITY.LARGE : CAPABILITY.SMALL
+  const capability = asked ?? byProvider
+  if (!Object.values(CAPABILITY).includes(capability)) {
+    throw new TypeError(`--capability must be one of ${Object.values(CAPABILITY).join(', ')}`)
+  }
+
+  const budget = CAPABILITY_LIMITS[capability]
+  return {
+    capability,
+    declared: asked !== undefined,
+    limits: {
+      maxSteps: positiveInteger(args, 'max-steps') ?? budget.maxSteps,
+      maxOutputTokens: positiveInteger(args, 'max-output-tokens') ?? budget.maxOutputTokens
+    }
+  }
+}
 
 /**
  * Parse `--flag value` pairs. A flag with no value, or one followed by another flag, is `true`
@@ -33,18 +168,8 @@ const VALUE_FLAGS = ['only', 'tag', 'out']
  *   anything — waiting on a model load to then reject a typo costs a minute per attempt.
  */
 export function evalOptions (args = {}) {
-  // `true` is what a flag with no value parses to, and Number(true) is 1 — so a bare --reps
-  // would validate as "one repetition" rather than being reported as the typo it is.
-  const count = (name) => {
-    const raw = args[name]
-    if (raw === undefined) return 1
-    if (typeof raw !== 'string' && typeof raw !== 'number') throw new TypeError(`--${name} needs a value`)
-    const value = Number(raw)
-    if (!Number.isInteger(value) || value < 1) throw new TypeError(`--${name} must be a positive integer, got "${raw}"`)
-    return value
-  }
-  const reps = count('reps')
-  const concurrency = count('concurrency')
+  const reps = positiveInteger(args, 'reps') ?? 1
+  const concurrency = positiveInteger(args, 'concurrency') ?? 1
   // Empty counts as missing. A script passing --only "$FILTER" with FILTER unset would
   // otherwise select nothing to filter on and quietly run the whole battery.
   for (const name of VALUE_FLAGS) {

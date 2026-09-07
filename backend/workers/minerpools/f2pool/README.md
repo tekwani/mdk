@@ -14,7 +14,7 @@ npm install @tetherto/mdk-worker-f2pool
 passed at boot, not a `registerThing`-provisioned device:
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startF2poolWorker } = require('@tetherto/mdk-worker-f2pool')
 
 const kernel = await getKernel()
@@ -28,15 +28,15 @@ const worker = await startF2poolWorker({
 await kernel.registerWorker(worker.runtime.getPublicKey())
 ```
 
-| `opts` field | Type | Status | Notes |
-| --- | --- | --- | --- |
-| `workerId` | string | Required | One runtime process = one `workerId`. |
-| `rack` | string | Required | Rack identifier; also the pool store prefix. |
-| `storeDir` | string | Required | Persistent store directory. |
-| `conf.f2pool.accounts` | string[] | Required | F2Pool usernames to poll. |
-| `conf.f2pool.apiSecret` | string | Required | Sent as the `F2P-API-SECRET` header. |
-| `conf.f2pool.apiUrl` | string | Optional | Defaults to the F2Pool API base URL. |
-| `kernelTopic` | string | Optional | DHT discovery topic (hex); omit to register directly with `kernel.registerWorker()`. |
+| Option | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `workerId` | Required | `string` | None | One runtime process = one `workerId` |
+| `rack` | Required | `string` | None | Rack identifier; also the pool store prefix |
+| `storeDir` | Required | `string` | None | Persistent store directory |
+| `conf.f2pool.accounts` | Required | `string[]` | None | F2Pool usernames to poll |
+| `conf.f2pool.apiSecret` | Required | `string` | None | Sent as the `F2P-API-SECRET` header |
+| `conf.f2pool.apiUrl` | Optional | `string` | None; requests target an empty base URL if omitted | The F2Pool API base URL; [`config/f2pool.json.example`](config/f2pool.json.example) ships `https://api.f2pool.com/v2` as a template value, not a code-level default |
+| `kernelTopic` | Optional | `string` | None | DHT discovery topic (hex); omit to register directly with `kernel.registerWorker()` |
 
 ## Telemetry
 

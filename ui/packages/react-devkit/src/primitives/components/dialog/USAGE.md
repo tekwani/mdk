@@ -19,24 +19,24 @@ A modal dialog built on Radix UI `@radix-ui/react-dialog`. Provides composable p
 
 ## `DialogContent` Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `title` | `string` | no | — | Renders `DialogTitle` (and optional `DialogDescription`) inside the header |
-| `description` | `string` | no | — | Renders `DialogDescription` below the title |
-| `closable` | `boolean` | no | — | Shows an ✕ close button in the header |
-| `onClose` | `VoidFunction` | no | — | Fired when the ✕ button is clicked |
-| `bare` | `boolean` | no | `false` | Applies `mdk-dialog__header--bare` to the header |
-| `closeOnClickOutside` | `boolean` | no | `true` | Whether clicking the overlay closes the dialog |
-| `closeOnEscape` | `boolean` | no | `true` | Whether pressing Escape closes the dialog |
-| `className` | `string` | no | — | Additional class for the content panel |
+| Prop                  | Status   | Type           | Default | Description                                                                |
+| --------------------- | -------- | -------------- | ------- | -------------------------------------------------------------------------- |
+| `title`               | Optional | `string`       | —       | Renders `DialogTitle` (and optional `DialogDescription`) inside the header |
+| `description`         | Optional | `string`       | —       | Renders `DialogDescription` below the title                                |
+| `closable`            | Optional | `boolean`      | —       | Shows an ✕ close button in the header                                      |
+| `onClose`             | Optional | `VoidFunction` | —       | Fired when the ✕ button is clicked                                         |
+| `bare`                | Optional | `boolean`      | `false` | Applies `mdk-dialog__header--bare` to the header                           |
+| `closeOnClickOutside` | Optional | `boolean`      | `true`  | Whether clicking the overlay closes the dialog                             |
+| `closeOnEscape`       | Optional | `boolean`      | `true`  | Whether pressing Escape closes the dialog                                  |
+| `className`           | Optional | `string`       | —       | Additional class for the content panel                                     |
 
 ## `DialogHeader` Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `closable` | `boolean` | no | — | Renders a close button |
-| `onClose` | `VoidFunction` | no | — | Fired when the close button is clicked |
-| `bare` | `boolean` | no | `false` | Applies bare header style |
+| Prop       | Status   | Type           | Default | Description                            |
+| ---------- | -------- | -------------- | ------- | -------------------------------------- |
+| `closable` | Optional | `boolean`      | —       | Renders a close button                 |
+| `onClose`  | Optional | `VoidFunction` | —       | Fired when the close button is clicked |
+| `bare`     | Optional | `boolean`      | `false` | Applies bare header style              |
 
 ## Example
 
@@ -64,5 +64,5 @@ const [open, setOpen] = useState(false)
 
 ## Notes
 
-- `DialogContent` omits `aria-describedby` automatically when no `description` is provided.
-- Use `DialogTrigger` for uncontrolled open state; use the `open` / `onOpenChange` props on `Dialog` for controlled usage.
+- `DialogContent` omits `aria-describedby` automatically when no `description` is provided
+- Use `DialogTrigger` for uncontrolled open state; use the `open` / `onOpenChange` props on `Dialog` for controlled usage

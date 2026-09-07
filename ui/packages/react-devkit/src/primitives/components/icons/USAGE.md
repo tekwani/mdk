@@ -4,12 +4,12 @@ A collection of domain-specific SVG icon components plus the `createIcon` factor
 
 ## `IconProps`
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `size` | `number \| string` | no | — | Sets both `width` and `height` |
-| `color` | `string` | no | `'currentColor'` | Fill/stroke color (only affects single-color icons) |
-| `width` | `number \| string` | no | icon default | Override width independently |
-| `height` | `number \| string` | no | icon default | Override height independently |
+| Prop     | Status   | Type               | Default          | Description                    |
+| -------- | -------- | ------------------ | ---------------- | ------------------------------ |
+| `size`   | Optional | `number \| string` | —                | Sets both `width` and `height` |
+| `color`  | Optional | `string`           | `'currentColor'` | Fill/stroke color (only affects single-color icons) |
+| `width`  | Optional | `number \| string` | icon default     | Override width independently   |
+| `height` | Optional | `number \| string` | icon default     | Override height independently  |
 
 All other `SVGAttributes<SVGElement>` props are forwarded to the `<svg>` element.
 

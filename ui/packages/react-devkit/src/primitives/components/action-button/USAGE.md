@@ -6,27 +6,27 @@ A button that requires confirmation before executing an action. The confirmation
 
 ### `ActionButton`
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `confirmation` | `ActionButtonConfirmation` | yes | — | Configuration for the confirmation UI |
-| `label` | `string` | no | — | Button label text |
-| `variant` | `'primary' \| 'danger' \| 'secondary'` | no | `'secondary'` | Visual style of the trigger button |
-| `mode` | `'popover' \| 'dialog'` | no | `'popover'` | Whether confirmation appears as an inline popover or a modal dialog |
-| `loading` | `boolean` | no | — | Shows a spinner on the trigger button |
-| `disabled` | `boolean` | no | — | Disables the trigger button |
-| `className` | `string` | no | — | Additional class for the trigger button |
+| Prop           | Status   | Type                                   | Default       | Description                             |
+| -------------- | -------- | -------------------------------------- | ------------- | --------------------------------------- |
+| `confirmation` | Required | `ActionButtonConfirmation`             | —             | Configuration for the confirmation UI   |
+| `label`        | Optional | `string`                               | —             | Button label text                       |
+| `variant`      | Optional | `'primary' \| 'danger' \| 'secondary'` | `'secondary'` | Visual style of the trigger button      |
+| `mode`         | Optional | `'popover' \| 'dialog'`                | `'popover'`   | Whether confirmation appears as an inline popover or a modal dialog |
+| `loading`      | Optional | `boolean`                              | —             | Shows a spinner on the trigger button   |
+| `disabled`     | Optional | `boolean`                              | —             | Disables the trigger button             |
+| `className`    | Optional | `string`                               | —             | Additional class for the trigger button |
 
 ### `ActionButtonConfirmation`
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `title` | `string` | yes | — | Heading shown in the confirmation UI |
-| `description` | `React.ReactNode` | no | — | Body text or node shown below the title |
-| `icon` | `React.ReactNode` | no | `<QuestionMarkCircledIcon>` | Icon shown in the popover header (popover mode only) |
-| `confirmLabel` | `string` | no | `'OK'` / `'Confirm'` | Label for the confirm button |
-| `cancelLabel` | `string` | no | `'Cancel'` | Label for the cancel button |
-| `onConfirm` | `VoidFunction` | no | — | Fired when the user confirms |
-| `onCancel` | `VoidFunction` | no | — | Fired when the user cancels |
+| Prop           | Status   | Type              | Default                     | Description                                          |
+| -------------- | -------- | ----------------- | --------------------------- | ---------------------------------------------------- |
+| `title`        | Required | `string`          | —                           | Heading shown in the confirmation UI                 |
+| `description`  | Optional | `React.ReactNode` | —                           | Body text or node shown below the title              |
+| `icon`         | Optional | `React.ReactNode` | `<QuestionMarkCircledIcon>` | Icon shown in the popover header (popover mode only) |
+| `confirmLabel` | Optional | `string`          | `'OK'` / `'Confirm'`        | Label for the confirm button                         |
+| `cancelLabel`  | Optional | `string`          | `'Cancel'`                  | Label for the cancel button                          |
+| `onConfirm`    | Optional | `VoidFunction`    | —                           | Fired when the user confirms                         |
+| `onCancel`     | Optional | `VoidFunction`    | —                           | Fired when the user cancels                          |
 
 ## Example
 
@@ -60,5 +60,5 @@ import { ActionButton } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- In `popover` mode the confirm button defaults to `variant="primary"`; in `dialog` mode it uses the same `variant` as the trigger.
-- The component manages its own open/close state — no external state required.
+- In `popover` mode the confirm button defaults to `variant="primary"`; in `dialog` mode it uses the same `variant` as the trigger
+- The component manages its own open/close state — no external state required

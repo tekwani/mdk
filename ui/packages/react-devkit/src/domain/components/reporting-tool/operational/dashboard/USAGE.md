@@ -12,13 +12,13 @@ fixtures) - the hook never fetches.
 
 ## Props
 
-| Prop          | Type                              | Description                                                        |
-| ------------- | --------------------------------- | ------------------------------------------------------------------ |
-| `hashrate`    | `{ data?, isLoading? }`           | Shaped hashrate trend (`LineChartCardData`).                       |
-| `consumption` | `{ data?, isLoading? }`           | Shaped power-consumption trend.                                    |
-| `efficiency`  | `{ data?, isLoading? }`           | Shaped site-efficiency trend.                                      |
-| `miners`      | `{ data?, isLoading? }`           | Shaped stacked miners-status data.                                 |
-| `controls`    | `ReactElement`                    | Optional controls (e.g. a date-range picker) rendered above grid. |
+| Prop          | Status   | Type                    | Default | Description                                             |
+| ------------- | -------- | ----------------------- | ------- | ------------------------------------------------------- |
+| `hashrate`    | Optional | `{ data?, isLoading? }` | —       | Shaped hashrate trend (`LineChartCardData`)             |
+| `consumption` | Optional | `{ data?, isLoading? }` | —       | Shaped power-consumption trend                          |
+| `efficiency`  | Optional | `{ data?, isLoading? }` | —       | Shaped site-efficiency trend                            |
+| `miners`      | Optional | `{ data?, isLoading? }` | —       | Shaped stacked miners-status data                       |
+| `controls`    | Optional | `ReactElement`          | —       | Controls (e.g. a date-range picker) rendered above grid |
 
 ### `useOperationsDashboard(input)`
 
@@ -45,9 +45,9 @@ const Dashboard = ({ queries }) => {
 
 ## Notes
 
-- Hashrate is displayed in TH/s (kit standard); power in MW; efficiency in W/TH/s.
+- Hashrate is displayed in TH/s (kit standard); power in MW; efficiency in W/TH/s
 - A nominal value renders a flat reference line (lightweight-charts has no
-  native reference line).
+  native reference line)
 - The individual chart components (`OperationalHashrateChart`, …) and
   `ChartExpandAction` are exported as `advanced` building blocks for custom
-  layouts.
+  layouts

@@ -23,8 +23,7 @@ for that model; the rest of this page describes the older shape's conventions.
 
 | Family | Path | Protocol | Telemetry / commands | Copy it when… |
 | --- | --- | --- | --- | --- |
-| **demo-worker** | [`samples/demo-worker`](../../../../../../backend/workers/samples/demo-worker/) | HTTP JSON (hypothetical firmware) | 5 / 2 | Lean V2 sample (contract at package root + SQLite history). The skill/CLI scaffold is `packages/cli/templates/worker/` → `../assets/worker-template/`. |
-| **whatsminer** | [`miners/whatsminer`](../../../../../../backend/workers/miners/whatsminer/README.md) | CGMiner JSON over TCP, AES-encrypted, token auth | 13 / 6 | Encrypted/stateful TCP APIs; the only shipped contract with a bounded numeric param (`setPowerPct.pct` 0–200) |
+| **demo-worker** | [`samples/demo-worker`](../../../../../../backend/workers/samples/demo-worker/) | HTTP JSON (hypothetical firmware) | 5 / 2 | Lean V2 sample (contract at package root + SQLite history). The skill/CLI scaffold is [`packages/cli/templates/worker/`](../../../../../../packages/cli/templates/worker/) → `../assets/worker-template/`. |
 | **antminer** | [`miners/antminer`](../../../../../../backend/workers/miners/antminer/README.md) | HTTP JSON with Digest auth | 10 / 4 | HTTP devices behind auth; digest client setup in `connect` |
 | **avalon** | [`miners/avalon`](../../../../../../backend/workers/miners/avalon/README.md) | CGMiner ASCII over TCP | 9 / 4 | Plain-text TCP command APIs |
 | **abb** | [`power-meter/abb`](../../../../../../backend/workers/power-meter/abb/README.md) | Modbus TCP | 9 / 0 | Modbus register maps; **multi-model**: `MODEL_CLASSES` lookup keyed off `config.model` (B23/B24/M1M20/M4M20/REU615) |
@@ -33,6 +32,10 @@ for that model; the rest of this page describes the older shape's conventions.
 | **antspace** | [`containers/antspace`](../../../../../../backend/workers/containers/antspace/README.md) | HTTP JSON | 5 / 5 | Cooling containers; model variants (hydro/immersion); approval-gated commands via `constraints` |
 | **bitdeer** | [`containers/bitdeer`](../../../../../../backend/workers/containers/bitdeer/README.md) | MQTT | — | Subscription-style transports |
 | **f2pool / ocean** | [`minerpools/f2pool`](../../../../../../backend/workers/minerpools/f2pool/README.md), [`minerpools/ocean`](../../../../../../backend/workers/minerpools/ocean/README.md) | Pool HTTP APIs | — | Non-hardware "device" integrations |
+
+Whatsminer (CGMiner JSON over TCP, AES-encrypted, token auth) is no longer an in-repo family to copy from — it's the
+external [`whatsminer-mdk-worker`](https://github.com/whatsminer/whatsminer-mdk-worker) contract plugin, hosted on
+`WorkerRuntimeV2` via a thin per-deployment adapter (see `examples/full-site/backend/whatsminer-adapter.js`).
 
 Do **not** copy from `miners/wm-v3` (empty stub) or model anything on the
 `ThingManager`/`MinerManager` class architecture in [`backend/workers/README.md`](../../../../../../backend/workers/README.md)

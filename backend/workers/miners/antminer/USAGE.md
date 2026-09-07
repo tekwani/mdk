@@ -72,7 +72,7 @@ tests at [`tests/integration/antminer.test.js`](tests/integration/antminer.test.
 first boot against an empty `opts.storeDir`:
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
 
 const kernel = await getKernel()
@@ -105,7 +105,7 @@ digest-auth username; real Antminer devices default to `root`), `password` (stri
 To register a device with an already-running Worker instead of at boot, send the `registerThing` command over HRPC:
 
 ```js
-const { createMdkClient } = require('@tetherto/mdk/backend/core/client')
+const { createMdkClient } = require('@tetherto/mdk-client')
 
 const client = createMdkClient({ kernelKey: kernel.getPublicKey() })
 await client.connect()
@@ -132,9 +132,7 @@ node examples/backend/miners/antminer/index.js
 ```
 
 It falls back to the committed [`config/mdk.config.json.example`](../../../../examples/backend/miners/antminer/config/mdk.config.json.example) when no local `config/mdk.config.json` is present.
-This is the Antminer mirror of [`examples/backend/miners/whatsminer/index.js`](../../../../examples/backend/miners/whatsminer/index.js), which uses Whatsminer.
-
-These are the Antminer mirror of [`examples/backend/miners/whatsminer/index.js`](../../../../examples/backend/miners/whatsminer/index.js), which uses Whatsminer.
+This is the Antminer mirror of [`examples/backend/miners/avalon/index.js`](../../../../examples/backend/miners/avalon/index.js), which uses Avalon.
 
 ## Capabilities
 

@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-plugin-agent",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "MDK gateway agent plugin: auth-gated chat sessions, SSE streams and approval round-trips.",
   "author": "Tether",
   "license": "Apache-2.0",
@@ -17,6 +17,6 @@
     "debug": "4.4.1"
   },
   "optionalDependencies": {
-    "@tetherto/mdk-agent": "*"
+    "@tetherto/mdk-agent": "file:../../core/agent"
   }
 }

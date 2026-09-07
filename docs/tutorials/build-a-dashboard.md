@@ -13,7 +13,7 @@ docs@tether_slug: tutorials/build-a-dashboard
 This guide builds the smallest version of [the Starter site example][mvp-site] (`examples/mvp-site`): **one Worker, one Gateway route, one React page**. It
 teaches the same end-to-end shape, including its UI layer, `@tetherto/mdk-react-devkit`
 components driven by `@tetherto/mdk-react-adapter` hooks. However, it does so without that example's family-specific adapters,
-persistence, history, commands, multi-page router, or chart aggregation. 
+persistence, history, commands, multi-page router, or chart aggregation.
 
 > [!NOTE]
 > This tutorial hand-assembles every piece to teach the wiring. To scaffold a real dashboard app against a stack you
@@ -604,9 +604,6 @@ Open **`http://localhost:3041/`** (the Vite port), not `:3000`. Step 5's proxy f
 
 [mvp-site]: ../../examples/mvp-site/README.md
 <!-- docs@tether.io: mvp-site → https://github.com/tetherto/mdk/tree/main/examples/mvp-site -->
-
-[full-site]: ../../examples/full-site/README.md
-<!-- docs@tether.io: full-site → https://github.com/tetherto/mdk/tree/main/examples/full-site -->
 
 [mvp-site-overview]: ../../examples/mvp-site/backend/gateway-plugins/site/controllers/overview.js
 <!-- docs@tether.io: mvp-site-overview → https://github.com/tetherto/mdk/blob/main/examples/mvp-site/backend/gateway-plugins/site/controllers/overview.js -->

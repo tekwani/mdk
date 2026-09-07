@@ -7,14 +7,14 @@ array (from the container-widgets data hook) and handles navigation via
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `containers` | `ContainerWidgetItem[]` | yes | — | Card-ready data per container (`ContainerWidgetCardProps` + `id`) |
-| `title` | `string` | no | `"Containers"` | Section heading |
-| `isLoading` | `boolean` | no | `false` | Show a spinner during the first load |
-| `errorMessage` | `string` | no | — | Error message shown in place of the grid |
-| `onContainerClick` | `(id: string) => void` | no | — | Invoked with the container id on card click |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop               | Status   | Type                    | Default | Description                                                       |
+| ------------------ | -------- | ----------------------- | ------- | ----------------------------------------------------------------- |
+| `containers`       | Required | `ContainerWidgetItem[]` | —       | Card-ready data per container (`ContainerWidgetCardProps` + `id`) |
+| `title`            | Optional | `string`                | —       | Section heading; nothing renders when omitted                     |
+| `isLoading`        | Optional | `boolean`               | `false` | Show a spinner during the first load                              |
+| `errorMessage`     | Optional | `string`                | —       | Error message shown in place of the grid                          |
+| `onContainerClick` | Optional | `(id: string) => void`  | —       | Invoked with the container id on card click                       |
+| `className`        | Optional | `string`                | —       | Additional class for the root element                             |
 
 ## Example
 
@@ -45,4 +45,4 @@ const containers: ContainerWidgetItem[] = [
   to the container-widgets read hook (react-adapter) which supplies the shaped
   `containers` array, `isLoading`, and any `errorMessage`.
 - Empty and error states render an `EmptyState`; the first load renders a
-  `Spinner`.
+  `Spinner`

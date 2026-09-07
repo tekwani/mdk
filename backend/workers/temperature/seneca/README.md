@@ -15,7 +15,7 @@ npm install @tetherto/mdk-worker-seneca
 ## Usage
 
 ```js
-const { getKernel } = require('@tetherto/mdk')
+const { getKernel } = require('@tetherto/mdk-core')
 const { startSenecaWorker } = require('@tetherto/mdk-worker-seneca')
 
 const kernel = await getKernel()

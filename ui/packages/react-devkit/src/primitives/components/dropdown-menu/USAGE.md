@@ -26,28 +26,28 @@ A composable dropdown menu built on Radix UI `@radix-ui/react-dropdown-menu`. Pr
 
 ### `DropdownMenuContent` Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `size` | `'sm' \| 'md' \| 'lg'` | no | `'md'` | Controls item font/padding size (propagated via context) |
-| `alignWidth` | `boolean` | no | `false` | Stretches the menu panel to the trigger width |
-| `sideOffset` | `number` | no | `4` | Pixel gap between trigger and panel |
+| Prop         | Status   | Type                   | Default | Description                                              |
+| ------------ | -------- | ---------------------- | ------- | -------------------------------------------------------- |
+| `size`       | Optional | `'sm' \| 'md' \| 'lg'` | `'md'`  | Controls item font/padding size (propagated via context) |
+| `alignWidth` | Optional | `boolean`              | `false` | Stretches the menu panel to the trigger width            |
+| `sideOffset` | Optional | `number`               | `4`     | Pixel gap between trigger and panel                      |
 
 ### `DropdownMenuItem` / `DropdownMenuStaticItem` Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `icon` | `React.ReactNode` | no | — | Icon prepended to the item content |
-| `disabled` | `boolean` | no | — | Disables the item |
-| `active` | `boolean` | no | — | Marks the item as active (static variants only) |
+| Prop       | Status   | Type              | Default | Description                                     |
+| ---------- | -------- | ----------------- | ------- | ----------------------------------------------- |
+| `icon`     | Optional | `React.ReactNode` | —       | Icon prepended to the item content              |
+| `disabled` | Optional | `boolean`         | —       | Disables the item                               |
+| `active`   | Optional | `boolean`         | —       | Marks the item as active (static variants only) |
 
 ### `DropdownMenuSearchable` Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `items` | `{ label: string; icon?: React.ReactNode; disabled?: boolean; active?: boolean }[]` | yes | — | Items to search and render |
-| `placeholder` | `string` | no | `'Search'` | Input placeholder |
-| `emptyMessage` | `string` | no | `'No matching results found'` | Shown when no items match |
-| `onItemSelect` | `(item) => void` | no | — | Fired when an item is clicked |
+| Prop           | Status   | Type             | Default    | Description                   |
+| -------------- | -------- | ---------------- | ---------- | ----------------------------- |
+| `items`        | Required | `{ label: string; icon?: React.ReactNode; disabled?: boolean; active?: boolean }[]` | —          | Items to search and render    |
+| `placeholder`  | Optional | `string`         | `'Search'` | Input placeholder             |
+| `emptyMessage` | Optional | `string`         | `'No matching results found'` | Shown when no items match     |
+| `onItemSelect` | Optional | `(item) => void` | —          | Fired when an item is clicked |
 
 ## Example
 
@@ -85,5 +85,5 @@ import {
 
 ## Notes
 
-- `size` is passed via React context from `DropdownMenuContent` to all child items; you do not need to set it on each item individually.
-- All named exports are also available as shorthand aliases (e.g. `Root`, `Item`, `Content`).
+- `size` is passed via React context from `DropdownMenuContent` to all child items; you do not need to set it on each item individually
+- All named exports are also available as shorthand aliases (e.g. `Root`, `Item`, `Content`)

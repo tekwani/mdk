@@ -5,13 +5,13 @@ blocks, and a compact recent-alerts list.
 
 ## Props
 
-| Prop                | Type                            | Required | Default | Description                                            |
-| ------------------- | ------------------------------- | -------- | ------- | ------------------------------------------------------ |
-| `stats`             | `DashboardStats`                | no       | —       | Top-of-page stat blocks; hidden while loading.         |
-| `isStatsLoading`    | `boolean`                       | no       | `false` | Hide stats while loading.                              |
-| `alerts`            | `Alert[]`                       | no       | `[]`    | Recent alerts list (capped to `MAX_ALERTS_DISPLAYED`). |
-| `onNavigationClick` | `(url: string) => void`         | yes      | —       | Called when a navigation block is clicked.             |
-| `onViewAllAlerts`   | `VoidFunction`                  | yes      | —       | Called when "View All Alerts" is clicked.              |
+| Prop                | Status   | Type                    | Default | Description                                           |
+| ------------------- | -------- | ----------------------- | ------- | ----------------------------------------------------- |
+| `onNavigationClick` | Required | `(url: string) => void` | —       | Called when a navigation block is clicked             |
+| `onViewAllAlerts`   | Required | `VoidFunction`          | —       | Called when "View All Alerts" is clicked              |
+| `stats`             | Optional | `DashboardStats`        | —       | Top-of-page stat blocks; hidden while loading         |
+| `isStatsLoading`    | Optional | `boolean`               | `false` | Hide stats while loading                              |
+| `alerts`            | Optional | `Alert[]`               | `[]`    | Recent alerts list (capped to `MAX_ALERTS_DISPLAYED`) |
 
 ## Minimal example
 
@@ -26,12 +26,12 @@ blocks, and a compact recent-alerts list.
 
 ## Data contracts
 
-- `DashboardStats` — declared in [`dashboard-types.ts`](./dashboard-types.ts) alongside the component.
-- `Alert` — [`foundation/types/alerts`](../../../types/alerts.ts) (same shape as `ActiveIncidentsCard` consumes).
+- `DashboardStats` — declared in [`dashboard-types.ts`](./dashboard-types.ts) alongside the component
+- `Alert` — [`foundation/types/alerts`](../../../types/alerts.ts) (same shape as `ActiveIncidentsCard` consumes)
 
 ## Notes
 
 - Navigation blocks are static (`navigationBlocks` constant) — extend the
-  constant to add or rename sections.
+  constant to add or rename sections
 - For a more compact recent-alerts list elsewhere on the page, prefer
-  `ActiveIncidentsCard`.
+  `ActiveIncidentsCard`

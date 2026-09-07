@@ -7,8 +7,8 @@ import { sweep, parseDuration, DEFAULT_CACHE_ROOT, DEFAULT_TTL, DEFAULT_EMPTY_GR
 
 const argv = process.argv.slice(2)
 
-// A flag given without a value used to return undefined and fall through to the default. For
-// --dir that meant a typo swept the real cache root instead of the directory asked for.
+// Every flag must carry a value. A bare `--dir` exits rather than falling through to the
+// default, because that default is the real cache root and sweeping it is not recoverable.
 const flag = (name, fallback) => {
   const i = argv.indexOf(`--${name}`)
   if (i === -1) return fallback

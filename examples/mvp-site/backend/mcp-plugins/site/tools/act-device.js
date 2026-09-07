@@ -21,22 +21,34 @@ module.exports = {
     // operator approves a write that fails at the hardware.
     if (action === 'set_power_mode') {
       const supported = (await powerModesFor(ref)).supportedPowerModes
-      if (!supported) return json({ summary: `${ref} does not report power modes, so it cannot be set.`, deviceId: ref, action })
+      if (!supported) return json({ summary: `${ref} does not report power modes, so it cannot be set.`, ref, action, outcome: 'rejected' })
       if (!supported.includes(mode)) {
         return json({
           summary: `${ref} does not support "${mode}" — it accepts ${supported.join(', ')}.`,
-          deviceId: ref,
+          ref,
           action,
+          outcome: 'rejected',
           supportedPowerModes: supported
         })
       }
     }
     const params = action === 'set_power_mode' ? { mode } : {}
     const result = await mdkClient.sendCommand(ref, COMMAND_BY_ACTION[action], params)
+    const attempt = action === 'reboot' ? 'Reboot' : `Set power mode to ${mode}`
+    // The kernel returns { error } rather than throwing when an envelope is rejected or the
+    // transport is down, and serializes a thrown error's message verbatim — which is empty for
+    // an Error carrying none. Presence decides, not truthiness, or a blank reason reads as a
+    // successful write.
+    if (result?.error != null) {
+      const reason = typeof result.error === 'string' && result.error.trim() ? result.error : 'no reason given'
+      return json({ summary: `${attempt} on ${ref} could not be sent: ${reason}.`, ref, action, outcome: 'failed', result })
+    }
+    const status = result?.status == null ? null : String(result.status).trim().toLowerCase() || null
     return json({
-      summary: `${action === 'reboot' ? 'Reboot' : `Set power mode to ${mode}`} on ${ref}: ${result?.status ?? 'sent'}.`,
-      deviceId: ref,
+      summary: `${attempt} on ${ref}: ${status ?? 'sent'}.`,
+      ref,
       action,
+      outcome: status ?? 'sent',
       result
     })
   }

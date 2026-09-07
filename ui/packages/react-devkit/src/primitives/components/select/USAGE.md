@@ -5,12 +5,12 @@ Compound Radix-based select with `Select`, `SelectTrigger`, `SelectContent`,
 
 ## `Select` props
 
-| Prop          | Type                | Required | Default | Description                            |
-| ------------- | ------------------- | -------- | ------- | -------------------------------------- |
-| `value`       | `string`            | no       | —       | Controlled value.                      |
-| `defaultValue`| `string`            | no       | —       | Uncontrolled initial value.            |
-| `onValueChange`| `(v: string) => void` | no    | —       | Setter for the value.                  |
-| `allowClear`  | `boolean`           | no       | `false` | Show a clear (X) button when a value is set. |
+| Prop            | Status   | Type                  | Default | Description                |
+| --------------- | -------- | --------------------- | ------- | -------------------------- |
+| `value`         | Optional | `string`              | —       | Controlled value           |
+| `defaultValue`  | Optional | `string`              | —       | Uncontrolled initial value |
+| `onValueChange` | Optional | `(v: string) => void` | —       | Setter for the value       |
+| `allowClear`    | Optional | `boolean`             | `false` | Show a clear (X) button when a value is set |
 
 `SelectTrigger` accepts `size` (`"sm" \| "md" \| "lg"`) and `variant`
 (`"default" \| "colored"`).

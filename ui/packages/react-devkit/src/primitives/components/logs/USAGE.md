@@ -13,17 +13,17 @@ A set of components for displaying paginated incident and activity log lists ins
 
 ### `LogsCard` Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `logsData` | `LogData[]` | no | `[]` | Array of log entries to display |
-| `type` | `string` | no | — | Log type (`'Incidents'` or `'Activity'`); controls the `LogDot` appearance |
-| `label` | `string` | no | — | Card header label |
-| `isDark` | `boolean` | no | `false` | Applies dark card theme |
-| `isLoading` | `boolean` | no | `false` | Shows skeleton rows while loading |
-| `skeletonRows` | `number` | no | `4` | Number of skeleton rows shown during loading |
-| `emptyMessage` | `string` | no | `'No active incidents'` | Message shown when `logsData` is empty |
-| `pagination` | `LogPagination` | no | — | Pagination config; hides pagination when on page 1 or data is empty |
-| `onLogClicked` | `(uuid: string) => void` | no | — | Fired with the log UUID when a row is clicked |
+| Prop           | Status   | Type                     | Default | Description                                                                |
+| -------------- | -------- | ------------------------ | ------- | -------------------------------------------------------------------------- |
+| `logsData`     | Optional | `LogData[]`              | `[]`    | Array of log entries to display                                            |
+| `type`         | Optional | `string`                 | —       | Log type (`'Incidents'` or `'Activity'`); controls the `LogDot` appearance |
+| `label`        | Optional | `string`                 | —       | Card header label                                                          |
+| `isDark`       | Optional | `boolean`                | `false` | Applies dark card theme                                                    |
+| `isLoading`    | Optional | `boolean`                | `false` | Shows skeleton rows while loading                                          |
+| `skeletonRows` | Optional | `number`                 | `4`     | Number of skeleton rows shown during loading                               |
+| `emptyMessage` | Optional | `string`                 | `'No active incidents'` | Message shown when `logsData` is empty                                     |
+| `pagination`   | Optional | `LogPagination`          | —       | Pagination config; hides pagination when on page 1 or data is empty        |
+| `onLogClicked` | Optional | `(uuid: string) => void` | —       | Fired with the log UUID when a row is clicked                              |
 
 ### `LogData`
 
@@ -46,19 +46,19 @@ A set of components for displaying paginated incident and activity log lists ins
 
 ### `LogRow` Props
 
-| Prop | Type | Required | Description |
-| ---- | ---- | -------- | ----------- |
-| `log` | `LogData` | yes | Log entry data |
-| `type` | `string` | yes | Log type (controls dot appearance) |
-| `style` | `CSSProperties` | no | Inline style for the row container |
-| `onLogClicked` | `(uuid: string) => void` | no | Click handler |
+| Prop           | Status   | Type                     | Default | Description                        |
+| -------------- | -------- | ------------------------ | ------- | ---------------------------------- |
+| `log`          | Required | `LogData`                | —       | Log entry data                     |
+| `type`         | Required | `string`                 | —       | Log type (controls dot appearance) |
+| `style`        | Optional | `CSSProperties`          | —       | Inline style for the row container |
+| `onLogClicked` | Optional | `(uuid: string) => void` | —       | Click handler                      |
 
 ### `LogDot` Props
 
-| Prop | Type | Required | Description |
-| ---- | ---- | -------- | ----------- |
-| `type` | `string` | yes | `'Incidents'` renders a colored circle; `'Activity'` renders an activity icon |
-| `status` | `string` | yes | Severity string for color mapping |
+| Prop     | Status   | Type     | Default | Description |
+| -------- | -------- | -------- | ------- | ----------- |
+| `type`   | Required | `string` | —       | `'Incidents'` renders a colored circle; `'Activity'` renders an activity icon |
+| `status` | Required | `string` | —       | Severity string for color mapping |
 
 ## Example
 
@@ -82,5 +82,5 @@ import { LogsCard } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- `LOG_TYPES` constants (`'Incidents'`, `'Activity'`) are exported from [`constants.tsx`](./constants.tsx).
-- Severity colors map `'Critical'` → red, `'High'` → high-severity style, `'Medium'` → medium-severity style.
+- `LOG_TYPES` constants (`'Incidents'`, `'Activity'`) are exported from [`constants.tsx`](./constants.tsx)
+- Severity colors map `'Critical'` → red, `'High'` → high-severity style, `'Medium'` → medium-severity style

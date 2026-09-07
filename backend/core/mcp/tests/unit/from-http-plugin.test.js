@@ -39,8 +39,22 @@ test('generateToolsFromGatewayPlugin - maps safety to MCP annotations', (t) => {
 
   const [ro, w, none] = generateToolsFromGatewayPlugin(plugin)
   t.alike(ro.annotations, { readOnlyHint: true }, 'read-only safety should set readOnlyHint')
-  t.alike(w.annotations, { destructiveHint: true }, 'write safety should set destructiveHint')
-  t.is(none.annotations, undefined, 'unrecognized/missing safety should leave annotations undefined')
+  t.alike(w.annotations, { readOnlyHint: false, destructiveHint: true }, 'write safety should set both hints')
+  t.alike(none.annotations, { readOnlyHint: false }, 'unrecognized/missing safety should fail safe to readOnlyHint: false')
+  t.pass()
+})
+
+// readOnlyHint is the field a caller reads to decide whether a tool needs approval before it
+// runs. A write that states only destructiveHint arrives with that field absent, which reads as
+// "not stated" rather than "it writes" — so the manifest's declaration is lost at the boundary.
+test('generateToolsFromGatewayPlugin - a write is never left silent on readOnlyHint', (t) => {
+  const plugin = makePlugin([
+    { id: 'get.fresh.reading', description: 'repolls the device', http: {}, safety: 'write', _handler: async () => ({}) }
+  ])
+
+  const [tool] = generateToolsFromGatewayPlugin(plugin)
+  t.is(tool.annotations.readOnlyHint, false, 'the write is stated as not read-only')
+  t.not(tool.annotations.readOnlyHint, undefined, 'and never left for a name heuristic to guess')
   t.pass()
 })
 

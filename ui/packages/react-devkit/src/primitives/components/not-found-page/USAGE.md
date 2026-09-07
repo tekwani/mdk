@@ -4,12 +4,12 @@ A full-page 404 "not found" screen with a customizable title, message, and optio
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-| ---- | ---- | -------- | ------- | ----------- |
-| `title` | `string` | no | `'404'` | Large heading displayed at the top |
-| `message` | `string` | no | `'The page you are looking for does not exist.'` | Explanatory text shown below the title |
-| `onGoHome` | `VoidFunction` | no | — | When provided, renders a "Go Home" button that calls this callback |
-| `className` | `string` | no | — | Additional class for the root element |
+| Prop        | Status   | Type           | Default | Description                            |
+| ----------- | -------- | -------------- | ------- | -------------------------------------- |
+| `title`     | Optional | `string`       | `'404'` | Large heading displayed at the top     |
+| `message`   | Optional | `string`       | `'The page you are looking for does not exist.'` | Explanatory text shown below the title |
+| `onGoHome`  | Optional | `VoidFunction` | —       | When provided, renders a "Go Home" button that calls this callback |
+| `className` | Optional | `string`       | —       | Additional class for the root element  |
 
 ## Example
 
@@ -31,4 +31,4 @@ const navigate = useNavigate()
 
 ## Notes
 
-- When `onGoHome` is omitted the button is not rendered, giving a read-only display.
+- When `onGoHome` is omitted the button is not rendered, giving a read-only display

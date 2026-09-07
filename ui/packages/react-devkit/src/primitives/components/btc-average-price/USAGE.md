@@ -5,10 +5,10 @@ toolbars. The value is formatted with `formatNumber` (grouping, no decimal place
 
 ## Props
 
-| Prop    | Type             | Required | Default               | Description                                                                                   |
-| ------- | ---------------- | -------- | --------------------- | --------------------------------------------------------------------------------------------- |
-| `price` | `number \| null` | no       | —                     | BTC price in USD. Omitted, null, NaN, non-finite, or negative → value shows `-` (`FALLBACK`). |
-| `label` | `string`         | no       | `"BTC Average Price"` | Header text before the colon.                                                                 |
+| Prop    | Status   | Type             | Default               | Description |
+| ------- | -------- | ---------------- | --------------------- | ----------- |
+| `price` | Optional | `number \| null` | —                     | BTC price in USD. Omitted, null, NaN, non-finite, or negative → value shows `-` (`FALLBACK`). |
+| `label` | Optional | `string`         | `"BTC Average Price"` | Header text before the colon |
 
 ## Example
 
@@ -25,6 +25,6 @@ Invalid or missing price still renders the label; the amount shows the fallback:
 
 ## Notes
 
-- Styling uses the `mdk-btc-average-price` BEM block; no size or color variants.
-- Use a dark toolbar background so default light text remains readable.
-- `price={0}` renders `$0`.
+- Styling uses the `mdk-btc-average-price` BEM block; no size or color variants
+- Use a dark toolbar background so default light text remains readable
+- `price={0}` renders `$0`

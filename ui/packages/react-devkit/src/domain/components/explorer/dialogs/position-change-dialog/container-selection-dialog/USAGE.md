@@ -4,13 +4,13 @@ Modal step that lists containers for the operator to choose from as part of a po
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `miner` | `Device` | no | — | The miner being moved. |
-| `containers` | `Device[]` | no | — | Available target containers. |
-| `isLoading` | `boolean` | no | — | Show loading spinner. |
-| `open` | `boolean` | yes | — | Controls visibility. |
-| `onClose` | `(value?: boolean) => void` | yes | — | Called when dialog closes. |
+| Prop | Status | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `miner` | Optional | `Device` | — | The miner being moved |
+| `containers` | Optional | `Device[]` | `[]` | Available target containers |
+| `isLoading` | Optional | `boolean` | — | Show loading spinner |
+| `open` | Required | `boolean` | — | Controls visibility |
+| `onClose` | Required | `(value?: boolean) => void` | — | Called when dialog closes |
 
 ## Minimal example
 

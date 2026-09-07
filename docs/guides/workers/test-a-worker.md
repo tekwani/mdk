@@ -4,12 +4,12 @@ description: Test a third party Worker package
 docs@tether_slug: guides/workers/test-a-worker
 ---
 
-This guide is for users of third-party worker packages or such partners who have integrated their own hardware, firmware, 
+This guide is for users of third-party worker packages or such partners who have integrated their own hardware, firmware,
 or data feed with MDK by shipping a [Worker plugin package][build-a-worker].
 
 ## Overview
 
-Worker packages are the contract between the hardware and the Kernel, before relying on such a contract you will want to 
+Worker packages are the contract between the hardware and the Kernel, before relying on such a contract you will want to
 test its integration. To seed devices and register with Kernel, host the package on `WorkerRuntimeV2` in a Node.js host process by
 pointing it at the Worker plugin package's directory (see [Build a third-party Worker][build-a-worker]). The host module
 may live in the Worker plugin package itself; a second npm package is **not required**. A separate host directory is
@@ -27,6 +27,7 @@ example directory containing one host module, not a standalone npm package.
 ## Prerequisites
 
 - Node.js `>=24` (all MDK core packages declare this `engines` constraint)
+- npm 11 (< 12)
 - A completed [Worker plugin package][build-a-worker], including its bundled mock device
 - Comfort with plain async JS — no additional MDK framework knowledge is required beyond what building the package already covered
 

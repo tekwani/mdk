@@ -7,7 +7,7 @@ docs@tether_slug: guides/gateway/plugins
 ## Overview
 
 The Gateway exposes HTTP routes through a declarative plugin system. Each plugin is a directory containing an
-[`mdk-plugin.json`][plugins-manifest] manifest and one or more controller files. MDK ships a set of default plugins that load automatically; 
+[`mdk-plugin.json`][plugins-manifest] manifest and one or more controller files. MDK ships a set of default plugins that load automatically;
 you can mount additional plugins for your own site logic.
 
 > [!NOTE]
@@ -43,7 +43,7 @@ The [plugin reference][plugins-readme] lists every route each of these plugins s
 Pass an `extraPluginDirs` array to `startGateway()` to load additional plugins at boot alongside the default plugins:
 
 ```js
-const { startGateway } = require('@tetherto/mdk/backend/core/mdk')
+const { startGateway } = require('@tetherto/mdk-core')
 
 await startGateway({
   kernel,
@@ -82,7 +82,7 @@ runs it end to end
 parameters, and `POST`s with a `requestBody` and path parameters
 - [`backend/core/plugins/telemetry/mdk-plugin.json`][telemetry-manifest]: auth, caching, query parameters, and named-export handlers
 
-Path parameters use `{param}` syntax — the loader normalises them to Fastify's `:param` format. For named exports use `"handler": 
+Path parameters use `{param}` syntax — the loader normalises them to Fastify's `:param` format. For named exports use `"handler":
 "./controllers/foo.js#namedExport"`. The [plugin reference][plugins-readme] explains what each field means and what the loader requires.
 
 #### 1.2 Write a controller
@@ -200,7 +200,9 @@ const pulls = workers.flatMap((w) => (w.deviceIds || []).map(async (deviceId) =>
 const totalHashrateMhs = (await Promise.all(pulls)).reduce((sum, v) => sum + v, 0)
 ```
 
-[`site-monitor/controllers/hashrate.js`][site-monitor-hashrate] is the shipping example this pattern is copied from.
+[`site-monitor/controllers/hashrate.js`][site-monitor-hashrate] is the shipping example this pattern is copied from;
+[`demo/controllers/summary.js`][demo-plugin-summary] is a smaller, minimal-dependency version of the same fan-out worth
+starting from if you're authoring your own plugin.
 
 There is no separate Gateway-side store for historical or aggregated data, either. Fan [`pullWorkerTelemetry`][client-readme-methods]
 out across every registered Worker and read the series from the Worker's own persisted tail-log:
@@ -214,6 +216,8 @@ const results = await Promise.allSettled(
 
 The [default telemetry controllers][telemetry-controllers] and [`telemetry/lib/site-data.js`][telemetry-site-data] show a worked,
 production version of this fan-out (aliasing, error tolerance per Worker, and the aggregation shapes each route returns).
+[`demo/controllers/history.js`][demo-plugin-history] is the same pattern at its smallest — a single-file worked example with
+an optional per-device filter and a Kernel-unavailable fallback.
 
 Note that "live" and "historical" are both network calls through the client, so guard them the same way. Neither degrades more
 gracefully than the other: both fail if the Worker is unreachable, as does `listWorkers` if the Kernel is. Map each failure to
@@ -275,6 +279,7 @@ The plugin loader validates every manifest and handler at startup and throws if 
 - Try the [live site backend example][all-workers-guide] for a complete worked plugin with three routes: a live site overview,
   a historical series, and a command endpoint running under PM2 or Docker
 - Build the [minimal dashboard tutorial][minimal-dashboard] — end-to-end worked example of the single-plugin + controller pattern
+- Read the [demo plugin][demo-plugin-readme] for the smallest complete worked example of both fan-out patterns above
 - Understand [how Workers declare their data][build-a-worker] via `mdk-contract.json` — what `mdkClient` reads and `sendCommand` dispatches
 - See the full [manifest and controller reference][plugins-readme]
 - Review the [Gateway API and config][gateway-readme]
@@ -293,14 +298,20 @@ The plugin loader validates every manifest and handler at startup and throws if 
 [site-monitor-hashrate]: ../../../backend/core/plugins/site-monitor/controllers/hashrate.js
 <!-- docs@tether.io: site-monitor-hashrate → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/site-monitor/controllers/hashrate.js -->
 
+[demo-plugin-readme]: ../../../backend/plugins/demo/README.md
+<!-- docs@tether.io: demo-plugin-readme → https://github.com/tetherto/mdk/blob/main/backend/plugins/demo/README.md -->
+
+[demo-plugin-summary]: ../../../backend/plugins/demo/controllers/summary.js
+<!-- docs@tether.io: demo-plugin-summary → https://github.com/tetherto/mdk/blob/main/backend/plugins/demo/controllers/summary.js -->
+
+[demo-plugin-history]: ../../../backend/plugins/demo/controllers/history.js
+<!-- docs@tether.io: demo-plugin-history → https://github.com/tetherto/mdk/blob/main/backend/plugins/demo/controllers/history.js -->
+
 [auth-plugin-readme]: ../../../backend/core/plugins/README.md#the-bundled-auth-plugin
 <!-- docs@tether.io: auth-plugin-readme → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#the-bundled-auth-plugin -->
 
 [gateway-concept-auth]: ../../../backend/core/gateway/README.md
 <!-- docs@tether.io: gateway-concept-auth → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md -->
-
-[gateway-additional-routes]: ../../../backend/core/gateway/README.md#raw-fastify-routes
-<!-- docs@tether.io: gateway-additional-routes → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#raw-fastify-routes -->
 
 [all-workers-guide]: ../deployment/run-all-workers-site.md
 <!-- docs@tether.io: all-workers-guide → guides/deployment/run-all-workers-site -->

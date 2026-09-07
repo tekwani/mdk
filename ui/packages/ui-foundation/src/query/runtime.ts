@@ -84,9 +84,9 @@ export const buildUrl = (base: string, path: string): string => {
 /**
  * Substitute `:name` segments in a path template, URL-encoding each value.
  *
- * Encoding here is what makes the template form safe: previously every dynamic
- * path was assembled with `${BASE}/${encodeURIComponent(id)}` at the call site,
- * so a missed `encodeURIComponent` was a silent path-injection bug.
+ * Encoding here is what makes the template form safe: it is done once, for every
+ * dynamic path, instead of at each call site — where a single missed
+ * `encodeURIComponent` is a silent path-injection bug.
  *
  * Throws when a template placeholder has no corresponding value — a missing id
  * would otherwise produce a request to a subtly wrong path (`/devices/undefined`)
