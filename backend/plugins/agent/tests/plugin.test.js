@@ -47,6 +47,7 @@ function loadAgentPlugin (events, record, opts = {}) {
         factory: async () => ({ createSession: async () => scriptedSession(events, record) })
       })
     }),
+    logger: { error () {}, warn () {}, info () {}, debug () {} },
     dataProxy: {}
   })
   const plugin = loadPlugin(PLUGIN_DIR, context)

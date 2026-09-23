@@ -249,11 +249,17 @@ function createMdkClient (config = {}, opts = {}) {
   let connecting = null
 
   const ensure = (connectOpts) => {
-    if (!raw) return Promise.reject(new Error(errCode))
+    if (!raw) {
+      const err = new Error(errCode)
+      err.code = errCode
+      return Promise.reject(err)
+    }
     if (!connecting) {
       connecting = raw.connect(connectOpts).then(() => raw, (err) => {
         connecting = null
-        throw new Error(`${errCode}: ${err.message}`)
+        const wrapped = new Error(`${errCode}: ${err.message}`)
+        wrapped.code = errCode
+        throw wrapped
       })
     }
     return connecting

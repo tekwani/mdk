@@ -1,0 +1,104 @@
+{
+  "bar": "the Skill's recommendations match the measured envelope on a held-out set of site descriptions.",
+  "note": "Descriptions are never the profile ids. Expected windows are read off the compiled envelope, not re-authored from the prose.",
+  "cases": [
+    {
+      "id": "edge-ten-whatsminer",
+      "description": "A single rack of ten Whatsminer M56S colocated with a small edge box: 4 physical cores, 8 GiB RAM, SATA SSD.",
+      "expected": {
+        "status": "green",
+        "tier": "edge",
+        "workerCount": 1,
+        "matchingProfileId": "cap-10devices-1workers",
+        "supportedUpToDevices": 10,
+        "rssSumMiB": 400
+      }
+    },
+    {
+      "id": "edge-ten-paraphrase",
+      "description": "Small box next to the rack, four cores and 8GB sata, running 10 MicroBT M56S miners.",
+      "expected": {
+        "status": "green",
+        "tier": "edge",
+        "workerCount": 1,
+        "matchingProfileId": "cap-10devices-1workers"
+      }
+    },
+    {
+      "id": "site-server-fifty-microbt",
+      "description": "About fifty MicroBT miners on a proper site server: 16 cores, 64 GiB, NVMe.",
+      "expected": {
+        "status": "green",
+        "tier": "site-server",
+        "workerCount": 2,
+        "matchingProfileId": "cap-50devices-2workers",
+        "supportedUpToDevices": 100,
+        "rssSumMiB": 800
+      }
+    },
+    {
+      "id": "site-server-eighty-interpolated",
+      "description": "80 Whatsminer M56S on a 16-core NVMe site-server with 64 GiB RAM.",
+      "expected": {
+        "status": "green",
+        "tier": "site-server",
+        "workerCount": 2,
+        "matchingProfileId": "cap-100devices-2workers",
+        "supportedUpToDevices": 100,
+        "rssSumMiB": 1040
+      }
+    },
+    {
+      "id": "mixed-sixty-forty",
+      "description": "Sixty Whatsminer M56S and forty Antminer S19 XP sharing one 16-core NVMe site server.",
+      "expected": {
+        "status": "green",
+        "tier": "site-server",
+        "workerCount": 2,
+        "matchingProfileId": "cap-100devices-2workers-mixed",
+        "supportedUpToDevices": 100,
+        "rssSumMiB": 1300
+      }
+    },
+    {
+      "id": "mixed-bench-fifteen",
+      "description": "A small mixed fleet like the example bench: ten Whatsminers and five Antminers, 8 cores, 32 GiB, SATA.",
+      "expected": {
+        "status": "green",
+        "tier": "site-server",
+        "workerCount": 2,
+        "matchingProfileId": "cap-15devices-2workers",
+        "rssSumMiB": 500
+      }
+    },
+    {
+      "id": "amber-two-hundred",
+      "description": "Two hundred Whatsminer M56S on a 16-core NVMe site-server, four worker processes.",
+      "expected": {
+        "status": "amber",
+        "tier": "site-server",
+        "workerCount": 4,
+        "matchingProfileId": "cap-200devices-4workers",
+        "supportedUpToDevices": 100
+      }
+    },
+    {
+      "id": "beyond-five-hundred",
+      "description": "Five hundred Whatsminer ASICs on one 16-core NVMe site-server.",
+      "expected": {
+        "status": "beyond-envelope",
+        "tier": "site-server",
+        "matchingProfileId": "cap-500devices-4workers",
+        "supportedUpToDevices": 100
+      }
+    },
+    {
+      "id": "unmeasured-avalon",
+      "description": "A handful of Avalon miners on an SD-card Raspberry Pi.",
+      "expected": {
+        "status": "unmeasured",
+        "tier": "edge"
+      }
+    }
+  ]
+}

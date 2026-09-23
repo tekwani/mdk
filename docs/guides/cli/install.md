@@ -20,7 +20,7 @@ docs@tether_slug: guides/cli/install
 ## Prerequisites
 
 - [Node.js][node] >=24 (LTS)
-- npm 11 (< 12)
+- npm 11 [(< 12)][npm-version]
 
 ## Install
 
@@ -105,6 +105,9 @@ npm rm -g @tetherto/mdk-cli
 
 [node]: https://nodejs.org/
 <!-- docs@tether.io: external link — preserve URL -->
+
+[npm-version]: ../../reference/environment.md#why-npm-stays-below-12
+<!-- docs@tether.io: npm-version → reference/environment -->
 
 [mdk-tags]: https://github.com/tetherto/mdk/tags
 <!-- docs@tether.io: external link — preserve URL -->

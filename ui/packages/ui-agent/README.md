@@ -1,7 +1,7 @@
 # @tetherto/mdk-ui-agent
 
 The operator agent chat, as a drop-in for any MDK UI shell. Talks to the agent
-gateway plugin (`@tetherto/mdk-plugin-agent`) over SSE and renders its six-event
+gateway plugin ([`@tetherto/mdk-plugin-agent`](../../../backend/plugins/agent/README.md)) over SSE and renders its six-event
 contract as a conversation.
 
 ## Install
@@ -21,7 +21,7 @@ import '@tetherto/mdk-ui-agent/styles.css'
 That is the whole integration. The shell template ships with both lines already
 in place; delete them to remove it.
 
-The backend half is a stack concern: add `@tetherto/mdk-plugin-agent` to your
+The backend half is a stack concern: add [`@tetherto/mdk-plugin-agent`](../../../backend/plugins/agent/README.md) to your
 `mdk.yaml`, and point it at an MCP server for the fleet tools. Without the plugin
 the panel opens and reports that the agent is not configured. See
 [Running it all locally](#running-it-all-locally) for the whole chain from an
@@ -42,14 +42,14 @@ calls stay same-origin.
 
 ## Surface
 
-| Export | What it is |
-| --- | --- |
-| `<CoPilot />` | The docked overlay: a launcher in the corner that opens a 420×640 panel. Mount once at the app root. |
-| `<ChatUIEntry />` | The same conversation as a full-height page. Default export too, so it drops into a lazy route registry. |
-| `useAgentChat()` | The one stateful hook — session, live turn, persistence. Everything below it is presentational. |
+| Export             | What it is                                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `<CoPilot />`      | The docked overlay: a launcher in the corner that opens a 420×640 panel. Mount once at the app root.     |
+| `<ChatUIEntry />`  | The same conversation as a full-height page. Default export too, so it drops into a lazy route registry. |
+| `useAgentChat()`   | The one stateful hook — session, live turn, persistence. Everything below it is presentational.          |
 | `useConversations()` | Binds the conversation store to React. |
-| `@tetherto/mdk-ui-agent/core` | The headless half: contract types, SSE reader, transport, turn reducer, conversation store. No React — also reachable from the root package, since `.` re-exports everything here; the subpath just lets a consumer skip the components. |
-| `@tetherto/mdk-ui-agent/panel` | `CoPilotPanel`, for building your own launcher around the panel body. |
+| [`@tetherto/mdk-ui-agent/core`](./src/core/index.ts) | The headless half: contract types, SSE reader, transport, turn reducer, conversation store. No React — also reachable from the root package, since `.` re-exports everything here; the subpath just lets a consumer skip the components. |
+| [`@tetherto/mdk-ui-agent/panel`](./src/components/co-pilot-panel.tsx) | `CoPilotPanel`, for building your own launcher around the panel body. |
 
 All props are optional. Inside an `MdkProvider` the base URL and bearer token
 come from the provider's auth seam; outside one it falls back to relative URLs
@@ -124,19 +124,19 @@ against it. These are handled here, and each is pinned by a test:
 
 ## Errors
 
-Five codes come from the Gateway route; three are synthesized locally by `@tetherto/mdk-ui-agent/core` when the
+Five codes come from the Gateway route; three are synthesized locally by [`@tetherto/mdk-ui-agent/core`](./src/core/index.ts) when the
 transport itself misbehaves.
 
-| Code | Fires when | Fix |
-| --- | --- | --- |
-| `ERR_AGENT_UNAVAILABLE` | `config.agent` is missing entirely, or the agent failed to construct (`503`) | An operator-facing failure — the Gateway wasn't configured or the agent couldn't start; check the plugin's own config |
+| Code                          | Fires when                           | Fix                               |
+| ----------------------------- | ------------------------------------ | --------------------------------- |
+| `ERR_AGENT_UNAVAILABLE`       | `config.agent` is missing entirely, or the agent failed to construct (`503`) | An operator-facing failure — the Gateway wasn't configured or the agent couldn't start; check the plugin's own config |
 | `ERR_AGENT_SESSION_NOT_FOUND` | The session id doesn't exist — commonly because the Gateway restarted and its in-memory sessions were lost (`404`) | Start a new session; the transcript still reads back locally |
-| `ERR_AGENT_TURN_ACTIVE` | A message or delete is sent to a session while its previous turn is still streaming or paused on an approval (`409`) | Wait for the current turn to finish, or decide its pending approval |
+| `ERR_AGENT_TURN_ACTIVE`       | A message or delete is sent to a session while its previous turn is still streaming or paused on an approval (`409`) | Wait for the current turn to finish, or decide its pending approval |
 | `ERR_AGENT_APPROVAL_NOT_FOUND` | An approval decision is sent for an id that doesn't exist for that session — already decided, or never existed (`404`) | Confirm the approval card is still the current one; a stale one is a decision arriving after the turn already moved on |
 | `ERR_AGENT_MESSAGE_TEXT_REQUIRED` | The message `text` sent to the Gateway is missing, not a string, or empty after trimming (`400`) | Don't send an empty message |
-| `ERR_AGENT_STREAM_IDLE` | No event arrived within the idle window for the current phase (`STREAM_IDLE_TIMEOUT_MS` mid-turn, `FIRST_EVENT_IDLE_TIMEOUT_MS` before the first event, `APPROVAL_IDLE_TIMEOUT_MS` while an approval is outstanding) | Usually a wedged agent or a half-closed proxy; retry the turn |
+| `ERR_AGENT_STREAM_IDLE`      | No event arrived within the idle window for the current phase (`STREAM_IDLE_TIMEOUT_MS` mid-turn, `FIRST_EVENT_IDLE_TIMEOUT_MS` before the first event, `APPROVAL_IDLE_TIMEOUT_MS` while an approval is outstanding) | Usually a wedged agent or a half-closed proxy; retry the turn |
 | `ERR_AGENT_STREAM_TRUNCATED` | The stream ended with no terminal event and no idle timeout fired — the socket closed on its own (a failure after the SSE headers were already sent, which arrives with no `error` frame and no `done`) | Retry the turn; what already streamed is kept |
-| `ERR_AGENT_STREAM_EMPTY` | The Gateway answered the message request without a readable stream body at all | An environment gap (a `fetch` polyfill without streaming body support) rather than an agent failure; check the runtime |
+| `ERR_AGENT_STREAM_EMPTY`     | The Gateway answered the message request without a readable stream body at all | An environment gap (a `fetch` polyfill without streaming body support) rather than an agent failure; check the runtime |
 
 ## Rendering
 
@@ -163,15 +163,15 @@ plain http.
 
 The panel is code-split behind the launcher, so a collapsed co-pilot costs the
 host about 13 kB raw / 4.5 kB gzip; the transcript and its renderer arrive on
-open. Nothing may import `components/co-pilot-panel` statically from the root
-barrel — one static edge collapses the split for every consumer.
+open. Nothing may import [`components/co-pilot-panel`](./src/components/co-pilot-panel.tsx)
+statically from the root barrel — one static edge collapses the split for every consumer.
 
 ## Naming
 
 `Co-pilot` is a placeholder pending a naming decision. Every user-visible string
-derives from `AGENT_NAME` in `src/branding.ts`, so the rename is a one-line
-change there; `src/branding.test.ts` fails if a component hardcodes it. The CSS
-prefix (`mdk-agent-*`) and the storage key deliberately do not carry the name, so
+derives from `AGENT_NAME` in [`src/branding.ts`](./src/branding.ts), so the rename is a one-line
+change there; [`src/branding.test.ts`](./src/branding.test.ts) fails if a component hardcodes it.
+The CSS prefix (`mdk-agent-*`) and the storage key deliberately do not carry the name, so
 renaming breaks neither consumers' style overrides nor their stored history.
 
 Per deployment, pass `title` instead of editing the constant.
@@ -187,32 +187,24 @@ be rethemed without forking the stylesheet:
 ```
 
 Components do not import their own `.scss` — every partial is reached from
-`src/styles.scss`, and `npm run check:styles` fails the build if one is not.
+[`src/styles.scss`](./src/styles.scss), and `npm run check:styles` fails the build if one is not.
 
 ## Demo
 
-`ui/apps/catalog` → **Guides → Agent Co-pilot** drives all five states against a
+[`ui/apps/catalog`](../../apps/catalog/README.md) → **Guides → Agent Co-pilot** drives all five states against a
 stand-in gateway, so it runs with no backend.
 
 ## Running it all locally
 
-Four processes. The order matters: **the agent connects to MCP once, when it is
-created** — which is the first `POST /agent/sessions` — so a panel opened before
-the tool server is up gets a session with no tools and answers from the model
-alone, with no error to tell you.
-
-```text
-  model  ──►  agent gateway  ──►  MCP tool server  ──►  kernel + workers
-   :11500        :3847              :3008                  (the fleet)
-                   ▲
-                   └── UI shell :3030, proxying /agent
-```
+Four processes, in order. See the [operator agent guides](../../../docs/guides/agent/index.md) for the topology diagram and
+why order matters here: the agent connects to MCP once, when a session is created, so a panel opened before the tool
+server is up gets a session with no tools and answers from the model alone, with no error to tell you.
 
 ### 1. A model
 
 Anything that speaks the OpenAI `/v1/chat/completions` API. QVAC is the
 supported path — see
-[step 1 of the agent README](../../../backend/core/agent/README.md#1-serve-the-model-the-brain).
+[serving the model](../../../docs/guides/agent/run-standalone.md#serve-the-model-with-qvac).
 Any other local server works too: the provider is pointed at a URL, not at a
 vendor.
 
@@ -227,11 +219,11 @@ npm run setup  # first time — NOT npm install
 npm start      # kernel + workers + its own gateway :3007 + MCP tools on :3008
 ```
 
-`npm install` alone leaves it unbootable. The repo is federated — no root
-workspaces — so the example reaches into fourteen backend packages that each
-need installing, and a built UI besides; `setup` does all of that and takes a
-while. Its own preflight check refuses to start otherwise, naming what is
-missing.
+`npm install` alone leaves it unbootable. The repo is a root npm workspace, but
+`setup` also builds the UI toolkit ([`ui/`](../../README.md)) and installs [`examples/full-site/ui`](../../../examples/full-site/ui)
+— a plain root `npm install` does not do either of those; `setup` does all of
+that and takes a while. Its own preflight check refuses to start otherwise,
+naming what is missing.
 
 This is the same MCP server the agent CLI uses, exposing `summarize_site`,
 `count_devices`, `list_devices`, `get_device`, `rank_devices` and `act_device`.
@@ -243,54 +235,26 @@ together yet.
 
 ### 3. A gateway carrying the agent plugin
 
-**Relink the agent core first.** `backend/core/agent` is not a root workspace, and
-the plugin declares it as an optional dependency at a version that does not match
-what is on disk, so npm skips it silently — and any install, including step 2's
-`setup`, removes the link if one was there:
-
-```bash
-ln -s ../../backend/core/agent node_modules/@tetherto/mdk-agent   # from the repo root
-```
-
-Without it the gateway aborts with `ERR_PLUGIN_HANDLER_NOT_FOUND` naming
-`./controllers/sessions.js` — which is the loader mistaking a failed `require` of
-the agent core for a missing file, so the message points nowhere near the cause.
-
-`mdk onboard` scaffolds a stack and offers the plugin, or add it to an existing
-`mdk.yaml` by hand:
-
-```yaml
-  gateway:
-    port: 3847
-    plugins:
-      - package: "@tetherto/mdk-plugin-agent"
-        config:
-          agent:
-            provider:
-              kind: qvac
-              model: <model-id>
-              baseURL: http://127.0.0.1:11500/v1
-            mcp:
-              url: http://127.0.0.1:3008/mcp
-            approvalTimeoutMs: 120000
-```
-
-Then `mdk run`.
-
-**The wizard never asks for `agent.mcp.url`.** Onboard alone therefore produces
-an agent with no tools — add the `mcp` block yourself, or every answer comes out
-of the model's own weights.
+Mount [`@tetherto/mdk-plugin-agent`](../../../backend/plugins/agent/README.md) behind its own Gateway, against the local model
+and MCP server this walkthrough already served. See [Mount the plugin](../../../docs/guides/agent/gateway-deployment.md#mount-the-plugin)
+for the complete `mdk.yaml` and `mdk run all`.
 
 ### 4. The UI
 
 ```bash
 cd <your-app>            # or examples/mdk-ui-shell-template
-VITE_GATEWAY_URL=http://127.0.0.1:3847 npm run dev
+npm install               # first time only; this project isn't a root workspace member
+VITE_GATEWAY_URL=http://127.0.0.1:3847 VITE_AUTH_BYPASS=true npm run dev
 ```
 
-Open `:3030` and the launcher is in the corner. `VITE_GATEWAY_URL` feeds the
+The `npm install` above only needs to cover this project's own dependencies. The `ui/` toolkit it imports via `file:` links
+(`react-devkit`, `ui-foundation`, `react-adapter`, this package) is already built by step 2's `npm run setup`, which chains
+`npm --prefix ../.. run build:ui` — no separate build step here.
+
+`<your-app>` can be [`examples/mdk-ui-shell-template`](../../../examples/mdk-ui-shell-template/README.md). Open `:3030` and the launcher is in the corner. `VITE_GATEWAY_URL` feeds the
 `/agent` proxy from [Dev server](#dev-server); leave `VITE_MDK_API_URL` empty so
-calls stay relative and go through it.
+calls stay relative and go through it. `VITE_AUTH_BYPASS=true` skips the shell template's `/signin` gate, landing straight on
+the dashboard with a stub session, since this walkthrough has no OAuth backend to sign in against.
 
 ### Checking it
 
@@ -327,10 +291,6 @@ curl -N -X POST localhost:3847/agent/sessions/$SESSION/messages \
   `approvalTimeoutMs` (120s by default). The stream then resumes on its own.
 - **No CORS, ever.** The stream route hijacks the reply, so the dev proxy in
   step 4 is not optional if the UI is on another port.
-- **Any npm install can unlink the agent core again**, and the symptom is a
-  gateway that will not start rather than an agent that does not answer. The
-  relink in step 3 is the fix each time, until `backend/core/agent` becomes a
-  workspace.
 
 Walked end to end on 2026-08-14 and the four steps above are what it took —
 including two bugs fixed on the way, in `full-site`'s preflight check and its MCP

@@ -78,17 +78,6 @@ miners/antminer/
 - Dispatches incoming MDK Protocol actions to the plugin's per-device handlers, wrapping results into the protocol envelope itself
 - Persists the DHT/RPC keypair in a process-owned store when one is supplied (stable identity across restarts)
 
-<details>
-<summary>Migrating from MDKWorkerAdapter / ThingManager (pre-0.5.0)</summary>
-
-`WorkerRuntime` generalizes the former `MDKWorkerAdapter` (persistent seeds, single HRPC respond loop, DHT topic
-announce carried over) and replaces `ThingManager` delegation with per-device handler dispatch. See
-[Worker Runtime legacy services][worker-runtime-legacy-services] for the full
-migration history and the optional `opts.services` built-in surface that lets a host answer legacy queries and
-commands from a manager's store.
-
-</details>
-
 ### 3. mdk-contract.json
 
 Each Worker package ships an [`mdk-contract.json`][contract-schema] that declares its full capabilities:
@@ -153,6 +142,9 @@ compares the three, and [Test a new Worker][test-a-worker] has a runnable host s
 > `{ contract, dir, connect, disconnect? }` shape, which remains supported. `WorkerRuntimeV2` is the model for new hardware.
 
 ## Testing
+
+> [!NOTE]
+> Needs npm 11 [(< 12)][npm-version]; `npm install` from the repo root installs every package.
 
 Each Worker package has its own `mock/server.js` that simulates the hardware API. Run tests from the package root:
 
@@ -235,8 +227,8 @@ also run just its own mock on its default port, e.g. `cd miners/whatsminer && np
 [discovery-model]: docs/architecture.md#discovery-model
 <!-- docs@tether.io: discovery-model → https://github.com/tetherto/mdk/blob/main/backend/workers/docs/architecture.md#discovery-model -->
 
-[worker-runtime-legacy-services]: ../../docs/reference/maintainers/worker-runtime-legacy-services.md
-<!-- docs@tether.io: worker-runtime-legacy-services → https://github.com/tetherto/mdk/blob/main/docs/reference/maintainers/worker-runtime-legacy-services.md -->
-
 [antminer-usage]: ./miners/antminer/USAGE.md
 <!-- docs@tether.io: antminer-usage → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/antminer/USAGE.md -->
+
+[npm-version]: ../../docs/reference/environment.md#why-npm-stays-below-12
+<!-- docs@tether.io: npm-version → reference/environment -->

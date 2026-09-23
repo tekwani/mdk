@@ -18,13 +18,13 @@
 
   "workers": [
     {
-      "type": "mdk-worker-whatsminer",
-      "model": "m56s",
+      "type": "mdk-worker-antminer",
+      "model": "s21",
       "simulateMocks": true,
       "ceiling": { 
         "startDeviceCount": 10, 
         "stepDeviceCount": 10, 
-        "maxDeviceCount": 30 
+        "maxDeviceCount": 10 
       }
     },
     {

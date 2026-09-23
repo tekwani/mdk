@@ -55,8 +55,7 @@ parts (router, sidebar, line charts, domain panels) this single-page, single-Wor
 - This repo checked out, with the backend and UI dependencies installed once from the repository root:
 
   ```bash
-  npm run setup:core
-  npm run setup:workers
+  npm install
   npm run setup:ui
   npm run build:ui
   ```
@@ -407,7 +406,7 @@ ReactDOM.createRoot(rootElement).render(
 With no `auth` prop, `MdkProvider` defaults to `gatewayRedirectAuth()` (the bundled mining Gateway's OAuth-redirect
 flow) minus a redirect target — fine for a read-only route with no `"auth": true` requirement, like this one. Pass
 `auth={noAuth()}` instead for a backend that needs no session at all, or `auth={gatewayRedirectAuth({ oauthBaseUrl })}`
-to enable sign-in.
+to enable sign-in. The [react-adapter auth presets][react-adapter-auth] cover what each one does and its limits.
 
 Create `ui/src/OverviewPage.tsx` under your new `examples/minimal-dashboard/`: `useQuery` polls the route from Step 3 the same way
 [`examples/mvp-site/ui/src/SitePage.tsx`][mvp-site-page] polls `/site/overview`; `DataTable` and `Badge` replace that page's
@@ -643,3 +642,6 @@ Open **`http://localhost:3041/`** (the Vite port), not `:3000`. Step 5's proxy f
 
 [gateway-plugins]: ../guides/gateway/plugins.md
 <!-- docs@tether.io: gateway-plugins → guides/gateway/plugins -->
+
+[react-adapter-auth]: ../../ui/packages/react-adapter/README.md#authentication
+<!-- docs@tether.io: react-adapter-auth → https://github.com/tetherto/mdk/blob/main/ui/packages/react-adapter/README.md#authentication -->

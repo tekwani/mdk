@@ -13,8 +13,12 @@
 // resolve to a real directory, closing a gap linkinator itself can't (it
 // can't tell "exists, no index file" apart from "doesn't exist", so a
 // skip-listed directory that's later renamed or deleted would otherwise keep
-// silently "passing" forever). Both checks must pass for `npm run link-check`
-// to succeed, in both modes below. See docs/reference/maintainers/linters.md
+// silently "passing" forever). check-md-anchors.mjs is a third subprocess: it
+// resolves every cross-file and in-page `*.md#anchor` link against the target
+// file's own headings, closing linkinator's order-dependent fragment gap (a
+// fragment discovered after its target was already fetched is never validated).
+// All three checks must pass for `npm run link-check` to succeed, in both
+// modes below. See docs/reference/maintainers/linters.md
 // for policy and rationale.
 //
 // Optionally accepts an explicit list of .md files as CLI args
@@ -23,11 +27,16 @@
 // changed in the diff), so a PR check never crawls the whole repo. With no
 // args (the nightly job, and the default local run), every tracked .md file
 // is crawled. Only tracked .md paths narrow the crawl; any other argument —
-// e.g. a linkinator flag such as `--format json` — is ignored here and leaves
-// the full sweep intact (see resolveCrawlFiles). check-directory-links.mjs
-// always runs in full either way — it isn't a per-file crawl, just a handful
-// of `git ls-files` checks against linkinator.config.json's skip list, so
-// there's no "scoped" version of it and no cost to running it in full every time.
+// e.g. a linkinator flag such as `--format json` — is ignored here (with a
+// warning on stderr) and leaves the full sweep intact (see resolveCrawlFiles).
+// It never reaches linkinator either, which is why the report format travels
+// as LINK_CHECK_FORMAT instead. check-directory-links.mjs always runs in full
+// either way — it isn't a per-file crawl, just a handful of `git ls-files`
+// checks against linkinator.config.json's skip list, so there's no "scoped"
+// version of it and no cost to running it in full every time.
+// check-md-anchors.mjs also always runs in full: it reads files directly
+// instead of crawling, so a full pass is cheap and an anchor break is never
+// confined to the diff.
 
 import { execFileSync, spawnSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
@@ -78,26 +87,46 @@ function main () {
     process.exit(1)
   }
 
-  const { files } = resolveCrawlFiles(allFiles, process.argv.slice(2))
+  const args = process.argv.slice(2)
+  const { files } = resolveCrawlFiles(allFiles, args)
 
-  // Spawned before linkinator so it always runs in full regardless of scope,
-  // per the header comment — the directory-skip staleness check is not a
-  // per-file crawl and must gate every run.
+  const allFilesSet = new Set(allFiles)
+  const ignored = args.filter((a) => !allFilesSet.has(a))
+  if (ignored.length > 0) {
+    console.error(`link-check: ignoring arguments that are not tracked Markdown files: ${ignored.join(' ')}`)
+  }
+
+  // Both sub-checks are spawned before linkinator so they always run in full
+  // regardless of scope, per the header comment. Their stdout goes to fd 2 so
+  // it can't corrupt linkinator's report when LINK_CHECK_FORMAT=json: the
+  // nightly workflow parses stdout as JSON and reads the sub-checks' findings
+  // from stderr.
   const directoryLinksResult = spawnSync(
     'node',
     ['scripts/check-directory-links.mjs'],
-    { cwd: REPO_ROOT, stdio: 'inherit' }
+    { cwd: REPO_ROOT, stdio: ['inherit', 2, 'inherit'] }
   )
   const directoryLinksOk = (directoryLinksResult.status ?? 1) === 0
 
+  const anchorsResult = spawnSync(
+    'node',
+    ['scripts/check-md-anchors.mjs'],
+    { cwd: REPO_ROOT, stdio: ['inherit', 2, 'inherit'] }
+  )
+  const anchorsOk = (anchorsResult.status ?? 1) === 0
+
+  const format = process.env.LINK_CHECK_FORMAT
+    ? ['--format', process.env.LINK_CHECK_FORMAT]
+    : []
+
   const result = spawnSync(
     'npx',
-    ['--yes', 'linkinator@7.6.1', '--config', 'linkinator.config.json', ...files],
+    ['--yes', 'linkinator@7.6.1', '--config', 'linkinator.config.json', ...format, ...files],
     { cwd: REPO_ROOT, stdio: 'inherit' }
   )
 
   const linkinatorOk = (result.status ?? 1) === 0
-  process.exit(directoryLinksOk && linkinatorOk ? 0 : 1)
+  process.exit(directoryLinksOk && anchorsOk && linkinatorOk ? 0 : 1)
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

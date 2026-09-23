@@ -8,6 +8,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // The CLI colorizes through picocolors, which turns colors ON when CI is
+    // set — even for a non-TTY pipe. Assertions here match plain substrings
+    // ('Health: healthy'), so without this the same tests pass locally and
+    // fail in CI. NO_COLOR is the off switch theme.ts already documents.
+    env: { NO_COLOR: '1' },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],

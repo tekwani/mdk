@@ -1,6 +1,6 @@
 # MDK architecture
 
-Load this when you need to know which module owns a behaviour, or where a
+Load this when you need to know which module owns a behavior, or where a
 request travels between a consumer and a physical device.
 
 ## Layers
@@ -10,31 +10,26 @@ Consumers (UI, CLI, agents)
     │  HTTP / @tetherto/mdk-client
 Gateway (backend/core/gateway, boot glue in backend/core/mdk)
     │  MDK envelopes over HRPC
-Kernel — a.k.a. ORK (backend/core/kernel)
+Kernel (backend/core/kernel)
     │  MDK envelopes over HRPC ('mdk' method), discovery via Hyperswarm DHT
 Workers — WorkerRuntime/WorkerRuntimeV2 hosting a Worker Plugin (backend/core/mdk-worker + backend/workers/*)
     │  vendor protocol: CGMiner TCP, HTTP JSON, Modbus TCP, MQTT…
 Devices (miners, power meters, sensors, containers)
 ```
 
-Historical note: the Kernel was previously called **ORK** (Orchestration
-Kernel). Older docs use ORK; the code lives in [`backend/core/kernel`](../../../../../../backend/core/kernel/README.md) and the
-two terms are interchangeable.
-
 ## Kernel modules ([`backend/core/kernel/lib/modules/`](../../../../../../backend/core/kernel/lib/modules/))
 
-Each module has one job and modules never cross-call — they interact through
-the interfaces they expose:
+Each module has one job and modules never cross-call, they interact through the interfaces they expose:
 
-| Module | Job |
-| --- | --- |
-| `worker-registry` | deviceId → workerId → channel mapping; source of truth for routability; explicit state transition table |
-| `command-dispatcher` | Validates a command against the worker's declared capabilities (name, param types, `min`/`max` bounds → `ERR_PARAM_RANGE`) and routes it |
+| Module                  | Job                                                                                                                    |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `worker-registry`       | deviceId → workerId → channel mapping; source of truth for routability; explicit state transition table                |
+| `command-dispatcher`    | Validates a command against the Worker's declared capabilities (name, param types, `min`/`max` bounds → `ERR_PARAM_RANGE`) and routes it |
 | `command-state-machine` | Command lifecycle with explicit transition table; every mutation is WAL'd before it takes effect; emits `command:done` |
-| `telemetry-collector` | Pull-based: sends `telemetry.pull`, returns the raw worker payload |
-| `health-monitor` | Ping-based (`health.ping`); updates registry health state only |
-| `scheduler` | Drives the periodic pull/ping cadences |
-| `action-manager` / `action-caller` | Write-action approval lifecycle (`action.push`, `action.vote`, …) between gateway and kernel |
+| `telemetry-collector`   | Pull-based: sends `telemetry.pull`, returns the raw Worker payload                                                     |
+| `health-monitor`        | Ping-based (`health.ping`); updates registry health state only                                                         |
+| `scheduler`             | Drives the periodic pull/ping cadences                                                                                 |
+| `action-manager` / `action-caller` | Write-action approval lifecycle (`action.push`, `action.vote`, …) between Gateway and Kernel                |
 
 The protocol layer ([`backend/core/kernel/lib/protocol/`](../../../../../../backend/core/kernel/lib/protocol/)) owns the envelope
 ([`envelope.js`](../../../../../../backend/core/kernel/lib/protocol/envelope.js)), the action set ([`actions.js`](../../../../../../backend/core/kernel/lib/protocol/actions.js)) and per-action payload
@@ -46,7 +41,7 @@ Two Worker Plugin shapes exist side by side, hosted on two runtime classes
 that share the same envelope dispatch, DHT discovery, and Kernel-facing
 protocol. Details for both: [`../../mdk-worker-plugin/references/worker-base-api.md`](../../mdk-worker-plugin/references/worker-base-api.md).
 
-A module-exporting worker package ships a **Worker Plugin** — `plugin/index.js`
+A module-exporting Worker package ships a **Worker Plugin** — `plugin/index.js`
 exporting `{ contract, dir, connect, disconnect? }` — plus plain device-client
 code in `lib/`. It never subclasses anything and never depends on the runtime.
 `WorkerRuntime` ([`backend/core/mdk-worker/lib/worker-runtime.js`](../../../../../../backend/core/mdk-worker/lib/worker-runtime.js)) is the
@@ -60,7 +55,7 @@ siblings. This is the shape every currently-shipped device family
 (`backend/workers/miners/*`, `power-meter/*`, `containers/*`, `minerpools/*`,
 `temperature/*`) still uses.
 
-A directory-loaded worker package ships no module of its own: just
+A directory-loaded Worker package ships no module of its own: just
 `mdk-contract.json` at its root plus the handler files it declares under
 `src/` — no `plugin/index.js`, no `connect()`/`disconnect()`. `WorkerRuntimeV2`
 ([`backend/core/mdk-worker/lib/worker-runtime-v2.js`](../../../../../../backend/core/mdk-worker/lib/worker-runtime-v2.js))
@@ -70,7 +65,7 @@ ambient `@tetherto/mdk-worker/device` module instead of a `ctx` argument.
 There is no boot-time probe and no offline state: every device reports
 `online` immediately, and an unreachable one surfaces as an error inside the
 telemetry payload instead. This is the shape `mdk create worker` scaffolds
-today; [`backend/workers/samples/demo-worker`](../../../../../../backend/workers/samples/demo-worker/) is the only real reference
+today; [`backend/workers/samples/demo-worker`](../../../../../../backend/workers/samples/demo-worker/README.md) is the only real reference
 implementation on it so far.
 
 ## Discovery and request flow
@@ -78,17 +73,17 @@ implementation on it so far.
 1. A caller boots `WorkerRuntime` or `WorkerRuntimeV2` with a `kernelTopic`;
    the runtime joins that Hyperswarm topic in server mode and writes its HRPC
    public key to every incoming connection.
-2. The Kernel connects to topic peers, learns the worker's key, then sends
+2. The Kernel connects to topic peers, learns the Worker's key, then sends
    `identity.request` and `capability.request`; the registry records the
-   worker's devices and its published contract (handler paths stripped).
+   Worker's devices and its published contract (handler paths stripped).
 3. The scheduler then drives `telemetry.pull` / `state.pull` / `health.ping`
-   on a cadence; consumers trigger `command.request` through the gateway.
-4. Commands flow gateway → dispatcher (capability + bounds validation) →
-   state machine (WAL) → worker → `command.result` back up.
+   on a cadence; consumers trigger `command.request` through the Gateway.
+4. Commands flow Gateway → dispatcher (capability + bounds validation) →
+   state machine (WAL) → Worker → `command.result` back up.
 
 ## Where things run
 
 [`examples/full-site/start.js`](../../../../../../examples/full-site/start.js) boots the whole picture in one process tree:
-mock devices, Kernel, 11 real workers, gateway and UI. Worker-hosting caller
-for a single worker, in-process and no Kernel:
+mock devices, Kernel, 11 real Workers, Gateway and UI. Worker-hosting caller
+for a single Worker, in-process and no Kernel:
 [`examples/backend/demo-worker-caller/index.js`](../../../../../../examples/backend/demo-worker-caller/index.js).

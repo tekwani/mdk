@@ -13,7 +13,7 @@ Context: globs: docs/**/*.md, **/README.md, backend/**/docs/**/*.md, ui/**/docs/
 - Present tense, direct voice (e.g. "This page walks through…", not "This page will walk through…")
 - Code identifiers in backticks (package names, file names, function names, etc.)
 - Title lives in frontmatter only; don't repeat it as an H2
-- Restrict line length to 150-180 chars (context is prose; tables are an exception)
+- Restrict line length to ~150 chars (context is prose; tables are an exception)
 - Bullet lists: single-sentence bullet no stop (e.g. `- Avalon` not `- Avalon.`); compound/multi-sentence bullet, stop after every sentence including the last
 - Numbered lists stop (e.g. 1. Do this action.)
 - Diataxis ia
@@ -81,6 +81,11 @@ screen size. Where rows cant be accommodated due to their length, allow the over
 - `> [!WARNING]`: security or destructive action
 - `> [!CAUTION]`: a risk or pitfall that falls short of WARNING but still needs the reader's care
 
+## Directory layout
+
+Box-drawing tree (`├──`, `│`, `└──`), root name first, nested dirs indented, inline `#` comment
+per entry. See `backend/core/gateway/README.md`'s `## Directory layout` for the reference shape.
+
 ## Code blocks
 
 - Always fenced with language tag (`bash`, `js`, etc.) except terminal session output which uses plain ` ``` `
@@ -124,11 +129,17 @@ docs@tether_slug: tutorials/<path>/
 
 content
 
+#### A Alternative sub-step title
+
+content, only when sub-steps are a choice rather than a sequence
+
 </Step>
 
 </Steps>
 ```
 
 - `###` for each `<Step>` title: no "Step N:" prefix (component numbers automatically)
-- `####` for sub-steps: keep the `N.M` prefix
+- `####` for sub-steps: keep the `N.M` prefix when they run in sequence (do N.1, then N.2); switch to
+  `A`/`B`/`C` when they're alternatives (do A **or** B, never both) — a reader should never read a
+  number and infer an order that isn't there
 - Optional steps: `### (Optional) Title`

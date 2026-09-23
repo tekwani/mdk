@@ -1,15 +1,14 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   DIRS,
   WORKSPACES,
-  WORKSPACE_VERSION,
   addFileDependency,
-  addWorkspaceDependency,
   ensureProjectGitignore,
   ensureProjectManifest,
   ensureProjectReadme,
+  isFileLinkedFromProject,
   isWorkspaceMember,
   readStackName,
 } from '../../src/lib/project.js';
@@ -17,26 +16,25 @@ import { cleanupTmpDirs, makeTmpDir } from '../helpers.js';
 
 afterEach(() => cleanupTmpDirs());
 
-describe('DIRS / WORKSPACES / WORKSPACE_VERSION', () => {
+describe('DIRS / WORKSPACES', () => {
   it('declares the expected component directories and workspace globs', () => {
     expect(DIRS.workers).toBe('workers');
     expect(DIRS.plugins).toBe('plugins');
     expect(DIRS.apps).toBe('apps');
     expect(DIRS.dashboard).toBe(join('apps', 'dashboard'));
     expect(WORKSPACES).toEqual(['workers/*', 'plugins/*']);
-    expect(WORKSPACE_VERSION).toBe('*');
   });
 });
 
 describe('ensureProjectManifest', () => {
-  it('creates a manifest when none exists', () => {
+  it('creates a manifest when none exists, without a workspaces key', () => {
     const dir = makeTmpDir();
     const action = ensureProjectManifest(dir, 'My Stack!');
     expect(action).toBe('created');
     const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
     expect(pkg.name).toBe('my-stack');
-    expect(pkg.workspaces).toEqual(WORKSPACES);
     expect(pkg.private).toBe(true);
+    expect(pkg.workspaces).toBeUndefined();
   });
 
   it('slugifies an unusual stack name, falling back to mdk-stack if empty', () => {
@@ -46,14 +44,14 @@ describe('ensureProjectManifest', () => {
     expect(pkg.name).toBe('mdk-stack');
   });
 
-  it('adds workspaces to an existing manifest that lacks them', () => {
+  it('leaves an existing manifest without workspaces untouched', () => {
     const dir = makeTmpDir();
     writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'existing' }), 'utf8');
     const action = ensureProjectManifest(dir, 'stack');
-    expect(action).toBe('updated');
+    expect(action).toBe('present');
     const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
     expect(pkg.name).toBe('existing');
-    expect(pkg.workspaces).toEqual(WORKSPACES);
+    expect(pkg.workspaces).toBeUndefined();
   });
 
   it('leaves an existing manifest with workspaces untouched', () => {
@@ -85,50 +83,123 @@ describe('isWorkspaceMember', () => {
 
   it('is true for a package under a declared workspace glob', () => {
     const dir = makeTmpDir();
-    ensureProjectManifest(dir, 'stack');
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'stack', workspaces: WORKSPACES }),
+      'utf8',
+    );
     expect(isWorkspaceMember(dir, join(dir, 'workers', 'demo'))).toBe(true);
     expect(isWorkspaceMember(dir, join(dir, 'plugins', 'demo'))).toBe(true);
   });
 
   it('is false for a package outside every declared glob', () => {
     const dir = makeTmpDir();
-    ensureProjectManifest(dir, 'stack');
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'stack', workspaces: WORKSPACES }),
+      'utf8',
+    );
     expect(isWorkspaceMember(dir, join(dir, 'apps', 'dashboard'))).toBe(false);
   });
 
   it('is false for a path outside the project entirely', () => {
     const dir = makeTmpDir();
-    ensureProjectManifest(dir, 'stack');
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'stack', workspaces: WORKSPACES }),
+      'utf8',
+    );
     const outside = makeTmpDir();
     expect(isWorkspaceMember(dir, outside)).toBe(false);
   });
 
   it('is false for a nested path that does not match glob segment count', () => {
     const dir = makeTmpDir();
-    ensureProjectManifest(dir, 'stack');
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'stack', workspaces: WORKSPACES }),
+      'utf8',
+    );
     expect(isWorkspaceMember(dir, join(dir, 'workers', 'demo', 'nested'))).toBe(false);
+  });
+});
+
+describe('isFileLinkedFromProject', () => {
+  it('is false when there is no package.json', () => {
+    const dir = makeTmpDir();
+    expect(isFileLinkedFromProject(dir, join(dir, 'plugins', 'x'))).toBe(false);
+  });
+
+  it('is true for a package linked via dependencies', () => {
+    const dir = makeTmpDir();
+    const pluginDir = join(dir, 'plugins', 'x');
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ dependencies: { x: 'file:./plugins/x' } }),
+      'utf8',
+    );
+    expect(isFileLinkedFromProject(dir, pluginDir)).toBe(true);
+  });
+
+  it('is true for a package linked via devDependencies', () => {
+    const dir = makeTmpDir();
+    const pluginDir = join(dir, 'plugins', 'x');
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ devDependencies: { x: 'file:./plugins/x' } }),
+      'utf8',
+    );
+    expect(isFileLinkedFromProject(dir, pluginDir)).toBe(true);
+  });
+
+  it('is false when no dependency points at the package', () => {
+    const dir = makeTmpDir();
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ dependencies: { lodash: '^4.0.0' } }),
+      'utf8',
+    );
+    expect(isFileLinkedFromProject(dir, join(dir, 'plugins', 'x'))).toBe(false);
+  });
+
+  it('is false on an unparseable manifest', () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, 'package.json'), '{ not json', 'utf8');
+    expect(isFileLinkedFromProject(dir, join(dir, 'plugins', 'x'))).toBe(false);
   });
 });
 
 describe('addFileDependency', () => {
   it('throws when there is no package.json', () => {
     const dir = makeTmpDir();
-    expect(() => addFileDependency(dir, '@tetherto/mdk-worker-antminer', '/fake/checkout')).toThrow(
+    const checkout = makeTmpDir();
+    expect(() => addFileDependency(dir, '@tetherto/mdk-worker-antminer', checkout)).toThrow(
       /no package.json/,
     );
   });
 
-  it('adds the package as an absolute file: dependency, creating no workers/ folder', () => {
+  it('writes a relative file: spec for an in-project path', () => {
+    const dir = makeTmpDir();
+    ensureProjectManifest(dir, 'stack');
+    const local = join(dir, 'workers', 'demo');
+    addFileDependency(dir, '@org/demo', local);
+    const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+    expect(pkg.dependencies['@org/demo']).toBe('file:./workers/demo');
+    expect(pkg.workspaces).toBeUndefined();
+  });
+
+  it('writes a relative file: spec for an out-of-project checkout, never bare "*"', () => {
     const dir = makeTmpDir();
     const checkout = makeTmpDir();
     ensureProjectManifest(dir, 'stack');
     addFileDependency(dir, '@tetherto/mdk-worker-antminer', checkout);
     const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
-    expect(pkg.dependencies['@tetherto/mdk-worker-antminer']).toBe(`file:${resolve(checkout)}`);
-    expect(() => readFileSync(join(dir, 'workers', 'antminer'))).toThrow();
+    expect(pkg.dependencies['@tetherto/mdk-worker-antminer']).toMatch(/^file:\.\./);
+    expect(pkg.dependencies['@tetherto/mdk-worker-antminer']).not.toBe('*');
+    expect(pkg.workspaces).toBeUndefined();
   });
 
-  it('is idempotent when the dependency is already declared at that path', () => {
+  it('is idempotent when the dependency is already declared', () => {
     const dir = makeTmpDir();
     const checkout = makeTmpDir();
     ensureProjectManifest(dir, 'stack');
@@ -149,46 +220,7 @@ describe('addFileDependency', () => {
     addFileDependency(dir, '@tetherto/mdk-worker-antminer', checkout);
     const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
     expect(pkg.dependencies.lodash).toBe('^4.0.0');
-    expect(pkg.dependencies['@tetherto/mdk-worker-antminer']).toBe(`file:${resolve(checkout)}`);
-  });
-});
-
-describe('addWorkspaceDependency', () => {
-  it('throws when there is no package.json', () => {
-    const dir = makeTmpDir();
-    expect(() => addWorkspaceDependency(dir, '@tetherto/mdk-worker-antminer')).toThrow(
-      /no package.json/,
-    );
-  });
-
-  it('adds the package at the workspace version', () => {
-    const dir = makeTmpDir();
-    ensureProjectManifest(dir, 'stack');
-    addWorkspaceDependency(dir, '@tetherto/mdk-worker-antminer');
-    const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
-    expect(pkg.dependencies['@tetherto/mdk-worker-antminer']).toBe('*');
-  });
-
-  it('is idempotent when the dependency is already declared at "*"', () => {
-    const dir = makeTmpDir();
-    ensureProjectManifest(dir, 'stack');
-    addWorkspaceDependency(dir, '@tetherto/mdk-worker-antminer');
-    const before = readFileSync(join(dir, 'package.json'), 'utf8');
-    addWorkspaceDependency(dir, '@tetherto/mdk-worker-antminer');
-    expect(readFileSync(join(dir, 'package.json'), 'utf8')).toBe(before);
-  });
-
-  it('preserves other dependencies already present', () => {
-    const dir = makeTmpDir();
-    writeFileSync(
-      join(dir, 'package.json'),
-      JSON.stringify({ name: 'x', dependencies: { lodash: '^4.0.0' } }),
-      'utf8',
-    );
-    addWorkspaceDependency(dir, '@tetherto/mdk-worker-antminer');
-    const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
-    expect(pkg.dependencies.lodash).toBe('^4.0.0');
-    expect(pkg.dependencies['@tetherto/mdk-worker-antminer']).toBe('*');
+    expect(pkg.dependencies['@tetherto/mdk-worker-antminer']).toMatch(/^file:\.\./);
   });
 });
 

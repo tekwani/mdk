@@ -2,7 +2,7 @@
 name: mdk-deployment
 description: >
   Deploy and run a working MDK stack from mdk.yaml. Use when the task mentions
-  "deploy", "run the stack", "start the Kernel/ORK + workers + gateway",
+  "deploy", "run the stack", "start the Kernel + Workers + Gateway",
   "register a plugin", "mdk.yaml", or MDK environment configuration.
 metadata:
   suite: mdk-developer-skill
@@ -13,7 +13,7 @@ license: Apache-2.0
 # Deploy and run an MDK stack
 
 In CLI-managed projects (this folder), the stack is declared in `mdk.yaml` and
-started with `mdk run`. Boot order matters: **Kernel → workers → gateway/UI**.
+started with `mdk run`. Boot order matters: **Kernel → Workers → Gateway/UI**.
 
 ## Project shape
 
@@ -59,10 +59,10 @@ spec:
 ```
 
 Both `mdk create worker <name>` and `mdk create plugin <name>` scaffold the
-package **and** register it here automatically (workers under
+package **and** register it here automatically (Workers under
 `spec.workers`, plugins under `spec.gateway.plugins`) — no manual
 `package.json` linking step. They also seed a stack-unique mock port/device id
-per worker, so scaffolding several in one project never collides. If you add a
+per Worker, so scaffolding several in one project never collides. If you add a
 package by hand instead, mirror that: `npm install` at the project root (which
 links the new workspace member), then append the entry yourself.
 
@@ -81,8 +81,8 @@ just which command you type. Use the per-component targets and separate
 terminals when debugging one tier. Gateway port is `spec.gateway.port`
 (example: `3847`); curl plugins at `http://127.0.0.1:<gateway-port>/api/...`.
 
-Ctrl+C / SIGTERM stops components in reverse boot order (gateway → workers →
-kernel) and always exits, even if a component's own shutdown hangs.
+Ctrl+C / SIGTERM stops components in reverse boot order (Gateway → Workers →
+Kernel) and always exits, even if a component's own shutdown hangs.
 
 ### Verify
 
@@ -93,7 +93,7 @@ curl -s http://127.0.0.1:3847/api/<route> | jq .
 ```
 
 `mdk status` never starts, stops or repairs anything — it probes the Kernel
-over HRPC and the Gateway over HTTP and reports declared-vs-registered workers.
+over HRPC and the Gateway over HTTP and reports declared-vs-registered Workers.
 Exit codes: `0` healthy, `4` precondition not met (bad Node, invalid
 `mdk.yaml`, packages not installed), `5` stack not fully up.
 
@@ -102,34 +102,33 @@ open the page route added by `mdk-ui-component`.
 
 ## Scaffolding helpers
 
-| Need | Command |
-| --- | --- |
-| Guided `mdk.yaml` | `mdk onboard` |
-| New worker package | `mdk create worker <name>` → then `mdk-worker-plugin` |
-| New gateway plugin | `mdk create plugin <name>` → then `mdk-gateway-plugin` |
-| New dashboard app | `mdk create dashboard` |
+| Need               | Command                                                |
+| ------------------ | ------------------------------------------------------ |
+| Guided `mdk.yaml`  | `mdk onboard`                                          |
+| New Worker package | `mdk create worker <name>` → then `mdk-worker-plugin`  |
+| New Gateway plugin | `mdk create plugin <name>` → then `mdk-gateway-plugin` |
+| New dashboard app  | `mdk create dashboard`                                 |
 
 All three run `npm install` by default (`--no-install` to skip) and, for
-workers/plugins, install at the project root so the new package links as a
+Workers/plugins, install at the project root so the new package links as a
 workspace member rather than getting its own nested `node_modules`.
 
 ## Boot-order invariant
 
-1. Kernel listening
-2. Workers announce on the DHT topic, or attach directly when run in the same process
-3. Gateway loads plugins (needs Kernel + client)
-4. UI last — it only talks to the Gateway
+1. Kernel listening.
+2. Workers announce on the DHT topic, or attach directly when run in the same process.
+3. Gateway loads plugins (needs Kernel + client).
+4. UI last — it only talks to the Gateway.
 
-Starting the UI or a plugin before the worker is online yields empty arrays,
+Starting the UI or a plugin before the Worker is online yields empty arrays,
 not necessarily HTTP errors — treat an empty `devices: []` in a plugin
 response as a deployment signal, not a bug.
 
-
-
 ## Hand-off
 
-| Next need | Skill |
-| --- | --- |
-| New device worker | `mdk-worker-plugin` |
-| New aggregation API | `mdk-gateway-plugin` |
-| New dashboard page | `mdk-ui-component` |
+| Next need                          | Skill                |
+| ---------------------------------- | -------------------- |
+| How many Workers / which host tier | `mdk-site-sizing`    |
+| New device Worker                  | `mdk-worker-plugin`  |
+| New aggregation API                | `mdk-gateway-plugin` |
+| New dashboard page                 | `mdk-ui-component`   |

@@ -3,10 +3,10 @@ export const ROUTE_PATHS = {
   SIGN_IN: '/signin',
   HOME: '/home',
   // The paths below are anchors for the `_managed` demo pages. They are not
-  // routed in a bare shell, but `mdk-ui add page <Name>` re-inserts the matching
-  // `NAV_ICONS` entry keyed off these constants, so keep them in sync with
-  // `MANAGED_PAGES` in the CLI even though nothing references them until a page
-  // is added.
+  // routed in a bare shell, but the matching `NAV_ICONS` entry is keyed off
+  // these constants, so keep them in sync with the page names under
+  // `_managed/pages/` even though nothing references them until a page is
+  // copied in.
   DASHBOARD: '/dashboard',
   ALERTS: '/alerts',
   POOL_MANAGER: '/pool-manager',

@@ -1,10 +1,6 @@
----
-todo: "see docs/reference/maintainers/ia.md — check:plugin-reference-fresh and check:plugin-manifest"
----
-
 # @tetherto/mdk-plugins
 
-Default [Gateway](../gateway/README.md) plugins and the declarative plugin format for extending the MDK Gateway with
+The bundled [Gateway](../gateway/README.md) plugins and the declarative plugin format for extending the MDK Gateway with
 custom HTTP routes.
 
 ## Overview
@@ -14,8 +10,9 @@ A plugin is a directory containing:
 - `mdk-plugin.json`: manifest declaring route identity, HTTP surface, and caching
 - One or more controller files — each exports `async function (req)`
 
-The Gateway registers `telemetry`, `site-hashrate`, and `site-monitor` automatically, and accepts additional plugin directories via
-`startGateway({ extraPluginDirs: [...] })`. The `auth` plugin ships here but is [neither registered nor wired](#the-bundled-auth-plugin).
+A Gateway loads exactly the plugins your stack declares — nothing here, including `telemetry`, `site-hashrate`, and
+`site-monitor`, is registered automatically. Declare one via `spec.gateway.plugins[]` or `startGateway({ extraPluginDirs: [...] })`.
+The `auth` plugin ships here too, but is [neither registered nor wired](#the-bundled-auth-plugin) even once declared.
 
 > [!TIP]
 > New to the plugin system? Read the [Gateway plugins how-to guide](../../../docs/guides/gateway/plugins.md) for a step-by-step walkthrough.
@@ -70,75 +67,71 @@ A controller exports `async function (req)` and returns a value that is serializ
 
 `req`, assembled in [`plugin-adapter.js`](../gateway/workers/lib/plugin-adapter.js):
 
-| Field | Type | Contains |
-| --- | --- | --- |
-| `req.params` | `object` | Path parameters (e.g. `{ deviceId: 'wm-001' }`) |
-| `req.query` | `object` | Query string parameters |
-| `req.body` | `object` | Parsed JSON request body |
-| `req.headers` | `object` | HTTP headers |
-| `req._info` | `object` | Internal request metadata (rarely needed) |
+| Field         | Type     | Contains                                        |
+| ------------- | -------- | ----------------------------------------------- |
+| `req.params`  | `object` | Path parameters (e.g. `{ deviceId: 'wm-001' }`) |
+| `req.query`   | `object` | Query string parameters                         |
+| `req.body`    | `object` | Parsed JSON request body                        |
+| `req.headers` | `object` | HTTP headers                                    |
+| `req._info`   | `object` | Internal request metadata (rarely needed)       |
 
-- A controller builds its own [`@tetherto/mdk-client`](../client/README.md) from the plugin's context
-config (`require('@tetherto/mdk-gateway/plugin')`), same as [`telemetry/lib/client.js`](telemetry/lib/client.js) does, and requires that
-module once per plugin rather than per controller
+- A controller builds its own [`@tetherto/mdk-client`](../client/README.md) from the plugin's
+[context module](../../../docs/guides/gateway/plugins.md#the-plugins-context-module) (`require('@tetherto/mdk-gateway/plugin')`), same
+as [`telemetry/lib/client.js`](telemetry/lib/client.js) does, and requires that module once per plugin rather than per controller
 
 > [!TIP]
-> The [plugin authoring guide](../../../docs/guides/gateway/plugins.md) walks through building a controller and the plugin's context module.
+> The [plugin authoring guide](../../../docs/guides/gateway/plugins.md) walks through building a controller and the
+> [plugin's context module](../../../docs/guides/gateway/plugins.md#the-plugins-context-module) — its full field list.
 
-## Default plugins
+## Plugins MDK ships
 
-These plugins ship with MDK: `telemetry`, `site-hashrate`, and `site-monitor`. They are registered on Gateway startup by
-[`http.node.wrk.js`](../gateway/workers/http.node.wrk.js); `auth` is not, and mounting it needs work first
-([the bundled auth plugin](#the-bundled-auth-plugin)).
+These plugins ship with MDK. **None of them is loaded unless your stack declares it.** `spec.gateway.plugins[]` is the
+whole truth about what a Gateway runs. Declaring one is the same work as [declaring any other package](#declare-a-plugin-in-your-stack);
+[`auth`](#the-bundled-auth-plugin) needs work beyond declaring it.
 
 > [!Note]
-> Every route below is served without authentication: the Gateway applies no token check of its own; [protecting a route is
+> These plugins' routes are served without authentication: the Gateway applies no token check of its own; [protecting a route is
 > controller responsibility](../../../docs/guides/gateway/plugins.md#auth-and-permissions).
 
-The tables are generated from every `mdk-plugin.json` in this directory by
-[`docs/scripts/generate-plugin-reference.js`](../../../docs/scripts/generate-plugin-reference.js), so they cover the shipped plugins only. Routes you
-add through `extraPluginDirs` are owned by their own manifests and are not listed here.
+The [supported plugins reference](../../../docs/reference/supported-plugins.md) lists every route each shipped plugin
+serves, generated from these manifests by
+[`docs/scripts/generate-plugin-reference.js`](../../../docs/scripts/generate-plugin-reference.js). Routes you add through
+`extraPluginDirs` are owned by their own manifests and are not listed here.
 
-<!-- BEGIN GENERATED: default-plugins. DO NOT EDIT. Generated by docs/scripts/generate-plugin-reference.js: run `npm run generate:plugin-reference` from backend/core/plugins. Source: backend/core/plugins/*/mdk-plugin.json -->
+### Declare a plugin in your stack
 
-### `auth`
+They are subdirectories of the one `@tetherto/mdk-plugins` package, so each is addressed by its subpath:
 
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/auth/userinfo` | Returns the authenticated user's profile from the validated JWT |
-| `POST` | `/auth/token` | Issues a new JWT from an existing valid token, optionally scoping TTL and roles |
-| `GET` | `/auth/permissions` | Returns the permission set encoded in the current token |
-| `GET` | `/auth/ext-data` | Proxies an external data request to the Kernel network by type and optional query filter |
+```yaml
+# mdk.yaml
+spec:
+  gateway:
+    port: 3847
+    plugins:
+      - package: "@tetherto/mdk-plugins/telemetry"
+      - package: "@tetherto/mdk-plugins/site-monitor"
+      - package: "@tetherto/mdk-plugins/site-hashrate"
+      - package: "@example/mdk-plugin-mine"      # your own, unchanged
+```
 
-### `site-hashrate`
+`@tetherto/mdk-plugins` has to be resolvable from the project directory, which it is for a stack scaffolded by
+`mdk init` (it arrives with `@tetherto/mdk-gateway`). Add it to your own `package.json` if you vendored things yourself.
 
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/api/site/hashrate-history` | Fans out telemetry.pull to every registered worker and returns site-level hashrate history aggregated by timestamp. Defaults to last 7 days when start/end are omitted |
+Programmatically, `startGateway()` takes directories rather than package names, and
+[`bundledPluginDir()`](../mdk/README.md#bundledplugindirname) resolves one for you:
 
-### `site-monitor`
+```js
+const { startGateway, bundledPluginDir } = require('@tetherto/mdk-core')
 
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/auth/site` | Returns the site name from the gateway config (common.json `site`) |
-| `GET` | `/auth/featureConfig` | Returns the featureConfig object from the gateway config (common.json `featureConfig`) |
-| `GET` | `/site-monitor/hashrate` | Pulls metrics telemetry from every READY worker's devices via the MDK protocol and returns per-device hashrate/power plus site totals |
+await startGateway({
+  port: 3847,
+  kernelKey,
+  extraPluginDirs: [bundledPluginDir('telemetry'), path.join(__dirname, 'plugins', 'site')]
+})
+```
 
-### `telemetry`
-
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/auth/metrics/hashrate` | Returns daily hashrate history and summary for the site. Optionally groups by miner type or container |
-| `GET` | `/auth/metrics/consumption` | Returns daily power consumption (W and MWh) history and summary for the site |
-| `GET` | `/auth/metrics/efficiency` | Returns daily mining efficiency (W/TH) history and summary for the site |
-| `GET` | `/auth/metrics/miner-status` | Returns daily online/offline/sleep/maintenance miner counts and averages |
-| `GET` | `/auth/metrics/power-mode` | Returns miner count by power mode category (low/normal/high/sleep/offline) over time |
-| `GET` | `/auth/metrics/power-mode/timeline` | Returns per-miner power mode segments over a time range, optionally filtered by container |
-| `GET` | `/auth/metrics/temperature` | Returns max and average temperature per container over time, with site-level aggregates |
-| `GET` | `/auth/metrics/containers/{id}` | Returns latest telemetry snapshot and miner list for a specific container |
-| `GET` | `/auth/metrics/containers/{id}/history` | Returns historical telemetry log for a specific container |
-
-<!-- END GENERATED: default-plugins -->
+Every route is served without authentication. The Gateway applies no token check of its own, so protecting a route is controller work
+([auth and permissions](../../../docs/guides/gateway/plugins.md#auth-and-permissions)).
 
 ### The bundled auth plugin
 
@@ -171,6 +164,12 @@ await startGateway({
 
 The loader validates every manifest and handler at startup and throws on the first problem. The
 [Gateway's own error reference](../gateway/README.md#errors) lists the codes and their fixes.
+
+### Runtime plugin errors
+
+For plugin errors thrown after startup: a throw inside a plugin's `onReady` callback — registered via
+`context.onReady(fn)` on [the plugin's context module](../../../docs/guides/gateway/plugins.md#the-plugins-context-module) —
+is caught and logged as a warning; it does not stop the Gateway or any other plugin.
 
 ## Directory layout
 
@@ -215,20 +214,11 @@ plugins/
 │   ├── metrics.utils.js
 │   ├── period.utils.js
 │   └── utils.js
-└── package.json
+├── package.json
+└── tests/
+    └── unit/
+        └── generate-plugin-reference.test.js  # unit tests for the supported-plugins generator
 ```
-
-## Regenerating the default-plugin tables
-
-The default-plugin route tables under [Default plugins](#default-plugins) are generated from the manifests. Regenerate and commit them
-whenever a default plugin's routes change:
-
-```bash
-cd backend/core/plugins
-npm run generate:plugin-reference
-```
-
-That rewrites the route tables and touches nothing else.
 
 ## Next steps
 

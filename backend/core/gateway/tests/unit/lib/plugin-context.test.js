@@ -30,7 +30,7 @@ function writeContextPlugin (dir, marker) {
     'lib/client.js': [
       '\'use strict\'',
       'const { config, logger } = require(\'@tetherto/mdk-gateway/plugin\')',
-      'logger(\'client built for %s\', config.kernelKey)',
+      'logger.debug(\'client built for %s\', config.kernelKey)',
       'let calls = 0',
       'module.exports = { kernelKey: config.kernelKey, bootstrap: config.kernelBootstrap, count: () => ++calls }'
     ].join('\n'),
@@ -50,9 +50,11 @@ function writeContextPlugin (dir, marker) {
 }
 
 function makeContext (kernelKey) {
+  const noop = () => {}
+  const logger = { fatal: noop, error: noop, warn: noop, info: noop, debug: noop, trace: noop, child: () => logger }
   return Object.freeze({
     config: Object.freeze({ kernelKey, kernelBootstrap: 'dht://boot' }),
-    logger: () => {},
+    logger,
     dataProxy: {}
   })
 }

@@ -2,9 +2,9 @@
 name: mdk-gateway-plugin
 description: >
   Build a Gateway / App Node plugin that exposes an HTTP API over one or more
-  MDK workers. Use when the task mentions "aggregate", "combine workers",
-  "site summary / rollup", "plugin", "mdk-plugin.json", "gateway endpoint",
-  "cross-worker endpoint", or when a UI needs live worker data and no matching
+  MDK Workers. Use when the task mentions "aggregate", "combine Workers",
+  "site summary / rollup", "plugin", "mdk-plugin.json", "Gateway endpoint",
+  "cross-worker endpoint", or when a UI needs live Worker data and no matching
   `/api/...` route exists yet.
 metadata:
   suite: mdk-developer-skill
@@ -16,7 +16,7 @@ license: Apache-2.0
 
 A Gateway plugin is a small Node package the Gateway loads from `mdk.yaml`.
 It declares HTTP routes in `mdk-plugin.json` and implements each route as a
-controller that queries workers through its own `@tetherto/mdk-client`, built once per plugin from
+controller that queries Workers through its own `@tetherto/mdk-client`, built once per plugin from
 `require('@tetherto/mdk-gateway/plugin')`.
 
 Plugins are the **server half** of any "show me X from my devices" request.
@@ -25,25 +25,25 @@ plugin first, then hand off to `mdk-ui-component`.
 
 ## When to use this skill
 
-| Situation | Action |
-| --- | --- |
+| Situation                                             | Action                     |
+| ----------------------------------------------------- | -------------------------- |
 | UI / chart needs a metric and no Gateway route exists | Create a plugin here first |
-| "Aggregate / rollup / site summary" across devices | Create a plugin |
+| Aggregate / rollup / site summary" across devices     | Create a plugin            |
 | Endpoint already exists (check `mdk.yaml` → `spec.gateway.plugins`, or `mdk status`) | Skip — go straight to `mdk-ui-component` |
-| Need a new device protocol | Wrong skill — use `mdk-worker-plugin` |
+| Need a new device protocol                            | Wrong skill — use `mdk-worker-plugin` |
 
 ## Workflow
 
 ### 1. Site Capability Discovery (mandatory)
 
 Do **not** invent channel names, units, or device brands. Ground every field
-in an installed worker contract.
+in an installed Worker contract.
 
-**Resolve each worker's contract from `mdk.yaml` → `spec.workers[].package`:**
+**Resolve each Worker's contract from `mdk.yaml` → `spec.workers[].package`:**
 
-| `package` value | Contract path |
-| --- | --- |
-| Local path (`./workers/<name>`, `../…`) | `<package>/mdk-contract.json` (or legacy `<package>/plugin/mdk-contract.json`) |
+| `package` value                               | Contract path                                                                       |
+| --------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Local path (`./workers/<name>`, `../…`)       | `<package>/mdk-contract.json` (or legacy `<package>/plugin/mdk-contract.json`)      |
 | npm name (`@tetherto/mdk-worker-antminer`, …) | `node_modules/<package>/mdk-contract.json` (or legacy `…/plugin/mdk-contract.json`) |
 
 Also scan `workers/*/mdk-contract.json` and `workers/*/plugin/mdk-contract.json` for any local scaffolds not yet
@@ -56,7 +56,7 @@ Then:
 2. Read `capabilities.telemetry[]` / `commands[]` — note `name`, `type`, `unit`.
 3. Read `metadata.brand` / `deviceFamily` / `provider` for how to recognize
    the device family at runtime.
-4. Confirm the Kernel actually has the worker online (`mdk run worker <name>`
+4. Confirm the Kernel actually has the Worker online (`mdk run worker <name>`
    or `mdk status`) before assuming data will flow.
 
 `getCapabilities` returns the capability list only — not full contract
@@ -121,10 +121,10 @@ module.exports = async function myRoute (req) {
 
 Typical [fan-out pattern](./references/controller-patterns.md):
 
-1. `listWorkers()` → collect `deviceIds`
-2. `getCapabilities(deviceId)` → keep devices matching the contract fingerprint
-3. `pullTelemetry(deviceId, 'metrics')` → read `metrics.<channel>`
-4. Return a UI-friendly object (`unit`, totals, per-device rows)
+1. `listWorkers()` → collect `deviceIds`.
+2. `getCapabilities(deviceId)` → keep devices matching the contract fingerprint.
+3. `pullTelemetry(deviceId, 'metrics')` → read `metrics.<channel>`.
+4. Return a UI-friendly object (`unit`, totals, per-device rows).
 
 ### 5. Register in `mdk.yaml`
 
@@ -139,7 +139,7 @@ spec:
         config: {}
 ```
 
-Then restart the gateway (`mdk run gateway` or `mdk run`). Wiring and boot
+Then restart the Gateway (`mdk run gateway` or `mdk run`). Wiring and boot
 order details live in `mdk-deployment`.
 
 ### 6. Smoke-check the route
@@ -155,7 +155,7 @@ Only then build UI against it.
 
 ## Non-negotiable invariants
 
-- **Never reference a worker, channel, or field** that is not in an installed
+- **Never reference a Worker, channel, or field** that is not in an installed
   contract. Aggregation must be site-grounded.
 - **`mdkClient` returns bare payloads** — do not unwrap `.payload`.
 - **Recognize device families from capability signatures** when
@@ -167,15 +167,15 @@ Only then build UI against it.
 
 ## Hand-off
 
-| Next need | Skill |
-| --- | --- |
-| Render this route in the dashboard | `mdk-ui-component` |
-| Register / restart / verify the stack | `mdk-deployment` |
-| Device does not exist yet | `mdk-worker-plugin` first |
+| Next need                             | Skill                     |
+| ------------------------------------- | ------------------------- |
+| Render this route in the dashboard    | `mdk-ui-component`        |
+| Register / restart / verify the stack | `mdk-deployment`          |
+| Device does not exist yet             | `mdk-worker-plugin` first |
 
 ## References
 
-- [`references/plugin-authoring.md`](./references/plugin-authoring.md) — `mdk-plugin.json` fields + a fully-populated route example
-- [`references/controller-patterns.md`](./references/controller-patterns.md) — list / filter / pullTelemetry patterns
-- [`../mdk/references/protocol.md`](../mdk/references/protocol.md) — envelope / action set
+- [`references/plugin-authoring.md`](./references/plugin-authoring.md): `mdk-plugin.json` fields + a fully-populated route example
+- [`references/controller-patterns.md`](./references/controller-patterns.md): list / filter / pullTelemetry patterns
+- [`../mdk/references/protocol.md`](../mdk/references/protocol.md): envelope / action set
 - Shipped monorepo examples (when present): [`backend/core/plugins/`](../../../../../backend/core/plugins/README.md)

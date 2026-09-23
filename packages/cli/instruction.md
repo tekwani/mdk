@@ -75,19 +75,22 @@ Each `commands/*.ts` file exports `register<Name>(program)` functions that
 ## Build, run, test
 
 ```bash
-npm install                  # from this directory (backend/core/cli)
+npm install --prefix ..      # from this directory (packages/cli) — links workspace deps
 npm run dev -- <args>        # run from source via tsx, e.g. npm run dev -- onboard
 npm run build                # compile to dist/
 node dist/index.js <args>    # run the built CLI
 npm run clean                # remove dist/
 ```
 
-At the monorepo root, `npm run setup:core` installs this package's deps (it is
-listed in [`backend/core/install-packages.sh`](../../backend/core/install-packages.sh)).
+This package is a member of the `packages/` npm workspace root (alongside
+`@tetherto/mdk-skill`) — a workspace scoped to `packages/`, separate from the
+monorepo root's own `workspaces` field, which does not (yet) list `packages/cli`
+— so this package's own deps install via a single `npm install` from
+`packages/`.
 
 Always `npm run build` after changes and smoke-test the affected command before
-finishing. There is no test suite yet; if you add one, keep it runnable via
-`npm test` and wire it into the core `test:packages` loop.
+finishing. Run `npm test` (vitest) — it covers `src/lib` and `src/commands` —
+and add tests for anything you implement.
 
 ## CLI behavior rules (agent- and pipe-friendly)
 

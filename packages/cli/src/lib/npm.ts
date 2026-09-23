@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { isWorkspaceMember } from './project.js';
+import { isFileLinkedFromProject, isWorkspaceMember } from './project.js';
 
 export interface InstallResult {
   ok: boolean;
@@ -91,17 +91,18 @@ export function installPackages(dir: string, packages: string[], run = true): In
 }
 
 /**
- * Installs dependencies for a freshly scaffolded component. For a workspace
- * member npm must run at the project root: installing inside the package would
- * create a nested `node_modules` plus a second lockfile, and the workspace
- * symlink the runtime relies on to resolve the component would never appear.
- * Everything else installs in its own directory.
+ * Installs dependencies for a freshly scaffolded component. When the package is
+ * a workspace member or already declared as a `file:` dep of the project root,
+ * npm must run at the project root so the symlink lands in the project's
+ * `node_modules`. Everything else installs in its own directory.
  */
 export function installScaffold(
   projectDir: string,
   packageDir: string,
   run = true,
 ): ScaffoldInstall {
-  const dir = isWorkspaceMember(projectDir, packageDir) ? projectDir : packageDir;
+  const atRoot =
+    isWorkspaceMember(projectDir, packageDir) || isFileLinkedFromProject(projectDir, packageDir);
+  const dir = atRoot ? projectDir : packageDir;
   return { ...installDeps(dir, run), dir };
 }

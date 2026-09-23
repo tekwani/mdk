@@ -108,7 +108,7 @@ await client.sendWorkerCommand('avalon-rack-1', null, 'registerThing', {
 `registerThing` persists the device config immediately, but it only takes effect once the Worker is stopped and
 restarted (`await worker.stop()`, then `startAvalonWorker` again with the same `storeDir` and no `seedDevices`) —
 there is no hot-add. See
-[Worker Runtime legacy services](../../../../docs/reference/maintainers/worker-runtime-legacy-services.md) for how
+[Worker Runtime store services](../../../core/mdk-worker/README.md#store-services) for how
 `registerThing` is served (the `provisioning` service built-in).
 
 ## Runnable example

@@ -27,7 +27,7 @@
  * useQuery(widgetsQuery(queryClient, { limit: 10 }))
  * ```
  *
- * It is also the shape a `mdk-ui add hook` generator targets: everything that
+ * It is also the shape a hook generator targets: everything that
  * varies per endpoint is data, not code.
  *
  * @category query

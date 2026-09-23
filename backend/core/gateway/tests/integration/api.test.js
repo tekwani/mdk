@@ -2,8 +2,16 @@
 
 const test = require('brittle')
 const fs = require('fs')
+const path = require('path')
 const { createWorker } = require('@tetherto/tether-svc-test-helper').worker
 const { setTimeout: sleep } = require('timers/promises')
+
+// The plugins this file exercises used to arrive on their own, so it declared
+// none of them. A gateway now loads only what it is handed, so the routes under
+// test have to be asked for — by the same directory a stack names when it writes
+// `package: "@tetherto/mdk-plugins/telemetry"`.
+const BUNDLED_PLUGINS_ROOT = path.dirname(require.resolve('@tetherto/mdk-plugins/package.json'))
+const DECLARED_PLUGINS = ['telemetry', 'site-hashrate', 'site-monitor'].map((name) => path.join(BUNDLED_PLUGINS_ROOT, name))
 
 test('Api', { timeout: 90000 }, async (main) => {
   const baseDir = 'tests/integration'
@@ -51,7 +59,8 @@ test('Api', { timeout: 90000 }, async (main) => {
       tmpdir: baseDir,
       storeDir: 'test-store',
       serviceRoot: `${process.cwd()}/${baseDir}`,
-      port: gatewayPort
+      port: gatewayPort,
+      extraPluginDirs: DECLARED_PLUGINS
     })
 
     await worker.start()

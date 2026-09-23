@@ -16,10 +16,9 @@ It is intentionally not the contract — the strict contract lives in
 - **If `agent-ready`** → also ship `USAGE.md` + `*.example.tsx` (+
   `@kernelCapability` if domain-specific).
 - **`npm run fullcheck`**: when green, the repo is shippable.
-- **Agents** run `mdk-ui suggest` first, then drill into hooks/stores,
-  docs, examples, and blueprints — all local, no network.
-- **`mdk-ui init`** bootstraps any consumer project with an agent-context
-  file and an IDE rule that wires every session automatically.
+- **Agents** read `blueprints.json` first, then drill into
+  `registry.json` / `hooks.json` / `stores.json`, `USAGE.md`, and
+  examples — all local files, no network.
 - **Baseline is empty** → should be empty in CI; run
   `npm run check:agent-ready --workspace @tetherto/mdk-react-devkit -- --no-baseline`
   locally to see full debt.
@@ -41,24 +40,17 @@ It ships three TypeScript packages and one font package:
   component library: generic UI primitives in [`src/primitives/`](../packages/react-devkit/src/primitives/), mining-domain
   components and hooks in [`src/domain/`](../packages/react-devkit/src/domain/).
 
-Plus a CLI:
-
-- [`@tetherto/mdk-ui-cli`](../packages/cli/README.md) (`mdk-ui`) — the agent-facing
-  surface. Lists components, prints docs and examples, scaffolds pages,
-  type-checks single files, surfaces blueprints.
-
 Think of it as three layers:
 
 1. **The code**: components, hooks, Zustand stores, utilities (what you
    ship).
 2. **The contract**: JSDoc tags + co-located docs that describe each
    export.
-3. **The agent surface**: the generated JSON manifests and a CLI
-   (`mdk-ui`) that an LLM reads first.
+3. **The agent surface**: the generated JSON manifests an LLM reads first.
 
-The agent-first design lives mostly in `react-devkit` + `cli`.
-Everything below describes the artifacts that turn "code in `src/`" into
-"an agent can build with this".
+The agent-first design lives mostly in `react-devkit`. Everything below
+describes the artifacts that turn "code in `src/`" into "an agent can
+build with this".
 
 ## The big picture
 
@@ -75,11 +67,9 @@ flowchart LR
   bp["dist/blueprints.json"]
   hooks["dist/hooks.json"]
   stores["dist/stores.json"]
-  manifest["dist/cli-manifest.json"]
   baseline["agent-ready-baseline.json"]
   check["check:agent-ready"]
   smoke["registry.test.ts"]
-  cli["mdk-ui CLI"]
   agent["LLM / agent"]
   app["Consumer app"]
 
@@ -95,14 +85,12 @@ flowchart LR
   bp --> check
   baseline --> check
   reg --> smoke
-  reg --> cli
-  bp --> cli
-  hooks --> cli
-  stores --> cli
-  cli --> manifest
-  cli --> agent
-  agent --> scaffold["mdk-ui add page"]
-  scaffold --> verify["mdk-ui check"]
+  reg --> agent
+  bp --> agent
+  hooks --> agent
+  stores --> agent
+  agent --> scaffold["write src/pages/&lt;Name&gt;.tsx + routes.ts entry"]
+  scaffold --> verify["tsc --noEmit + eslint"]
   verify --> app
 ```
 
@@ -110,7 +98,7 @@ The artifacts an agent ultimately sees are: `registry.json`,
 `blueprints.json`, `hooks.json`, `stores.json`, `USAGE.md` files, and
 `*.example.tsx` files. Everything else is either authoring inputs
 (source + tags) or quality gates. That JSON is the agent's source of
-truth; the CLI, blueprints, and docs just make it easier to navigate.
+truth; the blueprints and docs just make it easier to navigate.
 
 ## The three tiers
 
@@ -195,8 +183,7 @@ on every build. Covers every hook exported from
 Also records the `MdkProvider` component (description + prop list) so
 agents know what to import and how to configure the root wrapper.
 
-Access via `mdk-ui hooks [--category <cat>] [--format table]` or import
-directly: `require('@tetherto/mdk-react-adapter/hooks.json')`.
+Import directly: `require('@tetherto/mdk-react-adapter/hooks.json')`.
 
 ### 4. `dist/stores.json` (ui-foundation state surface)
 
@@ -207,19 +194,9 @@ category, description, factory name, state field types, and action
 signatures. Also captures the TanStack Query helper signatures
 (`authQuery`, `devicesQuery`, `telemetryQuery`, …).
 
-Access via `mdk-ui stores [--category <cat>] [--format table]` or import
-directly: `require('@tetherto/mdk-ui-foundation/stores.json')`.
+Import directly: `require('@tetherto/mdk-ui-foundation/stores.json')`.
 
-### 5. `dist/cli-manifest.json` (CLI self-description)
-
-Generated at CLI build time by running `node dist/bin.js --json-help`.
-Records every subcommand, its arguments, and its options so an agent (or
-meta-tooling) can discover the CLI surface without executing it.
-
-Access via `mdk-ui --json-help` or import directly:
-`require('@tetherto/mdk-ui-cli/cli-manifest.json')`.
-
-### 6. Blueprints (intent → recipe)
+### 5. Blueprints (intent → recipe)
 
 Curated Markdown recipes under
 [`packages/react-devkit/blueprints/`](../packages/react-devkit/blueprints/README.md),
@@ -241,72 +218,61 @@ Blueprints are validated by `check:agent-ready`: every referenced
 component must exist in the registry **and** be `tier: agent-ready` —
 agents following a blueprint can never land on an advanced API.
 
-### 7. CLI (`mdk-ui`)
+### 6. The decision flow
 
-The agent-facing action surface, documented in detail in
-[`../packages/cli/README.md`](../packages/cli/README.md). The
-deterministic decision flow:
+Everything above is a plain file read — no tooling, no network, no model
+calls. The deterministic path from intent to code:
 
 ```mermaid
 flowchart TD
   intent["Plain-language intent"]
-  suggest["mdk-ui suggest &lt;text&gt;"]
-  stateHits{"State/hook hits?"}
-  hooksCmd["mdk-ui hooks --format table"]
-  storesCmd["mdk-ui stores --format table"]
-  list["mdk-ui blueprints"]
+  bp["blueprints.json — scan `intent` fields"]
   match{"Matching blueprint?"}
-  blueprint["mdk-ui blueprint &lt;id&gt;"]
-  find["mdk-ui find --domain X --capability Y"]
-  docs["mdk-ui docs &lt;Component&gt;"]
-  example["mdk-ui example &lt;Component&gt;"]
-  scaffold["mdk-ui add page &lt;Name&gt;"]
-  verify["mdk-ui check &lt;file&gt;"]
+  body["Read the blueprint's markdown `body`"]
+  facets["registry.json — intersect `indexes`\n(byDomain / byKernelCapability / byCategory / byTier)"]
+  state{"Needs state or data?"}
+  hooks["hooks.json — adapter hooks"]
+  stores["stores.json — stores + query helpers"]
+  contract["Read the entry's `usageDoc` + `examples`"]
+  scaffold["Write src/pages/&lt;Name&gt;.tsx\n+ routes.ts entry + nav icon"]
+  verify["tsc --noEmit + eslint"]
 
-  intent --> suggest
-  suggest --> stateHits
-  stateHits -- yes --> hooksCmd
-  stateHits -- yes --> storesCmd
-  stateHits -- no --> list
-  hooksCmd --> scaffold
-  storesCmd --> scaffold
-  list --> match
-  match -- yes --> blueprint
-  match -- no --> find
-  blueprint --> docs
-  find --> docs
-  docs --> example
-  example --> scaffold
+  intent --> bp
+  bp --> match
+  match -- yes --> body
+  match -- no --> facets
+  body --> facets
+  facets --> state
+  state -- yes --> hooks
+  state -- yes --> stores
+  hooks --> contract
+  stores --> contract
+  state -- no --> contract
+  contract --> scaffold
   scaffold --> verify
 ```
-
-Every command emits JSON by default; `--format table` is available for
-humans. No network calls, no model calls — everything is local lookups
-against the `dist/*.json` manifests.
-
-`mdk-ui init --ide cursor` (or `--ide claude`) bootstraps a new consumer
-project with a `.mdk/context.md` agent-context file and an IDE rule that
-wires all of the above into every AI session automatically.
 
 ## How an agent uses it
 
 Imagine a user says *"build me a mining dashboard with weather"*:
 
-1. **Agent runs `mdk-ui suggest "mining dashboard weather"`** → ranked
-   hits across components, devkit hooks, blueprints, adapter hooks, and
-   stores.
-2. **Agent checks `mdk-ui hooks --format table`** to find the right
-   React bindings (`useAuth`, `useDevices`, …) and **`mdk-ui stores
-   --format table`** to understand what state and query helpers are
-   already available.
-3. **Agent reads `dist/blueprints.json`** via `mdk-ui blueprints` →
-   high-level recipes (`mining-operations-dashboard`, `device-management`,
-   `custom-feature`) that map intent → concrete components/hooks.
-4. **Agent reads `dist/registry.json`** → O(1) lookup tables:
-   `componentsByTier`, `componentsByDomain`, `componentsByCategory`.
-   Fetches USAGE.md and examples via `mdk-ui docs` / `mdk-ui example`.
-5. **Agent scaffolds** with `mdk-ui add page` and **verifies** with
-   `mdk-ui check`. Runs `mdk-ui sync` to keep `.mdk/context.md` current.
+1. **Agent reads `dist/blueprints.json`** → high-level recipes
+   (`mining-operations-dashboard`, `device-management`, `custom-feature`)
+   that map intent → concrete components/hooks. "Weather" matches no
+   mining blueprint, so it lands on `custom-feature`.
+2. **Agent reads `dist/registry.json`** → O(1) lookup tables:
+   `componentsByTier`, `componentsByDomain`, `componentsByKernelCapability`,
+   `componentsByCategory`. Intersecting them narrows to the dashboard
+   components the intent implies.
+3. **Agent reads `dist/hooks.json` and `dist/stores.json`** to find the
+   right React bindings (`useAuth`, `useDevices`, …) and what state and
+   query helpers already exist.
+4. **Agent reads each entry's `usageDoc` and `examples`** — the paths are
+   in the registry entry, relative to the package root — so prop names and
+   types are copied, never guessed.
+5. **Agent writes the page** (`src/pages/<Name>.tsx` + a one-line
+   `routes.ts` entry + a nav icon) and **verifies** with `tsc --noEmit`
+   and `eslint`.
 6. **Agent composes only `agent-ready` exports** by default. Advanced
    ones require an explicit user request.
 
@@ -391,42 +357,35 @@ Should print `0 violations`. If you delete a `USAGE.md` or strip a
 
 ### 2. Try it as an agent would
 
+Every step is a file read against the built manifests — run this from the
+UI workspace after `npm run build`:
+
 ```bash
-# Bootstrap a new consumer project
-npx mdk-ui init --ide cursor   # .mdk/context.md + .cursor/rules/mdk.mdc
-npx mdk-ui init --ide claude   # .mdk/context.md + CLAUDE.md
+node --input-type=module -e '
+import registry from "./packages/react-devkit/dist/registry.json" with { type: "json" }
+import blueprints from "./packages/react-devkit/dist/blueprints.json" with { type: "json" }
+import hooks from "./packages/react-adapter/dist/hooks.json" with { type: "json" }
+import stores from "./packages/ui-foundation/dist/stores.json" with { type: "json" }
 
-# Free-text intent → ranked shortlist across all surfaces
-npx mdk-ui suggest "show hashrate for a pool"
+// Find a curated recipe
+console.log(blueprints.blueprints.map((b) => `${b.id}: ${b.intent}`))
 
-# Discover the state layer
-npx mdk-ui hooks --format table                        # all adapter hooks
-npx mdk-ui hooks --category store --format table       # store-binding hooks only
-npx mdk-ui stores --format table                       # Zustand stores + query helpers
-npx mdk-ui stores --category devices --format table    # just the devices store
+// Discover the component layer, narrowed by facet
+const { componentsByDomain: byDomain, componentsByKernelCapability: byCap } = registry.indexes
+console.log((byDomain["mining-operations"] ?? []).filter((n) => (byCap["hashrate-monitoring"] ?? []).includes(n)))
 
-# Discover the component layer
-npx mdk-ui registry --tier agent-ready --format table
-npx mdk-ui find --domain mining-operations --capability hashrate-monitoring
+// Discover the state layer
+console.log(hooks.hooks.filter((h) => h.category === "store").map((h) => h.name))
+console.log(stores.stores.map((s) => s.name), stores.queryHelpers.map((q) => q.name))
 
-# Read a component contract
-npx mdk-ui docs LineChartCard
-npx mdk-ui example LineChartCard
-
-# Find a curated recipe
-npx mdk-ui blueprints
-npx mdk-ui blueprint device-management
-
-# Scaffold + verify
-npx mdk-ui add page Dashboard --component LineChartCard
-npx mdk-ui check src/pages/Dashboard.tsx
-
-# Keep context in sync
-npx mdk-ui sync
-
-# Inspect the CLI's own surface (useful for meta-agents)
-npx mdk-ui --json-help
+// Read a component contract — usageDoc + examples are package-relative paths
+const entry = registry.components[registry.indexes.componentsByName.LineChartCard]
+console.log(entry.usageDoc, entry.examples, entry.props.map((p) => p.name))
+'
 ```
+
+Then verify generated code the way CI does: `npx tsc --noEmit` and
+`npx eslint <file>`.
 
 ### 3. Prove the gate works (negative test)
 
@@ -463,14 +422,15 @@ generated output). In a consuming app, load
   `generic`, …).
 - `indexes.hooksByDomain`: grouped hooks by domain.
 
-That JSON is the agent's source of truth. Everything else (CLI,
-blueprints, docs) just makes it easier to navigate.
+That JSON is the agent's source of truth. Everything else (blueprints,
+docs) just makes it easier to navigate.
 
 ## Glossary
 
 - **Tier** — audience classification on every public export
-  (`agent-ready` / `advanced` / `internal`). Drives `mdk-ui registry`
-  filtering, the CI gate, and `USAGE.md` / example requirements.
+  (`agent-ready` / `advanced` / `internal`). Drives the registry's
+  `componentsByTier` index, the CI gate, and `USAGE.md` / example
+  requirements.
 - **Kernel capability** - Kernel (Orchestration Kernel) capability identifier
   (`hashrate-monitoring`, `incident-alerts`, …). Lets an agent filter
   the registry to the capabilities a given site exposes.
@@ -489,7 +449,7 @@ blueprints, docs) just makes it easier to navigate.
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Contribute or tier a new component                       | [`../packages/react-devkit/AGENT_READY.md`](../packages/react-devkit/AGENT_READY.md)                                |
 | Author a new blueprint                                   | [`../packages/react-devkit/blueprints/README.md`](../packages/react-devkit/blueprints/README.md)                    |
-| Consume MDK from an app (or wire an agent into one)      | [`../packages/cli/README.md`](../packages/cli/README.md) — start with `mdk-ui init`                                 |
+| Consume MDK from an app (or wire an agent into one)      | [`../AGENTS.md`](../AGENTS.md) — the manifests and how to read them                                                 |
 | Understand the registry generator internals              | [`../packages/react-devkit/scripts/generate-registry.mts`](../packages/react-devkit/scripts/generate-registry.mts)  |
 | Understand the build & monorepo layout                   | [`ARCHITECTURE.md`](ARCHITECTURE.md), [`BUILD.md`](BUILD.md)                                                         |
 
@@ -524,8 +484,9 @@ npm start                          # http://localhost:3000
 
 # Frontend (this is the part MDK provides)
 cd <somewhere-outside-the-backend>
-mdk-ui create my-dashboard --template mdk-ui-shell
+cp -R <mdk-repo>/examples/mdk-ui-shell-template my-dashboard
 cd my-dashboard
+npm install
 cp .env.example .env
 npm run dev                        # http://localhost:3030
 ```
@@ -631,17 +592,18 @@ Restart the Gateway with the plugin mounted. The template needs no change:
 Needed for either path. From a directory **outside** the backend repo:
 
 ```bash
-# MDK CLI must be installed globally OR you're running from inside the
-# MDK monorepo with the workspace package built. From inside the monorepo:
-#   node packages/cli/dist/bin.js create my-dashboard --template mdk-ui-shell
-# From a published install:
-#   npx @tetherto/mdk-ui-cli create my-dashboard --template mdk-ui-shell
-mdk-ui create my-dashboard --template mdk-ui-shell
+# Option A — the root MDK CLI stands the template up alongside a stack:
+npx @tetherto/mdk-cli create dashboard my-dashboard
+
+# Option B — copy the template and run it in place. It is a real Vite app,
+# not a scaffold-only tree:
+cp -R <mdk-repo>/examples/mdk-ui-shell-template my-dashboard
+cd my-dashboard && npm install
 ```
 
-The CLI scaffolds the app, wires MDK dependencies as `file:` paths into
-the local monorepo if it detects one, runs `npm install`, and seeds the
-agent context files.
+With option B, point the three `@tetherto/mdk-*` dependencies in
+`package.json` at your local monorepo (`file:` paths) if you are working
+against an unpublished checkout.
 
 Then:
 

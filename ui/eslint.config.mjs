@@ -15,11 +15,6 @@ export default antfu(
       '*/*.md',
       'packages/**/*.md',
       'apps/**/*.md',
-      'packages/cli/templates/**',
-      // Docs rendering-component templates: written against the mdk-docs
-      // dependency tree (fumadocs, @/ alias), not resolvable here. They ship
-      // verbatim and are installed into the docs repo by `mdk-ui docs:build`.
-      'packages/cli/templates-docs/**',
     ],
   },
   // ── Cross-boundary import guard ──────────────────────────────────────────

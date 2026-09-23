@@ -18,32 +18,40 @@ of just a few lines.
 
 ```text
 backend/workers/mock/
-  base.mock.js              BaseMock — the shared foundation
-  index.js                  exports every base/transport/category class
-  transports/
-    base.transport.js       contract: listen(host, port) / close() / get listening()
-    tcp.transport.js         raw net.Server      (whatsminer encrypted, avalon plain)
-    http.transport.js        fastify (+ auth)    (antminer, antspace, ocean, f2pool)
-    modbus.transport.js      modbus-stream       (abb, satec, schneider, seneca)
-    mqtt.transport.js        mqtt client         (bitdeer)
-  miner.mock.js  container.mock.js  powermeter.mock.js  sensor.mock.js  minerpool.mock.js
+├── base.mock.js            # BaseMock: shared foundation class
+├── index.js                # Exports every base/transport/category class
+├── mock-control-agent.js   # MockControlAgent: fastify control API over running mocks
+├── transports/
+│   ├── base.transport.js   # Contract: listen(host, port) / close() / get listening()
+│   ├── tcp.transport.js    # raw net.Server (avalon plain; whatsminer external)
+│   ├── http.transport.js   # fastify + auth (antminer, antspace, ocean, f2pool)
+│   ├── modbus.transport.js # modbus-stream (abb, satec, schneider, seneca)
+│   └── mqtt.transport.js   # mqtt client (bitdeer)
+├── miner.mock.js           # Miner category mock
+├── container.mock.js       # Container category mock
+├── powermeter.mock.js      # Power-meter category mock
+├── sensor.mock.js          # Sensor category mock
+└── minerpool.mock.js       # Minerpool category mock
 ```
 
 Device leaves stay in `backend/workers/<category>/<device>/mock/` and `require` their category mock
 by relative path — the same convention the managers already use.
+
+Whatsminer is a [manufacturer-maintained external Worker](../../../docs/reference/supported-hardware.md); there is no
+in-repo Whatsminer mock leaf, though the generic `tcp` transport it speaks lives here.
 
 ## Coverage
 
 All the device families run on the framework. A category that shares one wire (power meters, pools)
 pins its transport; one whose vendors disagree (miners, containers) composes per leaf.
 
-| Category (`*.mock.js`) | Transport | Devices |
-|---|---|---|
-| `miner` | per-leaf | whatsminer (TCP, AES-encrypted + token), avalon (TCP, plain cgminer), antminer (HTTP, Digest auth) |
-| `container` | per-leaf | antspace (HTTP), bitdeer (MQTT client) |
-| `powermeter` | Modbus | abb, satec, schneider |
-| `sensor` (extends `powermeter`) | Modbus | seneca |
-| `minerpool` | HTTP | ocean, f2pool |
+| Category (`*.mock.js`) | Transport | Devices                                                      |
+| ---------------------- | --------- | ------------------------------------------------------------ |
+| `miner`                | per-leaf  | Whatsminer (external; TCP, AES-encrypted + token), Avalon (TCP, plain cgminer), Antminer (HTTP, Digest auth) |
+| `container`            | per-leaf  | Antspace (HTTP), Bitdeer (MQTT client)                       |
+| `powermeter`           | Modbus    | ABB, Satec, Schneider                                        |
+| `sensor` (extends `powermeter`) | Modbus | Seneca                                                 |
+| `minerpool`            | HTTP      | Ocean, F2Pool                                                |
 
 ## Run
 
@@ -74,3 +82,11 @@ plus `initial_states/default.js` (its register map). For a `miner`/`container` w
 isn't fixed by the category, also implement `createTransport()` to return the adapter it speaks
 (see [`miners/antminer`](../miners/antminer/README.md) for HTTP, [`miners/avalon`](../miners/avalon/README.md) for TCP, [`containers/bitdeer`](../containers/bitdeer/README.md) for MQTT). A
 brand-new wire protocol only needs one new `transports/<x>.transport.js` adapter.
+
+## Errors
+
+| Code                | Fires when                        | Fix                                      |
+| ------------------- | --------------------------------- | ---------------------------------------- |
+| `ERR_ABSTRACT`      | An abstract mock method is not overridden: `createTransport()`, `routes()`, or a transport's `listen()` | Implement the method named in the error message on your mock or transport |
+| `ERR_INVALID_STATE` | A mock's `type` has no matching `initial_states/<type>.js` and no `default.js` | Add an initial-state file for the type, or a `default.js` |
+| `ERR_UNSUPPORTED`   | A mock is constructed with a `type` not in its class's declared `TYPES`        | Use a `type` the mock declares in `TYPES` |

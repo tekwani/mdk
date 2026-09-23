@@ -20,6 +20,13 @@ const envelope = { turnId: 'turn-1', seq: 0, ts: 0 } as const
 
 const TOOL_LABELS = { count_devices: 'Site status', act_device: 'Send command' }
 
+/**
+ * Generous `findBy*` timeout for assertions that wait on the lazy-loaded
+ * panel's code-split chunk, which can take longer than testing-library's 1s
+ * default under CI load.
+ */
+const LAZY_PANEL_TIMEOUT_MS = 5000
+
 let fetchImpl: ReturnType<typeof vi.fn>
 
 function jsonResponse(body: unknown): Response {
@@ -65,8 +72,16 @@ describe('Collapsed', () => {
 
     // Awaited, not synchronous: the panel is code-split behind the launcher so
     // the markdown renderer and highlighter stay out of the host's first paint.
+    // findByRole's default 1000ms wait is tuned for already-mounted content;
+    // this is the one place in the suite that pays for the dynamic import's
+    // first resolution (every later test in this file reuses the cached
+    // module), so it gets a longer allowance.
     expect(
-      await screen.findByRole('textbox', { name: AGENT_LABELS.composer }),
+      await screen.findByRole(
+        'textbox',
+        { name: AGENT_LABELS.composer },
+        { timeout: LAZY_PANEL_TIMEOUT_MS },
+      ),
     ).toBeInTheDocument()
   })
 

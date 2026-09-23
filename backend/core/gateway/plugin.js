@@ -3,7 +3,7 @@
 /**
  * The per-plugin context, required by gateway plugin files as
  * `require('@tetherto/mdk-gateway/plugin')` and resolving to that plugin's
- * frozen context: config only — clients are plugin-owned [per the full surface](./workers/lib/plugin-gateway.js).
+ * frozen context: config, logger and onReady — clients are plugin-owned [per the full surface](./workers/lib/plugin-gateway.js).
  *
  * Inside a plugin the request never reaches [`./workers/lib/plugin-loader.js`](./workers/lib/plugin-loader.js),
  * the module context the gateway loads each plugin through, intercepts it and hands

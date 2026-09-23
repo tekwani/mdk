@@ -1,6 +1,5 @@
 'use strict'
 
-const path = require('path')
 const { STATUS_CODES } = require('http')
 const async = require('async')
 const TetherWrkBase = require('@tetherto/tether-wrk-base/workers/base.wrk.tether')
@@ -9,11 +8,10 @@ const debug = createLogger('store:aggr')
 const { loadPlugin } = require('./lib/plugin-loader')
 const { buildFastifyRoutes } = require('./lib/plugin-adapter')
 const { buildPluginContext } = require('./lib/plugin-gateway')
+const { fastifyLoggerOptions, gatewayLogger } = require('./lib/logger')
 const { startMcpHttpServer, generateToolsFromGatewayPlugin } = require('@tetherto/mdk-mcp')
 
 const DEFAULT_MCP_PORT_OFFSET = 100
-
-const MDK_PLUGINS_ROOT = path.dirname(require.resolve('@tetherto/mdk-plugins/package.json'))
 
 class WrkServerHttp extends TetherWrkBase {
   constructor (conf, ctx) {
@@ -44,7 +42,7 @@ class WrkServerHttp extends TetherWrkBase {
         staticRootPath: this.conf.staticRootPath,
         staticOn404File: 'index.html',
         port: this.ctx.port,
-        logger: true,
+        logger: fastifyLoggerOptions(this.conf),
         addDefaultRoutes: true,
         trustProxy: true
       }, 0]
@@ -52,11 +50,19 @@ class WrkServerHttp extends TetherWrkBase {
 
     this._plugins = []
     this._mcpTools = []
+    // Before the first registerPlugin call below, because loading a plugin is
+    // what fills this: onReady is registered from a plugin's module code.
+    this._readyWaiters = []
 
-    this.registerPlugin(path.join(MDK_PLUGINS_ROOT, 'telemetry'))
-    this.registerPlugin(path.join(MDK_PLUGINS_ROOT, 'site-hashrate'))
-    this.registerPlugin(path.join(MDK_PLUGINS_ROOT, 'site-monitor'))
-
+    // Nothing is registered that the caller did not name: `spec.gateway.plugins`
+    // (or, programmatically, opts.extraPluginDirs) is the complete inventory of a
+    // gateway's HTTP routes. Three plugins used to be registered here regardless
+    // — telemetry, site-hashrate, site-monitor — which meant a stack that
+    // declared two of them served eleven more routes nobody had asked for, and
+    // no reading of mdk.yaml could tell you so. They still ship in
+    // @tetherto/mdk-plugins; a stack that wants one names it like any other
+    // package (bundledPluginDir() / a "@tetherto/mdk-plugins/<name>" subpath).
+    //
     // Entries are a plugin dir, or { dir, config, autoGenerateMcp } when the
     // stack spec carries per-plugin config (spec.gateway.plugins[].config).
     for (const entry of this.ctx.extraPluginDirs || []) {
@@ -85,6 +91,35 @@ class WrkServerHttp extends TetherWrkBase {
 
   debugGeneric (msg) {
     debug(`[HTTP/${this.ctx.shard}]`, ...arguments)
+  }
+
+  // The plugin context's onReady (see lib/plugin-gateway.js). Plugins are loaded
+  // in init() and the listener opens in _start(), so load time is always too
+  // early for a plugin that needs this gateway to answer. Registering after the
+  // gateway is already serving is not a mistake (a plugin may do it from a
+  // request), so it runs the callback rather than dropping it, on a fresh tick
+  // to keep the two orders alike.
+  onGatewayReady (fn) {
+    if (this._serving) queueMicrotask(fn)
+    else this._readyWaiters.push(fn)
+  }
+
+  // Everything this gateway serves is up. Callbacks are fire-and-forget: what a
+  // plugin does here is its own, and neither the boot nor the next plugin waits
+  // on it. A throw is reported against the gateway rather than propagated, for
+  // the same reason.
+  _notifyGatewayReady () {
+    this._serving = true
+    const waiters = this._readyWaiters
+    this._readyWaiters = []
+
+    for (const fn of waiters) {
+      try {
+        fn()
+      } catch (err) {
+        gatewayLogger(this.conf).warn(`a plugin's onReady callback threw: ${err.message}`)
+      }
+    }
   }
 
   _start (cb) {
@@ -132,6 +167,12 @@ class WrkServerHttp extends TetherWrkBase {
           this._mcpServer = await startMcpHttpServer(mcpPort, this._mcpTools)
           debug('MCP server auto-started on port %d (%d tool(s))', mcpPort, this._mcpTools.length)
         }
+
+        // Last, so that a plugin waiting on the gateway waits for all of it —
+        // the standalone MCP listener above included, since a plugin pointed at
+        // that port would otherwise race exactly the way one pointed at the main
+        // HTTP port did before this existed.
+        this._notifyGatewayReady()
       }
     ], cb)
   }

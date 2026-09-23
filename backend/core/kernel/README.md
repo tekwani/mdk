@@ -69,16 +69,16 @@ use `getKernel()` from `@tetherto/mdk-core`.
 
 Factory that returns a configured, unstarted `KernelManager`. Caller controls the lifecycle.
 
-| Option | Status | Type | Default | Description |
-| --- | --- | --- | --- | --- |
-| `opts.db` | Optional | `string` | `os.tmpdir()/mdk/...` | Hyperbee store directory |
-| `opts.root` | Optional | `string` | `os.tmpdir()/mdk` | Config root directory |
-| `opts.listeners.hrpc` | Optional | `object\|false` | Enabled | HRPC listener config; `false` to disable |
-| `opts.auth.whitelist` | Optional | `string[]` | `[]` | HRPC firewall — hex public keys of allowed callers |
-| `opts.discovery.topic` | Optional | `string` | None; no DHT listener without one | 32-byte hex DHT topic Workers join |
-| `opts.cadences.telemetryPullMs` | Optional | `number` | `10000` | Telemetry poll interval |
-| `opts.cadences.healthPingMs` | Optional | `number` | `5000` | Health ping interval |
-| `opts.cadences.statePullMs` | Optional | `number` | `5000` | DHT Worker identity and device-list refresh interval |
+| Option                          | Status   | Type       | Default               | Description                                          |
+| ------------------------------- | -------- | ---------- | --------------------- | ---------------------------------------------------- |
+| `opts.db`                       | Optional | `string`   | `os.tmpdir()/mdk/...` | Hyperbee store directory                             |
+| `opts.root`                     | Optional | `string`   | `os.tmpdir()/mdk`     | Config root directory                                |
+| `opts.listeners.hrpc`           | Optional | `object\|false` | Enabled          | HRPC listener config; `false` to disable             |
+| `opts.auth.whitelist`           | Optional | `string[]` | `[]`                  | HRPC firewall — hex public keys of allowed callers   |
+| `opts.discovery.topic`          | Optional | `string`   | None; no DHT listener without one | 32-byte hex DHT topic Workers join       |
+| `opts.cadences.telemetryPullMs` | Optional | `number`   | `10000`               | Telemetry poll interval                              |
+| `opts.cadences.healthPingMs`    | Optional | `number`   | `5000`                | Health ping interval                                 |
+| `opts.cadences.statePullMs`     | Optional | `number`   | `5000`                | DHT Worker identity and device-list refresh interval |
 
 ### `KernelManager`
 
@@ -118,13 +118,13 @@ kernel.actionManager      // ActionManager (write-action approval)
 Kernel is organized into subsystems. Discovery, transport, storage, and protocol are the plumbing; coordination is the set
 of single-responsibility modules that do the work. Modules communicate only through their declared interfaces — no cross-calling.
 
-| Subsystem| Modules / code | What it does |
-|---|---|---|
-| Discovery | [`discovery/dht-listener.js`](lib/discovery/dht-listener.js); local and same-process modes live in [`@tetherto/mdk-core`](../mdk/lib/local-discovery.js) | Obtains a Worker's RPC public key, then `WorkerRegistry` drives it to `READY` |
-| Transport | [`transport/hrpc-listener.js`](lib/transport/hrpc-listener.js), [`transport/envelope-router.js`](lib/transport/envelope-router.js), [`transport/worker-channel.js`](lib/transport/worker-channel.js) | Inbound HRPC connections; `WorkerChannel` is the outbound path Kernel uses to call Workers |
+| Subsystem   | Modules / code | What it does                                                       |
+|-------------|----------------|--------------------------------------------------------------------|
+| Discovery   | [`discovery/dht-listener.js`](lib/discovery/dht-listener.js); local and same-process modes live in [`@tetherto/mdk-core`](../mdk/lib/local-discovery.js) | Obtains a Worker's RPC public key, then `WorkerRegistry` drives it to `READY` |
+| Transport   | [`transport/hrpc-listener.js`](lib/transport/hrpc-listener.js), [`transport/envelope-router.js`](lib/transport/envelope-router.js), [`transport/worker-channel.js`](lib/transport/worker-channel.js) | Inbound HRPC connections; `WorkerChannel` is the outbound path Kernel uses to call Workers |
 | Coordination | [`modules/worker-registry/`](lib/modules/worker-registry/index.js): `WorkerRegistry`, `CommandDispatcher`, `CommandStateMachine`, `TelemetryCollector`, `Scheduler`, `HealthMonitor`, `ActionManager`, `ActionCaller`; plus [`permissions/`](lib/permissions/index.js) | The single-responsibility modules detailed in the subsections below |
-| Storage | [`storage/stores.js`](lib/storage/stores.js), [`storage/wal.js`](lib/storage/wal.js) | Persists the registry, capabilities, command Write-Ahead Log (WAL), and action-approver state in Hyperbee |
-| Protocol | [`protocol/actions.js`](lib/protocol/actions.js), [`protocol/envelope.js`](lib/protocol/envelope.js), [`protocol/schemas.js`](lib/protocol/schemas.js) | The MDK envelope and action set Workers and callers speak; holds `PROTOCOL_VERSION` |
+| Storage     | [`storage/stores.js`](lib/storage/stores.js), [`storage/wal.js`](lib/storage/wal.js) | Persists the registry, capabilities, command Write-Ahead Log (WAL), and action-approver state in Hyperbee |
+| Protocol    | [`protocol/actions.js`](lib/protocol/actions.js), [`protocol/envelope.js`](lib/protocol/envelope.js), [`protocol/schemas.js`](lib/protocol/schemas.js) | The MDK envelope and action set Workers and callers speak; holds `PROTOCOL_VERSION` |
 
 ### `WorkerRegistry`
 
@@ -177,11 +177,11 @@ so it is not literally stateless, but nothing it keeps survives the process.)
 System metronome. Runs non-overlapping interval jobs for telemetry pulls, health pings, and state pulls. Jobs are idempotent
 — safe to restart with no state.
 
-| Job | Default | Operation |
-| --- | --- | --- |
-| `telemetry.pull` | 10000 ms | Pulls telemetry from ready Workers over HRPC |
-| `health.ping` | 5000 ms | Checks registered Worker liveness over HRPC |
-| `state.pull` | 5000 ms | Refreshes Worker identity and device lists when DHT discovery is active |
+| Job              | Default  | Operation                                                               |
+| ---------------- | -------- | ----------------------------------------------------------------------- |
+| `telemetry.pull` | 10000 ms | Pulls telemetry from ready Workers over HRPC                            |
+| `health.ping`    | 5000 ms  | Checks registered Worker liveness over HRPC                             |
+| `state.pull`     | 5000 ms  | Refreshes Worker identity and device lists when DHT discovery is active |
 
 Configure all three intervals with `createKernel({ cadences: { telemetryPullMs, healthPingMs, statePullMs } })`. The higher-level `getKernel()` API exposes `telemetryPullMs` and `healthPingMs` as flat options. These cadences affect scheduled HRPC calls after discovery; they do not change DHT discovery traffic.
 
@@ -272,30 +272,30 @@ All messages use the envelope format:
 
 **Action constants** (from [`lib/protocol/actions.js`](./lib/protocol/actions.js), `PROTOCOL_VERSION = '0.2.0'`):
 
-| Constant | Wire value | Direction |
-|----------|-----------|-----------|
-| `IDENTITY_REQUEST` | `identity.request` | Kernel → Worker |
-| `CAPABILITY_REQUEST` | `capability.request` | Kernel → Worker |
-| `TELEMETRY_PULL` | `telemetry.pull` | Kernel → Worker (scheduled) |
-| `COMMAND_REQUEST` | `command.request` | Kernel → Worker |
-| `HEALTH_PING` | `health.ping` | Kernel → Worker (scheduled) |
-| `WORKER_LIST` | `worker.list` | Gateway → Kernel |
-| `DEVICE_CAPABILITIES` | `device.capabilities` | Gateway → Kernel |
-| `WORKER_TERMINATE` | `worker.terminate` | Gateway → Kernel |
-| `STATE_PULL` | `state.pull` | Kernel → Worker (scheduled) |
-| `COMMAND_STATUS` | `command.status` | Gateway → Kernel |
-| `COMMAND_STATUS_RESPONSE` | `command.status.response` | Kernel → Gateway |
-| `COMMAND_CANCEL` | `command.cancel` | Gateway → Kernel |
-| `COMMAND_CANCEL_RESPONSE` | `command.cancel.response` | Kernel → Gateway |
-| `ACTION_PUSH` | `action.push` | Gateway → Kernel |
-| `ACTION_PUSH_BATCH` | `action.push-batch` | Gateway → Kernel |
-| `ACTION_GET` | `action.get` | Gateway → Kernel |
-| `ACTION_GET_BATCH` | `action.get-batch` | Gateway → Kernel |
-| `ACTION_QUERY` | `action.query` | Gateway → Kernel |
-| `ACTION_VOTE` | `action.vote` | Gateway → Kernel |
-| `ACTION_CANCEL_BATCH` | `action.cancel-batch` | Gateway → Kernel |
-| `WRITE_CALLS_REQUEST` | `write.calls.request` | Kernel → Worker |
-| `WRITE_CALLS_RESPONSE` | `write.calls.response` | Worker → Kernel |
+| Constant                  | Wire value                 | Direction                   |
+|---------------------------|----------------------------|-----------------------------|
+| `IDENTITY_REQUEST`        | `identity.request`         | Kernel → Worker             |
+| `CAPABILITY_REQUEST`      | `capability.request`       | Kernel → Worker             |
+| `TELEMETRY_PULL`          | `telemetry.pull`           | Kernel → Worker (scheduled) |
+| `COMMAND_REQUEST`         | `command.request`          | Kernel → Worker             |
+| `HEALTH_PING`             | `health.ping`              | Kernel → Worker (scheduled) |
+| `WORKER_LIST`             | `worker.list`              | Gateway → Kernel            |
+| `DEVICE_CAPABILITIES`     | `device.capabilities`      | Gateway → Kernel            |
+| `WORKER_TERMINATE`        | `worker.terminate`         | Gateway → Kernel            |
+| `STATE_PULL`              | `state.pull`               | Kernel → Worker (scheduled) |
+| `COMMAND_STATUS`          | `command.status`           | Gateway → Kernel            |
+| `COMMAND_STATUS_RESPONSE` | `command.status.response`  | Kernel → Gateway            |
+| `COMMAND_CANCEL`          | `command.cancel`           | Gateway → Kernel            |
+| `COMMAND_CANCEL_RESPONSE` | `command.cancel.response`  | Kernel → Gateway            |
+| `ACTION_PUSH`             | `action.push`              | Gateway → Kernel            |
+| `ACTION_PUSH_BATCH`       | `action.push-batch`        | Gateway → Kernel            |
+| `ACTION_GET`              | `action.get`               | Gateway → Kernel            |
+| `ACTION_GET_BATCH`        | `action.get-batch`         | Gateway → Kernel            |
+| `ACTION_QUERY`            | `action.query`             | Gateway → Kernel            |
+| `ACTION_VOTE`             | `action.vote`              | Gateway → Kernel            |
+| `ACTION_CANCEL_BATCH`     | `action.cancel-batch`      | Gateway → Kernel            |
+| `WRITE_CALLS_REQUEST`     | `write.calls.request`      | Kernel → Worker             |
+| `WRITE_CALLS_RESPONSE`    | `write.calls.response`     | Worker → Kernel             |
 
 ### Command control
 
@@ -307,11 +307,11 @@ Beyond the basic dispatch/result cycle, three exported constants extend the CSM 
 
 **`COMMAND_SCOPES`**: an object (`{ DEVICE: 'device', WORKER: 'worker', RACK: 'rack' }`) that sets the targeting resolution for a command:
 
-| Scope | Addresses | Routed by |
-|-------|-----------|-----------|
-| `device` | A single target device | `deviceId` on the envelope |
-| `worker` | Devices registered to a Worker | `workerId` in the payload |
-| `rack` | Devices across the Workers in a rack | `workerId` in the payload |
+| Scope    | Addresses                                       | Routed by                  |
+|----------|-------------------------------------------------|----------------------------|
+| `device` | A single target device                          | `deviceId` on the envelope |
+| `worker` | Devices registered to a Worker                  | `workerId` in the payload  |
+| `rack`   | Devices across the Workers in a rack            | `workerId` in the payload  |
 
 The scope field is validated in [`lib/protocol/schemas.js`](./lib/protocol/schemas.js) against `VALID_COMMAND_SCOPES`. Both `COMMAND_SCOPES` and `VALID_COMMAND_SCOPES` are exported from [`lib/protocol/actions.js`](./lib/protocol/actions.js).
 
@@ -321,11 +321,11 @@ Kernel does not expand a scope into a device list. For `worker` and `rack` scope
 
 All state is persisted in Hyperbee (append-only B-tree over Hypercore):
 
-| Store | Purpose |
-|-------|---------|
-| `kernel-registry` | Worker identities and state |
-| `ork-capabilities` | Device → contract mappings |
-| `kernel-command-wal` | Command WAL for crash recovery |
+| Store                | Purpose                         |
+|----------------------|---------------------------------|
+| `kernel-registry`    | Worker identities and state     |
+| `ork-capabilities`   | Device → contract mappings      |
+| `kernel-command-wal` | Command WAL for crash recovery  |
 
 ## Testing
 
@@ -337,11 +337,62 @@ npx brittle tests/integration/csm.test.js   # integration test
 
 Tests use real Corestore + `tmpdir` — no mocks for storage.
 
+## Errors
+
+| Code                     | Fires when                                                                   | Fix                                       |
+| ------------------------ | -----------------------------------------------------------------------------| ------------------------------------------|
+| `ERR_ACTION_DENIED`      | The voter's auth permissions do not include write access for every base type the action targets | Obtain write permission for all affected device families before voting |
+| `ERR_ACTION_INVALID`     | A write-call request's action is missing or not a string                                 | Pass a non-empty string action name |
+| `ERR_ACTION_INVALID_MISSING_ID` | An update-thing rack action omits the target record `id` in the first param       | Set `id` on the first param |
+| `ERR_ACTION_INVALID_MISSING_WORKER_ID` | A rack action other than rack-reboot omits `workerId` in the first param   | Set `workerId` on the first param |
+| `ERR_ACTION_INVALID_QUERY_ID` | A forget-things rack action omits a string `query.id` in the first param            | Provide `params[0].query.id` as a string |
+| `ERR_CANCELLED`          | A queued command is cancelled before it executes                                         | Resubmit the command if execution is still wanted |
+| `ERR_CHANNEL_NO_SEND_METHOD` | The target channel exposes no usable send path (no HRPC key with an initialized RPC layer, and no `request()` function) | Use a channel created by `connect()`, or provide an in-process `request` handler |
+| `ERR_CHANNEL_NOT_CONNECTED` | A send is attempted with no channel object                               | Establish the Worker channel before sending |
+| `ERR_CHANNEL_RPC_KEY_REQUIRED` | `connect()` is called without the Worker's `rpcKey`                   | Pass the Worker's RPC public key to `connect()` |
+| `ERR_CHANNEL_TIMEOUT`    | A Worker does not respond within the send timeout                           | Confirm the Worker is reachable and healthy, or raise the timeout |
+| `ERR_COMMAND_FAILED`     | A Worker returns a non-SUCCESS result carrying no error of its own          | Check the Worker logs for why the command was rejected |
+| `ERR_COMMAND_ID_REQUIRED` | A status or cancel request omits the `commandId`                           | Supply the `commandId` returned when the command was queued |
+| `ERR_COMMAND_NOT_FOUND`  | The requested `commandId` has no tracked command                            | Use a `commandId` that is still tracked; a completed command may have been evicted |
+| `ERR_COMMAND_NOT_IN_CAPABILITIES` | The requested command is not declared in the target Worker's capabilities | Issue a command the Worker advertises |
+| `ERR_COMMAND_REQUIRED`   | A dispatched command payload omits `command`                                | Include the command name in the payload |
+| `ERR_DEVICE_ID_REQUIRED` | A device-scoped command omits `deviceId` on the envelope                    | Set `deviceId` on the envelope |
+| `ERR_DEVICE_NOT_FOUND`   | No registered Worker owns the given `deviceId`                              | Target a `deviceId` registered by a ready Worker |
+| `ERR_KERNEL_ACTION_CALLS_EMPTY` | An action push resolves to no executable write calls, either for a specific Worker or across all Workers | Confirm the query matches ready Workers and the caller holds the required write permissions |
+| `ERR_KERNEL_NO_DISCOVERY` | `registerWorker` runs on a Kernel started without discovery configured     | Configure DHT discovery before registering Workers |
+| `ERR_KERNEL_NOT_INITIALIZED` | `start()` is called before the Kernel is initialized                    | Call `init()` before `start()` |
+| `ERR_KERNEL_NOT_STARTED` | `registerWorker` is called before the Kernel is started                     | Start the Kernel before registering Workers |
+| `ERR_KERNEL_SHUTDOWN`    | A command is executing or dispatched when the Kernel drains for shutdown    | Resubmit the command after the Kernel restarts |
+| `ERR_MAX_RETRIES_EXHAUSTED` | A command's send to the Worker keeps failing (timeout or channel error) until its retries are exhausted                         | Confirm the Worker is reachable and the channel is wired; raise retries or the timeout if it is merely slow |
+| `ERR_PARAM_RANGE`        | A numeric command parameter falls below its declared `min` or above its `max` | Pass a value within the parameter's declared range |
+| `ERR_PARAM_TYPE`         | A command parameter's value does not match its declared type                | Pass the parameter as its declared type |
+| `ERR_PARAMS_INVALID`     | A write-call request's `params` is not an array                             | Pass `params` as an array |
+| `ERR_PAYLOAD_INVALID`    | `pushActionsBatch` receives a `batchActionsPayload` that is not an array    | Pass `batchActionsPayload` as an array |
+| `ERR_QUERIES_INVALID`    | `queryActions` receives a `queries` value that is not an array              | Pass `queries` as an array |
+| `ERR_QUERIES_TYPE_INVALID` | A query entry omits a string `type`                                       | Give every query entry a string `type` |
+| `ERR_QUERY_INVALID`      | A write-call `query` is not a plain object or is not a valid mingo query    | Pass a valid mingo query object |
+| `ERR_RECOVERY_EXHAUSTED` | A command recovered after restart was in flight and has no retries remaining | Resubmit the command and investigate why it kept failing before shutdown |
+| `ERR_RPC_NOT_INITIALIZED` | A channel request runs before the transport's RPC layer is initialized     | Initialize the Kernel transport before sending over the channel |
+| `ERR_UNKNOWN_ACTION`     | An incoming envelope's `action` has no route handler                        | Send a supported action |
+| `ERR_WORKER_ID_REQUIRED` | A `worker.terminate` envelope, or a Worker- or rack-scoped command, omits `workerId` | Include `workerId` in the payload |
+| `ERR_WORKER_NOT_FOUND`   | The referenced `workerId` is not registered                                 | Register the Worker, or use a known `workerId` |
+| `ERR_WORKER_NOT_ROUTABLE` | The resolved Worker is registered but not in a routable state              | Wait until the Worker is ready before sending commands |
+| `ERR_WORKER_RESPONSE_INVALID` | A Worker returns a response that is not an object                      | Ensure the Worker returns a valid protocol response |
+
+Kernel validates the structure of every inbound envelope. A raw envelope that does not satisfy the
+[MDK Protocol](#mdk-protocol) schema raises an `ERR_ENVELOPE_*` code from
+[`protocol/envelope.js`](lib/protocol/envelope.js). Callers that go through [`@tetherto/mdk-client`](../client/README.md)
+or a [`WorkerRuntime`](../mdk-worker/lib/worker-runtime.js) never construct envelopes by hand, so they never hit this
+class of error.
+
 ## Directory layout
 
 ```text
 kernel/
 ├── index.js                  # Exports: KernelManager, createKernel
+├── setup-config.sh           # Copies config/*.example to real config files
+├── config/
+│   └── kernel.json.example   # Config template: HRPC allowlist, discovery topic, cadences
 ├── lib/
 │   ├── kernel.manager.js        # KernelManager (EventEmitter) — lifecycle orchestration
 │   ├── protocol/

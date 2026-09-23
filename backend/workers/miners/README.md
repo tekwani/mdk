@@ -2,7 +2,7 @@
 
 Bitcoin ASIC miner Workers. Each ships a Worker Plugin (`plugin/{index.js,mdk-contract.json,boot.js}`) hosted on
 [`WorkerRuntime`][mdk-worker-runtime], with mining-specific config (alert thresholds, stats specs) layered on top via
-[`createWorkerInfra`][worker-infra] — see [Worker Runtime legacy services][worker-runtime-legacy] for how that shared
+[`createWorkerInfra`][worker-infra] — see [Worker Runtime store services][worker-runtime-store] for how that shared
 plumbing works.
 
 ## Packages
@@ -110,8 +110,8 @@ documents its `model` values, mock, and the `registerThing` command for adding a
 [worker-infra]: ../../core/mdk/lib/worker-infra.js
 <!-- docs@tether.io: worker-infra → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/lib/worker-infra.js -->
 
-[worker-runtime-legacy]: ../../../docs/reference/maintainers/worker-runtime-legacy-services.md
-<!-- docs@tether.io: worker-runtime-legacy → https://github.com/tetherto/mdk/blob/main/docs/reference/maintainers/worker-runtime-legacy-services.md -->
+[worker-runtime-store]: ../../core/mdk-worker/README.md#store-services
+<!-- docs@tether.io: worker-runtime-store → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/README.md#store-services -->
 
 [run-whatsminer-worker]: ../../../docs/guides/miners/run-whatsminer-worker.md
 <!-- docs@tether.io: run-whatsminer-worker → https://github.com/tetherto/mdk/blob/main/docs/guides/miners/run-whatsminer-worker.md -->

@@ -78,6 +78,45 @@ describe('resolveProjectPackageDir', () => {
       /is not installed/,
     );
   });
+
+  // How a stack declares one of the plugins MDK ships now that no Gateway
+  // registers them unasked: they are subdirectories of one `@tetherto/mdk-plugins`
+  // package, with no package.json of their own, so the package resolves and the
+  // subpath is appended to it.
+  it('resolves a subpath inside an installed package', () => {
+    const dir = makeTmpDir();
+    linkRealPackage(dir, 'yaml');
+    expect(runtime.resolveProjectPackageDir(dir, 'yaml/browser')).toMatch(/yaml\/browser$/);
+  });
+
+  it('resolves a subpath inside an installed scoped package', () => {
+    const dir = makeTmpDir();
+    mkdirSync(join(dir, 'node_modules', '@scope', 'pkg', 'telemetry'), { recursive: true });
+    writeFileSync(
+      join(dir, 'node_modules', '@scope', 'pkg', 'package.json'),
+      JSON.stringify({ name: '@scope/pkg', version: '1.0.0' }),
+    );
+    // The scope counts as part of the name, not as a subpath — `@scope/pkg` is
+    // the package and `telemetry` the directory inside it.
+    expect(runtime.resolveProjectPackageDir(dir, '@scope/pkg/telemetry')).toMatch(
+      /node_modules\/@scope\/pkg\/telemetry$/,
+    );
+  });
+
+  // A missing subpath and a missing install want different fixes, so they must not
+  // read as the same failure: `npm install yaml/nope` is not a thing npm can do.
+  it('distinguishes a subpath that is not there from a package that is not installed', () => {
+    const dir = makeTmpDir();
+    linkRealPackage(dir, 'yaml');
+    expect(() => runtime.resolveProjectPackageDir(dir, 'yaml/nope')).toThrow(/has no "nope" in it/);
+    expect(() => runtime.resolveProjectPackageDir(dir, 'yaml/nope')).not.toThrow(/is not installed/);
+  });
+
+  it('names the package, not the subpath, in the install hint', () => {
+    expect(() =>
+      runtime.resolveProjectPackageDir(makeTmpDir(), '@tetherto/mdk-plugins/telemetry'),
+    ).toThrow(/npm install @tetherto\/mdk-plugins$/m);
+  });
 });
 
 describe('assertGatewayPortFree', () => {

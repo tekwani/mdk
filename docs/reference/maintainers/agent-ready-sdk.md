@@ -53,16 +53,17 @@ Nothing yet. Core monorepo presence today. The open question is whether [`backen
 `mdk-contract.json` covers the **runtime** contract. For the **docs / discovery** layer the monorepo adds two co-located files per artefact:
 
 ```text
-backend/workers/miners/whatsminer/
-  src/...
+backend/workers/miners/antminer/
   package.json
-  mdk-contract.json        # ← already exists, governs runtime
-  USAGE.md                 # ← new: prose for humans + LLMs (overview, install, gotchas)
-  examples/                # ← new: one runnable Node file per --wtype / scenario (qvac model)
-    run-m53s.js
-    run-m56s.js
-    run-m63.js
+  plugin/
+    mdk-contract.json  # ← already exists, governs runtime
+  USAGE.md              # ← already exists: prose for humans + LLMs (overview, install, gotchas)
+  examples/             # ← new, not yet added: one runnable Node file per scenario (qvac model)
+    run-<scenario>.js
 ```
+
+(Whatsminer is a manufacturer-maintained external Worker as of 0.9.0 — see [`backend/workers/external-workers.json`](../../../backend/workers/external-workers.json) — so
+`antminer`/`avalon` are the current in-repo examples of this shape; neither has an `examples/` directory yet, only `USAGE.md`.)
 
 `USAGE.md` and `examples/` are the only **new** conventions. The contract itself is unchanged.
 
@@ -83,19 +84,15 @@ See [`backend/core/docs/examples-convention.md`](../../../backend/core/docs/exam
 
 ## Tag rules
 
-The constraint surface for Worker tags is [`mdk-contract.schema.json`](../../../backend/core/mdk-worker/mdk-contract.schema.json), not the docs. The docs catalogue reads contract fields, pretty-prints them via the [`tag-vocab.yaml`](tag-vocab.yaml) presentation overlay, and groups Workers into integration kinds via the same overlay's `integration-kinds` section.
+Tags are read from the contract, never declared separately — see [`ia.md`'s Tag vocabulary](ia.md#tag-vocabulary) for the general
+schema-vs-overlay philosophy and the QA gates that would enforce it. The one thing specific to Workers is which contract field maps to which
+overlay bucket:
 
 | Source field | Where it is constrained | Where it is displayed |
 |--------------|------------------------|------------------------|
 | `metadata.deviceFamily` | enum in [`mdk-contract.schema.json`](../../../backend/core/mdk-worker/mdk-contract.schema.json) | [`tag-vocab.yaml`](./tag-vocab.yaml) → `device-families` (label only, falls back to slug) |
 | `metadata.provider` | open string in current schema | [`tag-vocab.yaml`](./tag-vocab.yaml) → `providers` (label only, falls back to slug) |
 | `metadata.modelsSupported[]` | per-contract | aggregated by the docs build into namespaced ids |
-
-Tags are **read from the contract**, not declared elsewhere. No parallel `manifest.yaml`, no duplicated metadata. Adding a Worker for a new vendor does not require a docs-side PR to the overlay — the schema validates the contract, the slug ships, and the overlay catches up only when someone wants prettier display.
-
-Until [`check:integrations-fresh`](ia.md#checkintegrations-fresh) lands (and it may not — adopting it is engineering's call), the **docs maintainers** keep the catalogue tables in step with shipping Workers manually. Engineers adding a Worker don't need to touch docs — the invisible `<!-- mdk-monorepo: hand-maintained ... -->` reminder at the top of each [`integrations/`](integrations/index.md) index page is a note to whichever docs maintainer is editing the file. A Worker without a row ships invisible to the catalogue, so docs maintainers track new contracts during integration audits.
-
-See [QA gates](ia.md#qa-gates) for the proposed schema validator (`check:contract`) and overlay drift detector (`check:facets-fresh`), and [Derived vocabulary](ia.md#derived-vocabulary) for the target end state where the overlay is built from shipping contracts and JSDoc.
 
 ## Catalogue aggregation
 
@@ -113,7 +110,7 @@ Once `dist/index.json` is shipping, it would also unlock [`check:integrations-fr
 
 The default Gateway plugins in [`backend/core/plugins/`](../../../backend/core/plugins/README.md) each ship an `mdk-plugin.json` manifest — the source of truth for their HTTP routes. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js) (run via `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` in [`backend/core/plugins`](../../../backend/core/plugins/README.md) for this generator alone) reads those manifests and regenerates the route tables inside the marked region of [`backend/core/plugins/README.md`](../../../backend/core/plugins/README.md), so the published route list never drifts from the manifests. This is the same read-source-of-truth, generate, ship pattern as the Worker catalogue.
 
-Only the default plugins are generated — plugins mounted at runtime via `startGateway({ extraPluginDirs })` live outside the repo and document their own routes. The [`check:plugin-reference-fresh`](ia.md#checkplugin-reference-fresh) gate keeps the generated tables honest, but no CI workflow runs it yet — regenerate with `npm run regenerate-docs` and commit when a default plugin's routes change.
+Only plugins that ship in the repo are generated — plugins mounted at runtime via `startGateway({ extraPluginDirs })` live outside the repo and document their own routes. The [`check:plugin-reference-fresh`](ia.md#checkplugin-reference-fresh) gate keeps the generated tables honest, shipping as the warn-only [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow. It annotates rather than blocks, so regenerate with `npm run regenerate-docs` and commit when a shipped plugin's routes change.
 
 ## Decisions deferred
 

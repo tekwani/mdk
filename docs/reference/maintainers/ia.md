@@ -7,8 +7,8 @@ The monorepo builds on contracts that already ship:
 - **Workers** ship [`mdk-contract.json`](../../../backend/workers/miners/antminer/plugin/mdk-contract.json) per package,
 validated against [`mdk-contract.schema.json`](../../../backend/core/mdk-worker/mdk-contract.schema.json), vendored in this repo.
 The contract carries metadata, telemetry, commands, health, and errors — programmatic contract + AI reasoning context in one file.
-- **UI** components carry JSDoc tags (`@tier`, `@category`, `@domain`, `@orkCapability`); the registry generator (`ui/<pkg>/scripts/generate-registry.mts`,
-lands when the UI workspace is populated) and sibling generators emit `dist/registry.json`,
+- **UI** components carry JSDoc tags (`@tier`, `@category`, `@domain`, `@orkCapability`); the registry generator (`ui/packages/react-devkit/scripts/generate-registry.mts`)
+and sibling generators emit `dist/registry.json`,
 `dist/blueprints.json`, `dist/hooks.json`, `dist/stores.json`. See [`ui/AGENTS.md`](../../../ui/AGENTS.md).
 <!-- mdk-monorepo: repoint to package-level AGENTS.md until ui/docs/AGENT_READY.md is populated -->
 
@@ -42,7 +42,7 @@ ui/<pkg>/src/.../<component>/
 | Location | Owns |
 |----------|------|
 | [`docs/`](../../README.md) | Role-based router ([`README.md`](../../README.md)) and end-user-facing SoT content ([`concepts/`](../../concepts/)) |
-| [`docs/reference/maintainers/`](README.md) | Docs maintainer plumbing: this file, [`agent-ready-sdk.md`](agent-ready-sdk.md), [`tag-vocab.yaml`](tag-vocab.yaml), [`single-source-of-truth.md`](single-source-of-truth.md), [`worker-runtime-legacy-services.md`](worker-runtime-legacy-services.md), and the hand-maintained [`integrations/`](integrations/index.md) catalogue (lives here, not at `docs/integrations/`, until [`check:integrations-fresh`](#checkintegrations-fresh) keeps it honest) |
+| [`docs/reference/maintainers/`](README.md) | Docs maintainer plumbing: this file, [`agent-ready-sdk.md`](agent-ready-sdk.md), [`tag-vocab.yaml`](tag-vocab.yaml), [`single-source-of-truth.md`](single-source-of-truth.md), and the hand-maintained [`integrations/`](integrations/index.md) catalogue (lives here, not at `docs/integrations/`, until [`check:integrations-fresh`](#checkintegrations-fresh) keeps it honest) |
 | [`backend/core/docs/`](../../../backend/core/docs/README.md) | Core workspace conventions (`mdk`, `client`, `kernel`, `gateway`, …) |
 | [`ui/`](../../../ui/README.md) | UI workspace conventions for react-devkit, adapter, ui-foundation, cli |
 | [`backend/workers/docs/`](../../../backend/workers/docs/architecture.md) | Workers workspace conventions (Worker lifecycle, install pattern, taxonomy) |
@@ -150,7 +150,7 @@ Until then, port signals are eyeballed during docs review.
 ### `check:integrations-fresh`
 
 > Implemented. [`backend/workers/scripts/generate-catalogue.js`](../../../backend/workers/scripts/generate-catalogue.js)
-> (run `npm run regenerate-docs` from the repo root, or `npm run generate:catalogue` in [`backend/workers`](../../../backend/workers/README.md) for this generator alone) walks
+> (run `npm run regenerate-docs` from the repo root, or `npm run generate:catalogue` — also from the repo root — for this generator alone) walks
 > `backend/workers/**/mdk-contract.json`, validates each against the vendored schema
 > with ajv, and generates the catalogue at [`backend/workers/docs/supported-hardware.md`](../../../backend/workers/docs/supported-hardware.md) plus
 > [`catalogue.json`](../../../backend/workers/docs/catalogue.json). The user-facing entrypoint is [`docs/reference/supported-hardware.md`](../supported-hardware.md). The hand-maintained tables
@@ -162,8 +162,8 @@ Until then, port signals are eyeballed during docs review.
 > drift described below, between shipping Workers and the hand-maintained tables under [`integrations/`](integrations/index.md).
 
 Drift detector for the hand-maintained catalogue tables under [`integrations/`](integrations/index.md). Would walk
-`backend/workers/**/mdk-contract.json` and compare against the rows in [`integrations/hardware/*.md`](integrations/hardware/index.md),
-[`integrations/pools.md`](integrations/pools.md), and [`integrations/external-services.md`](integrations/external-services.md).
+`backend/workers/**/mdk-contract.json` and compare against the rows in [`integrations/hardware/*.md`](integrations/hardware/index.md) and
+[`integrations/pools.md`](integrations/pools.md) (external services have no rows yet — no Worker has shipped in that kind).
 If adopted, it would report two kinds of drift:
 
 1. **Workers missing from the catalogue** — a shipping Worker has no row in the relevant index table. The catalogue is meant to be exhaustive,
@@ -182,26 +182,28 @@ stay under [`maintainers/`](./README.md) and never graduate to user-facing `docs
 
 ### `check:plugin-reference-fresh`
 
-> Generator implemented; no CI enforcement yet. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js)
-> (run `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` in [`backend/core/plugins`](../../../backend/core/plugins/README.md) for this generator alone)
-> reads each default plugin's `mdk-plugin.json` and regenerates the route tables in
-> [`backend/core/plugins/README.md`](../../../backend/core/plugins/README.md). Running `npm run regenerate-docs -- --check` reports drift, but no
-> workflow runs that check on pull requests today — it's a manual step.
+> Implemented, warn-only. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js)
+> (run `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` from the repo root for this generator alone)
+> reads each plugin's `mdk-plugin.json` across both plugin roots and regenerates the route tables in
+> [`supported-plugins.md`](../supported-plugins.md). The
+> [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow runs the regen-and-diff check on pull requests.
 
-Freshness gate for the generated default-plugin route tables. `npm run regenerate-docs -- --check`
-regenerates, compares against the last commit, restores the tree, and reports a non-empty diff in [`backend/core/plugins/README.md`](../../../backend/core/plugins/README.md). It catches one kind
-of drift:
+Freshness gate for the generated supported-plugins page. The `docs-freshness` workflow runs `npm run regenerate-docs -- --check`, which
+regenerates, compares against the last commit, restores the tree, and reports a non-empty diff in [`supported-plugins.md`](../supported-plugins.md).
+It catches one kind of drift:
 
-1. **Tables stale after a manifest change** — a route added, removed, or re-described in a default plugin's `mdk-plugin.json` is not reflected
+1. **Tables stale after a manifest change** — a route added, removed, or re-described in a plugin's `mdk-plugin.json` is not reflected
 in the generated tables.
 
-Nothing blocks a PR on this today; the pages stay wrong for readers until someone regenerates, so running the check by hand is on the contributor.
+The check annotates the pull request and does not block it, because a manifest change and its regenerated tables may legitimately land in separate
+pull requests. The pages stay wrong for readers until someone regenerates, so the warning is work owed rather than noise.
 
-**Why it matters:** the default-plugin route tables are the published API surface for the Gateway's built-in endpoints. A table that lags the
-manifest documents routes that no longer exist or omits ones that do. Only the default plugins in [`backend/core/plugins/`](../../../backend/core/plugins/README.md) are covered; plugins
-mounted via `extraPluginDirs` are external and document their own routes.
+**Why it matters:** the route tables are the published API surface of the plugins MDK ships — which a stack declares like any other package,
+and which serve nothing until it does. A table that lags the manifest documents routes that no longer exist or omits ones that do. Only the
+plugins that ship in the repo are covered (those under [`backend/core/plugins/`](../../../backend/core/plugins/README.md) and [`backend/plugins/`](../../../backend/plugins/));
+plugins mounted via `extraPluginDirs` are external and document their own routes.
 
-Maintainers re-run `npm run regenerate-docs` and commit the output whenever a default plugin's routes change.
+Maintainers re-run `npm run regenerate-docs` and commit the output whenever a shipped plugin's routes change.
 
 ### `check:plugin-manifest`
 
@@ -223,16 +225,10 @@ remains documented by example and the loader is the authoritative validator.
 
 ### `check:tutorial-commands-fresh`
 
-Drift detector for hardwired command lists in tutorial prose. Specifically, the full command reference in
-[`docs/tutorials/run-a-site.md`](../../tutorials/run-a-site.md) carries a curated subset of the `HELP` block in
-[`examples/full-site/cli/commands/index.js`](../../../examples/full-site/cli/commands/index.js) (lines 18–32). A CI script that
-runs `echo -e 'help\nexit' | node examples/full-site/cli.js` and diffs the output against the hardwired block in the
-tutorial would catch drift whenever a command is added, removed, or renamed.
-
-**Why it matters:** the command list is collapsed inside a `<details>` block and easy to miss during review. A new command
-added to `client.js` without a docs update is silently absent from the tutorial.
-
-**If not adopted:** docs maintainers manually reconcile the tutorial command list against `client.js` on each review cycle.
+Drift detector for hardwired command lists in tutorial prose — not currently applicable. This gate was written when
+[`docs/tutorials/run-a-site.md`](../../tutorials/run-a-site.md) hardcoded a curated subset of the CLI's `HELP` block; that tutorial no longer embeds
+any command list (verified: no reference to `full-site/cli`, `HELP`, or `cli.js` remains in it). Revive this section if a tutorial starts
+hardcoding a command list again — the mechanism (diff a CI-run `--help` output against the hardwired block) still applies.
 
 ### Combined effect
 
@@ -243,7 +239,7 @@ With all eight wired, an LLM browsing the catalogue can rely on eight guarantees
 3. The presentation overlay does not silently drift from what actually ships (`check:facets-fresh`).
 4. Every cross-reference in user-facing Markdown carries a port-time routing hint (`check:port-signals`).
 5. The hand-maintained integration catalogue tables stay in step with shipping Workers (`check:integrations-fresh`).
-6. The generated default-plugin route tables stay in step with each plugin's `mdk-plugin.json` (`check:plugin-reference-fresh`, shipping as a warn-only check).
+6. The generated supported-plugins page stays in step with each plugin's `mdk-plugin.json` (`check:plugin-reference-fresh`, shipping as a warn-only check).
 7. Every `mdk-plugin.json` in the repo is well-formed against the machine-readable schema (`check:plugin-manifest`).
 8. Hardwired command lists in tutorial prose stay in step with the source code they document (`check:tutorial-commands-fresh`).
 

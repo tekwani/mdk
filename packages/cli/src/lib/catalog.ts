@@ -15,7 +15,7 @@ export interface CatalogPlugin {
   /**
    * Location inside the MDK checkout, for a package that ships with MDK but is
    * not on npm yet. When the CLI runs from the checkout, the project depends on
-   * it via `addPathBackedDependency`: a relative `file:` link to the checkout
+   * it via `addFileDependency`: a relative `file:` link to the checkout
    * path (whether that path sits inside the project folder or elsewhere in the
    * monorepo) — never by appending the path to `workspaces`, and never via bare
    * `*` (npm would treat that as a registry range outside a parent workspace).

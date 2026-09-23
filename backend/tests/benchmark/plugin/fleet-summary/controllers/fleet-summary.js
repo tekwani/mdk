@@ -3,7 +3,7 @@
 // The only place aggregation happens: fan out per-device telemetry pulls via
 // mdk-client and combine. Workers are structurally single-device.
 // hashrate_avg (not hashrate_rt) is the one hashrate field every worker
-// family this harness uses (Whatsminer/Antminer/Avalon) actually exposes —
+// family this harness uses (Antminer/Avalon) actually exposes —
 // see lib/constants.js's WORKER_REGISTRY.
 //
 // `services` is a test-only seam: a real gateway route call always passes

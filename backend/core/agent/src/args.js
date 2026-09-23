@@ -1,6 +1,7 @@
 import { CAPABILITY } from './tools.js'
 import { CAPABILITY_LIMITS, DEFAULT_ENDPOINTS } from './constants.js'
 import { PROVIDER } from './provider.js'
+import { parseDuration, DEFAULT_TTL } from './cache-reaper.js'
 
 export const DEFAULT_API_KEY_ENV = 'MDK_AGENT_API_KEY'
 
@@ -157,13 +158,29 @@ export function parseArgs (argv) {
 // Flags that select what runs or where output goes. Checked as a set rather than one at a
 // time: guarding them individually is how --tag was added without one and silently ran the
 // whole battery instead of the subset asked for.
-const VALUE_FLAGS = ['only', 'tag', 'out']
+const VALUE_FLAGS = ['only', 'tag', 'out', 'battery', 'reap-ttl', 'reap-dir']
+
+/**
+ * How long a KV-cache entry survives an eval run, in ms, or `null` when `--no-reap` asked for
+ * no sweep at all. Defaulted rather than opt-in: `qvac serve` reclaims nothing by itself, so a
+ * run that does not sweep leaves its cache on the server's disk permanently.
+ *
+ * @throws {TypeError} on a duration the reaper cannot parse.
+ */
+function reapTtl (args) {
+  if (Object.hasOwn(args, 'no-reap')) return null
+  try {
+    return parseDuration(args['reap-ttl'] ?? DEFAULT_TTL)
+  } catch (err) {
+    throw new TypeError(`--reap-ttl: ${err.message}`)
+  }
+}
 
 /**
  * Validate the `--eval` flags and return them normalised.
  *
  * @param {Record<string, string|true>} args
- * @returns {{reps: number, concurrency: number, only: string|null, tag: string|null, out: string|null}}
+ * @returns {{reps: number, concurrency: number, only: string|null, tag: string|null, out: string|null, battery: string|null, reapTtlMs: number|null, reapDir: string|null}}
  * @throws {TypeError} on any malformed flag, so the CLI can report it before connecting to
  *   anything — waiting on a model load to then reject a typo costs a minute per attempt.
  */
@@ -182,6 +199,14 @@ export function evalOptions (args = {}) {
     concurrency,
     only: typeof args.only === 'string' ? args.only : null,
     tag: typeof args.tag === 'string' ? args.tag : null,
-    out: typeof args.out === 'string' ? args.out : null
+    out: typeof args.out === 'string' ? args.out : null,
+    // A second question set is named, never appended to battery.json: that file's hash is what
+    // makes a gate comparison mean anything, and it must not move.
+    battery: typeof args.battery === 'string' ? args.battery : null,
+    reapTtlMs: reapTtl(args),
+    // Null leaves the root to the reaper's default. The two are not the same machine in the
+    // shared-inference shape, nor the same home directory when the agent runs under WSL and
+    // `qvac serve` runs on the Windows host.
+    reapDir: typeof args['reap-dir'] === 'string' ? args['reap-dir'] : null
   }
 }

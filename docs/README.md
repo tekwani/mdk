@@ -72,6 +72,7 @@ scripts, and Gateway extensions. Your starting point depends on which you're bui
 | --- | --- |
 | Get started: first runnable example | [`tutorials/run-a-site.md`](tutorials/run-a-site.md) |
 | Deployment: connect Workers to a Gateway, run a site | [`guides/deployment/`](guides/deployment/index.md), and the [deployment topology concept](concepts/deployment-topologies.md) |
+| Site security blueprint (identity, allowlists, UI session) | [`guides/security/`](guides/security/index.md) |
 | Worker runtime contracts (telemetry, commands, health, errors) | `backend/workers/<family>/<provider>/mdk-contract.json` + `USAGE.md` + `examples/` |
 | Build a Worker and author its contract | [`guides/workers/build-a-worker.md`](guides/workers/build-a-worker.md) |
 | Workers (lifecycle, install pattern) | [`../backend/workers/docs/install-pattern.md`](../backend/workers/docs/install-pattern.md) |
@@ -87,12 +88,14 @@ scripts, and Gateway extensions. Your starting point depends on which you're bui
 | React adapter: stores, hooks, and the `<MdkProvider>` | [`../ui/packages/react-adapter/README.md`](../ui/packages/react-adapter/README.md) |
 | Pre-built UI components and blueprints | [`../ui/packages/react-devkit/README.md`](../ui/packages/react-devkit/README.md) |
 | Build the Pool Manager UI | [`ui/packages/react-devkit/blueprints/pool-manager.md`](../ui/packages/react-devkit/blueprints/pool-manager.md) |
+| UI session and auth options | [`guides/security/`](guides/security/index.md#step-6-wire-the-ui-session) |
 
 **Backend / Node.js developer** — building Gateway plugins, backend services, or integrating new hardware
 
 | Topic | Where |
 | --- | --- |
 | Gateway HTTP API surface and how to extend it | [`guides/gateway/`](guides/gateway/index.md) |
+| Site security blueprint | [`guides/security/`](guides/security/index.md) |
 | Build a Gateway plugin | [`guides/gateway/plugins.md`](guides/gateway/plugins.md) |
 | Call Kernel directly from a Node.js service or script | [`../backend/core/client/README.md`](../backend/core/client/README.md) |
 | Start Kernel and Workers in your app | [`../backend/core/mdk/README.md`](../backend/core/mdk/README.md) |

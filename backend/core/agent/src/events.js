@@ -34,7 +34,7 @@ export function isTerminal (ev) {
 // same reason, an undeclared key is stripped rather than rejected. A field the producer emits
 // but the schema omits survives every validity check and vanishes from parsed output, so
 // declaring every field is what keeps it readable downstream.
-const argsObject = z.record(z.unknown())
+const argsObject = z.record(z.string(), z.unknown())
 
 const TokenEvent = z.object({ type: z.literal(EVENT.TOKEN), text: z.string() })
 const ToolCallEvent = z.object({ type: z.literal(EVENT.TOOL_CALL), name: z.string(), args: argsObject })
@@ -44,7 +44,7 @@ const ToolCallEvent = z.object({ type: z.literal(EVENT.TOOL_CALL), name: z.strin
 const ToolResultEvent = z.object({ type: z.literal(EVENT.TOOL_RESULT), name: z.string(), text: z.string(), isError: z.boolean().optional(), contractViolation: z.string().optional(), approvalWaitMs: z.number().optional() })
 const PendingApprovalEvent = z.object({ type: z.literal(EVENT.PENDING_APPROVAL), name: z.string(), args: argsObject })
 const ErrorEvent = z.object({ type: z.literal(EVENT.ERROR), error: z.string() })
-const DoneEvent = z.object({ type: z.literal(EVENT.DONE), text: z.string().optional(), usage: z.record(z.unknown()).optional() })
+const DoneEvent = z.object({ type: z.literal(EVENT.DONE), text: z.string().optional(), usage: z.record(z.string(), z.unknown()).optional() })
 
 export const AgentEventSchema = z.discriminatedUnion('type', [
   TokenEvent, ToolCallEvent, ToolResultEvent, PendingApprovalEvent, ErrorEvent, DoneEvent

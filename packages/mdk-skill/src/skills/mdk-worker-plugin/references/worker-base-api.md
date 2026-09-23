@@ -131,7 +131,7 @@ usable directly, without a runtime, for contract-level tests — see
 | anything else | `ERR_UNKNOWN_ACTION` |
 
 Failure isolation: a handler that throws poisons only that field
-(`metrics.<name> = { error }`) or that command — never the worker. An offline
+(`metrics.<name> = { error }`) or that command — never the Worker. An offline
 device answers `ERR_DEVICE_UNAVAILABLE`; a wrong id `ERR_DEVICE_NOT_FOUND`.
 
 ## Param normalization

@@ -275,7 +275,7 @@ When you change behaviour, update the matching docs:
 
 - [`README.md`](../README.md) — top-level summary.
 - [`AGENTS.md`](../AGENTS.md) — repo-level guide for AI agents: manifests,
-  `mdk-ui` CLI, contributor quick recipes (keep in sync when agent surfaces change).
+  contributor quick recipes (keep in sync when agent surfaces change).
 - [`docs/AGENT_FIRST.md`](AGENT_FIRST.md) — plain-language tour, local test
   checklist, and the end-to-end shell setup for the agent-first system.
 - [`CLAUDE.md`](../CLAUDE.md) — Claude Code guidance in this repo (keep in sync with [`AGENTS.md`](../AGENTS.md)
@@ -322,12 +322,12 @@ Longer prose belongs in `USAGE.md`.
 > **These feed the public docs site.** Your JSDoc (description + per-prop
 > docs + `@default`), `USAGE.md`, and `*.example.tsx` files are the source
 > for the reference pages on the [mdk-docs](https://github.com/tetherto/mdk-docs)
-> site — `mdk-ui docs:build` reads them straight from the registry and writes
-> a generated dataset the docs repo embeds via `<ComponentDoc>`. Write them
-> for a reader, not just the linter: a clear sentence, a real default, and a
-> runnable example all show up verbatim on the published page. Run
-> `mdk-ui docs:build --docs-repo <path> --report-only` to see what would
-> change before you commit.
+> site. The docs repo reads `dist/registry.json` (plus `hooks.json` and
+> `stores.json`) straight out of a local checkout of this monorepo and generates
+> its reference pages from them, so write them for a reader, not just the
+> linter: a clear sentence, a real default, and a runnable example all show up
+> on the published page. Run `npm run build` here first — the docs repo reads
+> the built manifests, not the source.
 
 #### Extra files required for `agent-ready`
 
@@ -368,7 +368,7 @@ The docs site renders the description, props table, and examples from your
 types and `*.example.tsx` — it strips the `# Title`, `## Props`, and
 `## Example` sections out of `USAGE.md` so they aren't shown twice, and renders
 only your intro + `## Notes`. Put your effort into that prose; the props/example
-blocks above are optional (they only feed the raw `mdk-ui doc` CLI output). See
+blocks above are optional (they are not rendered on the published page). See
 [`packages/react-devkit/AGENT_READY.md`](../packages/react-devkit/AGENT_READY.md#paste-ready-templates)
 for the full explanation.
 

@@ -6,11 +6,23 @@ import readline from 'node:readline'
 import process from 'node:process'
 import { performance } from 'node:perf_hooks'
 import { writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { join, resolve } from 'node:path'
 import { createAgent, EVENT, runBattery, coverageGaps, loadBattery, selectCases, CHARTER_VERSION } from '../index.js'
 import { parseArgs, evalOptions, resolveProviderArgs, runtimeOptions, describeProvider } from '../src/args.js'
 import { PROVIDER } from '../src/provider.js'
 import { formatReport, formatResult } from '../src/report.js'
 import { DEFAULT_ENDPOINTS } from '../src/constants.js'
+import { BATTERY_PATH } from '../src/eval.js'
+import { buildManifest, gitCommit, hashFile } from '../src/manifest.js'
+import { appendRun, writeRunFile } from '../src/ledger.js'
+import { sweep } from '../src/cache-reaper.js'
+
+// MDK_EVAL_DIR moves both halves together. A reader that could be redirected while the writer
+// could not would put a run in one ledger and then look for it in another.
+const EVAL_DIR = process.env.MDK_EVAL_DIR ? resolve(process.env.MDK_EVAL_DIR) : fileURLToPath(new URL('../eval/', import.meta.url))
+const LEDGER_PATH = join(EVAL_DIR, 'ledger.ndjson')
+const RUNS_DIR = join(EVAL_DIR, 'runs')
 
 // ── terminal colors (kept minimal; presentation-friendly) ──────────────────────
 const C = {
@@ -207,11 +219,11 @@ async function repl () {
 // The eval battery, run in place of the REPL. Exits non-zero on any failure, so a run is a
 // gate: the report it writes is the evidence a new tool works, not a claim that it does.
 async function runEval () {
-  const { reps, concurrency, only, tag, out } = evalOpts
+  const { reps, concurrency, only, tag, out, battery: batteryPath, reapTtlMs, reapDir } = evalOpts
 
   let battery
   try {
-    battery = loadBattery()
+    battery = loadBattery(batteryPath ?? undefined)
   } catch (err) {
     return fail(`battery: ${err.message}`)
   }
@@ -221,6 +233,7 @@ async function runEval () {
   const gaps = coverageGaps(tools, battery)
   if (gaps.length && !only && !tag) console.log(`  ${C.yellow}no case covers: ${gaps.join(', ')}${C.reset}\n`)
 
+  const startedAt = new Date().toISOString()
   let report
   try {
     report = await runBattery({
@@ -241,6 +254,48 @@ async function runEval () {
 
   console.log(formatReport(report, { paint: PAINT }))
 
+  // Recorded whether or not --out was given: a run nobody stamped cannot be compared to
+  // anything later, and by then the model that produced it may no longer be served. A ledger
+  // that cannot be written must not cost the operator a passing run, so this fails loudly and
+  // carries on — the same rule --out already follows below.
+  try {
+    const manifest = buildManifest({
+      batterySha256: hashFile(batteryPath ?? BATTERY_PATH),
+      agentCommit: gitCommit(EVAL_DIR),
+      provider,
+      capability,
+      limits,
+      reps,
+      tools,
+      system: agent.system,
+      startedAt,
+      finishedAt: new Date().toISOString()
+    })
+    // A model id is a filename component here, and a hosted one carries a namespace:
+    // "qwen/qwen3-32b" would name a directory that does not exist and fail the write.
+    const safeModel = String(provider.model).replace(/[^a-zA-Z0-9._-]/g, '-')
+    const runId = `${startedAt.replace(/[:.]/g, '-')}-${safeModel}-${capability}`
+    const written = writeRunFile(RUNS_DIR, runId, { manifest, mcp: mcpUrl, endpoint: provider.baseURL ?? null, ...report })
+    const entry = appendRun(LEDGER_PATH, {
+      runId,
+      manifest,
+      summary: {
+        runs: report.runs,
+        passed: report.passed,
+        failed: report.failed,
+        cases: report.cases,
+        byCheck: report.byCheck,
+        byTag: report.byTag,
+        flaky: report.flaky,
+        skipped: report.skipped.map((s) => s.id)
+      },
+      reportSha256: written.sha256
+    })
+    console.log(`  ${C.dim}run ${entry.seq} recorded · ${runId} · chain ${entry.entryHash.slice(0, 12)}${C.reset}`)
+  } catch (err) {
+    console.error(`  ${C.yellow}could not record this run: ${err.message}${C.reset}`)
+  }
+
   // An unwritable path must not turn a passing run into a non-zero exit, nor throw away the
   // twenty minutes of results already printed above.
   let writeFailed = false
@@ -253,9 +308,40 @@ async function runEval () {
       console.error(`  could not write ${out}: ${err.message}`)
     }
   }
+  await reapCache(reapTtlMs, reapDir)
+
   console.log('')
   await agent.close()
   process.exit(report.failed || writeFailed ? 1 : 0)
+}
+
+/**
+ * Evict the KV-cache entries this and earlier runs left behind.
+ *
+ * A battery writes one cache entry per conversation and `qvac serve` reclaims none of them, so
+ * a fortnight of unswept runs fills the disk it serves from. Swept only after the report and
+ * the ledger are written, so reclaiming space can never cost a run the evidence it produced,
+ * and only for qvac — a hosted endpoint keeps no cache of ours to reclaim.
+ */
+async function reapCache (ttlMs, dir) {
+  if (ttlMs === null || provider.kind !== PROVIDER.QVAC) return
+  const gb = (n) => `${(n / 1024 ** 3).toFixed(2)} GB`
+  let r
+  try {
+    r = await sweep({ root: dir ?? undefined, ttlMs })
+  } catch (err) {
+    // Never fatal: the run already passed or failed on its own merits, and a reaper that
+    // cannot sweep must not restate that verdict.
+    console.error(`  ${C.yellow}could not reap the kv-cache: ${err.message}${C.reset}`)
+    return
+  }
+  // A sweep that found nothing stale is the uneventful case and stays quiet. One that could
+  // not delete what it selected is not — those bytes are still on the disk and still ours.
+  if (!r.removed && !r.failed) return
+  console.log(
+    `  ${C.dim}kv-cache · evicted ${r.removed} (${gb(r.bytes)}) · kept ${gb(r.keptBytes)}` +
+    `${r.failed ? ` · ${C.reset}${C.yellow}failed ${r.failed}${C.reset}${C.dim}` : ''}${C.reset}`
+  )
 }
 
 async function shutdown () {

@@ -1,17 +1,16 @@
 import type { ComponentType } from 'react'
 
 /**
- * Single source of truth for sidebar pages. Managed by `mdk-ui add page` and
- * `mdk-ui remove page`. The SignIn / Home / NotFound routes are hardcoded in
- * `src/router.tsx` and not present here.
+ * Single source of truth for sidebar pages. The SignIn / Home / NotFound routes
+ * are hardcoded in `src/router.tsx` and not present here.
  *
- * A fresh shell ships with a single `System Info` example page (a minimal,
- * working API-backed page you can delete once your own pages exist). Add more
- * pages with `mdk-ui add page <Name>` (e.g. `mdk-ui add page Dashboard`), which
- * appends a one-line entry below and wires the sidebar nav icon.
+ * A fresh shell ships with no example pages. To add a page: put the component
+ * under `src/pages/`, append a one-line entry below, and add its nav icon in
+ * `src/constants/navigation.tsx`. The canonical reference pages live under
+ * `_managed/pages/` — copy one into `src/pages/` to use it.
  *
- * Keep entries on a single line — the CLI's add/remove tooling matches whole
- * lines. Do not remove the `mdk:routes-end` marker.
+ * Keep entries on a single line — tooling matches whole lines. Do not remove
+ * the `mdk:routes-end` marker.
  */
 
 export interface AppRoute {
@@ -35,6 +34,5 @@ export interface AppRoute {
 }
 
 export const ROUTES: AppRoute[] = [
-  { path: '/system-info', label: 'System Info', page: () => import('./pages/SystemInfo') },
   // mdk:routes-end
 ]

@@ -28,7 +28,7 @@ DHT.
 ## Prerequisites
 
 - [Node.js][node] >=24 (LTS)
-- npm 11 (< 12)
+- npm 11 [(< 12)][npm-version]
 - PM2 (`npm install -g pm2`)
 
 <Steps>
@@ -193,6 +193,9 @@ run, [reset it][mvp-site-reset] before restarting — seed devices are only regi
 
 [node]: https://nodejs.org/
 <!-- docs@tether.io: external link — preserve URL -->
+
+[npm-version]: ../reference/environment.md#why-npm-stays-below-12
+<!-- docs@tether.io: npm-version → reference/environment -->
 
 [terminology]: ../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->

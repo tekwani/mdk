@@ -38,7 +38,7 @@ Authoring conventions for the comment-driven hints that travel with Markdown in 
 
 This file is the source-of-truth for that vocabulary. Two consumers read it:
 
-- The `check:port-signals` lint gate (see [`ia.md`](ia.md#qa-gates)) — runs in mdk-prv pre-commit / CI and warns when a non-anchor link definition has no routing comment.
+- The `check:port-signals` lint gate (see [`ia.md`](ia.md#qa-gates)) — **not wired today** (no CI/pre-commit hook references it); once adopted it would warn when a non-anchor link definition has no routing comment. Until then, port signals are eyeballed during docs review.
 - The port-sync transforms in the downstream fumadocs build — rewrite link targets and convert GFM alerts to `<Callout>` JSX on port.
 
 Authoring rule: add the appropriate comment beside each cross-reference or alert. Authors do not need to read this file to write user-facing prose; the only time you need it is when adding a new `[slug]: …` definition or callout block.
@@ -55,7 +55,7 @@ Reference-style link definitions in `## Links` blocks (or anywhere in Markdown) 
 | `<!-- mdk-monorepo: <note> -->` | Internal-only flag (e.g. temp link awaiting a code/README destination); pipeline ignores entirely |
 | _(no comment) on `[slug]: #anchor`_ | In-page anchor — preserve verbatim alongside the parent page-to-page mapping |
 
-A non-anchor link definition with **no signal at all** is a pipeline error: the slug has no routing rule. The `check:port-signals` lint gate catches this in mdk-prv before it reaches the port-sync.
+A non-anchor link definition with **no signal at all** is a pipeline error: the slug has no routing rule. The `check:port-signals` lint gate would catch this before it reaches the port-sync, once adopted — see the note above.
 
 A definition may carry **multiple comment lines** (e.g. one `docs@tether.io:` and one `mdk-monorepo:`) — each is read independently.
 
@@ -89,12 +89,13 @@ Engineer-facing code link with no upstream parity:
 <!-- docs@tether.io: no parity link -->
 ```
 
-Code link with a temp flag (target not yet populated):
+Code link with a temp flag, for a target not yet populated (illustrative syntax only — `backend/core/client/` itself has since been
+populated, so treat the path below as a placeholder, not a current status claim):
 
 ```markdown
 [client-package]: ../../backend/core/client/
 <!-- docs@tether.io: no parity link -->
-<!-- mdk-monorepo: temp — backend/core/client/ is empty (.gitkeep only) until the SDK port lands -->
+<!-- mdk-monorepo: temp — target is empty (.gitkeep only) until its content lands -->
 ```
 
 In-page anchor (uncommented by design):
@@ -139,7 +140,6 @@ The UI packages ship these machine-readable manifests under `dist/`:
 | `blueprints.json` | `@tetherto/mdk-react-devkit` | Intent → recipe map (markdown body included) |
 | `hooks.json` | `@tetherto/mdk-react-adapter` | React hooks (store / utility / permission / ui / external) + provider |
 | `stores.json` | `@tetherto/mdk-ui-foundation` | Zustand stores (state + actions) and TanStack Query helpers |
-| `cli-manifest.json` | `@tetherto/mdk-ui-cli` | The CLI's own command surface (args, options, subcommands) |
 
 See [`ui/AGENTS.md`](../../../ui/AGENTS.md#machine-readable-artifacts) for the full table with subpath imports and CLI commands.
 
@@ -169,7 +169,7 @@ cd ui
 npm run check:agent-ready --workspace @tetherto/mdk-react-devkit
 ```
 
-This is the same gate that runs in CI on every PR touching [`ui/packages/react-devkit`](../../../ui/packages/react-devkit/README.md). See [`ui/packages/react-devkit/AGENT_READY.md`](../../../ui/packages/react-devkit/AGENT_READY.md) for the rules it enforces.
+This gate exists and passes locally, but it is **not wired into this repo's live CI today** — the workflow file that would run it lives at `ui/.github/workflows/ci.yml`, a path GitHub Actions never executes (only root `.github/workflows/` is read), and the root CI has no `check:agent-ready` step. Whether it lands in root CI is the UI team's call (see [`ia.md`](ia.md#qa-gates)). See [`ui/packages/react-devkit/AGENT_READY.md`](../../../ui/packages/react-devkit/AGENT_READY.md) for the rules it enforces.
 
 ### Socket Firewall note
 
@@ -212,7 +212,7 @@ When one thing has changed, run that generator on its own. Each has its own comm
 
 | Generated page | Command | Run from |
 |---|---|---|
-| Supported hardware | `npm run generate:catalogue` | [`backend/workers`](../../../backend/workers/README.md) |
+| Supported hardware | `npm run generate:catalogue` | repo root |
 | Gateway plugin route tables | `npm run generate:plugin-reference` | [`backend/core/plugins`](../../../backend/core/plugins/README.md) |
 | Component reference in the skill | `npm run generate:ui-registry` | repo root |
 
@@ -251,7 +251,7 @@ Workers" listed first in the output:
 machine-readable twin [`backend/workers/docs/catalogue.json`](../../../backend/workers/docs/catalogue.json).
 
 **Generator:** [`backend/workers/scripts/generate-catalogue.js`](../../../backend/workers/scripts/generate-catalogue.js), owned by
-engineering and runnable on its own with `npm run generate:catalogue` from [`backend/workers`](../../../backend/workers/README.md).
+engineering and runnable on its own with `npm run generate:catalogue` from the repo root.
 
 Fetching a manufacturer's contract:
 
@@ -340,8 +340,9 @@ The copy is verbatim on purpose. Trimming it to what the skill reads today would
 
 ### Freshness in CI
 
-There is no CI workflow enforcing this yet — running [`npm run regenerate-docs -- --check`](#checking-without-changing-anything) after touching either the
-sources or the generated pages is on the contributor. The pages stay wrong for readers until someone regenerates, so treat a stale page as work owed rather than noise.
+[`.github/workflows/docs-freshness.yml`](../../../.github/workflows/docs-freshness.yml) runs report mode on pull requests that touch either the sources or the generated
+pages. It installs the UI workspace and treats a skipped target as a failure, since there a skip means the install broke rather than that someone is working light. It annotates the pull request and never blocks it: a device contract can land in one pull request and the regenerated page in the next, and a hard failure would
+force an unrelated docs commit into an engineering change. The pages stay wrong for readers until someone regenerates, so treat the warning as work owed rather than noise.
 
 ## Next steps
 

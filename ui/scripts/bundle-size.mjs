@@ -83,7 +83,6 @@ const CATEGORY = {
   'packages/react-devkit': 'treeshake',
   'packages/react-adapter': 'treeshake',
   'packages/ui-foundation': 'treeshake',
-  'packages/cli': 'not-shipped',
   'apps/catalog': 'not-shipped',
 }
 

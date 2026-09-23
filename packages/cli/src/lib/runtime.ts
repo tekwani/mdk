@@ -129,20 +129,56 @@ export function workerKeysDir(projectDir: string): string {
 }
 
 /**
+ * Splits a spec `package` into the npm package to resolve and the subdirectory
+ * inside it, if any: `@tetherto/mdk-plugins/telemetry` is one installed package
+ * and one directory within it, not a package called `.../telemetry`.
+ *
+ * Subpaths exist because the plugins MDK ships are subdirectories of a single
+ * `@tetherto/mdk-plugins` package, with no `package.json` of their own — and the
+ * three the Gateway used to register unasked (`telemetry`, `site-hashrate`,
+ * `site-monitor`) are now declared like anything else, so naming one has to work.
+ */
+function splitPackageSubpath(pkgName: string): { pkg: string; subpath: string } {
+  const parts = pkgName.split('/');
+  const nameLength = pkgName.startsWith('@') ? 2 : 1;
+  return { pkg: parts.slice(0, nameLength).join('/'), subpath: parts.slice(nameLength).join('/') };
+}
+
+/**
  * Resolves an installed package's root directory from the target project's
- * `node_modules` (via its `package.json`). Throws an actionable error naming the
- * missing package — gateway plugins must be installed into the project first.
+ * `node_modules` (via its `package.json`), or a subdirectory of one. Throws an
+ * actionable error naming the missing package — a package `mdk.yaml` declares
+ * must be installed into the project first.
  */
 export function resolveProjectPackageDir(projectDir: string, pkgName: string): string {
+  const { pkg, subpath } = splitPackageSubpath(pkgName);
+
+  let root: string;
   try {
-    const manifest = require.resolve(`${pkgName}/package.json`, { paths: [resolve(projectDir)] });
-    return dirname(manifest);
+    root = dirname(require.resolve(`${pkg}/package.json`, { paths: [resolve(projectDir)] }));
   } catch {
+    // The install command names the *package*: `npm install
+    // @tetherto/mdk-plugins/telemetry` is not a thing npm can do.
     throw new Error(
       `Gateway plugin package "${pkgName}" is not installed in ${resolve(projectDir)}.\n` +
-        `Install it first, e.g.: npm install ${pkgName}`,
+        `Install it first, e.g.: npm install ${pkg}`,
     );
   }
+
+  if (!subpath) return root;
+
+  // A subpath that is not there is a typo in mdk.yaml, not a missing install, and
+  // the two want different fixes. Whether the directory holds a plugin manifest
+  // (or a worker contract) is left to whoever loads it — that check belongs with
+  // the loader that knows which of the two it wanted.
+  const dir = join(root, subpath);
+  if (!existsSync(dir)) {
+    throw new Error(
+      `Gateway plugin package "${pkgName}" is installed as "${pkg}", but it has no "${subpath}" in it (looked in ${dir}).\n` +
+        `Check the subpath — e.g. package: "${pkg}/telemetry".`,
+    );
+  }
+  return dir;
 }
 
 /** Boots the Kernel (local discovery, project-local state), logging its key. */

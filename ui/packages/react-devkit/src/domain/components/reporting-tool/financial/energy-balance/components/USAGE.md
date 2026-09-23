@@ -9,9 +9,9 @@ Individual stat cards and charts used inside the Energy Balance section.
 | `EnergyRevenueChart` | Bar chart of site energy revenue per MWh with USD/BTC toggle. |
 | `EnergyBalancePowerChart` | Line chart of power consumption against threshold. |
 
-The cost and revenue tabs each render a row of `EnergyMetricCard`s driven by data, not by separate per-metric components (e.g. `name: 'Avg All-In Cost'`, `name: 'Curtailment Rate'`).
+Downtime in the revenue mosaic uses core `AverageDowntimeChart` (see its own `USAGE.md`).
 
-Downtime in the revenue mosaic uses core `AverageDowntimeChart`, documented in the `mdk-ui` docs.
+The cost and revenue tabs each render a row of `EnergyMetricCard`s driven by data, not by separate per-metric components (e.g. `name: 'Avg All-In Cost'`, `name: 'Curtailment Rate'`).
 
 ## EnergyMetricCard props
 

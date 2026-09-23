@@ -6,8 +6,7 @@
 
 > **For AI agents** (and humans onboarding to the repo): start with
 > [`AGENTS.md`](AGENTS.md) — its "Start here" section is the ordered
-> reading path (architecture tour, package layout, the export contract,
-> and the `mdk-ui` CLI reference).
+> reading path (architecture tour, package layout, and the export contract).
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/tetherto/mdk/blob/main/LICENSE)
 
@@ -105,12 +104,9 @@ Adapter Hooks, and Theming pages alongside per-component demos.
 
 ### Tooling — build and explore
 
-### `@tetherto/mdk-ui-cli` ([`packages/cli`](./packages/cli/README.md))
-
-The `mdk-ui` CLI supports scaffolding, registry discovery, and agent
-workflows (`registry`, `docs`, `example`, `suggest`, `create`, `add page`,
-…). It is **not** a runtime dependency of your app. See
-[`packages/cli/README.md`](packages/cli/README.md) and [`AGENTS.md`](AGENTS.md).
+The machine-readable manifests each package emits under `dist/`
+(`registry.json`, `hooks.json`, `stores.json`, `blueprints.json`) are the
+discovery surface for humans and agents alike. See [`AGENTS.md`](AGENTS.md).
 
 📖 **See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the dependency
 graph.**
@@ -144,32 +140,25 @@ npm run typecheck        # type-check all packages
 npm run lint             # lint all packages
 npm run lint:fix         # lint + auto-fix
 npm run test             # full test suite
-npm run fullcheck        # build + lint + typecheck + format + check:agent-ready + coverage
+npm run fullcheck        # build + lint + typecheck + format + check:agent-ready + coverage + docs
 ```
 
 ### Use the toolkit in your app
 
-The fastest way is the MDK CLI, it scaffolds a full Vite+React+MDK app
-and seeds the agent context files (`.mdk/context.md`, Cursor / Claude
-rules) for you:
+The fastest way is [`mdk create dashboard`](../packages/cli/README.md)
+(`@tetherto/mdk-cli`), which stands up a full sign-in-gated operations
+dashboard — the `mdk-ui-shell` template — alongside a running stack:
 
 ```bash
-npx mdk-ui create my-app           # one-shot scaffold + install
-cd my-app
-npm run dev                         # http://localhost:5173
-
-# Iterate from inside the app
-npx mdk-ui add feature alerts       # full alerts page from a blueprint
-npx mdk-ui add page Hashrate        # single-component page (auto-resolves)
-npx mdk-ui remove page Hashrate     # undo a scaffolded page
+npx @tetherto/mdk-cli create dashboard my-dashboard
+cd my-dashboard
+npm run dev                         # http://localhost:3030
 ```
 
-For a full sign-in-gated operations dashboard against a real backend,
-use the `mdk-ui-shell` template instead of `starter`:
-
-```bash
-npx mdk-ui create my-dashboard --template mdk-ui-shell
-```
+You can also copy [`examples/mdk-ui-shell-template/`](../examples/mdk-ui-shell-template/README.md)
+directly and run it in place — it is a real Vite app, not a scaffold-only
+tree. Its README covers adding pages (including the reference Dashboard,
+Alerts, Pool Manager, Site Overview, and Explorer pages under `_managed/`).
 
 That template needs a local
 [`mdk-gateway`](../backend/core/gateway/README.md)
@@ -190,8 +179,7 @@ runtime packages to its [`package.json`](./package.json):
 }
 ```
 
-> Runtime apps need the three `@tetherto/mdk-*` packages above; install
-> `@tetherto/mdk-ui-cli` separately when you want CLI or agent scaffolding.
+> Runtime apps need only the three `@tetherto/mdk-*` packages above.
 
 Wrap your app in `<MdkProvider>` and import the stylesheet once:
 
@@ -257,7 +245,7 @@ For details:
 
 - **Contributor** (monorepo changes, agent-ready exports) → [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) +
 [`AGENT_READY.md`](packages/react-devkit/AGENT_READY.md)
-- **Agent** (LLM workflows, manifests, `mdk-ui` CLI) → [`AGENTS.md`](AGENTS.md) + [`docs/AGENT_FIRST.md`](docs/AGENT_FIRST.md)
+- **Agent** (LLM workflows, manifests) → [`AGENTS.md`](AGENTS.md) + [`docs/AGENT_FIRST.md`](docs/AGENT_FIRST.md)
 - **Engineer** (integrating MDK into an app) → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) + the package READMEs below
 
 ### Core
@@ -273,14 +261,12 @@ For details:
 - **[Styling](docs/STYLING.md)**: theming model + SCSS build setup
 - **[Test coverage](docs/CONTRIBUTING.md#coverage)**: thresholds and reports
 
-### Agents and CLI
+### Agents
 
 - **[AGENTS.md](AGENTS.md)**: agent contract overview and quick recipe.
 - **[Agent-first](docs/AGENT_FIRST.md)**: plain-language tour, deeper architecture reference
 (manifests, blueprints, registry), and the
   end-to-end shell setup
-- **[@tetherto/mdk-ui-cli](packages/cli/README.md)**: full CLI command reference (`create`, `add page`,
-`add feature`, `remove page`, `registry`, `hooks`, `stores`, `suggest`, …)
 
 ### Package documentation
 

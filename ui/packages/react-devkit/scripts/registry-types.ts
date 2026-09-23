@@ -6,7 +6,7 @@
  * discover the entire MDK surface area without parsing source.
  *
  * Keep this file the single source of truth for the schema — the registry
- * generator, the `@tetherto/mdk-ui-cli` package, and any future MCP server
+ * generator, the docs-generation pipeline, and any future MCP server
  * all consume these types.
  */
 
@@ -19,7 +19,7 @@ export type DomainContext =
 
 /**
  * Audience tier for a registry entry. Drives the default visibility of
- * `mdk-ui registry`, the `check:usage-docs` CI gate, and what an MCP server
+ * the docs dataset, the `check:usage-docs` CI gate, and what an MCP server
  * surfaces to LLM tool calls.
  *
  * - `agent-ready`: stable, props-driven, recommended for autonomous LLM use.

@@ -435,7 +435,7 @@ describe('mdk onboard', () => {
     expect(clack.log.message).toHaveBeenCalledWith(expect.stringContaining('Install manually: npm install'));
   });
 
-  it('updates (rather than creates) an existing package.json and .gitignore that are missing MDK-specific content', async () => {
+  it('leaves an existing package.json untouched and updates a .gitignore missing MDK content', async () => {
     const dir = makeTmpDir();
     writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'preexisting' }), 'utf8');
     writeFileSync(join(dir, '.gitignore'), 'node_modules/\n', 'utf8');
@@ -449,8 +449,10 @@ describe('mdk onboard', () => {
 
     await buildProgram().parseAsync(['node', 'mdk', 'onboard']);
 
-    expect(clack.log.message).toHaveBeenCalledWith(expect.stringContaining('Updated package.json'));
+    expect(clack.log.message).not.toHaveBeenCalledWith(expect.stringContaining('Updated package.json'));
+    expect(clack.log.message).not.toHaveBeenCalledWith(expect.stringContaining('Created package.json'));
     expect(clack.log.message).toHaveBeenCalledWith(expect.stringContaining('Updated .gitignore'));
+    expect(JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))).toEqual({ name: 'preexisting' });
     expect(readFileSync(join(dir, '.gitignore'), 'utf8')).toContain('.mdk/');
   });
 

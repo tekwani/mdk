@@ -2,8 +2,8 @@
 
 Maintainer-facing inventory of the lint tooling that guards this monorepo's documentation. Two layers:
 
-- 🚧 Project-specific IA gates 🚧 — five **proposed** gates defined in [`ia.md`](ia.md#qa-gates) (`check:contract`, `check:facets-fresh`, `check:agent-ready`, `check:port-signals`, `check:integrations-fresh`). **If adopted**, they would enforce the contract between code, the docs catalogue, and the port pipeline. The regen-and-diff half of `check:integrations-fresh`, plus `check:plugin-reference-fresh`, have their generators implemented, but no CI workflow runs them yet; the remaining gates are not wired, engineering decides per-gate, and docs maintainers absorb the upkeep manually for any gate not adopted.
-- **Generated-page freshness** — [`npm run regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) reports when a page written by a script no longer matches its sources. No CI workflow runs it yet — it's a manual step for contributors touching generated pages.
+- 🚧 Project-specific IA gates 🚧 — five **proposed** gates defined in [`ia.md`](ia.md#qa-gates) (`check:contract`, `check:facets-fresh`, `check:agent-ready`, `check:port-signals`, `check:integrations-fresh`). **If adopted**, they would enforce the contract between code, the docs catalogue, and the port pipeline. The regen-and-diff half of `check:integrations-fresh`, plus `check:plugin-reference-fresh`, now ship as the warn-only `docs-freshness` workflow; the remaining gates are not wired, engineering decides per-gate, and docs maintainers absorb the upkeep manually for any gate not adopted.
+- **Generated-page freshness** — [`npm run regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) reports when a page written by a script no longer matches its sources. The [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow runs it on pull requests and warns rather than blocks.
 - **General docs hygiene** — the rest of this file. Link verification, anchor validation, spelling. These guard the docs themselves, not the IA contract.
 
 ## Nightly and PR diff link verification — linkinator
@@ -103,7 +103,23 @@ A `skip` entry is a regex, applied blindly forever. If a skip-listed directory i
 
 The silent-failure mode it catches is exactly the one you most need it for: a heading rename in (say) [`ia.md`](ia.md) invalidates every inbound `#derived-vocabulary` reference, and without anchor validation the link still returns OK because the target file exists.
 
-One linkinator quirk worth knowing when reading reports: a **valid** fragment is folded into its base-file `OK` entry and never listed separately. Only **broken** fragments appear as their own `#`-bearing `BROKEN` line. So "no `#` links in the report" means all anchors passed, not that none were checked.
+One linkinator quirk worth knowing when reading reports: a **valid** fragment is folded into its base-file `OK` entry and never listed separately. Only **broken** fragments appear as their own `#`-bearing `BROKEN` line. So an absent `#` line means that anchor was not *reported*, which is not the same as validated — see the next section.
+
+### Cross-file anchors — `check:md-anchors`
+
+`checkFragments: true` alone is not a gate. linkinator registers a fragment when it *discovers* the link, but validates it inside the crawl of the target URL — a crawl it skips entirely when that URL is already in its visited cache. Fetch `architecture.md` for any reason before something discovers `architecture.md#workers`, and the anchor is never checked and never reported. Only same-page fragments get a second pass.
+
+The result is order-dependent, and the order is not random: the sweep feeds files in `git ls-files` (alphabetical) order, so `docs/concepts/architecture.md` is always fetched before `docs/concepts/deployment-topologies.md` is parsed. A break in that direction is invisible to *every* run, not an intermittent one. Reproduce it with the same version and content, changing only argument order:
+
+```console
+$ npx linkinator@7.6.1 --markdown --check-fragments docs/concepts/deployment-topologies.md docs/concepts/architecture.md
+ERROR: Detected 2 broken links.
+
+$ npx linkinator@7.6.1 --markdown --check-fragments docs/concepts/architecture.md docs/concepts/deployment-topologies.md
+✓ Successfully scanned 23 links.
+```
+
+[`scripts/check-md-anchors.mjs`](../../../scripts/check-md-anchors.mjs) closes that gap without a crawler: it reads every tracked `.md` file, collects each target's GitHub-style heading slugs (plus explicit `<a name>`/`id` anchors), and resolves every relative `*.md#anchor` and in-page `#anchor` link against them. No server, no fetch, no visit cache — so no ordering to be wrong about. Fenced code blocks are excluded on both sides, so an anchor shown as an example is not treated as a link. It runs as part of `npm run link-check` as a third, independent subprocess alongside linkinator and `check:directory-links`; all three must pass for the command to succeed.
 
 ### CI wiring
 
@@ -112,17 +128,17 @@ One linkinator quirk worth knowing when reading reports: a **valid** fragment is
 **Nightly full sweep** (`linkinator` job — `schedule` + `workflow_dispatch`):
 
 - Cron `0 2 * * *` (02:00 UTC) plus `workflow_dispatch` for manual triggering. Gated with `if: github.event_name != 'pull_request'` so it never runs the full sweep on a PR.
-- Runs `npm run link-check` (the same script maintainers use locally), which invokes `linkinator@^7.6.0` against `**/*.md` using the root config; no project dependencies are installed in the runner.
+- Runs `npm run link-check` (the same script maintainers use locally), which invokes the exact-pinned `linkinator@7.6.1` (see [above](#nightly-and-pr-diff-link-verification--linkinator)) against `**/*.md` using the root config; no project dependencies are installed in the runner. Report format is set with `LINK_CHECK_FORMAT=json`, an environment variable — **not** a CLI flag: `scripts/link-check.mjs` reads its positional arguments as the diff-scoped file list, so `-- --format json` never reaches linkinator. Any argument that is not a tracked `.md` file is ignored with a warning on stderr and never narrows the sweep (a unit test in `test/link-check-scope.test.mjs` guards that), so a stray flag can no longer collapse the crawl to `README.md` alone.
 - On failure, opens a tracking issue labelled `link-check` via the pre-installed `gh` CLI. If an open `link-check` issue already exists, the run **comments on it** instead of opening a duplicate — daily failures collapse into one thread, not a daily new issue.
 - Surfaces the failure in the Actions run history (`exit 1`) after the issue is composed, so the repo's main page shows red.
 
 **PR diff gate** (`link-check-diff` job — `pull_request`, gated with `if: github.event_name == 'pull_request'`):
 
 - Triggered only when a PR touches `**/*.md`, [`linkinator.config.json`](../../../linkinator.config.json), or the workflow itself (path filter on the `pull_request` trigger).
-- Checks out with `fetch-depth: 0`, then computes the added/modified `.md` files in the diff (`git diff --diff-filter=ACMR …`, which drops deleted files) and passes that explicit list straight to `npm run link-check -- <files...>` — [`scripts/link-check.mjs`](../../../scripts/link-check.mjs) accepts an optional file-list argument for exactly this: when given, it scopes the linkinator crawl to just those files (plus [`README.md`](../../../README.md), always included as a server-root anchor — see the comment in the script for why); with no argument at all (the nightly job, and a plain local run) it crawls every tracked `.md` file. **`check:directory-links` always runs in full either way** — it isn't a per-file crawl, just a handful of `git ls-files` lookups against [`linkinator.config.json`](../../../linkinator.config.json)'s skip list, so there's no meaningful "diff-scoped" version of it and no cost to running it every time.
-- A broken link (in the scoped crawl) or a stale directory-skip entry (always checked in full) fails the check — no issue is opened; that's the nightly's job.
-- If the PR changes the config or either checker script ([`scripts/link-check.mjs`](../../../scripts/link-check.mjs), [`scripts/check-directory-links.mjs`](../../../scripts/check-directory-links.mjs)) or the workflow itself, it falls back to a **full** `npm run link-check` sweep (no file-list argument), since a weakened skip rule or a change to how either check works can expose breakage outside the diff.
-- **Known gap:** the linkinator half of the diff gate only validates links *originating from* changed files. A PR that renames a heading breaks inbound `#anchor` references in *other* (unchanged) files, which this job won't see — the nightly full sweep is the backstop for that. Treat the PR gate as a fast first line, not a replacement for the nightly.
+- Checks out with `fetch-depth: 0`, then computes the added/modified `.md` files in the diff (`git diff --diff-filter=ACMR …`, which drops deleted files) and passes that explicit list straight to `npm run link-check -- <files...>` — [`scripts/link-check.mjs`](../../../scripts/link-check.mjs) accepts an optional file-list argument for exactly this: when given, it scopes the linkinator crawl to just those files (plus [`README.md`](../../../README.md), always included as a server-root anchor — see the comment in the script for why); with no argument at all (the nightly job, and a plain local run) it crawls every tracked `.md` file. **`check:directory-links` and `check:md-anchors` always run in full either way** — it isn't a per-file crawl, just a handful of `git ls-files` lookups against [`linkinator.config.json`](../../../linkinator.config.json)'s skip list, so there's no meaningful "diff-scoped" version of it and no cost to running it every time.
+- A broken link (in the scoped crawl), a stale directory-skip entry or a broken anchor (both always checked in full) fails the check — no issue is opened; that's the nightly's job.
+- If the PR changes the config or any checker script ([`scripts/link-check.mjs`](../../../scripts/link-check.mjs), [`scripts/check-directory-links.mjs`](../../../scripts/check-directory-links.mjs), [`scripts/check-md-anchors.mjs`](../../../scripts/check-md-anchors.mjs)) or the workflow itself, it falls back to a **full** `npm run link-check` sweep (no file-list argument), since a weakened skip rule or a change to how any check works can expose breakage outside the diff.
+- **Known gap:** the linkinator half of the diff gate only validates links *originating from* changed files. A PR that removes an external URL's last inbound reference, or weakens a skip rule, can still expose breakage this job won't see — the nightly full sweep is the backstop for that. Inbound `#anchor` breakage from a heading rename is *not* in this gap: `check:md-anchors` runs in full on every PR and catches it there. Treat the PR gate as a fast first line, not a replacement for the nightly.
 
 ## Nightly example-path verification
 
@@ -145,7 +161,7 @@ This wraps [`scripts/check-example-paths.mjs`](../../../scripts/check-example-pa
 - `_skip_notes` — mandatory sibling object, one entry per `skipFiles`/`skipPaths` pattern, explaining why. The checker refuses to run if any skip entry lacks a note. An unexplained skip is a silent false negative waiting to happen — the same lesson the linkinator skip list already enforces by convention; here it's enforced by the script itself.
 - Placeholders are dropped automatically, not via the skip list: any candidate token immediately followed by `<`, `>`, `*`, `{`, `}`, or `…` (for example `examples/run-<scenario>.js` or `` examples/run-*.js ``) is treated as unresolved template text, not a real path.
 
-**CI wiring** — none yet. There is no workflow running `npm run check:example-paths`; it's a manual step for now, hand-run the same way as `link-check` above.
+**CI wiring** — [`.github/workflows/example-paths.yml`](../../../.github/workflows/example-paths.yml). Nightly only, deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split: the `example-paths` job (`schedule` + `workflow_dispatch`) runs `npm run check:example-paths`, and on failure opens or (if one is already open) comments on a tracking issue labelled `example-paths`, then exits non-zero so the run shows red. There is no PR gate — this check is not wired into the PR path.
 
 ## 🚧 Spelling — Vale
 
@@ -154,17 +170,24 @@ Vale catches accidental misspellings and enforces a project word list. Configure
 ## Style — Markdownlint
 
 [`markdownlint-cli2`](https://github.com/DavidAnson/markdownlint-cli2) enforces structural consistency — heading hierarchy, list indentation, fenced code block style, reference-link
-hygiene. The intended ruleset — `.markdownlint-cli2.jsonc`, kept identical to the mdk-docs ruleset so both repos lint the same way, globs differing to cover `docs/**/*.md` and the
-root `README.md` — has not been committed to this repo yet, so `npm run lint:md` currently has no config to find and does not lint anything.
+hygiene. The ruleset in [`.markdownlint-cli2.jsonc`](../../../.markdownlint-cli2.jsonc) is kept identical to the mdk-docs ruleset so both repos lint the same way; only the globs
+differ, covering `docs/**/*.md` and the root `README.md`.
 
-Diff-scoped, the same set CI would lint on a pull request once the config lands:
+Full sweep, from the repo root:
+
+```bash
+npm run lint:md
+```
+
+Diff-scoped, the same set CI lints on a pull request:
 
 ```bash
 VERIFY_BASE_REF=origin/main npm run lint:md:pr
 ```
 
-**CI wiring** — none yet. [`scripts/lint-md-pr.sh`](../../../scripts/lint-md-pr.sh) exists and mirrors the mdk-docs `lint-markdown` job, but there is no `lint-markdown` job in
-[`ci.yml`](../../../.github/workflows/ci.yml) calling it, and it also depends on the missing `.markdownlint-cli2.jsonc` above.
+**CI wiring** — the `lint-markdown` job in [`ci.yml`](../../../.github/workflows/ci.yml) runs [`scripts/lint-md-pr.sh`](../../../scripts/lint-md-pr.sh) on every pull request against
+the changed `docs/**/*.md` and `README.md`. It runs independently of the changed-area detection, because a docs-only pull request skips every domain suite. A diff with no matching
+files passes without linting.
 
 `MD053` (unused link reference definitions) is enforced rather than disabled. It counts the same three reference-link forms the port pipeline resolves — full, collapsed, and shortcut
 — so a definition it flags contributes nothing to ported output and is dead weight in the `## Links` footer. One case diverges: a definition referenced only from an HTML comment is

@@ -7,104 +7,65 @@ tools over MCP** — it never invents fleet data, and write actions require huma
 The model routes and narrates; the tools compute. Nothing leaves the machine.
 
 > [!NOTE]
-> The following steps run the library directly for local development. In production, this agent is deployed behind the
-> Gateway by [`@tetherto/mdk-plugin-agent`](../../plugins/agent/README.md), which mounts it as a chat API instead; the
-> [agent guide chooser](../../../docs/guides/agent/index.md) covers both paths, including that one.
+> This page is reference: the model, the CLI flags, the capability budgets, and the session-store contract. For a
+> walkthrough that runs it end to end, see [Run the agent as a standalone CLI](../../../docs/guides/agent/run-standalone.md).
+> In production, this agent is deployed behind the Gateway by [`@tetherto/mdk-plugin-agent`](../../plugins/agent/README.md),
+> which mounts it as a chat API instead; the [agent guide chooser](../../../docs/guides/agent/index.md) covers both paths.
 
 ## Prerequisites
 
 - Node.js ≥ 24
-- A GPU (the model runs locally via QVAC — Vulkan, not CUDA)
-- `npm install` in this directory
+- npm 11 ([< 12](../../../docs/reference/environment.md#why-npm-stays-below-12))
+- A GPU
 
-`npm install` covers talking to a model over HTTP (`--base-url`, the default). Serving one
-on this machine additionally needs `@qvac/cli` — see step 1.
+> [!NOTE]
+> QVAC uses **Metal on macOS** and **Vulkan 1.4+ on Linux and Windows** — never CUDA.
+> On macOS and Linux, a missing GPU backend falls back to CPU (slower but workable); on Windows
+> the addon loads Vulkan even for CPU inference, so a pre-1.4 runtime fails the load outright.
+> `qvac doctor` reports what this host actually has.
 
-## 1. Serve the model (the brain)
+- Dependencies installed — a single root `npm install` (or `npm run setup`) covers the whole
+  monorepo, this package included; `backend/core/agent` is a root workspace member, and running
+  `npm install` from inside it instead rewrites the whole install graph rather than using it
 
-The agent needs a language model listening locally. QVAC serves one with an
-OpenAI-compatible API — start it first, in its own terminal:
+> [!NOTE]
+> The root install covers talking to a model over HTTP (`--base-url`, the default). Serving one
+> on this machine additionally needs `@qvac/cli` — see
+> [Run the agent as a standalone CLI](../../../docs/guides/agent/run-standalone.md).
 
-```bash
-npm i --no-save @qvac/cli@^0.9.0 --legacy-peer-deps   # once; ~4.9 GB of prebuilt inference engines
-npx qvac serve openai --config qvac-runtime/qvac.config.json --port 11500 --verbose
-```
+## Quick start
 
-`@qvac/cli` is an optional peer dependency, so it is not installed by default — the agent
-only needs it to *serve* a model, not to talk to one. Skip this step if a QVAC server is
-already running elsewhere (another host, or Windows alongside WSL) and point `--base-url`
-at it. Note the `qvac` binary comes from `@qvac/cli`; there is no `qvac` package on npm,
-so a bare `npx qvac` without the install above fails with a 404.
-
-**Use 0.9.0 or newer.** 0.8.x never passes `kvCache` to the SDK, so every request
-re-prefills the whole conversation — measured at ~2.4 s for a 7k-word prompt, with an
-exact repeat costing the same as a cold one. 0.9.0 enables it and a follow-up turn drops
-to ~44% of cold. `--legacy-peer-deps` is needed until `@qvac/ai-sdk-provider` is bumped:
-0.3.0 caps the peer at `^0.8.0`, and 0.4.0 (which allows `^0.9.0`) requires `ai@^7`.
-
-- [`qvac-runtime/qvac.config.json`](./qvac-runtime/qvac.config.json) pins the model (Qwen3-4B, 4-bit quantized, 16k context).
-- The first run downloads the model into `~/.qvac/models`; after that it is cached.
-- `--verbose` shows the load and the GPU offload. Wait until it is listening on `11500`.
-
-## 2. Start the demo fleet + tools (optional)
-
-To try it end-to-end, boot the full-site example. It brings up a simulated fleet (miners,
-containers, powermeters, sensors, pools) and exposes the MDK tools over MCP on port `3008`:
-
-```bash
-cd ../../../examples/full-site
-npm install    # first time only
-npm start      # kernel + workers + gateway + MCP server on :3008
-```
-
-Leave it running. (If you already have an MCP tool server, skip this and point the agent
-at its URL in step 3.)
-
-## 3. Start the agent and ask
-
-In a third terminal, start the CLI — pointing it at the model (step 1) and the MCP tool
-server (step 2):
+Serve a model, boot the demo fleet, and start the CLI:
 
 ```bash
 node bin/mdk-agent.js --model qwen3-4b --mcp-url http://127.0.0.1:3008/mcp
 ```
 
-Then ask, in plain language:
+[Run the agent as a standalone CLI](../../../docs/guides/agent/run-standalone.md) walks through
+serving the model and starting the demo fleet the command above assumes, plus the REPL it opens.
 
-```text
-you › how many miners are on the site?
-  → tool   count_devices({"family":"miner","state":"all"})
-  ← data   { "summary": "15 miners.", "count": 15 }
-  ▌ There are 15 miners on the site.
+## Flags
 
-you › list the devices that are not ready
-you › reboot antminer-3          ← a write: the agent stops and asks you to approve
-```
+| Flag           | Status   | Type      | Default    | Description                                                 |
+| -------------- | -------- | --------- | ---------- | ----------------------------------------------------------- |
+| `--model`      | Required for a hosted provider | `string` | `qwen3-4b` | Model id served by QVAC — the floor the budgets assume |
+| `--provider`   | Optional | `string`  | `qvac`     | `qvac`, `openai`, or `openai-compatible` with an explicit `--base-url` |
+| `--mode`       | Optional | `string`  | `external` | How the provider reaches the model; `external` talks to `--base-url` |
+| `--base-url`   | Optional | `string`  | `http://127.0.0.1:11500/v1` | The QVAC model endpoint served locally, or the hosted endpoint |
+| `--api-key`    | Optional | `string`  | None       | Hosted key, read only if the [environment variable](#talking-to-a-hosted-model) isn't set |
+| `--rpm`        | Optional | `number`  | Unpaced    | Cap requests per minute against a hosted endpoint that rate limits |
+| `--capability` | Optional | `string`  | `small`, or `large` for a hosted provider | Which tools are admitted and what a turn may spend |
+| `--max-steps` | Optional | `number`   | From the capability | Override the step budget                           |
+| `--max-output-tokens` | Optional | `number` | From the capability | Override the token budget                    |
+| `--mcp-url`   | Optional | `string`   | None      | MCP tool server; omit for plain grounded chat, no tools      |
+| `--eval`      | Optional | `boolean`  | Off       | Run the eval battery instead of the REPL (needs `--mcp-url`) |
+| `--reps`      | Optional | `number`   | `1`       | Repetitions per question; 3+ exposes unstable routing        |
+| `--only`      | Optional | `string`   | All       | Restrict the run to case ids containing this string          |
+| `--tag`       | Optional | `string`   | All       | Restrict the run to cases carrying this tag                  |
+| `--concurrency` | Optional | `number` | `1`       | Run this many cases at once; 6 is ~4x faster                 |
+| `--out`       | Optional | `string`   | None      | Write the JSON report to this path                           |
 
-REPL commands: `/about` (what this is) · `/tools` · `/info` · `/new` · `/exit`.
-
-### Flags
-
-| Flag | Status | Type | Default | Description |
-| --- | --- | --- | --- | --- |
-| `--model` | Required for a hosted provider | `string` | `qwen3-4b` | Model id served by QVAC — the floor the budgets assume |
-| `--provider` | Optional | `string` | `qvac` | `qvac`, `openai`, or `openai-compatible` with an explicit `--base-url` |
-| `--mode` | Optional | `string` | `external` | How the provider reaches the model; `external` talks to `--base-url` |
-| `--base-url` | Optional | `string` | `http://127.0.0.1:11500/v1` | The QVAC model endpoint from step 1, or the hosted endpoint |
-| `--api-key` | Optional | `string` | None | Hosted key, read only if the [environment variable](#talking-to-a-hosted-model) isn't set |
-| `--rpm` | Optional | `number` | Unpaced | Cap requests per minute against a hosted endpoint that rate limits |
-| `--capability` | Optional | `string` | `small`, or `large` for a hosted provider | Which tools are admitted and what a turn may spend |
-| `--max-steps` | Optional | `number` | From the capability | Override the step budget |
-| `--max-output-tokens` | Optional | `number` | From the capability | Override the token budget |
-| `--mcp-url` | Optional | `string` | None | MCP tool server; omit for plain grounded chat, no tools |
-| `--eval` | Optional | `boolean` | Off | Run the eval battery instead of the REPL (needs `--mcp-url`) |
-| `--reps` | Optional | `number` | `1` | Repetitions per question; 3+ exposes unstable routing |
-| `--only` | Optional | `string` | All | Restrict the run to case ids containing this string |
-| `--tag` | Optional | `string` | All | Restrict the run to cases carrying this tag |
-| `--concurrency` | Optional | `number` | `1` | Run this many cases at once; 6 is ~4x faster |
-| `--out` | Optional | `string` | None | Write the JSON report to this path |
-
-### Talking to a hosted model
+## Talking to a hosted model
 
 The same tools and the same contract, against any endpoint that speaks the OpenAI chat API.
 Useful as a control: a low battery score against a local model is ambiguous between a wrong tool
@@ -132,17 +93,17 @@ If the endpoint rate limits, `--rpm 30` paces requests; retries follow the endpo
 `Retry-After` rather than a guess. A 429 at startup is reported and treated as reachable, since
 it is the endpoint answering on a valid key for a model it recognises.
 
-### Capability
+## Capability
 
 One knob decides two things: which tools a model is shown, and what a turn of it may spend.
 They are the same judgement — a model trusted with harder tools is trusted to take more steps
 to use them.
 
 | Capability | Steps | Output tokens |
-| --- | --- | --- |
-| `small` | 6 | 2048 |
-| `mid` | 8 | 4096 |
-| `large` | 10 | 8192 |
+| ---------- | ----- | ------------- |
+| `small`    | 6     | 2048          |
+| `mid`      | 8     | 4096          |
+| `large`    | 10    | 8192          |
 
 `small` is budgeted for the 4B this agent was measured on, which is also the floor: the tool
 loop asks for JSON on demand and a sub-billion model does not reliably produce it.
@@ -157,7 +118,7 @@ A step is one model call, not one tool call: the answer costs a step of its own.
 fans out over the whole fleet does not fit any of these numbers and belongs in a tool that fans
 out internally, not in a larger budget.
 
-### Measuring the agent
+## Measuring the agent
 
 The battery asks the questions an operator asks, and scores routing, the answer, the result
 contract and the approval gate on each. Expectations are read from the live fleet at run time,
@@ -172,9 +133,10 @@ node bin/mdk-agent.js --model qwen3-4b --mcp-url http://127.0.0.1:3008/mcp \
 without it. Use `--tag rank` or `--only decline-` while iterating.
 
 It exits non-zero on any failure. A new tool ships with a passing report — see
-[docs/TOOLS.md](docs/TOOLS.md) for the authoring pipeline.
+[docs/TOOLS.md](docs/TOOLS.md) for the authoring pipeline. [Evaluating the agent](docs/EVALUATION.md)
+covers how a run is scored, gated against a baseline, and compared across models.
 
-### Beyond single questions
+## Beyond single questions
 
 The battery opens a fresh session per question, so two things it cannot reach have their own
 runners. Both need the model and an MCP server up, and neither is part of `npm test`.
@@ -224,6 +186,31 @@ still in flight. Those are left alone until they are older than `--empty-grace` 
 An entry whose files cannot be read is never evicted at all: failing to measure something is
 not evidence that it is stale.
 
+### During an eval run
+
+`--eval` sweeps the cache itself, once the report and the ledger are written, so a battery no
+longer leaves its entries behind. The default TTL is 24h, and a run that reaps nothing says
+nothing.
+
+```bash
+node bin/mdk-agent.js --eval --mcp-url <url> --reap-ttl 6h     # keep only the last six hours
+node bin/mdk-agent.js --eval --mcp-url <url> --no-reap         # leave the cache alone
+node bin/mdk-agent.js --eval --mcp-url <url> --reap-dir /mnt/c/Users/you/.qvac/kv-cache
+```
+
+`--reap-dir` names the cache root when the agent and `qvac serve` do not share a home directory,
+which is what an agent under WSL against a Windows host has. Left out, the sweep uses
+`~/.qvac/kv-cache`, the same default the reaper takes.
+
+A hosted provider is never swept, because no cache of ours exists there to reclaim. A sweep that
+fails prints and carries on: the run has already passed or failed on its own merits, and
+housekeeping does not get to restate that verdict.
+
+> [!CAUTION]
+> The sweep runs where the agent runs, not where the model is served. Point `--reap-dir` at the
+> serving machine's cache, or run the reaper there, or the eval reports a clean sweep having
+> freed nothing.
+
 ## Where conversations live
 
 A CLI holds one conversation in a variable and exits. A gateway serves many people across many
@@ -252,14 +239,14 @@ check protects.
 in-memory version could otherwise be more forgiving than the real one — and so let a bug pass
 locally that only appears in production:
 
-| | |
-| --- | --- |
-| `create({ userId, metadata })` | → record. Throws without a `userId` |
-| `get(id)` | → record or `null` — **`null` for expired and never-existed alike** |
-| `save(record)` | → the stored record, trimmed and re-stamped. Throws `err.code === 'SESSION_GONE'` for an id it does not hold |
-| `delete(id)` | → whether there was anything to remove |
-| `listByUser(userId)` | → live records, newest first |
-| `sweep()` | → how many expired records it reclaimed |
+| Method                         | Returns                                                           |
+| ------------------------------ | ----------------------------------------------------------------- |
+| `create({ userId, metadata })` | Record: throws without a `userId`                                 |
+| `get(id)`                      | Record or `null` — **`null` for expired and never-existed alike** |
+| `save(record)`                 | The stored record, trimmed and re-stamped. Throws `err.code === 'SESSION_GONE'` for an id it does not hold |
+| `delete(id)`                   | Whether there was anything to remove                              |
+| `listByUser(userId)`           | Live records, newest first                                        |
+| `sweep()`                      | How many expired records it reclaimed                             |
 
 1. **Every method is async.** A `Map` does not need it; a network round trip does, and callers
    written against a synchronous store all break the day it is not one.
@@ -280,7 +267,7 @@ itself every `sweepEvery` creates (100 by default), and drops the expired record
 walks past. `sweep()` remains for a host that would rather schedule it — and a persistent store
 with native expiry can return 0 from it and do nothing.
 
-Writes are last-one-wins. Serialising concurrent writes to one session belongs to the caller —
+Writes are last-one-wins. Serializing concurrent writes to one session belongs to the caller —
 a gateway knows about requests and users; a store does not.
 
 Defaults are **30 minutes idle**, reset by every write so an active conversation never dies
@@ -288,21 +275,35 @@ under the operator, and **200 messages**, a memory guard rather than the model's
 Trimming keeps the newest and never leaves the history opening on an assistant turn, since a
 reply whose question has been dropped reads as something the model said unprompted.
 
-## Layout
+## Directory layout
 
 ```text
-index.js                   createAgent(config) — the entry point
-src/                       provider (local model) · session (turns) · loop (tool loop)
-src/charter.js             the standing system prompt and its version
-src/session-store.js       where conversations live; the contract Redis/SQL must satisfy
-src/eval.js                the battery runner, its expectation grammar and the report
-eval/battery.json          the questions themselves
-eval/threads.mjs           multi-turn conversations, for what a single question cannot reach
-eval/conversations.json    the operator threads that harness replays
-eval/latency.mjs           where a turn's time actually goes
-bin/mdk-agent.js           the CLI
-bin/qvac-cache-reaper.js   KV-cache eviction; runs next to `qvac serve`
-docs/CONTRACT.md           the event contract every consumer (CLI, gateway, UI) builds against
-docs/TOOLS.md              the tool authoring contract MCP tools must satisfy to be shown to the model
-qvac-runtime/              local-model config for `qvac serve` (qvac.config.json)
+agent/
+├── index.js                    # createAgent(config) — the entry point
+├── src/
+│   ├── charter.js               # The standing system prompt and its version
+│   ├── session-store.js         # Where conversations live; the contract Redis/SQL must satisfy
+│   └── eval.js                  # The battery runner, its expectation grammar and the report
+├── eval/
+│   ├── battery.json             # The questions themselves
+│   ├── analyse.mjs              # Reads a run back: score, verify, curve, matrix, coverage, gate
+│   ├── threads.mjs              # Multi-turn conversations, for what a single question cannot reach
+│   ├── conversations.json       # The operator threads that harness replays
+│   └── latency.mjs              # Where a turn's time actually goes
+├── bin/
+│   ├── mdk-agent.js             # The CLI
+│   └── qvac-cache-reaper.js     # KV-cache eviction; runs next to `qvac serve`
+├── docs/
+│   ├── CONTRACT.md              # The event contract every consumer (CLI, gateway, UI) builds against
+│   ├── TOOLS.md                 # The tool authoring contract MCP tools must satisfy to be shown to the model
+│   └── EVALUATION.md            # How a battery run is scored, recorded, and interpreted
+└── qvac-runtime/                 # Local-model config for `qvac serve` (qvac.config.json)
 ```
+
+## Next steps
+
+- [Run the agent as a standalone CLI](../../../docs/guides/agent/run-standalone.md): the walkthrough this
+  page's Quick start assumes
+- [Deploy the agent behind the Gateway](../../../docs/guides/agent/gateway-deployment.md): mount it as a chat
+  API for an operator UI instead
+- [Evaluating the agent](docs/EVALUATION.md): how a battery run is scored, recorded, and interpreted

@@ -11,9 +11,9 @@ export default antfu(
     // The eslint + vite configs are JS/TS in the project root and aren't
     // part of `src/**`, so skip them — otherwise eslint crashes trying
     // to look up parser services for them.
-    // `_managed/` holds canonical demo pages the CLI copies on demand; their
-    // relative imports only resolve once copied into `src/pages/`, so keep them
-    // out of the in-place lint run.
+    // `_managed/` holds canonical demo pages copied into `src/pages/` on
+    // demand (by `mdk create dashboard`, or by hand); their relative imports
+    // only resolve once copied, so keep them out of the in-place lint run.
     ignores: ['eslint.config.js', 'vite.config.ts', 'dist', 'node_modules', '_managed'],
   },
   {
@@ -29,8 +29,8 @@ export default antfu(
       ],
       'no-console': 'warn',
       // The route table lazy-loads pages via `page: () => import('./pages/X')`.
-      // That exact (non-async) form is what `mdk-ui add page` appends verbatim,
-      // so the arrow must stay non-async — disable the rule that flags it.
+      // Every entry must stay in that exact (non-async) single-line form so the
+      // table is parseable line-wise — disable the rule that flags it.
       'ts/promise-function-async': 'off',
       'antfu/no-top-level-await': 'off',
       'antfu/top-level-function': 'off',

@@ -53,7 +53,7 @@ npm run benchmark
 ```
 
 Every combination step writes `results/<profileId>.json` and `.md`, named by that step's total device count and Worker
-  count (e.g. `cap-150devices-2workers` for 100 Whatsminers + 50 Antminers on 2 Workers).
+  count (e.g. `cap-150devices-2workers` for 100 Antminers + 50 Avalons on 2 Workers).
 
 The filename encodes only those two numbers, not the per-family split, so two combinations that reach the same
 total device count and Worker count collide: the later one's report overwrites the earlier one's. The run
@@ -76,8 +76,8 @@ for example, one entry from [`config/benchmark.config.json.example`][benchmark-c
 
 ```json
 {
-  "type": "mdk-worker-whatsminer",
-  "model": "m56s",
+  "type": "mdk-worker-antminer",
+  "model": "s21",
   "simulateMocks": true,
   "ceiling": { "startDeviceCount": 10, "stepDeviceCount": 10, "maxDeviceCount": 30 }
 }
@@ -119,7 +119,7 @@ one server per Worker; its devices share it, differentiated only by port). Mock 
 
 ### Run a real leak-detection soak
 
-`RUN_REPRODUCIBILITY.soakMs` defaults to a short 5s so sweeps and CI stay fast.
+`RUN_REPRODUCIBILITY.soakMs` defaults to a short 60s so sweeps and CI stay fast.
 
 The template requires **≥ 24h** of soak before an RSS slope means anything as a real growth or leak signal rather
 than noise. To get that signal, bump `soakMs` to 24h or more in [`lib/constants.js`][benchmark-constants] and run
@@ -222,7 +222,7 @@ results/                       generated reports (gitignored)
 ## Add a device family
 
 [`lib/constants.js`][benchmark-constants]'s `WORKER_REGISTRY` covers every package under
-[`backend/workers/miners/`][workers-miners-readme] (Whatsminer, Antminer, Avalon) — any of them can be
+[`backend/workers/miners/`][workers-miners-readme] (Antminer, Avalon) — any of them can be
 used in `config.workers[].type`. To benchmark a family outside that
 directory (container, power meter, ...), add an entry to the registry's
 `WORKER_PACKAGES` map pointing at the target package's `start<Type>Worker`

@@ -10,12 +10,10 @@ import { ROUTE_PATHS } from './routes'
  * Sidebar nav icon lookup. Built-in paths map to their dedicated icons;
  * user-added routes fall back to a generic explorer icon.
  *
- * A bare shell only ships the Home entry. When you run `mdk-ui add page <Name>`
- * for a managed page (Dashboard, Alerts, …), the tooling inserts the matching
- * devkit icon import (above the `mdk:nav-icons-end` marker) and a `NAV_ICONS`
- * entry (above `mdk:nav-end`). Keep both markers, and keep each managed entry on
- * a single line, so the tooling can match and patch them. Add your own
- * hand-written entries here too — anything without a custom icon falls back to
+ * A bare shell only ships the Home entry. When you add a page, import its devkit
+ * icon above the `mdk:nav-icons-end` marker and add a `NAV_ICONS` entry above
+ * `mdk:nav-end`. Keep both markers, and keep each entry on a single line, so the
+ * file stays parseable line-wise. Anything without a custom icon falls back to
  * the default.
  */
 const NAV_ICONS: Record<string, ReactNode> = {

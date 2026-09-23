@@ -64,12 +64,23 @@ describe('createWorker', () => {
     expect(result.installWarning).toBe('npm exploded');
   });
 
-  it('links the project manifest when the parent dir already has an mdk.yaml', () => {
+  it('links the project manifest with a file: dep when the parent dir already has an mdk.yaml', () => {
     const dir = makeTmpDir();
     writeFileSync(join(dir, 'mdk.yaml'), 'metadata:\n  name: my-stack\n', 'utf8');
     createWorker({ name: 'demo-miner', parentDir: dir });
     const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
-    expect(pkg.workspaces).toContain('workers/*');
+    expect(pkg.workspaces).toBeUndefined();
+    expect(pkg.dependencies['demo-miner']).toBe('file:./workers/demo-miner');
+  });
+
+  it('still scaffolds when the existing package.json is unparseable, surfacing a link warning', () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, 'mdk.yaml'), 'metadata:\n  name: my-stack\n', 'utf8');
+    writeFileSync(join(dir, 'package.json'), '{ not json', 'utf8');
+    const result = createWorker({ name: 'demo-miner', parentDir: dir });
+    expect(result.ok).toBe(true);
+    expect(existsSync(result.workerPath!)).toBe(true);
+    expect(result.installWarning).toMatch(/Could not link demo-miner/);
   });
 
   it('adds the worker to spec.workers in mdk.yaml when present', () => {

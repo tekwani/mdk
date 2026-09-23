@@ -4,10 +4,10 @@ MDK Worker for Antspace (Bitmain) mining container systems. Supports the HK3 and
 
 ## Supported Models
 
-| `model` value | Model | Description |
-|--------|-------|-------------|
-| `hk3` | Antspace HK3 | Hyperscale liquid-cooled container |
-| `immersion` | Antspace immersion | Immersion cooling system |
+| `model` value | Model              | Description                        |
+| ------------- | ------------------ | ---------------------------------- |
+| `hk3`         | Antspace HK3       | Hyperscale liquid-cooled container |
+| `immersion`   | Antspace immersion | Immersion cooling system           |
 
 ## Install
 
@@ -46,26 +46,26 @@ Antspace uses a REST HTTP API. The Worker connects over HTTP and polls the conta
 
 ## Telemetry
 
-| Field | Unit | Description |
-|-------|------|-------------|
-| `inlet_temp` | °C | Inlet air/liquid temperature |
-| `outlet_temp` | °C | Outlet air/liquid temperature |
-| `liquid_supply_temp` | °C | Liquid coolant supply temperature |
-| `cooling_status` | — | Cooling system operational status |
+| Field                | Unit | Description                       |
+| -------------------- | ---- | --------------------------------- |
+| `inlet_temp`         | °C   | Inlet air/liquid temperature      |
+| `outlet_temp`        | °C   | Outlet air/liquid temperature     |
+| `liquid_supply_temp` | °C   | Liquid coolant supply temperature |
+| `cooling_status`     | —    | Cooling system operational status |
 
 ## Commands
 
-| Command | Parameters | Description |
-|---------|-----------|-------------|
-| `resetCoolingSystem` | — | Reset the cooling system |
-| `setLiquidSupplyTemperature` | `temperature: number` | Set coolant supply temperature setpoint |
-| `registerThing` | `info, opts` | Register container |
-| `updateThing` | `info` | Update container info |
-| `forgetThings` | `ids` | Remove containers |
-| `saveSettings` | — | Persist settings |
-| `saveComment` | `text` | Add annotation |
-| `editComment` | `commentId, text` | Edit annotation |
-| `deleteComment` | `commentId` | Delete annotation |
+| Command              | Parameters | Description                                                   |
+| -------------------- | ---------- | ------------------------------------------------------------- |
+| `resetCoolingSystem` | —          | Reset the cooling system                                      |
+| `setLiquidSupplyTemperature`| `temperature: number` | Set coolant supply temperature setpoint     |
+| `registerThing`      | `info, opts` | Register container                                          |
+| `updateThing`        | `info`     | Update container info                                         |
+| `forgetThings`       | `ids`      | Remove containers                                             |
+| `saveSettings`       | —          | Persist settings                                              |
+| `saveComment`        | `text`     | Add annotation                                                |
+| `editComment`        | `commentId, text` | Edit annotation                                        |
+| `deleteComment`      | `commentId` | Delete annotation                                            |
 
 ## Health
 
@@ -90,6 +90,15 @@ Programmatic:
 const asMock = require('@tetherto/mdk-worker-antspace/mock/server')
 asMock.createServer({ port: 18001, host: '127.0.0.1', type: 'hk3' })
 ```
+
+## Errors
+
+| Code                        | Fires when                                                      | Fix                                                 |
+| --------------------------- | --------------------------------------------------------------- | --------------------------------------------------- |
+| `ERR_DEVICE_CONFIG_INVALID` | A device is connected without `config.address` or `config.port` | Provide both `address` and `port` in the device config |
+| `ERR_MODEL_INVALID`         | The `model` is not a supported Antspace model, or no container class matches it | Use one of the [supported Antspace models](#supported-models) |
+| `ERR_STORE_DIR_REQUIRED`    | The boot function is called without `opts.storeDir`             | Pass a `storeDir` path to the boot function         |
+| `ERR_WORKER_ID_REQUIRED`    | The boot function is called without `opts.workerId`             | Pass a `workerId` to the boot function              |
 
 ## Testing
 

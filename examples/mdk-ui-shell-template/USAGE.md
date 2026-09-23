@@ -1,11 +1,10 @@
 # MDK UI Shell Template — Assembly Contract
 
 Read this before modifying anything. This template is a **bare backbone** —
-auth + the app frame + a Home landing page + one small **System Info** example
-page (a full, working vertical slice you can copy, then delete). Other feature
-pages are added on demand with `mdk-ui add page` (the reference pages like
-Dashboard and Alerts ship as managed pages the CLI wires in). The composition
-rules below are
+auth + the app frame + a Home landing page, with no example feature pages.
+Feature pages are added on demand (the reference pages like Dashboard and
+Alerts ship under `_managed/pages/`, ready to copy into `src/pages/`). The
+composition rules below are
 the *reason* those pages stay small (a ≈ 70-line Dashboard, no business
 logic) — break them and you'll end up with a wad of mid-tier code that
 duplicates what already lives in the MDK packages.
@@ -44,31 +43,33 @@ The template imports from three MDK packages and three only:
 ```
 
 **The template owns**: route configuration, app shell layout (sidebar /
-topbar), the SignIn / Home / NotFound pages, env-var reading. Pages added via
-`mdk-ui add page` land in [`src/pages/`](./src/pages/) and follow the same rules.
+topbar), the SignIn / Home / NotFound pages, env-var reading. Feature pages land
+in [`src/pages/`](./src/pages/) and follow the same rules.
 
 **The template does NOT own**: HTTP calls, auth flow logic, data-shape
 transformations, chart components, store state. Anything in those
 categories must come from the MDK packages — if a needed piece doesn't
 exist, **add it to the appropriate package**, not the template.
 
-## Worked example: System Info
+## The pattern every page should follow
 
-The shell ships one end-to-end example that exercises every layer above. It is
-the smallest complete demonstration of the MDK data flow — **copy its shape
-when you wire a new API-backed page, then delete it**:
+Every page follows the same layered data flow, whether it is your own or a
+copied reference page: a foundation query factory owns the endpoint + fetch,
+an adapter hook binds it with TanStack Query and shapes the payload, and the
+page stays thin — reading the hook and handing its output straight to a
+presentational component.
 
-| File | Layer | Responsibility |
-| ---- | ----- | -------------- |
-| [`packages/ui-foundation/src/presets/mining/factories.ts`](../../ui/packages/ui-foundation/src/presets/mining/factories.ts) / [`pool-factories.ts`](../../ui/packages/ui-foundation/src/presets/mining/pool-factories.ts) | Foundation | `siteQuery` / `userInfoQuery` / `featureConfigQuery` — own the endpoint URL + fetch. |
-| [`packages/react-adapter/src/hooks/use-system-info.ts`](../../ui/packages/react-adapter/src/hooks/use-system-info.ts) | Adapter | `useSystemInfo` binds those factories with TanStack Query and returns a shaped `SystemInfo` payload. |
-| [`src/pages/SystemInfo.tsx`](./src/pages/SystemInfo.tsx) | Page (template) | Thin glue — reads the hook, hands its output to the component. No `fetch`, no shaping. |
-| [`src/components/SystemInfoPanel.tsx`](./src/components/SystemInfoPanel.tsx) | Component (template) | Props in, markup out. |
+| Layer | Responsibility |
+| ----- | -------------- |
+| Foundation (`packages/ui-foundation/src/query/`) | Query factories own the endpoint URL + fetch. |
+| Adapter (`packages/react-adapter/src/hooks/`) | Hooks bind factories with TanStack Query and return a shaped payload. |
+| Page (`src/pages/`) | Thin glue — reads the hook, hands its output to a component. No `fetch`, no shaping. |
+| Component (`src/components/`) | Props in, markup out. |
 
-The rule it demonstrates: **data flows one direction and each layer has a
-single job.** The page never calls `fetch`, never shapes data, never touches a
-store. Need a new endpoint? Add the factory in `ui-foundation` and a hook in
-`react-adapter` — exactly as `useSystemInfo` does — and keep the page thin.
+The rule: **data flows one direction and each layer has a single job.** The
+page never calls `fetch`, never shapes data, never touches a store. Need a new
+endpoint? Add the factory in `ui-foundation` and a hook in `react-adapter`,
+and keep the page thin.
 
 ## Data hooks ↔ chart components
 
@@ -137,11 +138,11 @@ To add a second OAuth provider (e.g. Microsoft):
 | Hard-code a base URL                                   | Read from `import.meta.env.VITE_*` via [`src/constants/env`](./src/constants/env.ts).  |
 | Transform a chart response inline in [`Dashboard.tsx`](./_managed/pages/Dashboard.tsx)   | Put the transform in the hook's `select`; if reusable, in [`ui-foundation/utils`](../../ui/packages/ui-foundation/src/utils/index.ts). |
 | Import Ant Design / MUI / Bootstrap                    | Use `@tetherto/mdk-react-devkit` primitives + foundation.    |
-| Add a route directly to [`router.tsx`](./src/router.tsx)                   | Use `mdk-ui add page` — it appends to [`routes.ts`](./src/routes.ts).           |
+| Add a route directly to [`router.tsx`](./src/router.tsx)                   | Append a one-line entry to [`routes.ts`](./src/routes.ts).                      |
 
 ## Extending: add a new chart card
 
-(Assumes a chart page exists — e.g. after `mdk-ui add page Dashboard`.)
+(Assumes a chart page exists — e.g. the managed Dashboard, copied into `src/pages/`.)
 
 1. Pick / add a chart component in
    [`packages/react-devkit/src/domain/components/dashboard/`](../../ui/packages/react-devkit/src/domain/components/dashboard/index.ts).
@@ -158,6 +159,7 @@ lift it into [`packages/ui-foundation/src/utils/`](../../ui/packages/ui-foundati
 
 ## Blueprint reference
 
-`mdk-ui blueprint mdk-ui-shell-dashboard` prints the recipe form of this
-template. Use that to feed an LLM that's bootstrapping a similar
-dashboard — it's the same composition rules in a shorter form.
+The [`mdk-ui-shell-dashboard` blueprint](../../ui/packages/react-devkit/blueprints/mdk-ui-shell-dashboard.md)
+is the recipe form of this template. Use it to feed an LLM that's
+bootstrapping a similar dashboard — it's the same composition rules in a
+shorter form.

@@ -1,0 +1,11 @@
+'use strict'
+
+// Plugin-owned MDK client, built from the ambient gateway context. The loader
+// overrides `require('@tetherto/mdk-gateway/plugin')` per plugin (same pattern
+// as backend/plugins/agent) so `config` carries this plugin's merged settings
+// including kernelKey / kernelBootstrap. Controllers import this module —
+// they never take mdkClient from a services bag.
+const { config } = require('@tetherto/mdk-gateway/plugin')
+const { createMdkClient } = require('@tetherto/mdk-client')
+
+module.exports = createMdkClient(config)

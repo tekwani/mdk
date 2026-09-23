@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-skill",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "MDK Developer Skill Suite — Agent Skills (SKILL.md) bundle assembled from the MDK monorepo's real artifacts and versioned to track the MDK release line. Copy-only assembler: each library owns its artifacts, this package curates them into dist/skills/ and installs them flat into .cursor/skills/ or .claude/skills/.",
   "keywords": [
     "tether",
@@ -29,6 +29,8 @@
   ],
   "scripts": {
     "assemble": "node src/assemble.mjs",
+    "compile:envelope": "node src/skills/mdk-site-sizing/scripts/compile-envelope.mjs",
+    "test": "node src/skills/mdk-site-sizing/scripts/compile-envelope.mjs && node --test tests/site-sizing.test.mjs && node src/skills/mdk-site-sizing/scripts/eval-held-out.mjs",
     "install:skills": "node src/assemble.mjs && node src/install.mjs",
     "prepack": "node src/assemble.mjs"
   }

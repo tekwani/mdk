@@ -67,7 +67,7 @@ one device family (the contract declares the capability surface; the plugin's ha
 Kernel connection (it dials Kernel, never the reverse). This is the tier where *user*-level authentication, aggregation,
 and business logic live. Aggregation here means the cross-Worker queries no single Worker can answer — site hashrate,
 average temperature, cross-rack efficiency — resolved in controller code, since Kernel computes none of them. Kernel's own
-allowlist, when configured, gates which *connections* it accepts: a transport-level check, not a user identity.
+allowlist, when configured, gates which *connections* it accepts: a [transport-level check, not a user identity][security-boundaries].
 
 **[Workers][workers-concept]**: the integration handlers between physical hardware and Kernel, and the source of truth
 for that hardware's state. A Worker answers only when Kernel asks (identity, capabilities, telemetry, or a command) and
@@ -106,7 +106,7 @@ Discover each layer's canonical docs:
 | Kernel | `@tetherto/mdk-kernel` | [Coordination kernel][kernel-concept] |
 | Client SDK | `@tetherto/mdk-client` | [Protocol connector][client-concept] |
 | Gateway | `@tetherto/mdk-gateway` | [Plugin host and HTTP surface][gateway-concept] |
-| Gateway plugins | `@tetherto/mdk-plugins` | [Default plugins and the manifest format][plugins-readme] |
+| Gateway plugins | `@tetherto/mdk-plugins` | [Bundled plugins and the manifest format][plugins-readme] |
 | MCP server | `@tetherto/mdk-mcp` | [Tools for AI agents][mcp-readme] |
 | App Toolkit | Frontend packages | [The supported development path][app-toolkit] |
 
@@ -117,6 +117,7 @@ each a deployment runs is covered by [scalability][scalability].
 
 - Understand [the integration model][integration-model]: what a Worker plugin and a Gateway plugin each get to do
 - Understand [the storage model][storage-model]: where state actually lives as you scale
+- Understand the [security boundaries][security-boundaries]: what each tier does and does not authenticate, and what you must build
 - Understand [what an app is][whats-an-app] in MDK terms
 - Understand [scalability][scalability]: parallel Workers, parallel Kernels, and what's measured today
 - Understand the [MDK App Toolkit][app-toolkit]: the recommended development path from Gateway backend to frontend packages
@@ -133,8 +134,11 @@ each a deployment runs is covered by [scalability][scalability].
 [gateway-concept]: ../../backend/core/gateway/README.md
 <!-- docs@tether.io: gateway-concept → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md -->
 
+[security-boundaries]: security-boundaries.md
+<!-- docs@tether.io: security-boundaries → concepts/security-boundaries -->
+
 [workers-concept]: ../../backend/workers/README.md
-<!-- docs@tether.io: workers-concept → https://github.com/tetherto/mdk/blob/main/backend/workers/README.md -->
+<!-- docs@tether.io: workers-concept → reference/worker -->
 
 [hrpc-glossary]: ../reference/glossary.md#hyperswarm-rpc
 <!-- docs@tether.io: hrpc-glossary → reference/glossary#hyperswarm-rpc -->

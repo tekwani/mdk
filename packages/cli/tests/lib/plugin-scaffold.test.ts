@@ -33,6 +33,35 @@ describe('createPlugin', () => {
     expect(manifest.name).toBe('summary2');
   });
 
+  it('scaffolds the ambient mdkClient pattern (lib/client, not services)', () => {
+    const dir = makeTmpDir();
+    const result = createPlugin({ name: 'summary2', parentDir: dir });
+    expect(result.ok).toBe(true);
+    const pluginPath = result.pluginPath!;
+
+    const clientPath = join(pluginPath, 'lib', 'client.js');
+    expect(existsSync(clientPath)).toBe(true);
+    const clientSrc = readFileSync(clientPath, 'utf8');
+    expect(clientSrc).toContain("require('@tetherto/mdk-gateway/plugin')");
+    expect(clientSrc).toContain("require('@tetherto/mdk-client')");
+    expect(clientSrc).toContain('createMdkClient(config)');
+    expect(clientSrc).not.toMatch(/services\.mdkClient|mdkClient\s*=\s*services/);
+
+    const summarySrc = readFileSync(join(pluginPath, 'controllers', 'summary.js'), 'utf8');
+    expect(summarySrc).toContain("require('../lib/client')");
+    expect(summarySrc).toMatch(/async function summary\s*\(\s*req\s*\)/);
+    expect(summarySrc).not.toMatch(/\bservices\b/);
+    expect(summarySrc).not.toMatch(/\{\s*mdkClient\s*\}\s*=\s*services/);
+
+    const pkg = JSON.parse(readFileSync(join(pluginPath, 'package.json'), 'utf8'));
+    expect(pkg.dependencies['@tetherto/mdk-client']).toBeDefined();
+
+    const readme = readFileSync(join(pluginPath, 'README.md'), 'utf8');
+    expect(readme).toContain('@tetherto/mdk-gateway/plugin');
+    expect(readme).toContain('lib/client.js');
+    expect(readme).toMatch(/do \*\*not\*\* take `mdkClient`/);
+  });
+
   it('scopes the package name under --org', () => {
     const dir = makeTmpDir();
     const result = createPlugin({ name: 'summary2', parentDir: dir, org: 'demo' });
@@ -56,12 +85,23 @@ describe('createPlugin', () => {
     expect(result.installWarning).toBe('boom');
   });
 
-  it('links the project manifest when parentDir has an mdk.yaml', () => {
+  it('links the project manifest with a file: dep when parentDir has an mdk.yaml', () => {
     const dir = makeTmpDir();
     writeFileSync(join(dir, 'mdk.yaml'), 'metadata:\n  name: my-stack\n', 'utf8');
     createPlugin({ name: 'summary2', parentDir: dir });
     const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
-    expect(pkg.workspaces).toContain('plugins/*');
+    expect(pkg.workspaces).toBeUndefined();
+    expect(pkg.dependencies['summary2']).toBe('file:./plugins/summary2');
+  });
+
+  it('still scaffolds when the existing package.json is unparseable, surfacing a link warning', () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, 'mdk.yaml'), 'metadata:\n  name: my-stack\n', 'utf8');
+    writeFileSync(join(dir, 'package.json'), '{ not json', 'utf8');
+    const result = createPlugin({ name: 'summary2', parentDir: dir });
+    expect(result.ok).toBe(true);
+    expect(existsSync(result.pluginPath!)).toBe(true);
+    expect(result.installWarning).toMatch(/Could not link summary2/);
   });
 
   it('adds the plugin under spec.gateway.plugins in mdk.yaml', () => {

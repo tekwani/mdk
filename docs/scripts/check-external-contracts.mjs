@@ -36,12 +36,12 @@ const REPORT_PATH = path.join(REPO_ROOT, 'external-check-report.md')
 
 // Runs the generator for real (writes backend/workers/docs/catalogue.json and
 // supported-hardware.md, same as a normal `npm run generate:catalogue`) rather than importing it,
-// matching regenerate-docs.mjs's existing convention for reaching into backend/workers. A missing
-// or malformed external-workers.json is fatal there by design (see the generator's own comments),
-// so that failure surfaces here as a finding too, not a silent skip.
+// matching regenerate-docs.mjs's existing convention of running it from the repo root, where the
+// script is defined. A missing or malformed external-workers.json is fatal there by design (see
+// the generator's own comments), so that failure surfaces here as a finding too, not a silent skip.
 function runGenerateCatalogue () {
   const res = spawnSync('npm', ['run', 'generate:catalogue'], {
-    cwd: WORKERS_DIR,
+    cwd: REPO_ROOT,
     stdio: 'inherit',
     shell: process.platform === 'win32'
   })

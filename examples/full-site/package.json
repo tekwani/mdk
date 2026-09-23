@@ -1,13 +1,13 @@
 {
   "name": "@tetherto/mdk-full-site-example",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "MDK full-site example — 3 miner families + 2 containers + 3 powermeters + 2 sensors + 2 pools over the RPC listener",
   "private": true,
   "engines": {
     "node": ">=24"
   },
   "scripts": {
-    "setup": "npm --prefix ../.. run setup && npm --prefix ../.. run build:ui && npm install && npm --prefix ui install",
+    "setup": "npm --prefix ../.. run setup && npm --prefix ../.. run build:ui && npm --prefix ui install",
     "start": "node start.js",
     "lint": "standard",
     "test:unit": "NODE_ENV=test brittle tests/unit/*.test.js",
@@ -18,16 +18,6 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "mdk-crypto-lib": "file:../../backend/lib/mdk-crypto-lib",
     "whatsminer-mdk-worker": "git+https://github.com/whatsminer/whatsminer-mdk-worker.git"
-  },
-  "overrides": {
-    "crypto-js": "file:../../backend/lib/mdk-crypto-lib",
-    "@hono/node-server": "2.0.12",
-    "brace-expansion": "5.0.9",
-    "fast-uri": "4.1.4",
-    "hono": ">=4.12.34",
-    "ip-address": ">=10.3.1",
-    "js-yaml": "4.3.1",
-    "qs": "6.16.0"
   },
   "devDependencies": {
     "brittle": "3.18.0",

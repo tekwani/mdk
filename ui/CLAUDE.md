@@ -12,11 +12,11 @@ npm run dev            # watch all packages + catalog app
 npm run test           # vitest, all packages
 npm run lint           # eslint, all packages
 npm run typecheck      # tsc --noEmit, all packages
-npm run fullcheck      # build + lint + typecheck + format + check:agent-ready + test:coverage
+npm run fullcheck      # build + lint + typecheck + format + check:agent-ready + test:coverage + docs tests
 npm run check:agent-ready --workspace @tetherto/mdk-react-devkit  # after devkit export changes
 ```
 
-Repo-level agent surfaces (registry, `mdk-ui` CLI, manifests): read
+Repo-level agent surfaces (registry, manifests): read
 [`AGENTS.md`](AGENTS.md) first. Human contributor workflow:
 [`CONTRIBUTING.md`](../CONTRIBUTING.md). Strict export contract:
 [`packages/react-devkit/AGENT_READY.md`](packages/react-devkit/AGENT_READY.md).
@@ -55,9 +55,6 @@ added later without touching the core. Dependency flow:
   subpath, also re-exported from the package root) — reach for it instead
   of reimplementing SSE/transport/conversation-store logic elsewhere in
   the workspace.
-- **[`packages/cli`](./packages/cli/README.md)** (`@tetherto/mdk-ui-cli`, bin `mdk-ui`) — agent-first
-  CLI: registry discovery, doc/example fetching, page scaffolding,
-  typecheck/lint helpers.
 - **[`packages/fonts`](./packages/fonts/README.md)** (`@tetherto/mdk-fonts`) — JetBrains Mono assets.
 - **[`apps/catalog`](./apps/catalog/README.md)** — Vite/React showcase wrapped in `<MdkProvider>`.
 

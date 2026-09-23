@@ -41,7 +41,7 @@ const auth = gatewayRedirectAuth({
 // inside `MdkProvider` below — still wins over this if a real `?authToken=` is
 // on the URL. Token-refresh polling for this stub session is separately
 // disabled in `App.tsx`. Never enabled in production.
-if (AUTH_BYPASS && !authStore.getState().token) {
+if (AUTH_BYPASS && authStore.getState().token == null) {
   authStore.getState().setToken('dev-auth-bypass')
 }
 

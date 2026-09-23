@@ -5,6 +5,68 @@ import { MemorySessionStore } from './session-store.js'
 import { admitTools, CAPABILITY } from './tools.js'
 
 /**
+ * QVAC model endpoint. `external` talks to an already-running server; `managed` spawns one.
+ *
+ * @typedef {object} ProviderConfig
+ * @property {'qvac'} kind
+ * @property {string} model                        e.g. `'qwen3-4b'`
+ * @property {'external'|'managed'} [mode]         default `'external'` when `baseURL` is set, else `'managed'`
+ * @property {string} [baseURL]                    required in external mode, e.g. `'http://127.0.0.1:11500/v1'`
+ * @property {string} [apiKey]                     default `'qvac'`
+ * @property {object} [modelConfig]                managed-mode serve overrides (`ctx_size`, `reasoning_budget`, …)
+ */
+
+/**
+ * Streamable HTTP MCP tool server. Omit the whole object for plain grounded chat (no tools).
+ *
+ * @typedef {object} McpConfig
+ * @property {string} url                          e.g. `'http://127.0.0.1:3008/mcp'`
+ */
+
+/**
+ * Per-turn generation caps. Missing fields fall back to `{ maxSteps: 4, maxOutputTokens: 512 }`.
+ *
+ * @typedef {object} AgentLimits
+ * @property {number} [maxSteps]
+ * @property {number} [maxOutputTokens]
+ */
+
+/**
+ * @typedef {object} CreateSessionOptions
+ * @property {string} [userId]                     default `'local'`
+ * @property {object} [metadata]
+ */
+
+/**
+ * @typedef {object} ResumeSessionOptions
+ * @property {string} userId                       required — who is asking; no default
+ */
+
+/**
+ * @typedef {object} Agent
+ * @property {object} provider
+ * @property {object|null} mcp
+ * @property {object[]} tools
+ * @property {object[]} skipped
+ * @property {import('./session-store.js').MemorySessionStore} store
+ * @property {(opts?: { timeoutMs?: number, onWait?: function }) => Promise<number>} waitReady
+ * @property {(opts?: CreateSessionOptions) => Promise<import('./session.js').Session>} createSession
+ * @property {(id: string, opts: ResumeSessionOptions) => Promise<import('./session.js').Session|null>} resumeSession
+ * @property {() => Promise<void>} close
+ */
+
+/**
+ * @typedef {object} AgentConfig
+ * @property {ProviderConfig} provider             required
+ * @property {McpConfig} [mcp]                     `{ url }` of a Streamable HTTP MCP server
+ * @property {AgentLimits} [limits]
+ * @property {string} [system]                     override the operator-assistant charter
+ * @property {'small'|'mid'|'large'} [capability]  tool-admission floor; default `'small'`
+ * @property {string[]} [notCovered]               topics the prompt says tools do not cover; `[]` drops the block
+ * @property {import('./session-store.js').MemorySessionStore} [store]  default in-memory; supply Redis/SQL for a gateway
+ */
+
+/**
  * Create an agent — the sole public factory.
  *
  * The agent is long-lived and owns the shared provider connection and, when `config.mcp`
@@ -13,7 +75,8 @@ import { admitTools, CAPABILITY } from './tools.js'
  * Tools are admitted here and only here, so every session shares one filtered, identically
  * ordered list — which is what keeps their prompt prefix identical.
  *
- * Returns { provider, mcp, tools, skipped, store, waitReady, createSession, resumeSession, close }.
+ * @param {AgentConfig} [config]
+ * @returns {Promise<Agent>}
  */
 export async function createAgent (config = {}) {
   if (!config.provider) throw new Error('createAgent: config.provider is required')

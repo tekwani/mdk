@@ -1,0 +1,23 @@
+{
+  "profileId": "cap-200devices-4workers",
+  "tier": "site-server",
+  "hardware": {
+    "referenceTier": "site-server",
+    "cpuCoresPhysical": 16,
+    "cpuCoresLogical": 32,
+    "ramGiB": 64,
+    "diskType": "nvme"
+  },
+  "deviceCount": 200,
+  "workerCount": 4,
+  "workers": [
+    { "type": "mdk-worker-whatsminer", "model": "m56s", "deviceCount": 200 }
+  ],
+  "status": "amber",
+  "headroomRatio": 0.85,
+  "rssSumMiB": 2000,
+  "cpuSumPct": 90,
+  "readP99Ms": 140,
+  "actionP99Ms": 220,
+  "source": "fixture"
+}

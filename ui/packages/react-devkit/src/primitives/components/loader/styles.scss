@@ -1,8 +1,25 @@
 @use '../../styles/mixins' as *;
-/* Loader container */
+
+/* Loader container.
+ *
+ * The 200px is a *block* loading state: it reserves the space the content will occupy so a
+ * panel does not collapse and then jump when data lands. Every `isLoading ? <Loader/>` call
+ * site depends on it, which is why it stays the default. */
 .mdk-loader {
   @include flex_center;
   height: 200px;
+}
+
+/* Inline: an activity indicator sitting in a flow of content, not standing in for it.
+ *
+ * The block height is actively wrong here. Centring 8px dots inside 200px puts them ~100px
+ * below whatever they belong to, with dead space between — which reads as a frozen UI rather
+ * than a working one. Seen in the agent transcript, where the dots landed 103px under the
+ * speaker label and horizontally centred against left-aligned messages. */
+.mdk-loader--inline {
+  @include flex_center_justify_start;
+
+  height: auto;
 }
 
 /* Dot element */
@@ -31,6 +48,14 @@
 .mdk-loader__dot--blue {
   background-color: rgb(var(--mdk-color-soft-blue));
   --active-color: rgb(var(--mdk-color-sleep-blue));
+}
+
+/* `amber` is offered by LoaderProps and was the one variant with no rule, so it rendered a
+ * dot with no background at all — an invisible loader, the same class of bug as the inline
+ * height above. */
+.mdk-loader__dot--amber {
+  background-color: rgb(var(--mdk-color-soft-amber));
+  --active-color: var(--mdk-color-warning);
 }
 
 /* Pulse animation */

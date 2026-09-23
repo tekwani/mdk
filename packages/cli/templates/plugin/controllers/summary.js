@@ -1,22 +1,29 @@
 'use strict'
 
-// A read-only aggregation endpoint: it asks the Kernel (through the injected MDK
-// client) for the fleet and returns a small summary. Replace this with your own
-// aggregation, grounded in the telemetry channels your workers expose.
-//
-// Contract: `async (req, services) => result`. The return value is sent as JSON
-// (HTTP 200). Throw `Error('ERR_...')` to return a 400.
-module.exports = async function summary (req, services) {
-  const { mdkClient } = services
+const mdkClient = require('../lib/client')
 
-  // The Gateway can boot before the Kernel connects. Report that instead of
-  // failing so the route is always callable.
-  if (!mdkClient) {
-    return { ok: true, kernelConnected: false, workerCount: 0, deviceCount: 0, workers: [] }
+// A read-only aggregation endpoint: it asks the Kernel (through the plugin's
+// ambient MDK client) for the fleet and returns a small summary. Replace this
+// with your own aggregation, grounded in the telemetry channels your workers
+// expose.
+//
+// Contract: `async (req) => result`. The return value is sent as JSON
+// (HTTP 200). Throw `Error('ERR_...')` to return a 400.
+module.exports = async function summary (req) {
+  // createMdkClient fails per request (ERR_MDK_CLIENT_UNAVAILABLE) when the
+  // Gateway has no Kernel key / connection — report that instead of failing
+  // so the route stays callable during boot.
+  let workers
+  try {
+    const resp = await mdkClient.listWorkers()
+    workers = (resp && resp.workers) || []
+  } catch (err) {
+    if (err && err.code === 'ERR_MDK_CLIENT_UNAVAILABLE') {
+      return { ok: true, kernelConnected: false, workerCount: 0, deviceCount: 0, workers: [] }
+    }
+    throw err
   }
 
-  const resp = await mdkClient.listWorkers()
-  const workers = (resp && resp.workers) || []
   const deviceCount = workers.reduce((n, w) => n + ((w.deviceIds && w.deviceIds.length) || 0), 0)
 
   return {

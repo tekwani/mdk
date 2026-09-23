@@ -47,12 +47,15 @@ the seam `useMdkAuth()` reads back. Three are available:
 > Bring your own [Gateway plugin](../../../docs/guides/gateway/plugins.md) serving `/auth/token`, or use `noAuth()` /
 > `bearerTokenAuth()` against your own backend.
 
+Hiding a write control in the UI is not authorization: the Gateway still denies a request the token is not allowed to
+make. Gate controls for UX, but enforce identity in the [Gateway controller](../../../docs/guides/gateway/plugins.md#auth-and-permissions).
+
 ## Op Centre read hooks
 
 These hooks own the fetch → render-shape transformation for the Operational
 Centre pages (Site Overview and Explorer). All are tagged `@category
-op-centre` in the machine-readable manifest (`npx mdk-ui hooks --category
-op-centre`).
+op-centre` in the machine-readable manifest (filter `hooks.json` on
+`category === 'op-centre'`).
 
 | Hook | Endpoint | Polling |
 | --- | --- | --- |
@@ -130,20 +133,24 @@ MDK data-fetch pattern end to end: composes three read-only Gateway endpoints (`
 machine-readable manifest.
 
 > [!IMPORTANT]
-> **Prerequisite:** `/auth/site` and `/auth/featureConfig` are served by the default `site-monitor`
-> Gateway plugin, but `/auth/userinfo` has no default provider: the bundled `@tetherto/mdk-plugin-auth`
-> ships unwired. Bring your own [Gateway plugin](../../../docs/guides/gateway/plugins.md) serving
-> that route, or `email`/`roles` stay `undefined`. See the
-> [full-site example](../../../examples/full-site/plugins/site) for a working reference.
+> **Prerequisite:** `/auth/site` and `/auth/featureConfig` come from the `site-monitor` Gateway plugin,
+> which the stack has to declare — `package: "@tetherto/mdk-plugins/site-monitor"` in
+> `spec.gateway.plugins[]`. A Gateway loads only what it is declared to load, so an undeclared
+> `site-monitor` means `404` on both. `/auth/userinfo` has no provider at all: the bundled
+> `@tetherto/mdk-plugin-auth` ships unwired. Bring your own
+> [Gateway plugin](../../../docs/guides/gateway/plugins.md) serving that route, or `email`/`roles` stay
+> `undefined`. See the [full-site example](../../../examples/full-site/plugins/site) for a working reference.
 
 ## Machine-readable hook manifest
 
 Every hook is listed in [`dist/hooks.json`](./dist/hooks.json) (regenerated at build time). Agents
-and tooling can load it via the subpath export or the CLI:
+and tooling load it via the subpath export:
 
-```bash
-npx mdk-ui hooks --format table
-npx mdk-ui hooks --category permission
+```js
+import { hooks } from '@tetherto/mdk-react-adapter/hooks.json' with { type: 'json' }
+
+hooks.map((h) => h.name)
+hooks.filter((h) => h.category === 'permission')
 ```
 
 ## Subpath exports

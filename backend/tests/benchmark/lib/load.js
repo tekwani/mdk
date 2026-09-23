@@ -125,37 +125,60 @@ async function runReadLoad ({ client, deviceIds, durationMs, concurrency, record
   }
 }
 
-// Fixed-rate command submissions (Client -> Kernel dispatch accept). Not a
-// full approve/execute/e2e measurement — see module header.
+// Fixed-rate command submissions (Client -> Kernel dispatch accept). Open-loop:
+// a new submission is fired every intervalMs regardless of whether earlier
+// ones have resolved, so the achieved rate is actually ratePerSec (bounded
+// by real backpressure/rejects) instead of collapsing to 1/latency — awaiting
+// each submit before scheduling the next would just measure single-stream
+// latency, not throughput capacity. Not a full approve/execute/e2e
+// measurement — see module header.
 async function runActionLoad ({ client, deviceIds, durationMs, ratePerSec, recorder, actionType, actionParams }) {
   const end = Date.now() + durationMs
   const intervalMs = 1000 / Math.max(ratePerSec, 0.001)
   let completed = 0
   let rejected = 0
   let timedOut = 0
+  let inFlight = 0
+  let peakInFlight = 0
+  const pending = new Set()
 
-  while (Date.now() < end) {
-    const tickStart = Date.now()
+  function submit () {
     const id = deviceIds[Math.floor(Math.random() * deviceIds.length)]
     const t0 = process.hrtime.bigint()
-    try {
-      await client.sendCommand(id, actionType, actionParams || {})
-      recorder.record(Number(process.hrtime.bigint() - t0) / 1e6)
-      completed++
-    } catch (err) {
-      recorder.recordError()
-      if (classifyError(err) === 'timedOut') timedOut++
-      else rejected++
-    }
+    inFlight++
+    peakInFlight = Math.max(peakInFlight, inFlight)
+    const p = client.sendCommand(id, actionType, actionParams || {})
+      .then(() => {
+        recorder.record(Number(process.hrtime.bigint() - t0) / 1e6)
+        completed++
+      })
+      .catch((err) => {
+        recorder.recordError()
+        if (classifyError(err) === 'timedOut') timedOut++
+        else rejected++
+      })
+      .finally(() => {
+        inFlight--
+        pending.delete(p)
+      })
+    pending.add(p)
+  }
+
+  const wallStart = Date.now()
+  while (Date.now() < end) {
+    const tickStart = Date.now()
+    submit()
     const elapsed = Date.now() - tickStart
     if (elapsed < intervalMs) await new Promise((resolve) => setTimeout(resolve, intervalMs - elapsed))
   }
+  await Promise.all(pending)
+  const wallMs = Date.now() - wallStart
 
-  const wallMs = Date.now() - (end - durationMs)
   return {
     completed,
     rejected,
     timedOut,
+    peakInFlight,
     actionsPerSec: wallMs > 0 ? completed / (wallMs / 1000) : 0
   }
 }
@@ -165,7 +188,7 @@ async function runActionLoad ({ client, deviceIds, durationMs, ratePerSec, recor
 // FLOOR, not the real device round trip (it excludes protocol parse/auth
 // time) — label it "approximate: TCP connect only" wherever it's reported.
 // A protocol-accurate probe would need to speak the vendor's wire format
-// directly (see lib/whatsminer.js), which is out of scope for a
+// directly, which is out of scope for a
 // device-family-agnostic harness.
 function tcpConnectLatencyMs (host, port, timeoutMs = 2000) {
   return new Promise((resolve, reject) => {

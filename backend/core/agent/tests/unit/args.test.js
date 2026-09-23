@@ -4,6 +4,8 @@ import { PROVIDER } from '../../src/provider.js'
 import { CAPABILITY_LIMITS } from '../../src/constants.js'
 import { CAPABILITY } from '../../src/tools.js'
 
+const DAY_MS = 24 * 36e5
+
 const rejection = (fn) => {
   try {
     fn()
@@ -54,9 +56,43 @@ test('an empty or blank value is treated as missing, not as a filter', (t) => {
 })
 
 test('evalOptions normalises what runs and where it goes', (t) => {
-  t.alike(evalOptions({}), { reps: 1, concurrency: 1, only: null, tag: null, out: null })
+  t.alike(evalOptions({}), { reps: 1, concurrency: 1, only: null, tag: null, out: null, battery: null, reapTtlMs: DAY_MS, reapDir: null })
   t.alike(evalOptions({ reps: '3', concurrency: '6', tag: 'rank', only: 'decline-', out: 'r.json' }),
-    { reps: 3, concurrency: 6, only: 'decline-', tag: 'rank', out: 'r.json' })
+    { reps: 3, concurrency: 6, only: 'decline-', tag: 'rank', out: 'r.json', battery: null, reapTtlMs: DAY_MS, reapDir: null })
+})
+
+// The flag was registered, documented and destructured by the runner, and dropped from this
+// return, so --battery pointed at a second question set and the default one ran instead. Nothing
+// failed: the run reported a full pass over questions nobody asked for.
+test('evalOptions carries the question set it was told to run', (t) => {
+  t.is(evalOptions({ battery: 'eval/tiered.json' }).battery, 'eval/tiered.json')
+  t.is(evalOptions({}).battery, null, 'absent, the frozen battery runs')
+  t.is(rejection(() => evalOptions({ battery: '   ' })), '--battery needs a value')
+})
+
+// The reaper shipped a fortnight before anything called it and ~/.qvac/kv-cache reached 587 GB,
+// which is a full disk rather than a slow one. What prevents the repeat is the default, so that
+// is the assertion worth holding: a run nobody configured still sweeps.
+test('evalOptions reaps the kv-cache by default and can be told not to', (t) => {
+  t.is(evalOptions({}).reapTtlMs, DAY_MS, 'an unconfigured run still reaps')
+  t.is(evalOptions({ 'reap-ttl': '6h' }).reapTtlMs, 6 * 36e5)
+  t.is(evalOptions({ 'reap-ttl': '90m' }).reapTtlMs, 90 * 6e4, 'the duration grammar the reaper already speaks')
+  t.is(evalOptions({ 'no-reap': true }).reapTtlMs, null, '--no-reap leaves the cache alone')
+})
+
+// The agent and `qvac serve` need not share a home directory — under WSL against a Windows host
+// they do not — and a sweep of the wrong root reports success having freed nothing.
+test('evalOptions carries an explicit cache root', (t) => {
+  t.is(evalOptions({ 'reap-dir': '/srv/.qvac/kv-cache' }).reapDir, '/srv/.qvac/kv-cache')
+  t.is(evalOptions({}).reapDir, null, 'absent, the reaper chooses the root')
+})
+
+test('evalOptions rejects a reap duration it cannot parse', (t) => {
+  t.is(rejection(() => evalOptions({ 'reap-ttl': 'soon' })),
+    '--reap-ttl: invalid duration "soon" (expected e.g. 30m, 24h, 7d)')
+  t.is(rejection(() => evalOptions({ 'reap-ttl': true })), '--reap-ttl needs a value')
+  t.is(rejection(() => evalOptions({ 'reap-ttl': '   ' })), '--reap-ttl needs a value')
+  t.is(rejection(() => evalOptions({ 'reap-dir': true })), '--reap-dir needs a value')
 })
 
 test('evalOptions rejects counts that would run nothing or make no sense', (t) => {

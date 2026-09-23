@@ -26,13 +26,18 @@ The Gateway declares no application routes of its own. Every REST route it serve
 
 | Source | How it arrives |
 |--------|----------------|
-| Plugins | `telemetry`, `site-hashrate`, and `site-monitor` are registered at startup; your own follow via `extraPluginDirs` |
+| Plugins | Every plugin the stack declares in `spec.gateway.plugins[]`, or that you pass as `extraPluginDirs` — and nothing else |
 | [`additionalRoutes`](#raw-fastify-routes) | Raw Fastify route objects you pass to `startGateway()` |
 | `GET /echo` | A debug route contributed by the httpd facility's `addDefaultRoutes` |
 
 Which paths that adds up to is a property of the manifests, not of the Gateway. The
-[plugin route reference](../plugins/README.md#default-plugins) lists every route the registered plugins serve, generated from their
+[plugin route reference](../plugins/README.md#plugins-mdk-ships) lists every route the plugins MDK ships serve, generated from their
 `mdk-plugin.json` files so it cannot drift.
+
+> [!IMPORTANT]
+> A Gateway loads **only** what it is told to load. A stack that wants `telemetry`, `site-hashrate` or `site-monitor` names
+> it like any other package — `package: "@tetherto/mdk-plugins/telemetry"` — and a stack that does not gets `404` on
+> those paths. See [declaring a plugin MDK ships](../plugins/README.md#declare-a-plugin-in-your-stack).
 
 ## Live data
 
@@ -41,7 +46,7 @@ The Gateway has no push channel — clients poll its HTTP routes for updates.
 > To see an example of this, consider the [React adapter](../../../ui/packages/react-adapter/README.md) which does this on fixed cadences for its
 > hooks (for example, `useThingDetail` polls every 20 seconds, `useExplorerList` every 60).
 > Note, while the poll cadence is a real Gateway fact, the route those two hooks poll,
-> `/auth/list-things`, is illustrative — it is not served by any [built-in plugin](../plugins/README.md#default-plugins). Get live data out of these hooks by
+> `/auth/list-things`, is illustrative — it is not served by any [built-in plugin](../plugins/README.md#plugins-mdk-ships). Get live data out of these hooks by
 > writing a [Gateway plugin](../../../docs/guides/gateway/plugins.md) that serves the shape the hook expects;
 > see each hook's own JSDoc for its exact endpoint and disclosure.
 
@@ -115,7 +120,7 @@ public key must be added before the connection is accepted](../kernel/README.md#
 
 ### Plugin system (recommended)
 
-Pass plugin directories via `extraPluginDirs` to load additional routes at startup alongside the default plugins:
+Pass plugin directories via `extraPluginDirs` to load their routes at startup:
 
 ```js
 await startGateway({
@@ -127,8 +132,8 @@ await startGateway({
 ```
 
 Plugins receive `(req)` in every controller, and each builds its own `@tetherto/mdk-client` from the
-context config it reads via `require('@tetherto/mdk-gateway/plugin')`. The default plugins (`telemetry`, `site-hashrate`, `site-monitor`)
-are loaded the same way.
+context config it reads via `require('@tetherto/mdk-gateway/plugin')`. The plugins MDK ships load the same way, only
+when a stack declares them; nothing auto-registers.
 
 The [plugin authoring guide](../../../docs/guides/gateway/plugins.md) and the [plugin reference](../plugins/README.md) cover the full
 manifest schema, controller contract, and plugin context, and [what the loader throws](#errors) is documented here.
@@ -192,7 +197,7 @@ gateway/
 
 - [Run the Gateway](../../../docs/guides/gateway/run.md)
 - [Add routes with the plugin system](../../../docs/guides/gateway/plugins.md)
-- Browse the [default plugin route reference](../plugins/README.md)
+- Browse the [supported plugins reference](../../../docs/reference/supported-plugins.md)
 - See a complete [worked example](../../../examples/full-site/README.md)
 - Browse the [`startGateway()` options](../mdk/README.md)
 - Reach MDK over MCP — a standalone [`@tetherto/mdk-mcp`](../mcp/README.md) process, or one this Gateway auto-generates

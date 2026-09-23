@@ -45,7 +45,17 @@ function evaluateThresholds (profile, thresholds) {
 
   const rejectsPlusTimeouts = profile.throughput.rejected + profile.throughput.timedOut +
     (profile.actionLoad ? profile.actionLoad.rejected + profile.actionLoad.timedOut : 0)
-  const rejectsStatus = rejectsPlusTimeouts <= thresholds.rejectPlusTimeoutMax ? 'green' : 'red'
+  // Amber band per the template's own 3-tier definition (green `0`, amber
+  // `< _`, red otherwise): a run that deliberately oversaturates the read
+  // path (see renderThroughput) is expected to shed a few requests without
+  // that meaning the system is actually failing — only red when attrition
+  // exceeds rejectPlusTimeoutAmberPctOfAttempted of everything attempted.
+  const attempted = profile.throughput.completed + profile.throughput.rejected + profile.throughput.timedOut +
+    (profile.actionLoad ? profile.actionLoad.completed + profile.actionLoad.rejected + profile.actionLoad.timedOut : 0)
+  const rejectsPct = attempted > 0 ? rejectsPlusTimeouts / attempted : 0
+  const rejectsStatus = rejectsPlusTimeouts <= thresholds.rejectPlusTimeoutMax
+    ? 'green'
+    : (rejectsPct < thresholds.rejectPlusTimeoutAmberPctOfAttempted ? 'amber' : 'red')
 
   // A soak shorter than the template's 24h minimum makes the MiB/h
   // extrapolation noise-dominated (a few KB of GC jitter over milliseconds
@@ -331,7 +341,11 @@ This profile: **${verdict.telemetryFreshness}**.
 function renderThroughput (profile) {
   const t = profile.throughput
   const a = profile.actionLoad
+  const rr = profile.runReproducibility
+  const workerConcurrency = profile.operatingParameters.workerConcurrency
   return `## Throughput under load
+
+Reads below are driven at ${rr.readLoadConcurrency} concurrent readers for ${rr.readLoadDurationMs} ms — deliberately >= the Worker's own operating concurrency (${workerConcurrency}), to find the queueing/rejection ceiling rather than measure steady-state single-request latency. Per-call latency for this saturation phase is recorded separately from the "Telemetry read (single device)" row in the Latency metrics section below (see \`latencies.readLoadSaturation\` in the JSON output) precisely so induced queue wait doesn't read as ordinary read-path latency.
 
 | Metric | Value | Unit |
 | --- | --- | --- |
@@ -397,6 +411,9 @@ function renderThresholds (profile, verdict) {
   const lat = profile.latencies
   const cpu = Math.max(...Object.values(profile.resourceSummary).map((s) => s.avgCpuPct || 0))
   const rejectsPlusTimeouts = profile.throughput.rejected + profile.throughput.timedOut + profile.actionLoad.rejected + profile.actionLoad.timedOut
+  const attempted = profile.throughput.completed + profile.throughput.rejected + profile.throughput.timedOut +
+    profile.actionLoad.completed + profile.actionLoad.rejected + profile.actionLoad.timedOut
+  const rejectsPct = attempted > 0 ? rejectsPlusTimeouts / attempted : 0
   return `## Pass / fail thresholds
 
 | Criterion | Green | Amber | Red | Profile result |
@@ -404,7 +421,7 @@ function renderThresholds (profile, verdict) {
 | Telemetry freshness (cycle ≤ interval) | headroom < ${t.headroomGreenBelow} | ${t.headroomGreenBelow}–${t.headroomAmberBelow} | ≥ ${t.headroomAmberBelow} | ${fmt(profile.headroomRatio, 3)} (**${verdict.telemetryFreshness}**) |
 | Action e2e p99 | ≤ ${t.actionSubmitP99Ms} ms | n/a — binary criterion, no amber band | above green | ${fmt(lat.actionSubmit.p99Ms)} ms (**${verdict.actionSubmitP99}**) |
 | Steady-state CPU (busiest process) | ≤ ${t.steadyCpuPctOfOneCore}% | n/a — binary criterion, no amber band | above green | ${fmt(cpu)}% (**${verdict.steadyCpu}**) |
-| Rejected + timed-out under sustained load | 0 | n/a — binary criterion, no amber band | above green | ${rejectsPlusTimeouts} (**${verdict.rejectsPlusTimeouts}**) |
+| Rejected + timed-out under sustained load | 0 | < ${(t.rejectPlusTimeoutAmberPctOfAttempted * 100).toFixed(1)}% of attempted | otherwise | ${rejectsPlusTimeouts} / ${attempted} attempted, ${(rejectsPct * 100).toFixed(2)}% (**${verdict.rejectsPlusTimeouts}**) |
 | RSS slope over 24 h soak | flat (≤ ${t.rssSlopeFlatMiBPerHour} MiB/h) | red demoted to amber when soak < 24h (indicative) | clear leak (soak ≥ 24h) | ${fmt(profile.rssSlopeMiBPerHour, 3)} MiB/h (**${verdict.rssSlope}**) |
 
 **Overall: ${verdict.overall.toUpperCase()}**
@@ -461,7 +478,7 @@ Worker restart and Kernel restart are real kill+respawn drills against the same 
 | Kernel restart | Time to READY | ${fmt(fb.kernelRestart.ms, 0)} ms | recovered=${fb.kernelRestart.recovered} |
 | Unreachable device | Effect on cycle time (measured, fast-refusal) | ${measuredEffectMs == null ? '`_` (request still succeeded during the outage)' : `${fmt(measuredEffectMs, 1)} ms`} | baseline ${fmt(ud.measured.baselineMs, 1)} ms → during ${fmt(ud.measured.duringMs, 1)} ms → recovered ${fmt(ud.measured.recoveredMs, 1)} ms |
 | Unreachable device | Effect on cycle time (analytical, hung-device worst case) | ${fmt(ud.analyticalEffectMs, 0)} ms | timeout (${ud.timeoutBudgetMs} ms) × ⌈${ud.unreachableCount} devices / ${ud.concurrency} concurrency⌉ |
-| Unreachable device | Timeout budget per device | ${fmt(ud.timeoutBudgetMs, 0)} ms | from operating parameters (\`collectSnapTimeoutMs\`) |
+| Unreachable device | Timeout budget per device | ${fmt(ud.timeoutBudgetMs, 0)} ms | \`thing.miner.timeout\` (\`MINER_DEVICE_TIMEOUT_MS\` in lib/constants.js) — the real per-device RPC timeout; not \`collectSnapTimeoutMs\`, which only bounds periodic snap collection |
 | 24 h soak | RSS slope (MiB / h) per process | ${perProcessSlopes(profile.resourceSummary, 'rssSlopeMiBPerHour', 'MiB/h')} | leak detection — **indicative**, soak below 24h |
 | 24 h soak | FD / socket slope (per hour) per process | ${perProcessSlopes(profile.resourceSummary, 'fdSlopePerHour', '/h')} | sampled via \`lsof -p <pid>\` at start/stop only (more expensive than \`ps\`) — **indicative**, soak below 24h |
 `

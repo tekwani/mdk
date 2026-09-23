@@ -6,11 +6,6 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
-    "@tetherto/mdk-ui-cli#build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**"],
-      "cache": false
-    },
     "build:ts": {
       "dependsOn": ["^build:ts"],
       "outputs": ["dist/**"]
@@ -77,10 +72,6 @@
     },
     "test:coverage": {
       "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
-    },
-    "@tetherto/mdk-ui-cli#test:coverage": {
-      "dependsOn": ["^build", "build"],
       "outputs": ["coverage/**"]
     },
     "check": {

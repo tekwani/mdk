@@ -9,10 +9,11 @@ internal layout keeps the two layers clearly separated:
 > export must satisfy (JSDoc tags, tier system, `USAGE.md` + example
 > requirements). `npm run check:agent-ready` enforces it.
 
-> **Building features in a consuming app?** Use the
-> [`mdk-ui` CLI](../cli/README.md) — `suggest`, `blueprints`, `find`,
-> `docs`, `example`, `add page`, `check`. Run `npx mdk-ui init` once to seed
-> agent context in your project.
+> **Building features in a consuming app?** Read the machine-readable
+> manifests — `registry.json` and `blueprints.json` here,
+> `@tetherto/mdk-react-adapter/hooks.json` and
+> `@tetherto/mdk-ui-foundation/stores.json` next door. See
+> [`AGENTS.md`](../../AGENTS.md) for how to navigate them.
 
 - [`src/primitives/`](./src/primitives/index.ts) — framework-agnostic-ish UI primitives built on Radix UI,
   design tokens, formatting utilities and types.
@@ -90,8 +91,8 @@ overrides.
 | [`./tokens.scss`](./src/primitives/components/dropdown-menu/tokens.scss) | [`src/primitives/styles/_colors.scss`](./src/primitives/styles/_colors.scss) | Design-token CSS variables (`@use`) |
 | `./src/styles/index.scss` | [`src/domain/styles/index.scss`](./src/domain/styles/index.scss) | Domain SCSS entry (advanced) |
 
-For `mdk-ui registry`, `docs`, and `example`, see [`AGENTS.md`](../../AGENTS.md) and
-[`../cli/README.md`](../cli/README.md). Adapter hook and store manifests:
+For reading `registry.json`, `USAGE.md` files, and examples, see
+[`AGENTS.md`](../../AGENTS.md). Adapter hook and store manifests:
 `@tetherto/mdk-react-adapter/hooks.json`, `@tetherto/mdk-ui-foundation/stores.json`.
 
 ### Hooks and data (not separate devkit subpaths)

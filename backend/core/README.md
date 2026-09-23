@@ -40,6 +40,10 @@ All packages in `core/` follow these rules:
 
 ## Running Tests
 
+> [!NOTE]
+> Needs npm 11 [(< 12)](../../docs/reference/environment.md#why-npm-stays-below-12); `npm install` from the repo root
+> installs every package.
+
 Each package has its own test suite. Run from the package root:
 
 ```bash

@@ -69,11 +69,35 @@ export const MessageList = ({
   // while tokens land inside one unchanged turn.
   const liveLength = live ? live.text.length + live.tools.length : 0
 
+  /**
+   * Whether a turn is open at all — not the same question as how much of it has arrived.
+   *
+   * `liveLength` is 0 both before a turn exists and at the instant one starts, so on its own it
+   * cannot see the transition. The assistant block (speaker label and thinking indicator) is
+   * appended in exactly that commit and went unscrolled: the operator was left looking at their
+   * own question with the reply below the fold, which reads as the panel ignoring them. It
+   * self-corrected on the first token or tool call, so the dead window was however long the
+   * model took to say anything — seconds locally, far longer on a thinking model.
+   */
+  const isLive = live !== null
+
+  /**
+   * A turn opening re-pins, whatever the operator had scrolled to.
+   *
+   * A turn only opens because they just sent something, and sending is an explicit request to
+   * see the answer — so this is not the "don't yank the view while they read" case the pinning
+   * rule protects. Without it, asking a question after scrolling up back through the transcript
+   * left both the question and its answer off-screen, with no indication either had happened.
+   */
+  useEffect(() => {
+    if (isLive) pinnedRef.current = true
+  }, [isLive])
+
   useEffect(() => {
     const node = scrollRef.current
     if (!node || !pinnedRef.current) return
     node.scrollTop = node.scrollHeight
-  }, [messages.length, liveLength, pendingApproval])
+  }, [messages.length, liveLength, isLive, pendingApproval])
 
   const isEmpty = messages.length === 0 && live === null
   // Retrying an older turn would send it as the newest question, so only the last

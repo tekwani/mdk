@@ -23,8 +23,7 @@ device + registration** half on top so the API actually returns miners.
 - Monorepo dependencies installed (from the repo root):
 
 ```bash
-npm run setup:core      # backend/core packages
-npm run setup:workers   # backend/workers packages (includes miner-antminer + its mock)
+npm install   # backend/core, backend/plugins and backend/workers are all root workspace members
 ```
 
 > Without these the example fails at startup with `Cannot find module 'debug'` (or similar). This is
@@ -128,20 +127,6 @@ Kernel sees 4 Worker(s):
 OK — Antminer site is live and serving telemetry over the MDK Protocol.
 ```
 
-## Hitting the HTTP API with curl
-
-The HTTP API is curl-able with no token, because the Gateway authenticates nothing
-(**never expose this beyond localhost**):
-
-```bash
-curl http://localhost:3000/auth/site               # {"site":"SITE_NAME"}
-curl http://localhost:3000/site-monitor/hashrate   # per-device hashrate/power via the MDK Protocol
-```
-
-`/site-monitor/hashrate` aggregates over `worker.list` + `telemetry.pull`, so it reflects the same
-live device data [`verify.js`](./verify.js) prints. (The legacy per-method data routes — `/auth/list-things`,
-`/auth/miners` — never worked against the MDK Kernel and have been removed.)
-
 ## Configuration reference
 
 [`config/mdk.config.json`](./config/mdk.config.json.example) (copied from the `.example`):
@@ -218,7 +203,7 @@ storage can't tolerate one Corestore nested under another in the same process.
 
 | Issue | Fix |
 |---|---|
-| `Cannot find module 'debug'` (or similar) | Run `npm run setup:core` and `npm run setup:workers` from the repo root. |
+| `Cannot find module 'debug'` (or similar) | Run `npm install` from the repo root. |
 | `Cannot find module './config/mdk.config.json'` | `cp config/mdk.config.json.example config/mdk.config.json` first. |
 | `ERR_KERNEL_REQUIRED` | Keep the `kernel` service entry above `gateway`/Workers in the config. |
 | `ERR_WORKER_UNKNOWN: no manager for X:Y` | `worker:type` not in `WORKER_REGISTRY`. Use a supported pair or add it. |

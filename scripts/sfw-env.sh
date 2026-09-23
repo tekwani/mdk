@@ -28,10 +28,11 @@
 #   turborepo.dev                hit by the turbo CLI itself (not a linkinator target)
 #   nodejs.org                   Node.js docs/download links referenced in the repo's Markdown
 #   git-scm.com                  Git docs referenced in the repo's Markdown
+#   qvac.tether.io               QVAC product page, linked from docs/guides/agent/run-standalone.md
 #
 # Source this file from your shell profile rather than duplicating the policy there:
 #   [ -f "/absolute/path/to/mdk-prv/scripts/sfw-env.sh" ] && source "/absolute/path/to/mdk-prv/scripts/sfw-env.sh"
 
 # Merge additively: if another repo's sfw-env.sh already set SFW_CUSTOM_REGISTRIES
 # in this shell, keep its entries rather than clobbering them.
-export SFW_CUSTOM_REGISTRIES="${SFW_CUSTOM_REGISTRIES:+$SFW_CUSTOM_REGISTRIES,}bypass:localhost,bypass:img.shields.io,bypass:mdk.tether.io,bypass:docs.mdk.tether.io,bypass:discord.com,bypass:www.radix-ui.com,bypass:react-hook-form.com,bypass:www.conventionalcommits.org,bypass:semver.org,bypass:www.f2pool.com,bypass:ocean.xyz,bypass:telemetry.vercel.com,bypass:turborepo.dev,bypass:nodejs.org,bypass:git-scm.com"
+export SFW_CUSTOM_REGISTRIES="${SFW_CUSTOM_REGISTRIES:+$SFW_CUSTOM_REGISTRIES,}bypass:localhost,bypass:img.shields.io,bypass:mdk.tether.io,bypass:docs.mdk.tether.io,bypass:discord.com,bypass:www.radix-ui.com,bypass:react-hook-form.com,bypass:www.conventionalcommits.org,bypass:semver.org,bypass:www.f2pool.com,bypass:ocean.xyz,bypass:telemetry.vercel.com,bypass:turborepo.dev,bypass:nodejs.org,bypass:git-scm.com,bypass:qvac.tether.io"

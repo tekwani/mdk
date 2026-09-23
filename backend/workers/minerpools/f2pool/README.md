@@ -28,24 +28,24 @@ const worker = await startF2poolWorker({
 await kernel.registerWorker(worker.runtime.getPublicKey())
 ```
 
-| Option | Status | Type | Default | Description |
-| --- | --- | --- | --- | --- |
-| `workerId` | Required | `string` | None | One runtime process = one `workerId` |
-| `rack` | Required | `string` | None | Rack identifier; also the pool store prefix |
-| `storeDir` | Required | `string` | None | Persistent store directory |
-| `conf.f2pool.accounts` | Required | `string[]` | None | F2Pool usernames to poll |
-| `conf.f2pool.apiSecret` | Required | `string` | None | Sent as the `F2P-API-SECRET` header |
-| `conf.f2pool.apiUrl` | Optional | `string` | None; requests target an empty base URL if omitted | The F2Pool API base URL; [`config/f2pool.json.example`](config/f2pool.json.example) ships `https://api.f2pool.com/v2` as a template value, not a code-level default |
-| `kernelTopic` | Optional | `string` | None | DHT discovery topic (hex); omit to register directly with `kernel.registerWorker()` |
+| Option                  | Status   | Type       | Default | Description                                                        |
+| ----------------------- | -------- | ---------- | ------- | ------------------------------------------------------------------ |
+| `workerId`              | Required | `string`   | None    | One runtime process = one `workerId`                               |
+| `rack`                  | Required | `string`   | None    | Rack identifier; also the pool store prefix                        |
+| `storeDir`              | Required | `string`   | None    | Persistent store directory                                         |
+| `conf.f2pool.accounts`  | Required | `string[]` | None    | F2Pool usernames to poll                                           |
+| `conf.f2pool.apiSecret` | Required | `string`   | None    | Sent as the `F2P-API-SECRET` header                                |
+| `conf.f2pool.apiUrl`    | Optional | `string`   | None; requests target an empty base URL if omitted | The F2Pool API base URL; [`config/f2pool.json.example`](config/f2pool.json.example) ships `https://api.f2pool.com/v2` as a template value, not a code-level default |
+| `kernelTopic`           | Optional | `string`   | None    | DHT discovery topic (hex); omit to register directly with `kernel.registerWorker()` |
 
 ## Telemetry
 
-| Field | Unit | Description |
-|-------|------|-------------|
-| `hashrate` | TH/s | Pool-reported hashrate for this account |
-| `workers_online` | — | Number of active worker connections |
-| `balance` | BTC | Current unpaid balance |
-| `estimated_earnings` | BTC | Estimated daily earnings |
+| Field                | Unit | Description                             |
+|----------------------|------|-----------------------------------------|
+| `hashrate`           | TH/s | Pool-reported hashrate for this account |
+| `workers_online`     | —    | Number of active worker connections     |
+| `balance`            | BTC  | Current unpaid balance                  |
+| `estimated_earnings` | BTC  | Estimated daily earnings                |
 
 ## Protocol
 
@@ -69,6 +69,15 @@ Programmatic:
 const f2poolMock = require('@tetherto/mdk-worker-f2pool/mock/server')
 f2poolMock.createServer({ port: 5030, host: '127.0.0.1' })
 ```
+
+## Errors
+
+| Code                     | Fires when                                          | Fix                                                  |
+| ------------------------ | --------------------------------------------------- | ---------------------------------------------------- |
+| `ERR_POOL_REQUIRED`      | A device is connected without `config.pool`         | Provide the `pool` account name in the device config |
+| `ERR_RACK_REQUIRED`      | The boot function is called without `opts.rack`     | Pass a `rack` to the boot function                   |
+| `ERR_STORE_DIR_REQUIRED` | The boot function is called without `opts.storeDir` | Pass a `storeDir` path to the boot function          |
+| `ERR_WORKER_ID_REQUIRED` | The boot function is called without `opts.workerId` | Pass a `workerId` to the boot function               |
 
 ## Testing
 

@@ -46,10 +46,8 @@ npm-debug.log*
 *.tsbuildinfo
 
 # Apps under apps/ are local or generated: only the committed showcase app
-# (catalog) is tracked. Anything scaffolded here with `mdk-ui create`, plus the
-# starter bootstrap, is developer-local and not committed to this repo.
+# (catalog) is tracked. Anything scaffolded here by hand or by `mdk create
+# dashboard` is developer-local and not committed to this repo.
 apps/*
 !apps/catalog
 
-# Local mdk-ui CLI probe scaffolds (developer-only, not for publishing)
-tmp-mdk-check-*/

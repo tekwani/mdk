@@ -12,7 +12,7 @@ setup and configuration detail.
 |---|---|---|
 | [`full-site/`][full-site] | Kernel, 11 Workers across every supported device family, a Gateway site plugin, a React dashboard, and an MCP server. Boots in one process, or as supervised processes through an interactive REPL | `cd examples/full-site && npm run setup && node start.js --miners 3` |
 | [`mvp-site/`][mvp-site] | A single-container site under PM2 supervision: Whatsminer, Ocean pool, and SATEC power meter Workers, with the Gateway serving the built UI | `cd examples/mvp-site && npm run setup && npm start` |
-| [`mdk-ui-shell-template/`][ui-shell] | A bare application shell to copy as the starting point for your own app, with pages added from the command line via `mdk-ui add page` | Follow the [shell template README][ui-shell] |
+| [`mdk-ui-shell-template/`][ui-shell] | A bare application shell to copy as the starting point for your own app, with reference pages ready to copy in from its `_managed/` directory | Follow the [shell template README][ui-shell] |
 
 The [run a mining site tutorial][run-a-site] walks `full-site` end to end.
 

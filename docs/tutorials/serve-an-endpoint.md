@@ -24,7 +24,7 @@ The example verifies its own arithmetic and exits, so there is nothing to clean 
 ## Prerequisites
 
 - [Node.js][node] >=24 (LTS)
-- npm 11 (< 12)
+- npm 11 [(< 12)][npm-version]
 
 <Steps>
 
@@ -148,6 +148,9 @@ None. The example removes its own state directory on start and exits when the ch
 
 [node]: https://nodejs.org/
 <!-- docs@tether.io: external link — preserve URL -->
+
+[npm-version]: ../reference/environment.md#why-npm-stays-below-12
+<!-- docs@tether.io: npm-version → reference/environment -->
 
 [terminology]: ../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->

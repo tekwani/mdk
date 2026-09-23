@@ -8,6 +8,6 @@ MDK Workers wrap an upstream source — a hardware device, a pool API, or an ext
 |------|-----------|
 | Hardware | [`hardware/`](hardware/index.md) |
 | Pool integrations | [`pools.md`](pools.md) |
-| External services | [`external-services.md`](external-services.md) |
+| External services | none shipped yet — future Workers pulling third-party data (network state, weather, market data) would land here |
 
 Detailed facts for each integration live next to its Worker package: see `mdk-contract.json` for the runtime contract (telemetry, commands, health, errors) and `USAGE.md` + `examples/` for prose and runnables. Pages under this folder are thin indexes — click through to a Worker package for the full picture.

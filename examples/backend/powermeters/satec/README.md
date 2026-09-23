@@ -20,7 +20,7 @@ the Satec counterpart of [`examples/backend/miners/antminer`](../../miners/antmi
 - Worker dependencies installed (from the repo root):
 
 ```bash
-npm run setup:workers   # backend/workers packages (includes power-meter-satec + its mock)
+npm install   # backend/workers packages (including power-meter-satec + its mock) are root workspace members
 ```
 
 ## Quickstart
@@ -70,8 +70,8 @@ $TMPDIR/mdk-site-satec/kernel/        # Kernel Corestore
 
 | Issue | Fix |
 |---|---|
-| `Cannot find module ...` | Run `npm run setup:workers` from the repo root. |
-| `EADDRINUSE :::5061` | A previous run is still bound. `Ctrl+C` it, or change `PORT` in [`index.js`](./index.js). |
+| `Cannot find module ...` | Run `npm install` from the repo root. |
+| `EADDRINUSE :::5061` | A previous run is still bound. `Ctrl+C` it, or change `PORT` in `index.js`. |
 | `Corruption: ... MANIFEST-*` | Stale store from a `kill -9`. Delete `$TMPDIR/mdk-site-satec/` and retry. |
 
 ## Related

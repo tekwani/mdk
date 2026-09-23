@@ -263,7 +263,7 @@ test('a 401 body echoing the key is scrubbed before the SDK builds its error', a
   // Exactly what loop.js does with a failed part: String(part.error).
   let surfaced = ''
   const r = streamText({ model: p.model(), prompt: 'hi', maxOutputTokens: 8, maxRetries: 0, onError: () => {} })
-  for await (const part of r.fullStream) {
+  for await (const part of r.stream) {
     if (part.type === 'error') surfaced = String(part.error)
   }
 

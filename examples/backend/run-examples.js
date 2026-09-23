@@ -272,7 +272,7 @@ function checkPrereqs () {
   const checks = [
     {
       pkg: '@tetherto/mdk-kernel',
-      hint: 'npm --prefix backend/core run install:packages'
+      hint: 'npm install (from the repo root)'
     }
   ]
 

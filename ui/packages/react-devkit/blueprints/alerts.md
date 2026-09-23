@@ -76,10 +76,10 @@ export default function AlertsPage() {
 
 ## Routing
 
-- The page registers itself at `/alerts` when scaffolded with
-  `mdk-ui add feature alerts`. Override with `--route /something-else`.
-- The `mdk-ui-shell` template ships this page **by default** (alongside the
-  Dashboard) — `mdk-ui create mdk-ui-shell` includes it out of the box.
+- Register the page at `/alerts` with a one-line entry in the app's
+  `src/routes.ts`. Any other path works — the blueprint does not depend on it.
+- The `mdk-ui-shell` template ships this page under `_managed/pages/Alerts.tsx`,
+  ready to copy into `src/pages/`.
 
 ## Going further
 

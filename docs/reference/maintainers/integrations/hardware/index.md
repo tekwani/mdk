@@ -10,14 +10,13 @@ Detailed facts for a MDK-maintained integration live next to its Worker package,
 
 Which families currently have a manufacturer-maintained entry is generated data, not maintained here: see the catalogue linked above rather than this page for current coverage.
 
-Pool integrations and external services live at [`../pools.md`](../pools.md) and [`../external-services.md`](../external-services.md).
+Pool integrations live at [`../pools.md`](../pools.md); external services (none shipped yet) are covered in [`../index.md`](../index.md).
 
 ## How the Workers catalogue stays correct
 
-The catalogue is regenerated from the contracts, not hand-maintained:
+The catalogue is regenerated from the contracts, not hand-maintained. Run from the repo root:
 
 ```bash
-cd backend/workers
 npm run generate:catalogue
 ```
 

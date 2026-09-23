@@ -114,9 +114,9 @@ One-paragraph summary of what the component does.
 >   accessibility, performance. That prose is what the site actually shows, and
 >   the pipeline can't generate it.
 > - The `## Props` and example blocks above are **optional and harmless**: the
->   site ignores them, but the standalone `mdk-ui doc <name>` CLI serves the raw
->   file, so keeping a self-contained `USAGE.md` still helps agents reading it
->   directly. If you keep them, keep them accurate — the props table in the
+>   site ignores them, but an agent reading `USAGE.md` straight off disk sees
+>   the raw file, so keeping it self-contained still helps. If you keep them,
+>   keep them accurate — the props table in the
 >   registry (from your types) is the source of truth, not this copy.
 
 ### Advanced component
@@ -246,39 +246,39 @@ under [`blueprints/`](blueprints/README.md) and machine-indexed at build time.
 | `device-management`           | "Manage miners" / "drill into one device".                      |
 | `custom-feature`              | The user's domain is out-of-scope (weather, inventory, social). |
 
-### 3. CLI navigation commands
+### 3. Navigating the manifests
 
-The deterministic decision flow agents follow:
+The deterministic decision flow agents follow — every step is a plain read of
+a `dist/*.json` file:
 
 ```mermaid
 flowchart TD
-  intent["User intent (free text)"] --> step1["mdk-ui suggest <intent>"]
-  step1 --> step2["mdk-ui blueprints"]
-  step2 --> step3{"Matching blueprint?"}
-  step3 -- yes --> useBp["mdk-ui blueprint <id> + mdk-ui docs <Component> per listed component"]
-  step3 -- no --> step4["mdk-ui find --domain ... --capability ..."]
-  step4 --> step5["mdk-ui docs <Component>"]
-  step5 --> scaffold["mdk-ui add page ..."]
+  intent["User intent (free text)"] --> step1["blueprints.json — scan `intent` fields"]
+  step1 --> step2{"Matching blueprint?"}
+  step2 -- yes --> useBp["Read its markdown `body`, then each listed\ncomponent's registry entry + usageDoc"]
+  step2 -- no --> step3["registry.json — intersect `indexes`\n(byDomain / byKernelCapability / byCategory)"]
+  step3 --> step4["Read the entry's `usageDoc` + `examples`"]
+  step4 --> scaffold["Write src/pages/&lt;Name&gt;.tsx + routes.ts entry"]
   useBp --> scaffold
-  scaffold --> verify["mdk-ui check <generated-file>"]
+  scaffold --> verify["tsc --noEmit + eslint &lt;generated-file&gt;"]
 ```
 
-Worked examples — three intents, three paths through the tools:
+Worked examples — three intents, three paths through the manifests:
 
 - **"Build me a full mining operating system."**
-  `mdk-ui blueprints` → `mdk-ui blueprint mining-operations-dashboard` →
-  follow the listed components, run `mdk-ui docs <Name>` on each, then
-  `mdk-ui add page` + `mdk-ui check`.
+  `blueprints.json` → the `mining-operations-dashboard` entry → follow the
+  components it lists, reading each one's registry entry and `usageDoc`, then
+  write the page and typecheck it.
 
 - **"Add a reporting tool to my app."**
-  `mdk-ui blueprint reporting` → same flow. `StatsExport`, `LineChartCard`,
+  The `reporting` blueprint → same flow. `StatsExport`, `LineChartCard`,
   and `HistoricalAlerts` are the canonical set.
 
 - **"Add weather functionality."**
-  `mdk-ui blueprint custom-feature` → MDK does not ship weather components.
-  The blueprint enumerates the core primitives (`Card`, `LineChart`,
-  `DataTable`, …) to compose against and explicitly tells the agent not to
-  fork mining components for an unrelated domain.
+  The `custom-feature` blueprint → MDK does not ship weather components.
+  It enumerates the core primitives (`Card`, `LineChart`, `DataTable`, …) to
+  compose against and explicitly tells the agent not to fork mining
+  components for an unrelated domain.
 
 ## Pointers
 
@@ -286,6 +286,6 @@ Worked examples — three intents, three paths through the tools:
 - Reference for "well-documented agent-ready component":
   [`src/domain/components/active-incidents-card/`](src/domain/components/active-incidents-card/USAGE.md)
 - Reference for "well-documented agent-ready hook" — coming when we tier
-  the first hook as `agent-ready`
-- Downstream usage (consumer apps): [`../cli/README.md`](../cli/README.md)
-- Architecture tour: [`docs/AGENT_FIRST.md`](../../docs/AGENT_FIRST.md)
+  the first hook as `agent-ready`.
+- Downstream usage (consumer apps): [`AGENTS.md`](../../AGENTS.md).
+- Architecture tour: [`docs/AGENT_FIRST.md`](../../docs/AGENT_FIRST.md).

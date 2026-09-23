@@ -146,4 +146,39 @@ describe('installScaffold', () => {
       expect.objectContaining({ cwd: appDir }),
     );
   });
+
+  it('installs at the project root when the package is declared as a file: dependency', () => {
+    const projectDir = makeTmpDir();
+    const pluginDir = join(projectDir, 'plugins', 'summary');
+    mkdirSync(pluginDir, { recursive: true });
+    writeFileSync(
+      join(projectDir, 'package.json'),
+      JSON.stringify({ dependencies: { summary: 'file:./plugins/summary' } }),
+      'utf8',
+    );
+    writeFileSync(join(pluginDir, 'package.json'), '{}', 'utf8');
+    spawnSyncMock.mockReturnValue({ status: 0 });
+    const result = installScaffold(projectDir, pluginDir);
+    expect(result.dir).toBe(projectDir);
+    expect(spawnSyncMock).toHaveBeenCalledWith(
+      'npm',
+      ['install'],
+      expect.objectContaining({ cwd: projectDir }),
+    );
+  });
+
+  it('installs at the project root when the package is declared as a file: devDependency', () => {
+    const projectDir = makeTmpDir();
+    const pluginDir = join(projectDir, 'plugins', 'summary');
+    mkdirSync(pluginDir, { recursive: true });
+    writeFileSync(
+      join(projectDir, 'package.json'),
+      JSON.stringify({ devDependencies: { summary: 'file:./plugins/summary' } }),
+      'utf8',
+    );
+    writeFileSync(join(pluginDir, 'package.json'), '{}', 'utf8');
+    spawnSyncMock.mockReturnValue({ status: 0 });
+    const result = installScaffold(projectDir, pluginDir);
+    expect(result.dir).toBe(projectDir);
+  });
 });

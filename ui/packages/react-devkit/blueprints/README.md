@@ -4,9 +4,9 @@ A blueprint is a curated recipe that answers **"I want to build X — what do I 
 Each `.md` file in this folder defines one blueprint: structured frontmatter for
 machines, prose for humans and LLMs.
 
-Blueprints are indexed into `dist/blueprints.json` by the registry generator and
-exposed via the `mdk-ui blueprint`, `mdk-ui blueprints`, and `mdk-ui suggest`
-CLI commands.
+Blueprints are indexed into `dist/blueprints.json` by the registry generator,
+with `byId` / `byDomain` / `byKernelCapability` / `byComponent` indexes. Agents
+read that file directly.
 
 ## Authoring a blueprint
 

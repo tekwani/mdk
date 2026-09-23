@@ -34,10 +34,10 @@ smallest runnable demonstration of MDK end-to-end. The output is a
 ~70-line [`Dashboard.tsx`](../../../../examples/mdk-ui-shell-template/_managed/pages/Dashboard.tsx) with one hook per chart and no inline data
 transformations.
 
-Scaffold this app directly with:
+Stand this app up with:
 
 ```bash
-mdk-ui create my-dashboard --template mdk-ui-shell
+npx @tetherto/mdk-cli create dashboard my-dashboard
 ```
 
 ## Local setup (backend + frontend)

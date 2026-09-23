@@ -55,7 +55,7 @@ Before contributing, ensure you have the following installed:
 
 - **Node.js** (version >=24)
 - **Git** (latest stable version)
-- **npm 11** (< 12)
+- **npm 11 [(< 12)][npm-version]**
 
 ### Licensing
 
@@ -104,25 +104,24 @@ git merge --ff-only upstream/main   # fails loudly if main has diverged
 Use this workflow when contributing to backend code under [`backend/core/`](./backend/core/README.md).
 
 ```bash
-cd backend/core
-npm run install:packages
+npm install
 ```
 
-> [!NOTE]> 
-> Plain `npm install` here would only install this directory's own `devDependencies`. 
-> `install:packages` installs the repo-root workspace (most `backend/core/*` 
-> packages are workspace members, hoisted and linked from there). It separately installs and symlinks 
-> [`backend/core/agent`](./backend/core/agent/README.md), which isn't a workspace member.
+`backend/core/*` packages, including [`backend/core/agent`](./backend/core/agent/README.md), are
+members of the root npm workspace: a single `npm install` at the repo root hoists and links them
+all.
 
 #### Common commands
 
+`npm run lint` and `npm test` at the repo root also run the UI workspace (`lint:ui`/`test:ui`), which needs Turbo installed
+via `npm run setup`. For a backend-only install (just `npm install`), scope commands to the backend workspaces instead:
+
 ```bash
 # Lint backend code
-npm run lint
+npm run lint --workspaces --if-present
 
 # Run backend test suite (lint + unit + integration + package tests)
-npm test
-
+npm test --workspaces --if-present
 ```
 
 ### Frontend contribution setup 
@@ -228,8 +227,10 @@ Before submitting your PR, ensure that:
 - [ ] Generated pages affected by the change are regenerated, using the command named in that file's `DO NOT EDIT` header (a Worker contract, a plugin manifest, or devkit component source each rewrite a different file)
 
 > [!NOTE]
-> There is no CI workflow enforcing generated-page freshness yet, so regenerating stale pages is on you — see
-> [`npm run regenerate-docs -- --check`](docs/reference/maintainers/single-source-of-truth.md#checking-without-changing-anything).
+> The [`docs-freshness`](.github/workflows/docs-freshness.yml) workflow also checks this on a PR that touches a Worker
+> contract, a plugin manifest, devkit component source, or one of the generated pages themselves — it warns rather than
+> blocks when a page is stale, so regenerating is still on you, not something CI does for you. It does fail the run if a
+> generator itself breaks.
 
 ### PR title format
 
@@ -326,6 +327,9 @@ Happy contributing, and thanks for helping improve MDK! 🚀
 
 [license]: LICENSE
 <!-- docs@tether.io: license → https://github.com/tetherto/mdk/blob/main/LICENSE -->
+
+[npm-version]: docs/reference/environment.md#why-npm-stays-below-12
+<!-- docs@tether.io: npm-version → reference/environment -->
 
 [mdk-repo-git]: https://github.com/tetherto/mdk.git
 <!-- docs@tether.io: external link — preserve URL -->

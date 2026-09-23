@@ -14,6 +14,13 @@ const { keysDir, discoverWorkerKeys } = require('./lib/local-discovery')
 
 const defaultRoot = path.join(os.tmpdir(), 'mdk')
 
+// The gateway package, which startGateway boots and whose dependencies include
+// the bundled plugins — see bundledPluginDir.
+const GATEWAY_PKG = path.resolve(__dirname, '..', 'gateway')
+
+const BUNDLED_PLUGINS_PKG = '@tetherto/mdk-plugins'
+const PLUGIN_MANIFEST = 'mdk-plugin.json'
+
 // Well-known paths used as defaults when running without explicit configuration.
 // Override via opts.topicFile / opts.keyFile if co-locating multiple instances.
 const DEFAULT_TOPIC_FILE = path.join(defaultRoot, '.dht-topic')
@@ -95,6 +102,47 @@ function _writeConfigWithOverride (examplePath, destPath, overrides) {
   if (!hasBase && !hasOverrides) return
 
   fs.writeFileSync(destPath, JSON.stringify(_deepMerge(base, overrides), null, 2), 'utf8')
+}
+
+/**
+ * Directory of one of the plugins MDK ships in `@tetherto/mdk-plugins`, for an
+ * `extraPluginDirs` entry.
+ *
+ * Three of these — `telemetry`, `site-hashrate`, `site-monitor` — were registered
+ * by every gateway whatever its caller asked for. They are not any more: what a
+ * caller declares is the whole of what a gateway runs. Naming one here is how it
+ * comes back, and is exactly what `package: "@tetherto/mdk-plugins/telemetry"` in
+ * `mdk.yaml` does.
+ *
+ * Resolved from the gateway package rather than from the caller: the bundled
+ * plugins are subdirectories of one package, so they have no `package.json` to
+ * resolve on their own, and the gateway is where the dependency on them is
+ * declared — a caller whose own `node_modules` happens not to have hoisted it
+ * would otherwise get a resolution error instead of a directory.
+ *
+ * @param {string} name - Subdirectory name, e.g. 'telemetry'
+ * @returns {string} Absolute plugin package directory
+ */
+function bundledPluginDir (name) {
+  const root = path.dirname(require.resolve(`${BUNDLED_PLUGINS_PKG}/package.json`, { paths: [GATEWAY_PKG] }))
+  const dir = path.join(root, String(name))
+
+  // Read off disk rather than hard-coded, so this cannot drift from what the
+  // package actually ships — which is the only reason a caller is here.
+  const available = () => fs.readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(root, entry.name, PLUGIN_MANIFEST)))
+    .map((entry) => entry.name)
+  const notFound = () => new Error(`ERR_BUNDLED_PLUGIN_NOT_FOUND: ${BUNDLED_PLUGINS_PKG} ships no plugin "${name}" — it has: ${available().join(', ')}`)
+
+  // Containment has to be checked explicitly, before the manifest check below
+  // ever runs: `path.join` happily walks a `../`-laden (or absolute) `name`
+  // outside `root`, and the manifest check has no idea that's what it's
+  // looking at — it would just as happily say "found" for a sibling
+  // directory that happens to ship its own mdk-plugin.json.
+  if (path.resolve(dir) !== dir || !dir.startsWith(root + path.sep)) throw notFound()
+
+  if (fs.existsSync(path.join(dir, PLUGIN_MANIFEST))) return dir
+  throw notFound()
 }
 
 /**
@@ -201,7 +249,10 @@ async function startKernel (opts = {}) {
  *                                            then the key file.
  * @param {string}  [opts.keyFile]       - Key file to resolve the Kernel key from (default: DEFAULT_KEY_FILE)
  * @param {Array}   [opts.bootstrap]     - DHT bootstrap nodes for the Client (testnets)
- * @param {Array}   [opts.extraPluginDirs] - Extra plugin package dirs to load + register at boot.
+ * @param {Array}   [opts.extraPluginDirs] - The plugin package dirs this gateway loads and
+ *                                           registers at boot — all of them, since a gateway
+ *                                           registers nothing its caller did not name (see
+ *                                           bundledPluginDir for the ones MDK ships).
  *                                           Each entry is either a plugin dir (string) or
  *                                           `{ dir, config, autoGenerateMcp }`: `config` hands the
  *                                           plugin its own config block (merged over common in its
@@ -223,10 +274,9 @@ async function startKernel (opts = {}) {
  */
 async function startGateway (opts = {}) {
   const kernelKey = _resolveKernelKey(opts)
-  const gatewayPkg = path.resolve(__dirname, '..', 'gateway')
   const root = opts.root || path.join(defaultRoot, 'gateway')
   const facsDir = path.join(root, 'config', 'facs')
-  const facsExampleDir = path.join(gatewayPkg, 'config', 'facs')
+  const facsExampleDir = path.join(GATEWAY_PKG, 'config', 'facs')
 
   _ensureDirs(facsDir, path.join(root, 'db'), path.join(root, 'status'), path.join(root, 'store'), path.join(root, 'workers'))
 
@@ -235,12 +285,12 @@ async function startGateway (opts = {}) {
   if (!fs.existsSync(wrkStubPath)) {
     fs.writeFileSync(
       wrkStubPath,
-      `'use strict'\nmodule.exports = require(${JSON.stringify(path.join(gatewayPkg, 'workers', 'http.node.wrk'))})\n`
+      `'use strict'\nmodule.exports = require(${JSON.stringify(path.join(GATEWAY_PKG, 'workers', 'http.node.wrk'))})\n`
     )
   }
 
   _writeConfigWithOverride(
-    path.join(gatewayPkg, 'config', 'common.json.example'),
+    path.join(GATEWAY_PKG, 'config', 'common.json.example'),
     path.join(root, 'config', 'common.json'),
     opts.common || {}
   )
@@ -365,6 +415,7 @@ module.exports = {
   getKernel,
   startKernel,
   startGateway,
+  bundledPluginDir,
   waitForDiscovery,
   onShutdown,
   shutdown,

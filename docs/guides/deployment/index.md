@@ -22,6 +22,7 @@ Use these guides to choose a site deployment shape.
 - Understand the trade-offs before you choose your [deployment topology][deployment-topologies]
 - Measure real CPU, RAM, disk, and latency for your own hardware and device count with [the benchmark harness][benchmark-your-site]
 - Browse the [functions][mdk-functions] that wire together the [Kernel][kernel-concept], [device Workers][workers-concept], and the [Gateway][gateway-concept] HTTP
+- Follow the [site security blueprint][security-blueprint]: identity, allowlists, and network options for a real site
 
 ## Links
 
@@ -51,3 +52,6 @@ Use these guides to choose a site deployment shape.
 
 [gateway-concept]: ../../../backend/core/gateway/README.md
 <!-- docs@tether.io: gateway-concept → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md -->
+
+[security-blueprint]: ../security/index.md
+<!-- docs@tether.io: security-blueprint → guides/security -->

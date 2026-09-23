@@ -4,3 +4,9 @@ qvac-runtime/node_modules/
 
 # Local-only working docs (plans, HLD, design notes) — never committed.
 tmp/
+
+# Eval run output — local only, never committed. The ledger and its run files carry
+# endpoints and transcripts, and the results are this deployment's, not the library's.
+eval/ledger.ndjson
+eval/runs/
+eval/baseline.json

@@ -4,6 +4,16 @@ const test = require('brittle')
 const path = require('path')
 const os = require('os')
 const fs = require('fs')
+
+// _notifyGatewayReady warns through the gateway logger when a plugin's onReady
+// callback throws, which writes to the process's one pino destination —
+// nothing a test can read back. Stubbed before the worker is required,
+// because that is where the function is destructured out.
+const gatewayWarnings = []
+require('../../../workers/lib/logger').gatewayLogger = () => ({
+  warn: (msg) => gatewayWarnings.push(msg)
+})
+
 const WrkServerHttp = require('../../../workers/http.node.wrk')
 
 const FIXTURES_DIR = path.join(os.tmpdir(), 'mdk-register-plugin-test-' + Date.now())
@@ -26,6 +36,7 @@ function writeFixture (dir, files) {
 function makeFakeWrk () {
   return {
     _plugins: [],
+    _readyWaiters: [],
     conf: { site: { name: 'test-site' } },
     ctx: { kernelKey: 'a'.repeat(64), kernelBootstrap: null }
   }
@@ -98,6 +109,53 @@ test('registerPlugin - per-plugin config reaches the ambient context', async (t)
   const out = await wrk._plugins[0].routes[0]._handler({ params: {}, query: {}, body: {}, headers: {} })
   t.alike(out.agent, { provider: { kind: 'qvac' } }, 'plugin config block visible in config')
   t.alike(out.site, { name: 'test-site' }, 'gateway conf still underneath')
+})
+
+// The worker's half of the plugin context's onReady. Plugins are loaded here in
+// init() and the listener opens in _start(), so load time is always too early
+// for a plugin that needs this gateway to answer. What _start() fires at the
+// end is what these exercise.
+
+test('gateway ready - waiters run in registration order, once', (t) => {
+  const wrk = makeFakeWrk()
+  const fired = []
+  for (const name of ['first', 'second']) {
+    WrkServerHttp.prototype.onGatewayReady.call(wrk, () => fired.push(name))
+  }
+
+  t.alike(fired, [], 'nothing runs while the gateway is still building itself')
+
+  WrkServerHttp.prototype._notifyGatewayReady.call(wrk)
+  t.alike(fired, ['first', 'second'], 'the listener opening is what runs them')
+
+  WrkServerHttp.prototype._notifyGatewayReady.call(wrk)
+  t.alike(fired, ['first', 'second'], 'and a second notification repeats nothing')
+})
+
+test('gateway ready - a waiter registered afterwards still runs', async (t) => {
+  const wrk = makeFakeWrk()
+  const fired = []
+
+  WrkServerHttp.prototype._notifyGatewayReady.call(wrk)
+  WrkServerHttp.prototype.onGatewayReady.call(wrk, () => fired.push('late'))
+
+  t.alike(fired, [], 'not inside the caller\'s own stack, so both orders behave alike')
+  await Promise.resolve()
+  t.alike(fired, ['late'], 'the gateway is already serving, so there is nothing to wait for')
+})
+
+test('gateway ready - one plugin\'s throw does not cost the next one its callback', (t) => {
+  const wrk = makeFakeWrk()
+  const fired = []
+
+  gatewayWarnings.length = 0
+  WrkServerHttp.prototype.onGatewayReady.call(wrk, () => { throw new Error('plugin blew up') })
+  WrkServerHttp.prototype.onGatewayReady.call(wrk, () => fired.push('second'))
+  WrkServerHttp.prototype._notifyGatewayReady.call(wrk)
+
+  t.alike(fired, ['second'], 'the plugin behind the broken one is still called')
+  t.is(gatewayWarnings.length, 1, 'and the throw is not swallowed silently')
+  t.ok(gatewayWarnings[0].includes('plugin blew up'), 'the warning carries the reason')
 })
 
 test('registerPlugin - multiple extra dirs accumulate in order', (t) => {

@@ -3,8 +3,8 @@ import { APP_NAME } from '../constants/env'
 
 /**
  * The bare shell's landing page. A fresh app has no feature pages yet — this
- * placeholder confirms auth + the app frame work and points at the command that
- * adds real pages. Replace or remove it once you have wired your own.
+ * placeholder confirms auth + the app frame work and points at how real pages
+ * get added. Replace or remove it once you have wired your own.
  */
 const Home = () => (
   <PageLayout title="Home" className="mdk-ui-shell-home">
@@ -15,19 +15,24 @@ const Home = () => (
         backbone — authentication, the header, and the sidebar — with no feature
         pages yet.
       </p>
-      <p className="mdk-ui-shell-home__lead">Add a page from the command line:</p>
+      <p className="mdk-ui-shell-home__lead">Add a page in three steps:</p>
       <pre className="mdk-ui-shell-home__code">
         <code>
-          mdk-ui add page Dashboard{'\n'}
-          mdk-ui add page &lt;Component&gt;
+          1. add the component to src/pages/{'\n'}
+          2. add a one-line entry to src/routes.ts{'\n'}
+          3. add its icon to src/constants/navigation.tsx
         </code>
       </pre>
       <p className="mdk-ui-shell-home__hint">
-        Each added page registers its own route and sidebar entry. Run
+        The reference pages ship under
         {' '}
-        <code>mdk-ui add page --help</code>
+        <code>_managed/pages/</code>
         {' '}
-        to see the options.
+        — copy one into
+        {' '}
+        <code>src/pages/</code>
+        {' '}
+        to start from a working example.
       </p>
     </section>
   </PageLayout>

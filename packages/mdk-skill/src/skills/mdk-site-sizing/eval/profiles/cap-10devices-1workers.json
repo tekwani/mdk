@@ -1,0 +1,23 @@
+{
+  "profileId": "cap-10devices-1workers",
+  "tier": "edge",
+  "hardware": {
+    "referenceTier": "edge",
+    "cpuCoresPhysical": 4,
+    "cpuCoresLogical": 4,
+    "ramGiB": 8,
+    "diskType": "sata"
+  },
+  "deviceCount": 10,
+  "workerCount": 1,
+  "workers": [
+    { "type": "mdk-worker-whatsminer", "model": "m56s", "deviceCount": 10 }
+  ],
+  "status": "green",
+  "headroomRatio": 0.15,
+  "rssSumMiB": 400,
+  "cpuSumPct": 20,
+  "readP99Ms": 40,
+  "actionP99Ms": 70,
+  "source": "fixture"
+}

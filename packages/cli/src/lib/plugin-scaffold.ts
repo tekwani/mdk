@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { isMap, isSeq, parseDocument, YAMLSeq, type YAMLMap } from 'yaml';
 import { installScaffold } from './npm.js';
-import { DIRS, ensureProjectManifest, readStackName } from './project.js';
+import { DIRS, addFileDependency, ensureProjectManifest, readStackName } from './project.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -147,10 +147,23 @@ export function createPlugin(opts: PluginScaffoldOptions): PluginScaffoldResult 
     setJsonName(join(pluginPath, 'package.json'), packageName);
     setJsonName(join(pluginPath, 'mdk-plugin.json'), packageName);
 
-    // `mdk run gateway` resolves plugins through the project's node_modules,
-    // which the root manifest's workspace globs provide — link before installing.
+    // `mdk run gateway` resolves plugins through the project's node_modules via
+    // a `file:` dependency (no `workspaces` key on the root manifest). Best
+    // effort, like the old workspace-membership check it replaces: an
+    // unparseable existing package.json must not undo the plugin files
+    // already written above, so only the link step is guarded here.
     const stackName = readStackName(opts.parentDir);
-    if (stackName) ensureProjectManifest(opts.parentDir, stackName);
+    let linkWarning: string | undefined;
+    if (stackName) {
+      try {
+        ensureProjectManifest(opts.parentDir, stackName);
+        addFileDependency(opts.parentDir, packageName, pluginPath);
+      } catch (error) {
+        linkWarning = `Could not link ${packageName} into package.json: ${
+          error instanceof Error ? error.message : String(error)
+        }`;
+      }
+    }
 
     const install = installScaffold(opts.parentDir, pluginPath, opts.install !== false);
 
@@ -161,7 +174,7 @@ export function createPlugin(opts: PluginScaffoldOptions): PluginScaffoldResult 
       ok: true,
       pluginPath,
       packageName,
-      installWarning: install.ok ? undefined : install.message,
+      installWarning: linkWarning ?? (install.ok ? undefined : install.message),
       installDir: install.dir,
       stackFile,
     };

@@ -41,14 +41,22 @@ function dirSizeBytes (dirPath) {
 }
 
 class ResourceSampler {
-  constructor ({ pid, intervalMs = 250, label = 'process' } = {}) {
+  // warmupMs excludes samples taken shortly after start() from the RSS
+  // slope calculation only (avg/peak/summary still see every sample) — a
+  // Worker process's per-device log cache (LogsService._logCache) ramps up
+  // from empty to ~deviceCount-proportional right after boot, and without
+  // this that ramp reads as leak-shaped RSS growth that gets bigger the
+  // more devices a profile step boots, not because anything is leaking.
+  constructor ({ pid, intervalMs = 250, label = 'process', warmupMs = 0 } = {}) {
     if (!pid) throw new Error('ERR_RESOURCE_SAMPLER_PID_REQUIRED')
     this.pid = pid
     this.intervalMs = intervalMs
     this.label = label
+    this.warmupMs = warmupMs
     this.samples = []
     this.fdSamples = []
     this._timer = null
+    this._startedAt = null
   }
 
   _sample () {
@@ -80,6 +88,7 @@ class ResourceSampler {
 
   start () {
     if (this._timer) return this
+    this._startedAt = Date.now()
     this._sample()
     this._sampleFd()
     this._timer = setInterval(() => this._sample(), this.intervalMs)
@@ -128,13 +137,18 @@ class ResourceSampler {
     }
   }
 
-  // MiB/h slope across the full sample window — only meaningful over a soak
-  // long enough to separate signal from noise (template recommends >= 24h
-  // for growth/leak claims; short CI soaks are indicative only).
+  // MiB/h slope across the sample window, excluding the first warmupMs of
+  // samples — only meaningful over a soak long enough to separate signal
+  // from noise (template recommends >= 24h for growth/leak claims; short CI
+  // soaks are indicative only). Returns null (rather than a warmup-skewed
+  // number) if the soak doesn't outlast the warmup window.
   rssSlopeMiBPerHour () {
-    if (this.samples.length < 2) return null
-    const first = this.samples[0]
-    const last = this.samples[this.samples.length - 1]
+    const postWarmup = this.warmupMs > 0 && this._startedAt != null
+      ? this.samples.filter((s) => s.t >= this._startedAt + this.warmupMs)
+      : this.samples
+    if (postWarmup.length < 2) return null
+    const first = postWarmup[0]
+    const last = postWarmup[postWarmup.length - 1]
     const elapsedHours = (last.t - first.t) / (1000 * 60 * 60)
     if (elapsedHours <= 0) return null
     return (last.rssMiB - first.rssMiB) / elapsedHours

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { isMap, isSeq, parseDocument, YAMLSeq, type YAMLMap } from 'yaml';
 import { installScaffold } from './npm.js';
-import { DIRS, ensureProjectManifest, readStackName } from './project.js';
+import { DIRS, addFileDependency, ensureProjectManifest, readStackName } from './project.js';
 import { deviceId, deviceSerial, MOCK_PORT_BASE } from './spec.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -200,11 +200,23 @@ export function createWorker(opts: WorkerScaffoldOptions): WorkerScaffoldResult 
     pkg.name = packageName;
     writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
 
-    // `mdk run` resolves workers through the project's node_modules, which the
-    // root manifest's workspace globs provide — so link the project before
-    // installing. Only for a real MDK project (one with an mdk.yaml).
+    // `mdk run` resolves workers through the project's node_modules via a
+    // `file:` dependency (no `workspaces` key on the root manifest). Best
+    // effort, like the old workspace-membership check it replaces: an
+    // unparseable existing package.json must not undo the worker files
+    // already written above, so only the link step is guarded here.
     const stackName = readStackName(opts.parentDir);
-    if (stackName) ensureProjectManifest(opts.parentDir, stackName);
+    let linkWarning: string | undefined;
+    if (stackName) {
+      try {
+        ensureProjectManifest(opts.parentDir, stackName);
+        addFileDependency(opts.parentDir, packageName, workerPath);
+      } catch (error) {
+        linkWarning = `Could not link ${packageName} into package.json: ${
+          error instanceof Error ? error.message : String(error)
+        }`;
+      }
+    }
 
     const install = installScaffold(opts.parentDir, workerPath, opts.install !== false);
 
@@ -219,7 +231,7 @@ export function createWorker(opts: WorkerScaffoldOptions): WorkerScaffoldResult 
       workerPath,
       relPackage,
       packageName,
-      installWarning: install.ok ? undefined : install.message,
+      installWarning: linkWarning ?? (install.ok ? undefined : install.message),
       installDir: install.dir,
       stackFile: stackFile?.update,
       mockPort: stackFile?.port ?? MOCK_PORT_BASE,

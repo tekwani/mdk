@@ -13,8 +13,8 @@ import { ROUTES } from './routes'
 import './App.scss'
 
 // The sidebar is derived from the ROUTES registry — the single source of truth
-// managed by `mdk-ui add/remove page`. A bare shell only shows Home; each added
-// page appears here automatically (hidden deep-link routes are skipped).
+// for feature pages. A bare shell only shows Home; each added page appears here
+// automatically (hidden deep-link routes are skipped).
 
 export const App = () => {
   const navigate = useNavigate()

@@ -1,7 +1,7 @@
 # Local testing — no site required
 
-Load this when verifying a worker. A worker is site-agnostic, so the entire
-loop below runs on your machine against the worker's own device mock. Run the
+Load this when verifying a Worker. A Worker is site-agnostic, so the entire
+loop below runs on your machine against the Worker's own device mock. Run the
 steps in order; each catches a different failure class.
 
 ## 1. Contract validation (static, no runtime)
@@ -24,15 +24,15 @@ The harness looks for `<worker-dir>/smoke.config.js` (the template ships one):
 `setup()` boots the device mock and returns `{ config, commands?, teardown }`.
 The harness then:
 
-1. loads the contract through the real `loadContract` (catching handler wiring
-   errors exactly as `WorkerRuntimeV2` construction would),
-2. builds one device instance via `createInstance` and calls **every declared
+1. Loads the contract through the real `loadContract` (catching handler wiring
+   errors exactly as `WorkerRuntimeV2` construction would).
+2. Builds one device instance via `createInstance` and calls **every declared
    telemetry handler**, asserting each returns a defined value of the
-   contract-declared type,
-3. replicates the Kernel dispatcher's param validation to assert that every
+   contract-declared type.
+3. Replicates the Kernel dispatcher's param validation to assert that every
    bounded numeric param **rejects below-min / above-max** and accepts the
-   bounds themselves,
-4. executes each command listed in `smoke.config.js` `commands` with its
+   bounds themselves.
+4. Executes each command listed in `smoke.config.js` `commands` with its
    sample in-bounds params and asserts success.
 
 Alternative to `smoke.config.js`: pass `--config '<json>'` (or a path to a
@@ -74,17 +74,17 @@ boot-time probe and no offline state to hold the device in).
 
 ## 4. Site integration (a real Kernel)
 
-In a CLI-managed project (worker scaffolded with `mdk create worker`, listed
+In a CLI-managed project (Worker scaffolded with `mdk create worker`, listed
 under `mdk.yaml` → `spec.workers`), this step is just `mdk run worker <name>`
 followed by `mdk run kernel` (or `mdk run` to boot both together) — see
 `mdk-deployment`. `mdk status` then confirms registration.
 
-Otherwise, your worker package doesn't need to live in the MDK monorepo for
+Otherwise, your Worker package doesn't need to live in the MDK monorepo for
 this step — a caller can require it from anywhere; you only need a local
-Kernel to register against. In a checkout of the MDK monorepo, drop the worker into the
+Kernel to register against. In a checkout of the MDK monorepo, drop the Worker into the
 full-site example: [`examples/full-site/start.js`](../../../../../../examples/full-site/start.js)
-boots mocks + Kernel + workers + gateway from `WORKER_SPECS` in
-[`examples/full-site/backend/site.js`](../../../../../../examples/full-site/backend/site.js) — add a spec entry for your worker (the
+boots mocks + Kernel + Workers + Gateway from `WORKER_SPECS` in
+[`examples/full-site/backend/site.js`](../../../../../../examples/full-site/backend/site.js) — add a spec entry for your Worker (the
 `demo` entry shows the third-party-plugin shape, no worker-infra plumbing).
 Confirm the Kernel registers it, telemetry flows, and commands round-trip.
 

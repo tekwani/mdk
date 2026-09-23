@@ -6,7 +6,7 @@ Source of truth: [`backend/core/kernel/lib/protocol/`](../../../../../../backend
 
 ## The envelope
 
-Every message between Kernel and workers is exactly this object — nine fields,
+Every message between Kernel and Workers is exactly this object — nine fields,
 no more:
 
 ```js
@@ -44,7 +44,7 @@ Build responses with `buildResponse(requestEnvelope, action, payload, sender)`
 | Client → Kernel | `command.status` → `command.status.response` | Query command lifecycle |
 | Client → Kernel | `command.cancel` → `command.cancel.response` | Cancel a pending command |
 | Kernel → Worker (scheduled) | `health.ping` → `health.pong` | Liveness |
-| Gateway → Kernel only | `worker.list`, `device.capabilities`, `worker.terminate` | Kernel queries (never forwarded to workers) |
+| Gateway → Kernel only | `worker.list`, `device.capabilities`, `worker.terminate` | Kernel queries (never forwarded to Workers) |
 | Gateway → Kernel | `action.push`, `action.push-batch`, `action.get`, `action.get-batch`, `action.query`, `action.vote`, `action.cancel-batch` | Write-action approval lifecycle |
 | Kernel → Worker | `write.calls.request` → `write.calls.response` | Write-call resolution (only when worker-infra services are injected) |
 
@@ -55,7 +55,7 @@ Also defined there: `COMMAND_SCOPES` (`device` | `worker` | `rack`),
 ## Reads: `telemetry.pull`
 
 Payload shape: `{ query: { type, ...params } }`, deviceId in the envelope.
-`type` selects what a worker returns (dispatch in
+`type` selects what a Worker returns (dispatch in
 [`backend/core/mdk-worker/lib/worker-runtime.js`](../../../../../../backend/core/mdk-worker/lib/worker-runtime.js) `_handleTelemetry`):
 
 - `type: 'metrics'` (default) — runs **every** declared telemetry handler for
@@ -77,12 +77,12 @@ Per-field handler errors come back inside the payload
 Payload: `{ commandId, command, params }`, deviceId in the envelope.
 The **Kernel's dispatcher validates before dispatch**
 ([`backend/core/kernel/lib/modules/command-dispatcher/index.js`](../../../../../../backend/core/kernel/lib/modules/command-dispatcher/index.js)):
-the command must appear in the worker's declared capabilities
+the command must appear in the Worker's declared capabilities
 (`ERR_COMMAND_NOT_IN_CAPABILITIES`), params must match declared types
 (`ERR_PARAM_TYPE`), and numeric params must be within declared `min`/`max`
 (`ERR_PARAM_RANGE`). Bounds you do not declare are NOT enforced anywhere.
 
-The worker answers `command.result` with
+The Worker answers `command.result` with
 `{ commandId, status: 'SUCCESS', result }` or
 `{ commandId, status: 'FAILED', error }`. Handler exceptions become `FAILED`
 with the error message — so throw `ERR_*`-prefixed errors from handlers.
@@ -91,5 +91,5 @@ with the error message — so throw `ERR_*`-prefixed errors from handlers.
 
 Errors travel as `SCREAMING_SNAKE_CASE` strings prefixed `ERR_`, optionally
 suffixed with context after a colon (`ERR_DEVICE_NOT_FOUND: miner-42`). Device
-error codes a worker can emit belong in the contract's `capabilities.errors`
+error codes a Worker can emit belong in the contract's `capabilities.errors`
 map.

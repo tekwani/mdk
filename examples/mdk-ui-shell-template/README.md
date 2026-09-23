@@ -1,24 +1,17 @@
 # MDK UI Shell
 
-This example provides a bare application shell built with MDK. It ships the **backbone** plus one
-small, deletable **worked example** so a fresh app is wired end to end:
+This example provides a bare application shell built with MDK. It ships the **backbone** so a
+fresh app is wired end to end:
 
 - **Google OAuth sign-in** — the `/signin` page and the token lifecycle
   (`useTokenPolling`, `RequireAuth`).
 - **App frame** — header (logo + user/timezone/sign-out menu) and sidebar.
 - **A Home landing page** — a placeholder that confirms auth + the frame work.
-- **A System Info example page** — a minimal, working API-backed page that
-  reads three read-only Gateway endpoints through the layered data flow. It is
-  the reference to copy when wiring your own pages; delete it once you have.
 
-There are **no other feature pages** out of the box. Add them from the command
-line — including the full reference pages (Dashboard, Alerts, Pool Manager, …),
-which ship as managed pages the CLI wires in on demand:
-
-```bash
-npx mdk-ui add page Dashboard        # the reference operations dashboard
-npx mdk-ui add page <Component>      # a page from any devkit component
-```
+There are **no example pages** out of the box. The full reference pages
+(Dashboard, Alerts, Pool Manager, Site Overview, Explorer) ship under
+[`_managed/pages/`](./_managed/pages/) — copy the one you want into `src/pages/`
+and wire it up (see [Adding a new page](#adding-a-new-page)).
 
 Everything you add respects the same boundaries this shell does: **API/state in
 `@tetherto/mdk-ui-foundation`, hooks in `@tetherto/mdk-react-adapter`,
@@ -98,8 +91,8 @@ surface as type errors. `VITE_GATEWAY_URL` is a config-time-only variable read d
 
 ## Known limitation: no data without miners
 
-This only applies once you add a data-backed page (e.g. `mdk-ui add page
-Dashboard`). `miningos-gateway` is the *API surface*, not the data source. It
+This only applies once you add a data-backed page (e.g. the managed Dashboard).
+`miningos-gateway` is the *API surface*, not the data source. It
 expects Kernel clusters with real miners reporting in. **Without that, the
 charts will render empty states.** This is the expected first-run experience
 for a community demo — the pages are honest about no data being available.
@@ -116,44 +109,50 @@ src/
                          Hosts useTokenPolling() at the top of the tree.
   router.tsx             Router config — /signin is public, everything else
                          is wrapped in <RequireAuth>.
-  routes.ts              Feature pages live here (managed by `mdk-ui add
-                         page`). Ships with the one System Info example entry.
+  routes.ts              Feature pages live here. Ships empty.
   constants/
     env.ts               Typed import.meta.env accessors
     routes.ts            Route path literals
-    navigation.tsx       Sidebar nav-icon lookup (managed by add/remove page)
+    navigation.tsx       Sidebar nav-icon lookup, keyed by route path
   components/
     PageLayout.tsx       Shared page header + content wrapper
-    SystemInfoPanel.tsx  Presentational panel for the System Info example
   pages/
     SignIn.tsx           Google OAuth landing — <SignInGoogleButton/>
     Home.tsx             The bare landing page (replace once you add pages)
-    SystemInfo.tsx       Worked API example — reads /auth/{site,userinfo,
-                         featureConfig} via useSystemInfo, renders a panel.
     NotFound.tsx
 ```
 
-The **System Info page is the one to read first** — it's the smallest complete
-example of the layered data flow (see [`USAGE.md`](./USAGE.md) → "Worked example"). Copy its
-shape for a bespoke API page; use `mdk-ui add page` for the managed reference
-pages.
+Start from a managed reference page under [`_managed/pages/`](./_managed/pages/)
+— see [Adding a new page](#adding-a-new-page) below and [`USAGE.md`](./USAGE.md)
+for the composition rules those pages should follow.
 
 ## Adding a new page
 
-Two flavours:
+Three steps, whether the page is your own or one of the managed reference pages:
 
-```bash
-# A managed reference page — copies the full, hand-wired page + route + nav
-npx mdk-ui add page Dashboard
+1. **Add the component** under [`src/pages/`](./src/pages/). For a reference
+   page, copy it across — e.g.
+   `cp -R _managed/pages/Dashboard.tsx src/pages/`. For your own, follow the
+   composition rules in [`USAGE.md`](./USAGE.md).
+2. **Register the route** — append a single-line entry to
+   [`src/routes.ts`](./src/routes.ts), above the `// mdk:routes-end` marker:
 
-# A page scaffolded around any devkit component
-npx mdk-ui add page Devices --component DeviceExplorer
-```
+   ```text
+   export const ROUTES: AppRoute[] = [
+     { path: '/dashboard', label: 'Dashboard', page: () => import('./pages/Dashboard') },
+     // mdk:routes-end
+   ]
+   ```
 
-Either way the CLI writes `src/pages/<Name>.tsx` and appends an entry to
-[`src/routes.ts`](./src/routes.ts); the sidebar updates automatically. New pages are
+3. **Add the nav icon** — import it above `// mdk:nav-icons-end` and add a
+   `NAV_ICONS` entry above `// mdk:nav-end` in
+   [`src/constants/navigation.tsx`](./src/constants/navigation.tsx). Skip this
+   and the page still routes; it just gets the fallback icon.
+
+The sidebar is derived from `ROUTES`, so it updates automatically. New pages are
 auth-gated by default because they live inside the `<RequireAuth>` wrapper
-applied in [`src/router.tsx`](./src/router.tsx). Remove one with `npx mdk-ui remove page <Name>`.
+applied in [`src/router.tsx`](./src/router.tsx). To remove a page, delete its
+file and reverse steps 2 and 3.
 
 ## Troubleshooting
 
@@ -195,10 +194,3 @@ field (`power_w_sum_aggr`, `site_power_w`) outside the data layer —
 or a page building `ChartCardData` by hand — stop and refactor. Use
 `<LineChartCard>` + the adapter chart hooks
 (`useHashrateChartData`, `useSiteConsumptionChartData`) instead.
-
-## Agent context
-
-`mdk-ui init` seeded:
-
-- `.mdk/context.md` — repo conventions for the agent.
-- `.cursor/rules/mdk.mdc` — Cursor rule.

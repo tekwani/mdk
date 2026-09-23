@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 /**
  * Generate `dist/registry.json` — the machine-readable component registry
- * consumed by AI agents and the `@tetherto/mdk-ui-cli` package.
+ * consumed by AI agents and the docs-generation pipeline.
  *
  * The generator starts from the public entry (`src/index.ts`), enumerates its
  * exported declarations via the TypeScript compiler API (`ts-morph`), and

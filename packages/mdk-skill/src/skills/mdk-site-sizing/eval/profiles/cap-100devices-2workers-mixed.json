@@ -1,0 +1,24 @@
+{
+  "profileId": "cap-100devices-2workers-mixed",
+  "tier": "site-server",
+  "hardware": {
+    "referenceTier": "site-server",
+    "cpuCoresPhysical": 16,
+    "cpuCoresLogical": 32,
+    "ramGiB": 64,
+    "diskType": "nvme"
+  },
+  "deviceCount": 100,
+  "workerCount": 2,
+  "workers": [
+    { "type": "mdk-worker-whatsminer", "model": "m56s", "deviceCount": 60 },
+    { "type": "mdk-worker-antminer", "model": "s19xp", "deviceCount": 40 }
+  ],
+  "status": "green",
+  "headroomRatio": 0.5,
+  "rssSumMiB": 1300,
+  "cpuSumPct": 65,
+  "readP99Ms": 75,
+  "actionP99Ms": 120,
+  "source": "fixture"
+}

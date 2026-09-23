@@ -31,7 +31,7 @@ it would a published package.
 | `name` / `version` / `description` | Package identity (often mirrors package.json) |
 | `routes[].id` | Stable id (`<domain>.<resource>`) |
 | `routes[].handler` | Relative path, e.g. `./controllers/power.js` |
-| `routes[].auth` | `false` for local/dev read-only metrics; `true` when session required |
+| `routes[].auth` | Documentation only — the Gateway reads neither `auth` nor `permissions`. Protect a route by checking the token in its controller |
 | `routes[].http.method` | `GET` / `POST` / … |
 | `routes[].http.path` | Public path the UI fetches (`/api/...`) |
 | `routes[].http.responses` | Document `200` schema + error statuses |
@@ -113,4 +113,4 @@ Every field from the table above, together, on one route:
 `mdk create plugin <name>` does all of this: links the package as an npm
 workspace member (root `npm install`) and appends it under `mdk.yaml` →
 `spec.gateway.plugins[]` → `{ package: <name>, config: {} }`. Scaffolding by
-hand instead, do the same two steps yourself, then restart the gateway.
+hand instead, do the same two steps yourself, then restart the Gateway.

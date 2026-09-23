@@ -40,7 +40,6 @@ import {
   ensureProjectGitignore,
   ensureProjectManifest,
   ensureProjectReadme,
-  WORKSPACES,
 } from '../lib/project.js';
 import { theme, badge, banner, kvBlock, cmdBlock, tick } from '../lib/theme.js';
 import { pkg } from '../lib/pkg.js';
@@ -297,10 +296,7 @@ async function runOnboard(): Promise<void> {
     w.stop(`${tick} Wrote ${theme.value(specPath)}`);
     if (manifest !== 'present') {
       log.message(
-        theme.muted(
-          `${manifest === 'created' ? 'Created' : 'Updated'} package.json — ` +
-            `${WORKSPACES.join(' and ')} are npm workspaces`,
-        ),
+        theme.muted('Created package.json — path-backed packages use relative file: deps'),
       );
     }
     if (gitignore !== 'present') {
@@ -318,15 +314,15 @@ async function runOnboard(): Promise<void> {
 
   // 8. Side-effects ---------------------------------------------------------
   // Install the selected plugins so the runtime can resolve them from the
-  // project's node_modules. A bundled worker is declared as a `file:`-linked
-  // dependency pointing at its checkout path — `npm install` symlinks it
-  // straight into `node_modules` under its package name, same as a published
-  // package would be; no `workers/<name>` folder is created for it (that
-  // directory is only for packages the user owns via `mdk create worker`).
-  // Registry packages install normally. Local-path packages (scaffolded
-  // workers) are skipped — they are linked by the workspace globs instead.
-  // Best-effort: a failed install is a warning, never a hard stop (the spec is
-  // already valid).
+  // project's node_modules. A bundled package is path-backed with a relative
+  // `file:` dependency to its checkout (inside or outside the project folder);
+  // no checkout path is written into `workspaces`. `npm install` links it into
+  // `node_modules` under the package name; no `workers/<name>`/`plugins/<name>`
+  // folder is created (those are only for packages the user owns via
+  // `mdk create`). Registry packages install normally. Local-path packages
+  // (scaffolded workers) are skipped — they are linked by `file:` deps from
+  // `mdk create` instead. Best-effort: a failed install is a warning, never a
+  // hard stop (the spec is already valid).
   const registryPackages: string[] = [];
   let linkedBundled = false;
 

@@ -1,7 +1,6 @@
 ---
 title: Supported hardware
 description: The miners, containers, power meters, and sensors MDK supports, plus mining-pool integrations, derived from each Worker's contract.
-docs@tether_slug: reference/supported-hardware
 ---
 
 ## Overview

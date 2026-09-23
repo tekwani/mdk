@@ -31,8 +31,8 @@ export const router = createBrowserRouter([
         path: ROUTE_PATHS.HOME.replace(/^\//, ''),
         element: <Home />,
       },
-      // Feature pages are added by `mdk-ui add page` into `./routes`; deep-link
-      // params (e.g. Alerts' `/:uuid?`) come from each route's `routePath`.
+      // Feature pages come from `./routes`; deep-link params (e.g. Alerts'
+      // `/:uuid?`) come from each route's `routePath`.
       ...ROUTES.map((route) => {
         const Page = lazy(route.page)
         return {

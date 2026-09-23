@@ -31,7 +31,7 @@ function createServer ({ host, port, serial, hashrateThs, powerW }) {
     const scale = POWER_MODES[state.powerMode]
     return {
       serial: state.serial,
-      model: 'ACME_V1',
+      model: 'DEMO_V1',
       firmware: 'v1.0.0',
       uptime_s: Math.floor((Date.now() - state.bootTime) / 1000),
       power_mode: state.powerMode,

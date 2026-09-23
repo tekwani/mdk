@@ -43,7 +43,7 @@ alongside those links invites a duplicate-React bug, so it installs in place.
 
 `.mdk/` gives each component its own data root (`kernel/`, `gateway/`,
 `workers/<name>/`) plus the two cross-process handoff artifacts both sides look
-for: `kernel.key` (read by the Gateway) and `keys/` (written by workers, watched
+for: `kernel.key` (read by the Gateway) and `keys/` (written by Workers, watched
 by the Kernel). Delete the whole directory to reset a stack.
 
 ## Develop
@@ -77,7 +77,7 @@ CLI=/path/to/mdk-prv/packages/cli/dist/index.js
 
 # Install the MDK Developer Skill (via the @tetherto/mdk-skill entry point)
 node "$CLI" skill add --client all --dir .
-ls .cursor/skills .claude/skills   # mdk, mdk-gateway-plugin, mdk-deployment, mdk-worker-plugin, mdk-ui-component
+ls .cursor/skills .claude/skills   # mdk, mdk-gateway-plugin, mdk-deployment, mdk-worker-plugin, mdk-ui-component, mdk-site-sizing
 
 # Scaffold the MDK UI shell into apps/dashboard, named <stack>-dashboard from mdk.yaml
 node "$CLI" create dashboard --dir .
@@ -104,14 +104,14 @@ npm run dev -- onboard
 ### Run the stack
 
 `mdk run` boots the components declared in `mdk.yaml` against project-local state
-under `.mdk/`. With no target, it boots the Kernel, every worker, and the
+under `.mdk/`. With no target, it boots the Kernel, every Worker, and the
 Gateway together in one process. Prefer separate terminals instead? Run each
 component on its own (`mdk run kernel`, `mdk run worker <name>`, `mdk run
 gateway`) — that's just which command(s) you type, not a spec setting.
 
-A **worker** is a plugin package (contract + handlers) that the CLI hosts on
+A **Worker** is a plugin package (contract + handlers) that the CLI hosts on
 `WorkerRuntimeV2` — the same "caller hosts the plugin" split the monorepo examples
-use. Because worker plugins live beside the stack and are not published to npm,
+use. Because Worker plugins live beside the stack and are not published to npm,
 reference them in `mdk.yaml` by **local path**, and describe their seed devices
 under the plugin-defined `config`:
 
@@ -131,30 +131,52 @@ spec:
 
 `config.devices[].opts` is the plugin's own per-device config (opaque to the CLI).
 With `mock: true` the CLI starts one simulator from `<package>/mock/server.js` per
-device so the worker talks to a mock instead of hardware.
+device so the Worker talks to a mock instead of hardware.
 
-Scaffold a worker from the bundled template (a mirror of
-[`backend/workers/samples/demo-worker`](../../backend/workers/samples/demo-worker/), a firmware-v3 miner simulator) — it lands
-under `workers/<name>`, ready to reference by local path:
+A **Gateway plugin** is declared the same way, under `spec.gateway.plugins[]`. That
+list is the whole of what the Gateway loads, including the three plugins MDK
+ships (`telemetry`, `site-hashrate`, `site-monitor`). They are subdirectories of
+one package, so each is named by its subpath:
+
+```yaml
+spec:
+  gateway:
+    port: 3847
+    plugins:
+      - package: "@tetherto/mdk-plugins/telemetry"      # one MDK ships
+      - package: "@tetherto/mdk-plugins/site-monitor"
+      - package: "@tetherto/mdk-plugin-demo"            # an installed npm name
+      - package: ./plugins/site                         # or a local path
+        config:
+          agent: { provider: { kind: qvac } }
+```
+
+Undeclared means unserved: a stack that names none of the three gets `404` on
+`/auth/site`, `/auth/metrics/*` and the rest. `mdk status` reports a plugin whose
+package does not resolve, subpath included.
+
+Scaffold a Worker from the bundled template (a mirror of
+[`backend/workers/samples/demo-worker`](../../backend/workers/samples/demo-worker/README.md), a
+firmware-v3 miner simulator) — it lands under `workers/<name>`, ready to reference by local path:
 
 ```bash
 node "$CLI" create worker demo-miner --dir /tmp/mdk-try   # → /tmp/mdk-try/workers/demo-miner
 ```
 
-`create worker` also writes the new worker into the project's `mdk.yaml` under
+`create worker` also writes the new Worker into the project's `mdk.yaml` under
 `spec.workers` (with a `mock: true` seed device) so it is runnable right away;
 pass `--no-stack-entry` to skip and print the snippet instead. It leaves an
 existing same-named entry untouched.
 
 The seed device is given a stack-unique identity — mock port counting up from
-`18080`, and a device id/serial derived from the worker name — so scaffolding
-several workers into one project never produces a conflict. Both matter: a
+`18080`, and a device id/serial derived from the Worker name — so scaffolding
+several Workers into one project never produces a conflict. Both matter: a
 duplicate port fails the boot, and a duplicate device id is worse, because the
 Kernel registers ids globally and silently keeps only the first. `mdk run`
-rejects a spec that repeats a worker name or device id, naming both offenders.
+rejects a spec that repeats a Worker name or device id, naming both offenders.
 
 `mdk run` runs in the foreground and owns Ctrl+C (and `SIGTERM`). Components are
-stopped in reverse boot order — gateway, then workers and their mocks, then the
+stopped in reverse boot order — gateway, then Workers and their mocks, then the
 Kernel — but the process exits regardless of how that goes: a stop that throws is
 skipped, a stop that wedges is abandoned after 5s with a forced exit, and a
 second Ctrl+C exits immediately. So the ports a run holds are always released
@@ -182,15 +204,15 @@ node "$CLI" run dashboard --dir /tmp/mdk-try   # separate terminal from `mdk run
 
 Mock ports are also resolved at boot. The configured port is used whenever it is
 free; when something else already holds it (another stack on the machine, a
-worker left running) the mock moves to the next free port and says so, since the
+Worker left running) the mock moves to the next free port and says so, since the
 port is a private contract between the simulator and the plugin that dials it.
 Workers step over ports their not-yet-booted neighbours declared, so one squatter
-relocates one worker rather than shifting all of them. The Gateway port is never
+relocates one Worker rather than shifting all of them. The Gateway port is never
 relocated — it is a published endpoint, so a conflict there is a fast, explicit
 failure before anything boots.
 
 Both `create` commands install dependencies by default (`--no-install` to skip):
-a worker installs from the project root so npm links it as a workspace, while the
+a Worker installs from the project root so npm links it as a workspace, while the
 dashboard installs in place. If the project has no root [`package.json`](./package.json) yet,
 `create worker` writes one.
 
@@ -203,8 +225,8 @@ node "$CLI" run worker demo-miner --dir /tmp/mdk-try    # just the worker (+ its
 
 `mdk status` is a one-shot, read-only report — it never starts, stops or repairs
 anything. It covers the **environment** (Node version, package manager, `mdk.yaml`
-validity, and whether every declared worker/plugin package actually resolves) and
-the **stack** (Kernel, Gateway, and each worker with its state, health and device
+validity, and whether every declared Worker plugin package actually resolves) and
+the **stack** (Kernel, Gateway, and each Worker with its state, health and device
 count).
 
 ```bash
@@ -219,13 +241,13 @@ HTTP on its configured port.
 
 Exit codes make it scriptable (`mdk status && deploy…`):
 
-| Exit code | Fires when | Fix |
-| --- | --- | --- |
-| `0` | Environment checks pass and every component reports `healthy` | None |
-| `1` | `collectStatus` throws while gathering the report, an unexpected error | Check the printed error message and the project directory (`--dir`) |
-| `2` | `--output` names a format outside `table`/`json`/`yaml` | Pass one of `table`, `json`, `yaml` |
-| `4` | An environment precondition fails: old Node, a missing or invalid `mdk.yaml`, or a declared package that doesn't resolve | Fix the precondition the report names |
-| `5` | The stack isn't fully up: Kernel or Gateway unreachable, or a declared worker not registered/serving | Check the component the report marks unhealthy |
+| Exit code | Fires when                                                             | Fix                                 |
+| --------- | ---------------------------------------------------------------------- | ----------------------------------- |
+| `0`       | Environment checks pass and every component reports `healthy`          | None                                |
+| `1`       | `collectStatus` throws while gathering the report, an unexpected error | Check the printed error message and the project directory (`--dir`) |
+| `2`       | `--output` names a format outside `table`/`json`/`yaml`                | Pass one of `table`, `json`, `yaml` |
+| `4`       | An environment precondition fails: old Node, a missing or invalid `mdk.yaml`, or a declared package that doesn't resolve | Fix the precondition the report names |
+| `5`       | The stack isn't fully up: Kernel or Gateway unreachable, or a declared Worker not registered/serving | Check the component the report marks unhealthy |
 
 Notes:
 
@@ -244,11 +266,11 @@ lands in `apps/dashboard`, takes the package + `APP_NAME` from
 `.env.example` → `.env` with `VITE_GATEWAY_URL` pointed at this stack's gateway
 port. Passing a name puts the app in `apps/<name>` instead.
 
-  | Flag | Status | Type | Default | Description |
-  | --- | --- | --- | --- | --- |
-  | `--ref` | Optional | `string` | `main` | Branch/tag to scaffold from; ignored inside the monorepo since the local template always wins, applies only to the standalone GitHub path |
-  | `--force` | Optional | `boolean` | `false` | Overwrite the target directory; recursively deletes it first, no confirmation prompt |
-  | `--no-install` | Optional | `boolean` | `false` | Skip the post-scaffold dependency install |
+| Flag           | Status   | Type     | Default  | Description                                     |
+| -------------- | -------- | -------- | -------- | ----------------------------------------------- |
+| `--ref`        | Optional | `string` | `main`   | Branch/tag to scaffold from; ignored in monorepo (local template always wins), applies only to the standalone GitHub path |
+| `--force`      | Optional | `boolean` | `false` | Overwrite the target directory; recursively deletes it first, no confirmation prompt |
+| `--no-install` | Optional | `boolean` | `false` | Skip the post-scaffold dependency install       |
 
 - The scaffolded dashboard is a normal Vite app: `npm run build` inside it
 produces a `dist/` you serve however you serve static assets. `create dashboard`
@@ -276,24 +298,24 @@ mdk onboard
 Stub commands are wired up (name, arguments, options, help) but not implemented: each prints
 `mdk <command>: not implemented yet (stub).` to stderr and exits 0.
 
-| Group            | Implemented commands                                                                  | Stub commands                                                               |
-| ---------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Onboarding       | `mdk onboard`                                                                         |                                                                             |
-| Scaffold         | `mdk create worker <name>`, `mdk create plugin <name>`, `mdk create dashboard [name]` |                                                                             |
-| Run & manage     | `mdk run [target] [name]`, `mdk status`                                               | `mdk get <resource>`, `mdk describe <resource> <name>`, `mdk logs <target>` |
-| Discover         |                                                                                       | `mdk discover`                                                              |
-| Agent enablement | `mdk skill add`                                                                       | `mdk mcp register`                                                          |
-| Meta             | `mdk version`                                                                         | `mdk manifest` (alias `json-help`)                                          |
+| Group            | Implemented commands                    | Stub commands                                                               |
+| ---------------- | --------------------------------------- | --------------------------------------------------------------------------- |
+| Onboarding       | `mdk onboard`                           |                                                                             |
+| Scaffold         | `mdk create worker <name>`, `mdk create plugin <name>`, `mdk create dashboard [name]` |                               |
+| Run & manage     | `mdk run [target] [name]`, `mdk status` | `mdk get <resource>`, `mdk describe <resource> <name>`, `mdk logs <target>` |
+| Discover         | `mdk discover`                          |                                                                             |
+| Agent enablement | `mdk skill add`                         | `mdk mcp register`                                                          |
+| Meta             | `mdk version`                           | `mdk manifest` (alias `json-help`)                                          |
 
 Global flags:
 
-| Flag | Status | Type | Default | Description |
-| --- | --- | --- | --- | --- |
-| `-o, --output <fmt>` | Optional | `string` | `table` | Output format for data: `table`, `json`, or `yaml` |
-| `-v, --verbose` | Optional | `boolean` | `false` | Increase log detail |
-| `--debug` | Optional | `boolean` | `false` | Print stack traces for unexpected failures |
-| `--version` | Optional | `boolean` | `false` | Print the CLI version and exit |
-| `-h, --help` | Optional | `boolean` | `false` | Print usage help and exit |
+| Flag                 | Status   | Type      | Default | Description                                        |
+| -------------------- | -------- | --------- | ------- | -------------------------------------------------- |
+| `-o, --output <fmt>` | Optional | `string`  | `table` | Output format for data: `table`, `json`, or `yaml` |
+| `-v, --verbose`      | Optional | `boolean` | `false` | Increase log detail                                |
+| `--debug`            | Optional | `boolean` | `false` | Print stack traces for unexpected failures         |
+| `--version`          | Optional | `boolean` | `false` | Print the CLI version and exit                     |
+| `-h, --help`         | Optional | `boolean` | `false` | Print usage help and exit                          |
 
 ### Implement a command
 
@@ -304,5 +326,5 @@ The command wiring (name, arguments, options, help) does not need to change.
 ## Next steps
 
 - See [`instruction.md`](instruction.md) for the full guide (conventions, output
-rules, and definition of done) — read it before contributing, especially if you
-are an AI coding agent
+rules, and definition of done). Read it before contributing, especially if you
+are an AI coding agent.

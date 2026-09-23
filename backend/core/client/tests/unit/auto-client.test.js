@@ -23,6 +23,7 @@ test('auto client - method calls reject with the default code when no kernelKey'
     t.fail('should have rejected')
   } catch (err) {
     t.is(err.message, 'ERR_MDK_CLIENT_UNAVAILABLE', 'default error code')
+    t.is(err.code, 'ERR_MDK_CLIENT_UNAVAILABLE', 'default error code on .code')
   }
 })
 
@@ -33,6 +34,7 @@ test('auto client - honors a custom errorCode', async (t) => {
     t.fail('should have rejected')
   } catch (err) {
     t.is(err.message, 'ERR_KERNEL_CLIENT_NOT_CONNECTED', 'custom error code')
+    t.is(err.code, 'ERR_KERNEL_CLIENT_NOT_CONNECTED', 'custom error code on .code')
   }
 })
 
@@ -55,6 +57,7 @@ test('auto client - failed connect resets so the next request retries', async (t
   } catch (err) {
     t.ok(err.message.startsWith('ERR_MDK_CLIENT_UNAVAILABLE:'), 'code prefixes the cause')
     t.ok(err.message.includes('kernel unreachable'), 'cause preserved')
+    t.is(err.code, 'ERR_MDK_CLIENT_UNAVAILABLE', 'bare code on .code despite the cause suffix on .message')
   }
 
   const res = await mdkClient.listWorkers()

@@ -4,10 +4,12 @@ Catalog application showcasing the `@tetherto/mdk-react-devkit` component
 library along with the headless core (`@tetherto/mdk-ui-foundation`) and its
 React bindings (`@tetherto/mdk-react-adapter`).
 
-## Getting Started
+## Get started
 
 ```bash
-# Install dependencies (from root)
+cd ui                     # ui/ is its own Turborepo workspace, separate from the root's
+
+# Install dependencies
 npm install
 
 # Run the catalog app

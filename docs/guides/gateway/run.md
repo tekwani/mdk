@@ -16,7 +16,7 @@ a remote Kernel over HRPC (cross-host deployments), and as a standalone process 
 ## Prerequisites
 
 - [Node.js][node] >=24 (LTS)
-- npm 11 (< 12)
+- npm 11 [(< 12)][npm-version]
 - Commands are run from the repository root
 - A Kernel instance running and reachable, or `kernelKey: false` to start without a Kernel connection (development only)
 
@@ -121,6 +121,9 @@ npm start
 
 [node]: https://nodejs.org/
 <!-- docs@tether.io: external link — preserve URL -->
+
+[npm-version]: ../../reference/environment.md#why-npm-stays-below-12
+<!-- docs@tether.io: npm-version → reference/environment -->
 
 [terminology]: ../../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->

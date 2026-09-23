@@ -6,24 +6,26 @@ docs@tether_slug: guides/gateway
 
 ## Overview
 
-The Gateway is a container that hosts plugins and delivers an HTTP interface for your frontend: each plugin builds its own [`@tetherto/mdk-client`][mdk-client-readme] from its context. These guides cover how to run it and extend it with the plugin system.
+The Gateway is a container that hosts plugins and delivers an HTTP interface for your frontend: each plugin builds its own
+[`@tetherto/mdk-client`][mdk-client-readme] from its context. These guides cover how to run it and extend it with the plugin system.
 
 > [!NOTE]
-> An AI agent reaches MDK over MCP, not the Gateway's HTTP surface directly — served either by a standalone
+> An AI agent reaches MDK over MCP, not the Gateway's HTTP surface directly. MCP is served either by a standalone
 > [`@tetherto/mdk-mcp`][mcp-readme] process, or by the Gateway itself when it auto-generates tools from a mounted plugin's routes.
 
 > [!NOTE]
-> If Gateway, Kernel, or plugin are unfamiliar, read [terminology][terminology] first. For the full developer model — extension, data access,
-> auth design — read the [Gateway concept page][gateway-concept].
+> If Gateway, Kernel, or plugin are unfamiliar, read [terminology][terminology] first. For the full developer model (extension, data access,
+> auth design), read the [Gateway concept page][gateway-concept].
 
 ## Choose a guide
 
 | Goal | Guide |
 | --- | --- |
 | Start the Gateway for the first time | [Run the Gateway][run] |
-| Use built-in plugins or build your own | [Gateway plugins][plugins] |
+| Declare the plugins MDK ships, or build your own | [Gateway plugins][plugins] |
 | Stop Kernel, Gateway, and Workers cleanly | [Tear down MDK services][teardown] |
 | Operator in the loop: submit and approve write actions | [Submit and approve write actions][write-actions] |
+| Secure the site you are assembling | [Site security blueprint][security-blueprint] |
 
 ## Next steps
 
@@ -31,6 +33,7 @@ The Gateway is a container that hosts plugins and delivers an HTTP interface for
 - Read the [Gateway API reference][gateway-readme]
 - Choose a [deployment shape][deployment-topologies]
 - [Give an operator a chat interface to the fleet][agent-guides] by deploying the operator agent behind the Gateway
+- Follow the [site security blueprint][security-blueprint]: identity in controllers, Kernel allowlist, and UI session options
 
 ## Links
 
@@ -66,3 +69,6 @@ The Gateway is a container that hosts plugins and delivers an HTTP interface for
 
 [agent-guides]: ../agent/index.md
 <!-- docs@tether.io: agent-guides → guides/agent -->
+
+[security-blueprint]: ../security/index.md
+<!-- docs@tether.io: security-blueprint → guides/security -->

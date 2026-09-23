@@ -264,13 +264,13 @@ function describe (err, apiKey) {
 
 /**
  * Drain a streamText result object and resolve to the first error produced by any of its promise
- * properties (text, finishReason, usage) or by an error part in fullStream.
+ * properties (text, finishReason, usage) or by an error part in the stream.
  */
 async function firstStreamFailure (r) {
   let failure = null
   const claimed = [r.text, r.finishReason, r.usage].map((p) => p?.catch((err) => { failure ??= err }))
   try {
-    for await (const part of r.fullStream) {
+    for await (const part of r.stream) {
       if (part.type === 'error') failure ??= part.error
     }
   } catch (err) {

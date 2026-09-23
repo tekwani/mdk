@@ -27,7 +27,7 @@ example directory containing one host module, not a standalone npm package.
 ## Prerequisites
 
 - Node.js `>=24` (all MDK core packages declare this `engines` constraint)
-- npm 11 (< 12)
+- npm 11 [(< 12)][npm-version]
 - A completed [Worker plugin package][build-a-worker], including its bundled mock device
 - Comfort with plain async JS — no additional MDK framework knowledge is required beyond what building the package already covered
 
@@ -46,12 +46,12 @@ resolves it (by relative path, not through `node_modules` package resolution):
 npm install github:tetherto/mdk#main
 ```
 
-This installs the whole monorepo under `node_modules/@tetherto/mdk` (its root `package.json` name). It does **not**
-auto-install the nested package's own dependencies — this repo's install is a federated set of scripts, not a single
-root dependency graph — so run its installer once after adding it:
+This installs the whole monorepo under `node_modules/@tetherto/mdk` (its root `package.json` name). The monorepo is a
+real root npm workspace, but npm does not auto-install a git dependency's own transitive workspace tree — so run a
+single install inside the checked-out copy once after adding it:
 
 ```bash
-(cd node_modules/@tetherto/mdk/backend/core && ./install-packages.sh)
+(cd node_modules/@tetherto/mdk && npm install)
 ```
 
 The same deep-path pattern also gets you `getKernel`, `startGateway`, and `waitForDiscovery` from
@@ -388,7 +388,7 @@ topics enable rendezvous; they are not authentication secrets or command-authori
 
 `allowEmptyDevices` opts a host into a provisioning-first bootstrap: the runtime constructs with zero devices instead
 of throwing `ERR_DEVICES_REQUIRED`, then takes `registerThing` writes (a built-in command, see
-[Worker Runtime legacy services][worker-runtime-legacy]) that persist new device configs to the store. Those writes
+[Worker Runtime store services][worker-runtime-store]) that persist new device configs to the store. Those writes
 only take effect once the host is stopped and restarted with the provisioned set — there is no hot-add. It is off by
 default; every shipped miner Worker in this monorepo sets it to `true` in its boot function.
 
@@ -433,6 +433,9 @@ Understand the end-user experience of controlling and monitoring your device via
 
 ## Links
 
+[npm-version]: ../../reference/environment.md#why-npm-stays-below-12
+<!-- docs@tether.io: npm-version → reference/environment -->
+
 [build-a-worker]: build-a-worker.md
 <!-- docs@tether.io: build-a-worker → guides/workers/build-a-worker -->
 
@@ -451,8 +454,8 @@ Understand the end-user experience of controlling and monitoring your device via
 [security-boundaries]: ../../concepts/security-boundaries.md
 <!-- docs@tether.io: security-boundaries → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#security-model -->
 
-[worker-runtime-legacy]: ../../reference/maintainers/worker-runtime-legacy-services.md
-<!-- docs@tether.io: worker-runtime-legacy → https://github.com/tetherto/mdk/blob/main/docs/reference/maintainers/worker-runtime-legacy-services.md -->
+[worker-runtime-store]: ../../../backend/core/mdk-worker/README.md#store-services
+<!-- docs@tether.io: worker-runtime-store → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/README.md#store-services -->
 
 [minimal-dashboard]: ../../tutorials/build-a-dashboard.md
 <!-- docs@tether.io: minimal-dashboard → tutorials/build-a-dashboard -->

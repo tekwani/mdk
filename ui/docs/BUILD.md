@@ -18,7 +18,7 @@ npm run dev        # watch everything and start the catalog app
 ## Stack
 
 - **Monorepo tool**: Turborepo
-- **Package manager**: npm 11 workspaces (< 12; no pnpm, no yarn)
+- **Package manager**: npm 11 workspaces [(< 12)](../../docs/reference/environment.md#why-npm-stays-below-12); no pnpm, no yarn
 - **Build tools**:
   - TypeScript compiler (`tsc`) for `.ts/.tsx`. All three TypeScript
     packages are **pre-built** — `tsc` emits ESM JS + `.d.ts`
@@ -82,7 +82,6 @@ Defines the task graph used by every workspace:
 {
   "tasks": {
     "build":                       { "dependsOn": ["^build"],      "outputs": ["dist/**", ".next/**"] },
-    "@tetherto/mdk-ui-cli#build":  { "dependsOn": ["^build"],      "outputs": ["dist/**"], "cache": false },
     "build:ts":                    { "dependsOn": ["^build:ts"],   "outputs": ["dist/**"] },
     "build:scss":                  { "dependsOn": ["^build:scss"], "outputs": ["dist/**"] },
     "dev":                         { "cache": false, "persistent": true },
@@ -94,11 +93,6 @@ Defines the task graph used by every workspace:
   }
 }
 ```
-
-`@tetherto/mdk-ui-cli#build` opts out of caching entirely: its [`copy-templates.mjs`](../packages/cli/scripts/copy-templates.mjs) step bundles
-`examples/mdk-ui-shell-template`, a sibling of the turbo root that no `inputs` glob in this file can reach, so
-turbo cannot tell when the bundled copy has gone stale. See the comment at the top of
-[`copy-templates.mjs`](../packages/cli/scripts/copy-templates.mjs) for the full reasoning.
 
 ### Per-package: `package.json` scripts
 
@@ -214,10 +208,9 @@ All root scripts proxy to Turborepo, which fans out across workspaces.
 > cd examples/mdk-ui-shell-template && npm install && npm run dev
 > ```
 >
-> `mdk-ui create` reads that same directory and fills in the app-specific gaps
-> (package name, dependency protocol, `.gitignore`), so editing the example is
-> editing the template. The build step ([`copy-templates.mjs`](../packages/cli/scripts/copy-templates.mjs)) copies it into the
-> published CLI's `dist/templates/`.
+> [`mdk create dashboard`](../../packages/cli/README.md) reads that same
+> directory and fills in the app-specific gaps (package name, dependency
+> protocol, `.gitignore`), so editing the example is editing the template.
 
 ## Per-package scripts
 
@@ -352,8 +345,7 @@ Outputs are cached between runs.
    only useful when isolating a failure.
 2. **Trust the cache**: Turborepo's cache is keyed off inputs. Never use
    `--force` unless you suspect cache corruption — the cache is normally
-   correct. The one task that never caches, by design, is
-   `@tetherto/mdk-ui-cli#build` — see the `turbo.json` section above.
+   correct.
 3. **Run `npm run build` before `npm run dev` on a fresh clone** — the
    pre-built packages (`mdk-ui-foundation`, `mdk-react-adapter`) need their
    `dist/` populated before the devkit consumes them.

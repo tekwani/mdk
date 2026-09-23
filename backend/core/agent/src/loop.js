@@ -107,9 +107,11 @@ export async function * runToolLoop ({ model, system, messages, tools, mcp, notC
     const asked = lastUserMessage()
     const signal = deadline(requestTimeoutMs)
     try {
-      // onError is a noop because stream errors surface as part.type === 'error' parts in fullStream below.
+      // onError is a noop because stream errors surface as part.type === 'error' parts in
+      // the stream below and are yielded as EVENT.ERROR; the SDK's default would print the
+      // raw error object on top of that.
       const result = streamText({ model, system: toolSystem, messages: convo, maxOutputTokens, maxRetries: 2, onError: () => {}, abortSignal: signal })
-      for await (const part of result.fullStream) {
+      for await (const part of result.stream) {
         if (part.type === 'error') { yield { type: EVENT.ERROR, error: String(part.error) }; return }
         if (part.type === 'finish') finishReason = part.finishReason
         if (part.type !== 'text-delta') continue

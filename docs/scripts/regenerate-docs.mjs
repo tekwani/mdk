@@ -40,16 +40,16 @@ const TARGETS = [
   {
     key: 'hardware',
     label: 'Supported hardware page',
-    cwd: 'backend/workers',
+    cwd: '.',
     command: ['npm', ['run', 'generate:catalogue']],
     paths: ['backend/workers/docs/supported-hardware.md', 'backend/workers/docs/catalogue.json']
   },
   {
     key: 'plugins',
-    label: 'Gateway plugin route tables',
-    cwd: 'backend/core/plugins',
+    label: 'Supported plugins page',
+    cwd: '.',
     command: ['npm', ['run', 'generate:plugin-reference']],
-    paths: ['backend/core/plugins/README.md']
+    paths: ['docs/reference/supported-plugins.md', 'backend/plugins/docs/plugins.json']
   },
   {
     key: 'ui-registry',

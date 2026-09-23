@@ -97,7 +97,9 @@ const AssistantMessageView = ({
           )
         : null}
 
-      {isThinking ? <Loader size={6} count={3} color="orange" /> : null}
+      {/* `inline`, or the loader's 200px block height strands the dots ~100px below this
+          label with dead space between, and the turn reads as frozen while it is working. */}
+      {isThinking ? <Loader inline size={6} count={3} color="orange" /> : null}
 
       {hasText && leaked === null ? <CollapsibleAnswer text={text} streaming={streaming} /> : null}
       {hasText && leaked !== null ? <LeakedToolCallNotice call={leaked} /> : null}

@@ -49,10 +49,10 @@ Re-run with `-- --update` and **review the baseline diff in the PR** — that di
 is the record of what the release breaks. Do not update it in the same commit as
 unrelated work.
 
-## Note on `npm run api:surface`
+## Note on the removed `npm run api:surface`
 
-That is a **different, older, and currently broken** script
-([`scripts/generate-public-surface.mjs`](../scripts/generate-public-surface.mjs)): it emits rich TypeDoc reflection dumps
-into `ui/api/`, which is gitignored, and it imports `ui/api/schema.mjs` — a file
-that was never committed, so the script exits with `ERR_MODULE_NOT_FOUND`. It is
-unrelated to this gate.
+There used to be a second, older script (`scripts/generate-public-surface.mjs`)
+that emitted TypeDoc reflection dumps into a gitignored `ui/api/`. It imported
+`ui/api/schema.mjs`, a file that was never committed, so it always exited with
+`ERR_MODULE_NOT_FOUND`. It has been removed along with the `typedoc`
+dependency; it was never part of this gate.

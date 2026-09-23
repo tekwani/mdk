@@ -34,7 +34,7 @@ Bitdeer communicates over **MQTT**, not HTTP/Modbus:
 - Worker dependencies installed (from the repo root):
 
 ```bash
-npm run setup:workers   # backend/workers packages (includes container-bitdeer + its mock)
+npm install   # backend/workers packages (including container-bitdeer + its mock) are root workspace members
 ```
 
 ## Quickstart
@@ -75,7 +75,7 @@ $TMPDIR/mdk-site-bitdeer/kernel/     # Kernel Corestore
 
 | Issue | Fix |
 |---|---|
-| `Cannot find module ...` | Run `npm run setup:workers` from the repo root. |
+| `Cannot find module ...` | Run `npm install` from the repo root. |
 | `EADDRINUSE :::10883` | A previous run's MQTT broker is still bound. `Ctrl+C` it, or free the port. |
 | Telemetry all `n/a` | Give it a few seconds — the mock publishes every five seconds. |
 | `Corruption: ... MANIFEST-*` | Stale store from a `kill -9`. Delete `$TMPDIR/mdk-site-bitdeer/` and retry. |

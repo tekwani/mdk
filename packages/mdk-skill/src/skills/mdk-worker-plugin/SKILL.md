@@ -1,9 +1,9 @@
 ---
 name: mdk-worker-plugin
 description: >
-  Integrate a new device into MDK as a device worker. Use for any task like
-  "new device / miner / power meter / sensor / container worker", "build a
-  worker", "integrate hardware", "wrap a device protocol (Modbus / CGMiner /
+  Integrate a new device into MDK as a device Worker. Use for any task like
+  "new device / miner / power meter / sensor / container Worker", "build a
+  Worker", "integrate hardware", "wrap a device protocol (Modbus / CGMiner /
   HTTP / MQTT)", or anything creating or editing an mdk-contract.json, a
   Worker Plugin, or telemetry/command handlers under backend/workers/.
 metadata:
@@ -12,9 +12,9 @@ metadata:
 license: Apache-2.0
 ---
 
-# Integrate a new MDK device worker
+# Integrate a new MDK device Worker
 
-A device worker is a **Worker Plugin**: a package directory holding an
+A device Worker is a **Worker Plugin**: a package directory holding an
 `mdk-contract.json` plus one small handler module per telemetry channel and
 per command. It exports no module of its own. `WorkerRuntimeV2`
 (`@tetherto/mdk-worker`) loads the directory and instantiates the plugin once
@@ -40,17 +40,17 @@ The final package shape (this is `assets/worker-template/`, a verbatim copy of
 
 ## Workflow
 
-### 1. Start from the worker template
+### 1. Start from the Worker template
 
-The default starting point for every new worker is `assets/worker-template/`
+The default starting point for every new Worker is `assets/worker-template/`
 — a complete minimal Worker Plugin (contract + client + handlers + mock) with
 no assumptions about your device category.
 
-Do **not** model a new worker on the MDK monorepo's shipped device families
-(whatsminer, antminer, abb, seneca, …) by default — those still use the older
+Do **not** model a new Worker on the MDK monorepo's shipped device families
+(Whatsminer, Antminer, ABB, Seneca, …) by default — those still use the older
 `plugin/` layout and are tightly coupled to the mining use cases they were
 built for. Only when the user **explicitly asks** to follow the existing MDK
-worker families and their structure (e.g. contributing a worker into this
+Worker families and their structure (e.g. contributing a Worker into this
 monorepo, or deliberately mirroring a shipped family's protocol handling)
 should you read [`references/device-families.md`](./references/device-families.md)
 and copy from the named family instead.
@@ -63,19 +63,19 @@ In a CLI-managed project, scaffold and register in one step:
 mdk create worker <name>
 ```
 
-This copies the CLI worker template into `workers/<name>`, links it as an npm
+This copies the CLI Worker template into `workers/<name>`, links it as an npm
 workspace member (root `npm install`, skip with `--no-install`), and appends
 it under `mdk.yaml` → `spec.workers` with a `mock: true` seed device (skip
 with `--no-stack-entry`) — so it is runnable immediately with
 `mdk run worker <name>` before you change a line.
 
 Outside the CLI (e.g. contributing inside the monorepo, or no `mdk.yaml`
-project), copy `assets/worker-template/` to your worker's location instead.
+project), copy `assets/worker-template/` to your Worker's location instead.
 Either way, rename the template-specific parts (contract metadata, client
 methods, mock behavior). Remember to adapt `smoke.config.js` (mock boot,
 device opts, sample command params) and `package.json` (name, description).
 The plugin is location-independent — put the package wherever your project
-keeps packages. (Only workers contributed to the MDK monorepo itself follow
+keeps packages. (Only Workers contributed to the MDK monorepo itself follow
 its `backend/workers/<category>/<family>/` layout.)
 
 ### 3. Author `mdk-contract.json`
@@ -143,7 +143,7 @@ Load [`references/local-testing.md`](./references/local-testing.md) for the full
    out-of-bounds command params are rejected. No Kernel, no DHT.
 3. **Standalone protocol check** — host the package on `WorkerRuntimeV2` with a
    tiny caller and drive real envelopes through `handleRequest`.
-4. **Site integration** — add the worker to a site stack (e.g.
+4. **Site integration** — add the Worker to a site stack (e.g.
    [`examples/full-site/start.js`](../../../../../examples/full-site/start.js))
    and confirm a real Kernel registers it end-to-end.
 
@@ -165,21 +165,21 @@ const runtime = new WorkerRuntimeV2(pkgDir, {
 await runtime.start()
 ```
 
-The worker joins the DHT topic; the Kernel pulls identity + capabilities and
+The Worker joins the DHT topic; the Kernel pulls identity + capabilities and
 starts scheduling telemetry/health. **No Kernel changes are ever needed to add
-a worker.**
+a Worker.**
 
 ## Gotchas
 
-- **Unidirectional protocol**: a worker never calls the Kernel — it only
+- **Unidirectional protocol**: a Worker never calls the Kernel — it only
   answers. If you think you need to push, you need a telemetry channel that
   the Kernel will pull.
-- **`deviceId` ownership is exclusive** per worker; duplicate ids in
+- **`deviceId` ownership is exclusive** per Worker; duplicate ids in
   `opts.devices` throw `ERR_DEVICE_ID_DUPLICATE` at construction.
 - One device offline must never affect siblings — failures stay inside that
   device's instance (V2 has no boot-time probe; unreachable devices surface
   as errors in telemetry payloads rather than `ERR_DEVICE_UNAVAILABLE`).
-- Use `debug` / the ambient `logger`, never `console.log`, in worker code.
+- Use `debug` / the ambient `logger`, never `console.log`, in Worker code.
   Errors are `ERR_SCREAMING_SNAKE` strings.
 - The published contract strips `handler` paths; everything else in the
   contract is visible to sites and AI operators — write it accordingly.
@@ -189,10 +189,10 @@ a worker.**
 This skill stops at a working Worker Plugin + contract. For prompts that also
 ask to **show** the data in a UI:
 
-| Next need | Skill |
-| --- | --- |
-| Aggregate / expose HTTP API over this worker | `mdk-gateway-plugin` |
-| Register worker in `mdk.yaml` and run it | `mdk-deployment` |
-| Dashboard page / tiles / charts | `mdk-ui-component` |
+| Next need                                    | Skill                |
+| -------------------------------------------- | -------------------- |
+| Aggregate / expose HTTP API over this Worker | `mdk-gateway-plugin` |
+| Register Worker in `mdk.yaml` and run it     | `mdk-deployment`     |
+| Dashboard page / tiles / charts              | `mdk-ui-component`   |
 
 See the composite routing table in [`../mdk/SKILL.md`](../mdk/SKILL.md).

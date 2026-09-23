@@ -16,7 +16,7 @@ import './pool-manager.scss'
  * Composite Pool Manager surface. Owns internal, state-based view switching
  * across the dashboard and the four feature views (Pools, Miner Explorer,
  * Sites Overview, Site Detail) so the whole experience resolves to a single
- * route for `mdk-ui add page`. Receives all data as props — the shell page is
+ * route. Receives all data as props — the shell page is
  * thin glue that reads the adapter hooks and passes them down.
  *
  * Actions staged from any sub-view (create/edit pool, assign miners) are

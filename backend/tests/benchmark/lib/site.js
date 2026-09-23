@@ -13,7 +13,7 @@ const fs = require('fs')
 const debug = require('debug')('mdk:benchmark:site')
 const { getKernel, startGateway } = require('@tetherto/mdk-core')
 const { publishWorkerKey, keysDir } = require('@tetherto/mdk-core/lib/local-discovery')
-const { WORKER_REGISTRY, ALERT_INDUCTION, ALLOW_DUPLICATE_IPS, MOCK_PORT_RANGE, HOST, DISCOVERY, ROOT, KERNEL_DEFAULTS, GATEWAY_PLUGIN_DIR } = require('./constants')
+const { WORKER_REGISTRY, ALERT_INDUCTION, ALLOW_DUPLICATE_IPS, MOCK_PORT_RANGE, HOST, DISCOVERY, ROOT, KERNEL_DEFAULTS, WORKER_CONF_DEFAULTS, MINER_DEVICE_TIMEOUT_MS, GATEWAY_PLUGIN_DIR } = require('./constants')
 
 const benchmarkDir = path.join(__dirname, '..')
 const config = require(path.join(benchmarkDir, 'config', 'benchmark.config.json'))
@@ -201,10 +201,13 @@ function workerStoreDir (root, workerId) {
   return storeDir
 }
 
-// `conf` is deliberately just allowDuplicateIPs plus alert induction —
-// every other operating parameter (snap/store intervals, timeouts, ...) is
-// left unset so the worker always boots on its own package defaults, never
-// a benchmark-tuned override. Alert thresholds are the one exception (see
+// `conf.thing` carries WORKER_CONF_DEFAULTS (lib/constants.js) so the
+// worker actually boots on the cadence/timeout knobs the report claims —
+// createWorkerInfra merges this over its own (slower, production-sized)
+// THING_CONF_DEFAULTS, so without passing it explicitly here the worker
+// would run on package defaults while every "Configured ... interval" row
+// and headroomRatio kept assuming WORKER_CONF_DEFAULTS was actually in
+// effect. Alert thresholds are folded into the same `thing` object (see
 // ALERT_INDUCTION in lib/constants.js): without them AlertsService never
 // evaluates anything, so the alerts path would stay permanently unmeasured
 // rather than just soak-bound like everything else that needs a real wait.
@@ -218,14 +221,24 @@ async function bootWorker ({ workerId, type, model, kernel, kernelTopic, root, m
     storeDir: workerStoreDir(root, workerId),
     conf: {
       allowDuplicateIPs: ALLOW_DUPLICATE_IPS,
-      // thing.miner: {} isn't policy, it's a guard — AlertsService's base
-      // pool-mismatch checks read ctx.thingConf.pools where ctx.thingConf is
-      // this same thing.miner sub-object; left undefined, that access
-      // throws inside the checked block and gets swallowed as a fake
-      // "alert" (the exact TypeError message as its description). An empty
-      // object makes `.pools` just undefined, so those checks correctly
-      // no-op instead of misreporting as real alerts.
-      ...(induction ? { thing: { alerts: { [deviceType]: induction.alerts }, miner: {} } } : {})
+      thing: {
+        ...WORKER_CONF_DEFAULTS,
+        // thing.miner always carries at least `timeout` — two reasons it
+        // can never be left out entirely. First, a guard: AlertsService's
+        // base pool-mismatch checks read ctx.thingConf.pools where
+        // ctx.thingConf is this same thing.miner sub-object; left undefined,
+        // that access throws inside the checked block and gets swallowed as
+        // a fake "alert" (the exact TypeError message as its description).
+        // Second, `timeout` is the real per-device RPC timeout mdk-core's
+        // Thing base class falls back to 10000ms for when unset (see
+        // MINER_DEVICE_TIMEOUT_MS in lib/constants.js) — the number that
+        // actually bounds a live pullTelemetry()/sendCommand() call to a
+        // hung device, so it's set explicitly rather than left to that
+        // implicit fallback, and processes/run-process.js's device-outage
+        // drill uses the same constant for its analytical worst case.
+        miner: { timeout: MINER_DEVICE_TIMEOUT_MS },
+        ...(induction ? { alerts: { [deviceType]: induction.alerts } } : {})
+      }
     },
     kernelTopic: (!kernel && mode !== 'local') ? kernelTopic : null,
     seedDevices: devices

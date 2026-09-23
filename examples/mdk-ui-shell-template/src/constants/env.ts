@@ -9,8 +9,8 @@
 
 /**
  * Human-facing application name — shown in the browser tab and the Home landing
- * page. `mdk-ui create <name>` rewrites this to your app's name; edit it freely
- * afterwards (it is the single source of truth for the display name).
+ * page. Set it to your app's name (it is the single source of truth for the
+ * display name).
  */
 export const APP_NAME = 'MDK UI Shell'
 

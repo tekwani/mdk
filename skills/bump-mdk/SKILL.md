@@ -51,27 +51,30 @@ embedded `file:`-dependency entries.
     because nothing local satisfies the range). `cli` similarly pins
     `@tetherto/mdk-react-devkit: ^X`.
   - Regenerate the whole workspace with **one** command: `cd ui && npm install --package-lock-only …`.
-- **`backend/core/*`** — independent packages, each with its own lock:
-  `agent, client, plugins, gateway, mdk, kernel, mcp, mdk-worker`.
-  - ⚠️ **`agent` is NOT a repo-root workspace member** — it installs standalone via
-    `backend/core/install-packages.sh`, which also symlinks it into the root
-    `node_modules/@tetherto/` so the gateway plugin can resolve it by name. Do not
-    "fix" this by adding it to the root `workspaces`: npm then claims the tree,
-    prunes the standalone install and does not rebuild it — measured as "removed
-    407 packages, added 0", silently, with no error to explain it.
+- **`backend/core/*`** — `agent, client, plugins, gateway, mdk, kernel, mcp,
+  mdk-worker` are all root npm workspace members, sharing the single root
+  `package-lock.json`. Regenerate the **root** lock (`npm install
+  --package-lock-only …` at the repo root) when any of these change, not a
+  per-package one.
   `gateway` `file:`-links `client` and `plugins`, so bumping client/plugins
-  forces a `gateway` lock regen.
-- **`backend/plugins/*`** — gateway plugins, own locks, versioned independently of
-  the release line (`agent` is at `0.1.0` while the repo is at `0.6.0`), so a
-  release bump does **not** touch them. Their `@tetherto/*` deps are linked, never
-  fetched, so pin them at `*`: a version range there resolves against nothing and
-  rots unnoticed — the agent plugin sat at `^0.0.0` across several releases with
-  nothing to catch it.
-- **`backend/workers/*`** — independent worker packages, own locks.
-- **`examples/*`** — many independent packages, own locks. The UI examples
-  (`examples/full-site/ui`, `examples/mvp-site/ui`, `examples/mdk-ui-shell-template`)
-  `file:`-link the `ui/packages/*` packages, so a ui bump cascades into their locks.
-  Because the CI gate skips `examples/`, these are the locks most likely to be stale.
+  forces a root lock regen (that's where `gateway`'s dependency entries now
+  live).
+- **`backend/plugins/*`** — gateway plugins, also root workspace members
+  sharing the root lock, versioned independently of the release line (`agent`
+  is at `0.1.0` while the repo is at `0.6.0`), so a release bump does **not**
+  touch them. Their `@tetherto/*` deps are linked, never fetched, so pin them
+  at `*`: a version range there resolves against nothing and rots unnoticed —
+  the agent plugin sat at `^0.0.0` across several releases with nothing to
+  catch it.
+- **`backend/workers/*`** — independent worker packages, also root workspace
+  members sharing the root lock.
+- **`examples/*`** — `examples/full-site` and `examples/mvp-site` (the backend
+  halves) are root workspace members sharing the root lock. The UI shells
+  (`examples/full-site/ui`, `examples/mvp-site/ui`,
+  `examples/mdk-ui-shell-template`) are the ones left with their own
+  independent locks; they `file:`-link the `ui/packages/*` packages, so a ui
+  bump cascades into their locks. Because the CI gate skips `examples/`, these
+  are the locks most likely to be stale.
 
 As of the 0.6.0 cycle versioning is **uniform across the release line**: every
 tracked package sits at the same version, `mdk-worker` no longer lags, and

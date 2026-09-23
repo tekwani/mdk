@@ -1,6 +1,6 @@
 # MDK
 
-[![Release](https://img.shields.io/github/v/release/tetherto/mdk?display_name=tag&style=flat-square)](https://github.com/tetherto/mdk/releases/tag/v0.8.0)
+[![Release](https://img.shields.io/github/v/release/tetherto/mdk?display_name=tag&style=flat-square)](https://github.com/tetherto/mdk/releases/tag/v0.9.0)
 [![CI](https://img.shields.io/github/actions/workflow/status/tetherto/mdk/ci.yml?branch=main&label=CI&style=flat-square&logo=github)](https://github.com/tetherto/mdk/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/tetherto/mdk/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/tetherto/mdk/actions/workflows/github-code-scanning/codeql)
 [![Documentation](https://img.shields.io/badge/docs-mdk.tether.io-2ea44f?style=flat-square)](https://docs.mdk.tether.io)
@@ -11,7 +11,7 @@
 
 MDK is under active development and is **not yet considered stable**.
 
-Current release [v0.8.0](https://github.com/tetherto/mdk/releases/tag/v0.8.0).
+Current release [v0.9.0](https://github.com/tetherto/mdk/releases/tag/v0.9.0).
 
 ## Table of Contents
 
@@ -86,10 +86,10 @@ integrations directly.
 - [`@tetherto/mdk-ui-foundation`](ui/packages/ui-foundation/README.md) provides framework-independent state, API contracts, and query helpers
 - [`@tetherto/mdk-react-adapter`](ui/packages/react-adapter/README.md) connects React applications to Gateway data and actions
 - [`@tetherto/mdk-react-devkit`](ui/packages/react-devkit/README.md) provides reusable UI primitives and mining-domain components
-- [`mdk-ui`](ui/packages/cli/README.md) scaffolds applications, pages, and features
 
-Use the packages together for a complete operator dashboard. You may develop your dashboards via the
-CLI reference: [`mdk-ui`](ui/packages/cli/README.md), the [agent-oriented workflow](ui/docs/AGENT_FIRST.md), or directly compose the runtime packages
+Use the packages together for a complete operator dashboard. You may start from the
+[`mdk-ui-shell` template](examples/mdk-ui-shell-template/README.md), follow the
+[agent-oriented workflow](ui/docs/AGENT_FIRST.md), or directly compose the runtime packages
 in your own application structure.
 
 ## Releases
@@ -113,7 +113,7 @@ The fastest way to see MDK working end to end. This boots the
 [full-site example](examples/full-site/README.md): a Kernel, 11 real Workers, their mock device servers, a Gateway HTTP API,
 and a React dashboard.
 
-**Requirements:** Node.js >=24, npm 11 (< 12).
+**Requirements:** Node.js >=24, npm 11 [(< 12)](docs/reference/environment.md#why-npm-stays-below-12).
 
 ```bash
 git clone git@github.com:tetherto/mdk.git
@@ -170,13 +170,13 @@ MDK ships a backend SDK and an optional dashboarding layer. Find your lane:
 - **I'm a hardware provider**: where do I start? Build a Worker and author its [`mdk-contract.json`](docs/guides/workers/build-a-worker.md)
 - **I'm a site operator**: how do I connect my Workers to a Gateway? Run an MDK site as a
 [single process](docs/guides/deployment/run-single-process-site.md), or [choose another deployment shape](docs/guides/deployment/index.md)
-- **I'm an app developer building a React UI**: scaffold or add MDK to an existing app with the [UI toolkit and CLI](ui/README.md#getting-started)
+- **I'm a site operator** how do I manage my site with a conversational agent?: start from the [operator agent guides](docs/guides/agent/index.md)
+- **I'm an app developer building a React UI**: start from the [UI toolkit](ui/README.md#getting-started), or add MDK to an existing app
 - **I'm an app developer building backend services or Gateway plugins**: run the [backend stack locally](examples/backend/README.md) or start with
 the [Gateway API surfaces](docs/guides/gateway/index.md)
 - **I'm an app developer building a dashboard end to end**: follow [build a dashboard](docs/tutorials/build-a-dashboard.md), or scaffold one against
-a running stack with [`mdk create dashboard`](packages/cli/README.md) (`@tetherto/mdk-cli`) — a separate tool from the `mdk-ui` CLI above, which adds
-pages and components inside an app you already have
-- **I'm building with AI**: how do I point an agent at MDK? Read the [agent entry points](docs/README.md#agent)
+a running stack with [`mdk create dashboard`](packages/cli/README.md) (`@tetherto/mdk-cli`)
+- **I'm building with AI**: how does my agent work with MDK? Read the [agent entry points](docs/README.md#agent)
 
 ### Agents
 
@@ -190,50 +190,51 @@ If you are an LLM being pointed at this repo, read these first:
 
 ## Build and develop
 
-The repo root is a real npm workspace: every `backend/core/*` and `backend/workers/*` package, plus [`examples/mvp-site`](./examples/mvp-site/README.md), is a
-workspace member, so a single `npm install` (or `npm ci`) at the root installs and links them all together. [`ui/`](./ui/README.md) stays a
-separate, nested npm workspace with its own `apps/*` + `packages/*` members; the root itself has no Turbo configuration.
+The repo root is a real npm workspace: every `backend/core/*`, `backend/plugins/*`, `backend/workers/**` and `backend/tests/*`
+package, the standalone `packages/*` tools, and `examples/full-site` + `examples/mvp-site` are workspace members, so a single
+`npm install` (or `npm ci`) at the root installs and links them all together. `ui/` stays a separate, nested npm workspace
+with its own `apps/*` + `packages/*` members and its own lockfile; the root itself has no Turbo configuration.
 
-| Domain | Location | Tooling |
-| --- | --- | --- |
-| UI | [`ui/`](ui/README.md) | npm workspace (`apps/*` + `packages/*`) driven by Turbo |
-| Core (backend) | [`backend/core/`](backend/core/README.md) | root npm workspace member, installed via [`install-packages.sh`](backend/core/install-packages.sh) |
-| Workers (backend) | [`backend/workers/`](backend/workers/README.md) | root npm workspace member, installed via [`install-packages.sh`](backend/workers/install-packages.sh) |
+| Domain    | Location                                  | Tooling                                                 |
+| --------- | ----------------------------------------- | ------------------------------------------------------- |
+| UI        | [`ui/`](ui/README.md)                     | npm workspace (`apps/*` + `packages/*`) driven by Turbo |
+| Core      | [`backend/core/`](backend/core/README.md) | root npm workspace member, installed via a plain `npm install`/`npm ci` at the repo root |
+| Workers   | [`backend/workers/`](backend/workers/README.md) | root npm workspace member, installed via a plain `npm install`/`npm ci` at the repo root |
 
 Run any task once from the repo root and it fans out to all three domains:
 
 ```bash
-npm run setup       # install every domain (UI workspace + backend per-process installs)
+npm run setup       # install every domain (UI workspace install and a single root npm install)
 npm run build       # build all domains (no-op where a domain has no build step)
 npm run test        # test all domains
 npm run lint        # lint all domains
 npm run typecheck   # typecheck all domains (no-op where a domain has no typecheck step)
 ```
 
-Each task also has per-domain variants when you only need one: `:ui`, `:core`, `:workers` (e.g. `npm run test:ui`, `npm run lint:core`). Use
-`npm run ci` instead of `npm run setup` for clean, lockfile-faithful installs in CI, and `npm run clean` to tear down build artifacts and
-installed dependencies.
+The only per-domain variant left is `:ui` (e.g. `npm run test:ui`, `npm run lint:ui`); everything else runs via `--workspaces` under
+the unqualified script name. Use `npm run ci` instead of `npm run setup` for clean, lockfile-faithful installs in CI, and `npm run clean`
+to tear down the UI's build artifacts and installed dependencies; most backend and example packages don't yet define a `clean` script.
 
 ### Examples
 
 Four example trees ship with the repo. All four are maintained — none is deprecated — but they answer different questions,
 so start from the one that matches what you are doing:
 
-| Example | Use it for | Status |
-| --- | --- | --- |
+| Example                                               | Use it for                  | Status      |
+| ----------------------------------------------------- | --------------------------- | ----------- |
 | [`examples/full-site/`](examples/full-site/README.md) | The canonical end-to-end demo: Kernel + 11 Workers + Gateway + React dashboard + MCP, in one process or an interactive REPL | Actively developed — start here |
-| [`examples/backend/`](examples/backend/README.md) | Per-family backend snippets (miners, containers, power meters, sensors, pools, kernel, plugin e2e) with no UI | Actively developed |
-| [`examples/mvp-site/`](examples/mvp-site/README.md) | The same fleet as separate PM2-supervised processes, for deployment-shaped experiments | Maintained; overlaps `full-site`, which is the richer of the two |
-| [`examples/mdk-ui-shell-template/`](examples/mdk-ui-shell-template/README.md) | Not run directly — it is the source the `mdk-ui` CLI copies when scaffolding a new app | Maintained as a template |
+| [`examples/backend/`](examples/backend/README.md)     | Per-family backend snippets (miners, containers, power meters, sensors, pools, kernel, plugin e2e) with no UI | Actively developed     |
+| [`examples/mvp-site/`](examples/mvp-site/README.md)   | The same fleet as separate PM2-supervised processes, for deployment-shaped experiments | Maintained; overlaps `full-site`, which is the richer of the two |
+| [`examples/mdk-ui-shell-template/`](examples/mdk-ui-shell-template/README.md) | A runnable sign-in-gated operator shell, and the source `mdk create dashboard` copies when scaffolding a new app | Maintained as a template |
 
 > [!NOTE]
-> Scaffolding with the `mdk-ui` CLI writes into `ui/apps/<name>/`, which is gitignored except for `apps/catalog`. Those
-> generated apps are still npm workspace members, so a stale one gets picked up by the next `npm install` and written into the
-> tracked `ui/package-lock.json`. Delete scaffolds you are done with rather than leaving them in the tree.
+> Apps scaffolded into `ui/apps/<name>/` are gitignored except for `apps/catalog`, but they are still npm workspace
+> members, so a stale one gets picked up by the next `npm install` and written into the tracked `ui/package-lock.json`.
+> Delete scaffolds you are done with rather than leaving them in the tree.
 
-> Note: `setup`/`ci` fans out per domain, but [`backend/core`](./backend/core/README.md) and [`backend/workers`](./backend/workers/README.md) packages are root workspace members, so a
-> plain `npm install` (or `npm ci`) at the root installs and links them directly. [`ui/`](./ui/README.md) stays outside the root workspace and
-> needs its own `npm --prefix ui install`.
+> Note: `setup`/`ci` fan out to `ui/` (via the `:ui` variant) and then run `--workspaces` across every backend/example package in
+> one go — `backend/core` and `backend/workers` packages are root workspace members, so a plain `npm install` (or `npm ci`) at the
+> root installs and links them directly. `ui/` stays outside the root workspace and needs its own `npm --prefix ui install`.
 
 ### Documentation
 

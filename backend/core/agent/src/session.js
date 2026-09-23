@@ -124,13 +124,16 @@ export class Session {
       messages: this.messages,
       maxOutputTokens: this.limits.maxOutputTokens ?? DEFAULT_LIMITS.maxOutputTokens,
       maxRetries: this.limits.maxRetries ?? 2,
+      // A stream error is reported as EVENT.ERROR below; the SDK's default onError
+      // would also dump the raw error object over whoever is reading the stream.
+      onError: () => {},
       abortSignal: signal
     })
     let assistant = ''
     let errored = false
     try {
       try {
-        for await (const part of result.fullStream) {
+        for await (const part of result.stream) {
           if (part.type === 'text-delta') {
             const t = part.text ?? part.delta ?? ''
             assistant += t

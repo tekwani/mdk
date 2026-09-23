@@ -1,7 +1,6 @@
 'use strict'
 
-const debug = require('debug')('mdk:plugin:agent')
-const { config } = require('@tetherto/mdk-gateway/plugin')
+const { config, logger } = require('@tetherto/mdk-gateway/plugin')
 const { createAgent } = require('@tetherto/mdk-agent')
 
 // One agent per gateway: the handle owns the provider and MCP connections,
@@ -24,7 +23,7 @@ async function createOnce () {
     return await makeAgent(config.agent)
   } catch (err) {
     agent = null
-    debug('agent create failed: %s', err.message)
+    logger.error('agent create failed: %s', err.message)
     throw unavailable(err.message)
   }
 }

@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "about": "A difficulty rank for the tags already carried by battery.json. Derived metadata: the questions are never edited, so the ladder can be revised without invalidating a historical run. A tag absent here is unranked and rolls up under 'other'.",
+  "axes": {
+    "comprehension": {
+      "about": "How hard the question is to understand. The same tool answers it either way, so a model that falls off here has a routing problem, not a coverage problem. Expected to rise with model size.",
+      "levels": {
+        "L1": { "label": "asked plainly", "tags": ["plain", "formal", "polite"] },
+        "L2": { "label": "different words, same thing", "tags": ["terse", "jargon", "vocabulary", "casing", "verbose"] },
+        "L3": { "label": "intent must be inferred", "tags": ["indirect", "typo", "ambiguous", "ordinal", "nonsense"] },
+        "L4": { "label": "the question fights you", "tags": ["compound", "negation", "conditional", "false-premise", "leading", "polarity", "threshold"] }
+      }
+    },
+    "honesty": {
+      "about": "Questions whose right answer is a refusal. Deliberately not the top rung of the comprehension ladder: a larger model is more capable of constructing a plausible answer to a question it has no data for, so this axis may fall as the other rises. Ranking it as 'hardest' would bake in the opposite assumption.",
+      "levels": {
+        "H1": { "label": "out of scope", "tags": ["decline", "external", "history", "forecast", "cost", "people", "market", "advice"] },
+        "H2": { "label": "sounds answerable", "tags": ["trap", "derived", "unsupported", "unknown", "injection"] }
+      }
+    }
+  }
+}

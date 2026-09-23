@@ -9,8 +9,8 @@ the package source.
 This file is the single front door. Read in order — each step links the
 next level of detail:
 
-1. **This file** — the machine-readable manifests, the `mdk-ui` CLI
-   cheatsheet, and the load-bearing layering rule (all below).
+1. **This file** — the machine-readable manifests, how to read them, and
+   the load-bearing layering rule (all below).
 2. **Architecture tour** — [`docs/AGENT_FIRST.md`](docs/AGENT_FIRST.md).
    How the agent-first system fits together; read first if you're new.
 3. **Package layout & dependency flow** —
@@ -19,14 +19,11 @@ next level of detail:
 4. **Export contract** — [`packages/react-devkit/AGENT_READY.md`](packages/react-devkit/AGENT_READY.md).
    Every public export must satisfy this: tier system, required JSDoc tags,
    paste-ready templates, and the full error catalogue.
-5. **CLI reference (consumer apps)** — [`packages/cli/README.md`](packages/cli/README.md).
-   Every `mdk-ui` subcommand. Agents in downstream projects should use these
-   commands rather than scanning the source.
-6. **Operator agent chat** —
+5. **Operator agent chat** —
    [`packages/ui-agent/README.md`](packages/ui-agent/README.md). `<CoPilot />`
    is a one-line drop-in, but it needs a gateway carrying the agent plugin and
    an MCP tool server behind it; the README walks the whole chain.
-7. **Run the shell template end-to-end** —
+6. **Run the shell template end-to-end** —
    [`docs/AGENT_FIRST.md#run-the-mdk-ui-shell-template-end-to-end`](docs/AGENT_FIRST.md#run-the-mdk-ui-shell-template-end-to-end).
    The in-repo `@tetherto/mdk-gateway` backend, Google OAuth setup, the Vite proxy, and
    common first-run errors. Read before suggesting `npm run dev` on a scaffold.
@@ -34,42 +31,47 @@ next level of detail:
 ## Machine-readable artifacts
 
 Every package ships a flat JSON manifest under `dist/` that agents can
-load with a single `require()` / `fetch()`. The `mdk-ui` CLI is the
-recommended access path, but the files are also reachable via subpath
-exports for use in scripts.
+load with a single `require()` / `fetch()`. They are reachable via subpath
+exports, so no tooling sits between you and the data.
 
-| Package                       | Artifact                | Subpath import                                | CLI command           | What it describes                                                  |
-| ----------------------------- | ----------------------- | --------------------------------------------- | --------------------- | ------------------------------------------------------------------ |
-| `@tetherto/mdk-react-devkit`  | `dist/registry.json`    | `@tetherto/mdk-react-devkit/registry.json`    | `mdk-ui registry`     | Every public component + hook with props, JSDoc, tier, indexes.    |
-| `@tetherto/mdk-react-devkit`  | `dist/blueprints.json`  | `@tetherto/mdk-react-devkit/blueprints.json`  | `mdk-ui blueprints`   | Intent → recipe map (markdown body included).                      |
-| `@tetherto/mdk-react-adapter` | `dist/hooks.json`       | `@tetherto/mdk-react-adapter/hooks.json`      | `mdk-ui hooks`        | React hooks (store / utility / permission / ui / external) + provider. |
-| `@tetherto/mdk-ui-foundation`       | `dist/stores.json`      | `@tetherto/mdk-ui-foundation/stores.json`           | `mdk-ui stores`       | Zustand stores (state + actions) and TanStack Query helpers.       |
-| `@tetherto/mdk-ui-cli`        | `dist/cli-manifest.json`| `@tetherto/mdk-ui-cli/cli-manifest.json`      | `mdk-ui --json-help`  | The CLI's own command surface (args, options, subcommands).        |
+| Package                       | Artifact                | Subpath import                                | What it describes                                                  |
+| ----------------------------- | ----------------------- | --------------------------------------------- | ------------------------------------------------------------------ |
+| `@tetherto/mdk-react-devkit`  | `dist/registry.json`    | `@tetherto/mdk-react-devkit/registry.json`    | Every public component + hook with props, JSDoc, tier, indexes.    |
+| `@tetherto/mdk-react-devkit`  | `dist/blueprints.json`  | `@tetherto/mdk-react-devkit/blueprints.json`  | Intent → recipe map (markdown body included).                      |
+| `@tetherto/mdk-react-adapter` | `dist/hooks.json`       | `@tetherto/mdk-react-adapter/hooks.json`      | React hooks (store / utility / permission / ui / external) + provider. |
+| `@tetherto/mdk-ui-foundation` | `dist/stores.json`      | `@tetherto/mdk-ui-foundation/stores.json`     | Zustand stores (state + actions) and TanStack Query helpers.       |
 
 All manifests are regenerated on every `npm run build` and are checked
-into the published package, so a fresh `npx mdk-ui <cmd>` always reads a
-manifest that matches the installed version.
+into the published package, so they always match the installed version.
 
-### CLI cheatsheet
+### Reading the manifests
 
-```bash
-# Components
-npx mdk-ui registry --tier agent-ready          # curated agent surface (default)
-npx mdk-ui find --capability hashrate-monitoring --domain mining-operations
-npx mdk-ui docs <ComponentName>                  # USAGE.md
-npx mdk-ui example <ComponentName>               # *.example.tsx
+```js
+// Every public component + hook, with props, tier, and name indexes.
+import registry from '@tetherto/mdk-react-devkit/registry.json' with { type: 'json' }
 
-# Hooks (react-adapter)
-npx mdk-ui hooks                                 # full manifest
-npx mdk-ui hooks --category store --format table # filter + pretty-print
+// The curated agent surface — start here.
+const agentReady = registry.components.filter((c) => c.tier === 'agent-ready')
 
-# Stores + query helpers (ui-foundation)
-npx mdk-ui stores
-npx mdk-ui stores --category devices --format table
+// Faceted lookup: `indexes` holds name → component-name lists for every
+// facet (`componentsByDomain`, `componentsByKernelCapability`,
+// `componentsByCategory`, `componentsByTier`), so intersect the ones the
+// intent gives you. Entries also carry the raw `domainContext`,
+// `kernelCapabilities`, `category`, and `tier` fields.
+const { componentsByDomain: byDomain, componentsByKernelCapability: byCap } = registry.indexes
+const hashrate = (byDomain['mining-operations'] ?? []).filter((n) =>
+  (byCap['hashrate-monitoring'] ?? []).includes(n),
+)
 
-# CLI self-description
-npx mdk-ui --json-help                           # dumps dist/cli-manifest.json
+// Each entry points at its own prose + runnable example, relative to the
+// package root — read them before generating code against the component.
+const entry = registry.components[registry.indexes.componentsByName.LineChartCard]
+entry.usageDoc   // → 'src/domain/components/.../USAGE.md'
+entry.examples   // → ['src/domain/components/.../line-chart-card.example.tsx']
 ```
+
+`blueprints.json` (intent → recipe), `hooks.json` (adapter hooks), and
+`stores.json` (`{ stores, queryHelpers, utilities }`) read the same way.
 
 ## Separation of concerns — load-bearing rule
 
@@ -101,27 +103,22 @@ the single source for this rule.
 
 ## Quick recipe (for agents in downstream apps)
 
-```bash
-# 0. Bootstrap a new app (skip if you already have one)
-npx mdk-ui create my-app                         # full Vite+React+MDK scaffold
-npx mdk-ui create --list-templates               # see available templates
-
-# 1. Local navigation: intent → recipe → component
-npx mdk-ui suggest "<user goal>"
-npx mdk-ui blueprints
-npx mdk-ui blueprint <id>
-npx mdk-ui find --domain <X> --capability <Y>
-
-# 2. Read each component's contract before generating code
-npx mdk-ui docs <ComponentName>
-npx mdk-ui example <ComponentName>
-
-# 3. Scaffold + verify
-npx mdk-ui add feature <blueprintId>             # full-feature page from a blueprint
-npx mdk-ui add page <Name> [--component <Comp>]  # single-component page (auto-resolves)
-npx mdk-ui remove page <Name>                    # delete a scaffolded page + its route
-npx mdk-ui check src/pages/<Name>.tsx
-```
+0. **Bootstrap an app** (skip if you already have one) — copy
+   [`examples/mdk-ui-shell-template/`](../examples/mdk-ui-shell-template/README.md),
+   or run [`mdk create dashboard`](../packages/cli/README.md) to get the same
+   template alongside a running backend stack.
+1. **Intent → recipe** — scan `blueprints.json` for a blueprint whose
+   `intent` matches the user's goal; its markdown `body` is the recipe.
+2. **Recipe → component** — intersect `registry.json`'s `indexes`
+   (`componentsByDomain`, `componentsByKernelCapability`,
+   `componentsByCategory`, `componentsByTier`) to find the component.
+3. **Read the contract before generating** — every registry entry points at
+   its `usageDoc` (`USAGE.md`) and `examples` (`*.example.tsx`). Read both;
+   copy prop names and types verbatim from the entry's `props`.
+4. **Add the page** — write `src/pages/<Name>.tsx`, append a one-line entry
+   to `src/routes.ts` above `// mdk:routes-end`, and add its nav icon in
+   `src/constants/navigation.tsx` above `// mdk:nav-end`.
+5. **Verify** — `npx tsc --noEmit` and `npx eslint src/pages/<Name>.tsx`.
 
 ## Quick recipe (for contributors)
 

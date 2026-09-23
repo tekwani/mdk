@@ -5,7 +5,7 @@
 How the repo is laid out and why: what MDK is, the toolkit packages and how
 they depend on each other, the monorepo directory layout, the per-package
 surface map, and how build / state / styling / testing fit together. For
-machine-readable manifests and the `mdk-ui` CLI, see [`AGENTS.md`](../AGENTS.md).
+machine-readable manifests, see [`AGENTS.md`](../AGENTS.md).
 For contributor workflow and tiers, see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## What MDK UI is
@@ -18,8 +18,7 @@ set of npm workspace packages that consuming applications depend on.
 
 The UI toolkit is split along a **framework-first** axis: a framework-agnostic
 headless core, a per-framework adapter, and a per-framework UI library on
-top. A separate `@tetherto/mdk-ui-cli` provides agent-first tooling, and
-`@tetherto/mdk-fonts` ships font assets independently.
+top. `@tetherto/mdk-fonts` ships font assets independently.
 
 ### `@tetherto/mdk-ui-foundation` — framework-agnostic core
 
@@ -89,30 +88,24 @@ The app runtime chain is **headless → React adapter → React devkit → catal
         │ @tetherto/mdk-catalog-ui        │    │ @tetherto/mdk-fonts    │
         │ (apps/catalog)                  │    └────────────────────────┘
         └──────────────────────────────┘
-
-        ┌──────────────────────────────┐
-        │ @tetherto/mdk-ui-cli (mdk-ui)│  reads manifests from the three
-        │ devDependency at build time  │  TS packages above; not in the
-        └──────────────────────────────┘  runtime app dependency chain
 ```
 
 ## Directory layout
 
 ```
 mdk-ui/
-├── AGENTS.md             # Agent entry: manifests, mdk-ui CLI, quick recipes
+├── AGENTS.md             # Agent entry: manifests, how to read them, quick recipes
 ├── CLAUDE.md             # Claude Code guidance for this repo
 ├── packages/
 │   ├── ui-foundation/          # @tetherto/mdk-ui-foundation        — headless state + telemetry
 │   ├── react-adapter/    # @tetherto/mdk-react-adapter  — React bindings for the core
 │   ├── react-devkit/     # @tetherto/mdk-react-devkit   — React UI (primitives + domain)
-│   ├── cli/              # @tetherto/mdk-ui-cli           — mdk-ui binary (agent-first)
 │   └── fonts/            # @tetherto/mdk-fonts            — JetBrains Mono assets
 ├── apps/
 │   └── catalog/          # @tetherto/mdk-catalog-ui          — Vite/React showcase
-├── api-surface/          # TypeDoc config and public-surface schema for API docs generation
+├── api-surface/          # Committed export-shape baselines (check:api-surface)
 ├── docs/                 # Architecture, agent-first, build, styling, contributing
-└── scripts/              # Bundle-size and other repo helpers
+└── scripts/              # Bundle-size, API-surface and other repo helpers
 ```
 
 **Tooling**:
@@ -335,29 +328,6 @@ half is a stack concern; see
 [`packages/ui-agent/README.md`](../packages/ui-agent/README.md) for the whole
 chain from an empty machine.
 
-### `@tetherto/mdk-ui-cli`
-
-**Purpose**: Agent-first CLI for registry discovery, co-located docs/examples,
-page scaffolding, and targeted typecheck. Binary: `mdk-ui`.
-
-**Location**: [`packages/cli`](../packages/cli/README.md)
-
-**Surface**:
-
-- Commander-based `mdk-ui` commands (`registry`, `find`, `docs`, `example`,
-  `suggest`, `blueprints`, `hooks`, `stores`, `add page`, `check`, `init`,
-  `sync`, …). See [`packages/cli/README.md`](../packages/cli/README.md).
-- Reads installed workspace packages' `dist/*.json` manifests (does not
-  parse TypeScript source)
-- `dist/cli-manifest.json` (subpath `@tetherto/mdk-ui-cli/cli-manifest.json`)
-  describes the CLI's own command surface (`mdk-ui --json-help`)
-
-**Build**: `tsc` → `dist/`, copy templates, emit `cli-manifest.json`.
-
-**Usage**: `npx mdk-ui --help` from a consumer project with devkit, adapter,
-and core installed. Repo contributors run it via the workspace after
-`npm run build`.
-
 ### `@tetherto/mdk-fonts`
 
 **Purpose**: Font assets for the toolkit.
@@ -379,7 +349,6 @@ import "@tetherto/mdk-fonts/jetbrains-mono.css";
 | `@tetherto/mdk-ui-foundation` | pre-built `dist/` ESM + `.d.ts` | `dist/stores.json` |
 | `@tetherto/mdk-react-adapter` | pre-built `dist/` ESM + `.d.ts` | `dist/hooks.json` |
 | `@tetherto/mdk-react-devkit` | pre-built `dist/` ESM + `.d.ts` | `dist/styles.css`, `dist/styles-domain.css`, `dist/registry.json`, `dist/blueprints.json` |
-| `@tetherto/mdk-ui-cli` | pre-built `dist/` + `mdk-ui` bin | `dist/cli-manifest.json` |
 | `@tetherto/mdk-fonts` | n/a | `dist/jetbrains-mono.css` + woff2 |
 
 Every TypeScript library package is **pre-built** — consumers import `dist/`

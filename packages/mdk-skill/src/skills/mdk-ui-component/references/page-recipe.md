@@ -23,7 +23,7 @@ Optional: `src/constants/navigation.tsx` only if you need a custom nav icon
 | Hook | `fetch`, JSON → typed `info`, polling | JSX |
 | Panel | Markup, loading/empty/error UI, registry components | `fetch`, business rules |
 | Page | Hook call, `PageLayout`, Refresh button | Shaping, direct HTTP |
-| Plugin (backend) | Aggregation across workers | UI concerns |
+| Plugin (backend) | Aggregation across Workers | UI concerns |
 
 ## Minimal page skeleton
 
@@ -65,13 +65,14 @@ Keep on one line. Path becomes the sidebar href.
 
 Before writing JSX:
 
-1. Open [`ui-registry.json`](./ui-registry.json)
-2. Find the component by name
-3. Use only documented `props[]` names/types
-4. Prefer `tier: "agent-ready"` / `public: true` components
+1. Open [`ui-registry.json`](./ui-registry.json).
+2. Find the component by name.
+3. Use only documented `props[]` names/types.
+4. Prefer `tier: "agent-ready"` / `public: true` components.
 
-## Reference implementation in this project
+## Composition rules
 
-| Page | Why copy it |
-| --- | --- |
-| `SystemInfo` + `SystemInfoPanel` (shipped in every scaffolded dashboard) | Thinnest official vertical slice — see the shell's own [`USAGE.md`](../../../../../../examples/mdk-ui-shell-template/USAGE.md) |
+See the shell's own [`USAGE.md`](../../../../../../examples/mdk-ui-shell-template/USAGE.md) ("The pattern every page should follow") for the
+layered data flow this checklist implements: a fresh scaffold ships no example
+page, so there is no file in the project to copy — follow the layer
+responsibilities above instead.

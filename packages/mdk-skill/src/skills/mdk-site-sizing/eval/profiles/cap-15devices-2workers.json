@@ -1,0 +1,24 @@
+{
+  "profileId": "cap-15devices-2workers",
+  "tier": "custom",
+  "hardware": {
+    "referenceTier": "custom",
+    "cpuCoresPhysical": 8,
+    "cpuCoresLogical": 16,
+    "ramGiB": 32,
+    "diskType": "sata"
+  },
+  "deviceCount": 15,
+  "workerCount": 2,
+  "workers": [
+    { "type": "mdk-worker-whatsminer", "model": "m56s", "deviceCount": 10 },
+    { "type": "mdk-worker-antminer", "model": "s19xp", "deviceCount": 5 }
+  ],
+  "status": "green",
+  "headroomRatio": 0.2,
+  "rssSumMiB": 500,
+  "cpuSumPct": 25,
+  "readP99Ms": 50,
+  "actionP99Ms": 85,
+  "source": "fixture"
+}

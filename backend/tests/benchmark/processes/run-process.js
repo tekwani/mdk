@@ -12,7 +12,7 @@
 //
 // Usage:
 //   node processes/run-process.js
-//   node processes/run-process.js --devices 250 --workers 1 --type mdk-worker-whatsminer --model m56s --id cap-250devices-1workers --sweep ceiling
+//   node processes/run-process.js --devices 250 --workers 1 --type mdk-worker-antminer --model s21 --id cap-250devices-1workers --sweep ceiling
 //   node processes/run-process.js --role kernel --id cap-10devices-1workers --root <path>   (debugging one role)
 
 const path = require('path')
@@ -24,7 +24,7 @@ const {
   config, loadConfig, profileRoot, makeDevicePlan, saveDevicePlan, loadDevicePlan,
   startMocks, bootKernel, bootWorker, bootGateway, workerStoreDir
 } = require('../lib/site')
-const { DEFAULT_WORKER_TYPE, DEFAULT_MODEL, ALERT_INDUCTION, WORKER_CONF_DEFAULTS, DEFAULT_THING_RTD_CONCURRENCY, KERNEL_DEFAULTS, GATEWAY_DEFAULTS, RUN_REPRODUCIBILITY, THRESHOLDS } = require('../lib/constants')
+const { DEFAULT_WORKER_TYPE, DEFAULT_MODEL, ALERT_INDUCTION, WORKER_CONF_DEFAULTS, WORKER_LOG_CACHE_WARMUP_MS, MINER_DEVICE_TIMEOUT_MS, DEFAULT_THING_RTD_CONCURRENCY, KERNEL_DEFAULTS, GATEWAY_DEFAULTS, RUN_REPRODUCIBILITY, THRESHOLDS } = require('../lib/constants')
 const { ResourceSampler, dirSizeBytes } = require('../lib/metrics')
 const { LatencyRecorder } = require('../lib/latency')
 const { measureCycleHeadroom, runReadLoad, runActionLoad, measureDeviceBaseline, pollAlerts, pollAlertsViaGateway } = require('../lib/load')
@@ -187,7 +187,7 @@ async function runFailureDrills ({ client, devicePlan, allDeviceIds, commonArgs,
     commonArgs,
     procs,
     outageMs: rr.deviceOutageMs,
-    timeoutBudgetMs: 10000,
+    timeoutBudgetMs: MINER_DEVICE_TIMEOUT_MS,
     concurrency: DEFAULT_THING_RTD_CONCURRENCY
   })
   return { workerRestart, kernelRestart, unreachableDevice }
@@ -327,13 +327,25 @@ async function runChecklist ({ client, devicePlan, workerDeviceMap, allDeviceIds
   await measureDeviceBaseline({ devices: devicePlan.devices, recorder: deviceBaselineRecorder, sampleSize: Math.min(20, devicePlan.devices.length) })
 
   const telemetrySingleRecorder = new LatencyRecorder('telemetrySingle')
+  // Separate from telemetrySingleRecorder on purpose: runReadLoad drives
+  // rr.readLoadConcurrency (deliberately >> WORKER_CONF_DEFAULTS.thingQueryConcurrency)
+  // concurrent readers, so its per-call latency includes real queue wait
+  // under induced saturation — a different thing from the sequential,
+  // uncontended single-request latency the "Telemetry read (single device)"
+  // row measures. Folding the two into one recorder would let saturation
+  // queueing masquerade as ordinary read latency.
+  const readLoadRecorder = new LatencyRecorder('readLoadSaturation')
   const statusRecorder = new LatencyRecorder('status')
   const actionSubmitRecorder = new LatencyRecorder('actionSubmit')
   const gatewayRequestRecorder = new LatencyRecorder('gatewayRequest')
   const gatewayTelemetrySingleRecorder = new LatencyRecorder('gatewayTelemetrySingle')
   const gatewayActionSubmitRecorder = new LatencyRecorder('gatewayActionSubmit')
 
-  for (let i = 0; i < rr.n; i++) {
+  // Capped like every other sequential single-request loop below (rr.n can
+  // be 1000+ for a real capacity run — at one real round trip per iteration,
+  // uncapped this alone was blowing a profile's wall-clock time out past 5
+  // minutes without adding proportionally useful percentile resolution).
+  for (let i = 0; i < Math.min(rr.n, 50); i++) {
     const id = allDeviceIds[i % allDeviceIds.length]
     await telemetrySingleRecorder.time(() => client.pullTelemetry(id, 'metrics'))
   }
@@ -393,7 +405,7 @@ async function runChecklist ({ client, devicePlan, workerDeviceMap, allDeviceIds
     deviceIds: allDeviceIds,
     durationMs: rr.readLoadDurationMs,
     concurrency: rr.readLoadConcurrency,
-    recorder: telemetrySingleRecorder
+    recorder: readLoadRecorder
   })
 
   const actionLoad = await runActionLoad({
@@ -477,6 +489,11 @@ async function runChecklist ({ client, devicePlan, workerDeviceMap, allDeviceIds
     alerts,
     latencies: {
       telemetrySingle: telemetrySingleRecorder.summary(),
+      // Saturation-phase latency (see readLoadRecorder above) — not one of
+      // the template's own rows, so renderLatency doesn't put it in the
+      // Read path table; it's here for the "Throughput under load" caveat
+      // in renderThroughput and for anyone diffing the raw JSON.
+      readLoadSaturation: readLoadRecorder.summary(),
       status: statusRecorder.summary(),
       actionSubmit: actionSubmitRecorder.summary(),
       gatewayRequest: gatewayRequestRecorder.summary(),
@@ -538,7 +555,7 @@ async function runMainProfile ({ profileId, sweep, workers, root, usedPorts }) {
       gateway: new ResourceSampler({ pid: gatewayProc.pid, intervalMs: RUN_REPRODUCIBILITY.resourceSampleIntervalMs, label: 'gateway' }).start()
     }
     workerProcs.forEach((proc, i) => {
-      resourceSamplers[`worker-${i}`] = new ResourceSampler({ pid: proc.pid, intervalMs: RUN_REPRODUCIBILITY.resourceSampleIntervalMs, label: `worker-${i}` }).start()
+      resourceSamplers[`worker-${i}`] = new ResourceSampler({ pid: proc.pid, intervalMs: RUN_REPRODUCIBILITY.resourceSampleIntervalMs, label: `worker-${i}`, warmupMs: WORKER_LOG_CACHE_WARMUP_MS }).start()
     })
 
     // Starts here (before the soak wait), not inside runChecklist, so the

@@ -1,5 +1,5 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, join, relative, resolve, sep } from 'node:path';
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
 /**
@@ -10,7 +10,9 @@ import { parse as parseYaml } from 'yaml';
  * path in `mdk.yaml` says what it is:
  *
  *   mdk.yaml          the stack spec
- *   package.json      private root manifest; workers/ + plugins/ are workspaces
+ *   package.json      private root manifest (no `workspaces` key — path-backed
+ *                     packages link via relative `file:` deps so `npm install`
+ *                     works inside the project directory)
  *   workers/<name>/   worker plugins   (mdk create worker)
  *   plugins/<name>/   gateway plugins  (mdk create plugin)
  *   apps/dashboard/   the UI dashboard (mdk create dashboard)
@@ -27,19 +29,11 @@ export const DIRS = {
 } as const;
 
 /**
- * npm workspace globs for the root manifest.
- *
- * Workers and gateway plugins are workspaces because the runtime resolves them
- * from the project's `node_modules` (`resolveProjectPackageDir`), which a
- * workspace symlink satisfies for free — and one root `npm install` then covers
- * every component. `apps/*` is deliberately excluded: the dashboard links the
- * MDK UI packages by `file:` path, and hoisting its React through the root
- * alongside those links is a well-known way to end up with two Reacts.
+ * Historical workspace globs (`workers/*`, `plugins/*`). Kept for reading
+ * pre-existing manifests that still declare them (`isWorkspaceMember`); new
+ * projects never write a `workspaces` key — local scaffolds use `file:` deps.
  */
 export const WORKSPACES = [`${DIRS.workers}/*`, `${DIRS.plugins}/*`];
-
-/** npm workspace-local version — links to a sibling under `workers/*` or `plugins/*`. */
-export const WORKSPACE_VERSION = '*';
 
 export type FileAction = 'created' | 'updated' | 'present';
 
@@ -54,10 +48,9 @@ function npmName(name: string): string {
 }
 
 /**
- * Ensures the project has a private root `package.json` declaring the component
- * workspaces. Creates one if absent; if a manifest already exists it only adds
- * the missing `workspaces` field (the project may be a pre-existing app — its
- * name, deps and scripts are never touched).
+ * Ensures the project has a private root `package.json`. Creates one if absent
+ * (no `workspaces` key — local packages are linked via `file:` dependencies).
+ * An existing manifest is never modified (name, deps, scripts, or workspaces).
  */
 export function ensureProjectManifest(targetDir: string, stackName: string): FileAction {
   const path = join(targetDir, 'package.json');
@@ -67,23 +60,14 @@ export function ensureProjectManifest(targetDir: string, stackName: string): Fil
       name: npmName(stackName),
       version: '0.1.0',
       private: true,
-      workspaces: WORKSPACES,
       scripts: { dev: 'mdk run' },
     };
     writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
     return 'created';
   }
 
-  try {
-    const pkg = JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>;
-    if (Array.isArray(pkg.workspaces) || pkg.workspaces) return 'present';
-    pkg.workspaces = WORKSPACES;
-    writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
-    return 'updated';
-  } catch {
-    // Unparseable manifest is the user's to fix — never overwrite it.
-    return 'present';
-  }
+  // Existing manifest is the user's — never overwrite it, and never inject workspaces.
+  return 'present';
 }
 
 /** The project's declared workspace globs (empty when it is not a workspace root). */
@@ -120,6 +104,31 @@ export function isWorkspaceMember(targetDir: string, packageDir: string): boolea
   });
 }
 
+/**
+ * True when the project root already declares a `file:` dependency — in
+ * either `dependencies` or `devDependencies` — that points at `packageDir`, so
+ * `npm install` must run at the project root to create the symlink the
+ * runtime resolves from `node_modules`.
+ */
+export function isFileLinkedFromProject(targetDir: string, packageDir: string): boolean {
+  const path = join(targetDir, 'package.json');
+  if (!existsSync(path)) return false;
+  try {
+    const pkg = JSON.parse(readFileSync(path, 'utf8')) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const deps = { ...pkg.devDependencies, ...pkg.dependencies };
+    const absPackage = resolve(packageDir);
+    return Object.values(deps).some((spec) => {
+      if (!spec.startsWith('file:')) return false;
+      return resolve(targetDir, spec.slice('file:'.length)) === absPackage;
+    });
+  } catch {
+    return false;
+  }
+}
+
 /** Sets one `dependencies` entry in the project root manifest, if not already set. */
 function setDependency(targetDir: string, packageName: string, versionSpec: string): void {
   const path = join(targetDir, 'package.json');
@@ -134,20 +143,25 @@ function setDependency(targetDir: string, packageName: string, versionSpec: stri
   writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
 }
 
-/** Declares a workspace-linked package (a scaffold under `workers/*`/`plugins/*`). */
-export function addWorkspaceDependency(targetDir: string, packageName: string): void {
-  setDependency(targetDir, packageName, WORKSPACE_VERSION);
-}
-
 /**
- * Declares a `file:`-linked dependency pointing directly at `absPath` — used
- * for catalog workers that ship with the MDK checkout but are not published to
- * npm. `npm install` symlinks it straight into `node_modules/<packageName>`,
- * the same as a real registry package; no `workers/<name>` folder is created; that
- * directory stays reserved for packages the user owns via `mdk create worker`.
+ * Declares a `file:`-linked dependency pointing at `absPath`, written relative
+ * to `targetDir`. Works for packages inside the project folder and for bundled
+ * monorepo catalog checkouts outside it — never appends to a `workspaces`
+ * array, and never writes bare `*` (that hits the registry when the project is
+ * not a monorepo workspace member). `npm install` resolves the relative
+ * `file:` specifier against the project root and symlinks it into
+ * `node_modules/<packageName>`.
  */
 export function addFileDependency(targetDir: string, packageName: string, absPath: string): void {
-  setDependency(targetDir, packageName, `file:${resolve(absPath)}`);
+  const target = resolve(absPath);
+  const rel = relative(resolve(targetDir), target);
+  // `path.relative()` returns an absolute path when `targetDir` and `absPath`
+  // are on different drives (Windows only) — fall back to the absolute path
+  // rather than writing a `file:./C:/...` spec, which npm resolves under the
+  // project dir and 404s.
+  const posix = (isAbsolute(rel) ? target : rel).split(sep).join('/');
+  const spec = isAbsolute(rel) || posix.startsWith('.') ? posix : `./${posix}`;
+  setDependency(targetDir, packageName, `file:${spec}`);
 }
 
 /**
@@ -273,9 +287,10 @@ apps/dashboard/    the UI dashboard (Vite app)
 .mdk/              runtime state written by \`mdk run\` — disposable, gitignored
 \`\`\`
 
-\`workers/*\` and \`plugins/*\` are npm workspaces of this project: one
-\`npm install\` at the root wires them all up, which is also how the Gateway
-resolves its plugins. Component directories appear as you add components.
+Workers, plugins and bundled monorepo catalog packages are linked with relative
+\`file:\` dependencies (no \`workspaces\` key). One \`npm install\` at the project
+root wires them up so the Gateway can resolve its plugins. Component directories
+appear as you add components.
 
 ## Run it
 

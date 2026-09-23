@@ -1,38 +1,50 @@
 ---
 title: Gateway plugins
-description: Use the default Gateway plugins, mount third-party plugins, and build your own using the mdk-plugin.json format
+description: Declare the Gateway plugins MDK ships, mount third-party plugins, and build your own using the mdk-plugin.json format
 docs@tether_slug: guides/gateway/plugins
 ---
 
 ## Overview
 
 The Gateway exposes HTTP routes through a declarative plugin system. Each plugin is a directory containing an
-[`mdk-plugin.json`][plugins-manifest] manifest and one or more controller files. MDK ships a set of default plugins that load automatically;
-you can mount additional plugins for your own site logic.
+[`mdk-plugin.json`][plugins-manifest] manifest and one or more controller files. A Gateway loads exactly the plugins your
+stack declares in `spec.gateway.plugins[]` and nothing else, whether they are yours or ones MDK ships.
 
 > [!NOTE]
-> A plugin builds its own [`@tetherto/mdk-client`][mdk-client-readme] to call into the Kernel — no knowledge of the MDK Protocol envelope or internal message shapes is required.
+> A plugin builds its own [`@tetherto/mdk-client`][mdk-client-readme] to call into the Kernel — no knowledge of the MDK
+> Protocol envelope or internal message shapes is required.
 
 ## Prerequisites
 
 - The [Gateway is running][run-gateway]
 - A Kernel instance running and reachable, or `kernelKey: false` to start without a Kernel connection (development only)
 
-## Default plugins
+## Plugins MDK ships
 
-MDK ships plugins that load automatically on Gateway startup:
+The [supported plugins reference][supported-plugins] is the source of truth for what
+currently ships and the routes each serves. The site plugins it bundles today are subpaths of the
+[`@tetherto/mdk-plugins`][plugins-readme] package, so each is named by its subpath:
 
-- The `telemetry` plugin serves site metrics (hashrate, consumption, efficiency, temperature, and more)
-- The `site-hashrate` plugin serves aggregated site hashrate history
-- The `site-monitor` plugin serves site configuration, feature flags, and live per-device hashrate
+```yaml
+# mdk.yaml
+spec:
+  gateway:
+    port: 3847
+    plugins:
+      - package: "@tetherto/mdk-plugins/telemetry"
+      - package: "@tetherto/mdk-plugins/site-monitor"
+```
 
 > [!IMPORTANT]
-> The [`auth` plugin][auth-plugin-readme] (`@tetherto/mdk-plugin-auth`) ships in the same package but is not among them, and mounting it via
-> `extraPluginDirs` does not give you working identity endpoints: its controllers still expect a second handler parameter and a populated
-> `req._info` that the Gateway does not provide. Supply your own identity layer.
+> A stack serves only the plugins it declares. A route from a [bundled plugin][supported-plugins-bundled] you have not
+> declared answers `404`. If a [React adapter][react-adapter] hook reads one of those routes, declare the plugin that serves it.
 
-The [plugin reference][plugins-readme] lists every route each of these plugins serves, with its method, generated from the plugin's
-`mdk-plugin.json`. Plugins you mount yourself are documented by their own manifests.
+> [!NOTE]
+> The [`auth` plugin][auth-plugin-readme] (`@tetherto/mdk-plugin-auth`) ships in the same package but is not among them, and
+> declaring it does not give you working identity endpoints: its controllers still expect a second handler parameter and a
+> populated `req._info` that the Gateway does not provide. Supply your own identity layer.
+
+Plugins you mount yourself are documented by their own manifests.
 
 <Steps>
 
@@ -40,17 +52,18 @@ The [plugin reference][plugins-readme] lists every route each of these plugins s
 
 ### Mount a plugin
 
-Pass an `extraPluginDirs` array to `startGateway()` to load additional plugins at boot alongside the default plugins:
+`extraPluginDirs` is the complete list of plugins `startGateway()` loads — there is no set it is added to:
 
 ```js
-const { startGateway } = require('@tetherto/mdk-core')
+const { startGateway, bundledPluginDir } = require('@tetherto/mdk-core')
 
 await startGateway({
   kernel,
   port: 3000,
   extraPluginDirs: [
     path.join(__dirname, 'plugins/custom-metrics'),
-    path.join(__dirname, 'plugins/alerts')
+    path.join(__dirname, 'plugins/alerts'),
+    bundledPluginDir('telemetry')      // one MDK ships, by name rather than by path
   ]
 })
 ```
@@ -71,9 +84,9 @@ A plugin is a directory with two things: a manifest and controllers.
 
 #### 1.1 Create the manifest
 
-[`mdk-plugin.json`][plugins-manifest] declares the plugin identity (`name`, `version`) and a `routes` array. Each route needs an `id`, a `handler` path, and either
-an `http` block with a `method` and `path`, or those same `method`/`path` fields flattened to the route's top level; the bundled agent plugin
-uses the flat form. Rather than copy a synthetic example, start from a real manifest and trim it:
+[`mdk-plugin.json`][plugins-manifest] declares the plugin identity (`name`, `version`) and a `routes` array. Each route needs an `id`, a
+`handler` path, and either an `http` block with a `method` and `path`, or those same `method`/`path` fields flattened to the route's top level;
+the bundled agent plugin uses the flat form. Rather than copy a synthetic example, start from a real manifest and trim it:
 
 - [`examples/backend/mdk-plugin-e2e/gateway-plugin/mdk-plugin.json`][e2e-manifest]: one route, fully annotated with a response
 schema, `constraints`, `errors`, and `safety`. The easiest starting point, and [seeing a plugin serve your data][serve-an-endpoint]
@@ -138,6 +151,8 @@ controller reference][plugins-readme-controllers] shows a controller building it
 | Field | Type | Contains |
 | --- | --- | --- |
 | `config` | `object` | The Gateway's runtime config, with `kernelKey`/`kernelBootstrap` folded in, and this plugin's own per-plugin config layered over the top key-by-key |
+| `logger` | `object` | A `child()` of the Gateway's own logger, tagged with this plugin's name — its lines interleave with the Gateway's own on stdout, ordered and formatted the same |
+| `onReady` | `function` | Registers a callback that runs once this Gateway is serving. Errors thrown inside it are [caught and logged as a warning, not fatal][plugins-readme-runtime-errors] |
 
 ### Supplying per-plugin config
 
@@ -151,25 +166,6 @@ extraPluginDirs: [
 
 Build a [`lib/client.js`][telemetry-client] from it once per plugin and `require` that module from every controller that
 needs one — there is no per-request Kernel access to guard, only the client's own connect failures:
-
-<details>
-<summary>Migrate from the `services` parameter (pre-0.7)</summary>
-
-A controller used to take `(req, services)`, a `services` object the Gateway passed to every plugin.
-
-| Before | After |
-| --- | --- |
-| `module.exports = (req, services) => …` | `module.exports = (req) => …` |
-| `services.conf` | `config` from `require('@tetherto/mdk-gateway/plugin')` |
-| `services.mdkClient` | The plugin builds its own from `config.kernelKey` / `config.kernelBootstrap` |
-| `services.dataProxy` | Removed with the data proxy |
-| `services.authLib` | Removed in 0.6.0 |
-
-Drop the second handler parameter, read `config` from the context module, and build your own MDK client for Kernel
-access — the bundled `site-monitor`, `site-hashrate`, and `telemetry` plugins each ship a `lib/client.js` showing
-the pattern.
-
-</details>
 
 > [!IMPORTANT]
 > `createMdkClient` connects on first use and memoizes the connection. A failure maps to `ERR_MDK_CLIENT_UNAVAILABLE` (or your own
@@ -200,9 +196,8 @@ const pulls = workers.flatMap((w) => (w.deviceIds || []).map(async (deviceId) =>
 const totalHashrateMhs = (await Promise.all(pulls)).reduce((sum, v) => sum + v, 0)
 ```
 
-[`site-monitor/controllers/hashrate.js`][site-monitor-hashrate] is the shipping example this pattern is copied from;
-[`demo/controllers/summary.js`][demo-plugin-summary] is a smaller, minimal-dependency version of the same fan-out worth
-starting from if you're authoring your own plugin.
+[`demo/controllers/summary.js`][demo-plugin-summary] is the smallest worked example of this fan-out, worth starting
+from if you're authoring your own plugin.
 
 There is no separate Gateway-side store for historical or aggregated data, either. Fan [`pullWorkerTelemetry`][client-readme-methods]
 out across every registered Worker and read the series from the Worker's own persisted tail-log:
@@ -214,20 +209,18 @@ const results = await Promise.allSettled(
 )
 ```
 
-The [default telemetry controllers][telemetry-controllers] and [`telemetry/lib/site-data.js`][telemetry-site-data] show a worked,
-production version of this fan-out (aliasing, error tolerance per Worker, and the aggregation shapes each route returns).
-[`demo/controllers/history.js`][demo-plugin-history] is the same pattern at its smallest — a single-file worked example with
-an optional per-device filter and a Kernel-unavailable fallback.
+[`demo/controllers/history.js`][demo-plugin-history] is the smallest worked example — a single-file version with an
+optional per-device filter and a Kernel-unavailable fallback.
 
-Note that "live" and "historical" are both network calls through the client, so guard them the same way. Neither degrades more
-gracefully than the other: both fail if the Worker is unreachable, as does `listWorkers` if the Kernel is. Map each failure to
-your own error rather than assuming one path is safe to leave unhandled.
+Both live and historical calls are network calls through the client — guard both [the same way](#supplying-per-plugin-config). An
+unguarded `pullTelemetry` or `pullWorkerTelemetry` throws `ERR_MDK_CLIENT_UNAVAILABLE` straight through to the caller as an
+unhandled `500` the moment a Worker or the Kernel drops; neither path degrades more gracefully than the other.
 
 ### Send a command
 
 [`sendCommand`][client-readme-methods] dispatches via the Kernel to the Worker that owns the device — the command
-must be declared in the Worker's `mdk-contract.json`. `controllers/command.js` above already shows the pattern; the
-client's own reference documents the full return shape (`commandId`, `status`, `result`, `error`).
+must be declared in the Worker's [`mdk-contract.json`][contract-schema]. `controllers/command.js` above shows the pattern; return shape
+is `commandId`, `status`, `result`, `error`.
 
 ### Caching
 
@@ -257,10 +250,10 @@ module.exports = async function protectedRoute (req) {
   const token = req.headers.authorization?.replace('Bearer ', '')
   if (!token) throw Object.assign(new Error('ERR_UNAUTHORIZED'), { statusCode: 401 })
 
-  const { permissions } = validateToken(token)
+  const { permissions, email } = validateToken(token)
   if (!permissions.includes('miner:w')) throw Object.assign(new Error('ERR_FORBIDDEN'), { statusCode: 403 })
 
-  // Your route logic
+  // Pass email and permissions into Kernel yourself. Do not take them from req.body.
 }
 ```
 
@@ -280,23 +273,18 @@ The plugin loader validates every manifest and handler at startup and throws if 
   a historical series, and a command endpoint running under PM2 or Docker
 - Build the [minimal dashboard tutorial][minimal-dashboard] — end-to-end worked example of the single-plugin + controller pattern
 - Read the [demo plugin][demo-plugin-readme] for the smallest complete worked example of both fan-out patterns above
-- Understand [how Workers declare their data][build-a-worker] via `mdk-contract.json` — what `mdkClient` reads and `sendCommand` dispatches
+- Understand [how Workers declare their data][build-a-worker] via [`mdk-contract.json`][contract-schema] — what
+  [`mdkClient`][client-readme-methods] reads and [`sendCommand`][client-readme-methods] dispatches
 - See the full [manifest and controller reference][plugins-readme]
 - Review the [Gateway API and config][gateway-readme]
 
 ## Links
 
-[telemetry-controllers]: ../../../backend/core/plugins/telemetry/controllers
-<!-- docs@tether.io: telemetry-controllers → https://github.com/tetherto/mdk/tree/main/backend/core/plugins/telemetry/controllers -->
-
 [telemetry-client]: ../../../backend/core/plugins/telemetry/lib/client.js
 <!-- docs@tether.io: telemetry-client → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/telemetry/lib/client.js -->
 
-[telemetry-site-data]: ../../../backend/core/plugins/telemetry/lib/site-data.js
-<!-- docs@tether.io: telemetry-site-data → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/telemetry/lib/site-data.js -->
-
-[site-monitor-hashrate]: ../../../backend/core/plugins/site-monitor/controllers/hashrate.js
-<!-- docs@tether.io: site-monitor-hashrate → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/site-monitor/controllers/hashrate.js -->
+[contract-schema]: ../../../backend/core/mdk-worker/mdk-contract.schema.json
+<!-- docs@tether.io: contract-schema → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/mdk-contract.schema.json -->
 
 [demo-plugin-readme]: ../../../backend/plugins/demo/README.md
 <!-- docs@tether.io: demo-plugin-readme → https://github.com/tetherto/mdk/blob/main/backend/plugins/demo/README.md -->
@@ -332,6 +320,12 @@ The plugin loader validates every manifest and handler at startup and throws if 
 [plugins-readme]: ../../../backend/core/plugins/README.md
 <!-- docs@tether.io: plugins-readme → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md -->
 
+[supported-plugins]: ../../reference/supported-plugins.md
+<!-- docs@tether.io: supported-plugins → reference/supported-plugins -->
+
+[supported-plugins-bundled]: ../../reference/supported-plugins.md#bundled-site-plugins
+<!-- docs@tether.io: supported-plugins-bundled → reference/supported-plugins#bundled-site-plugins -->
+
 [plugins-manifest]: ../../../backend/core/plugins/README.md#manifest-format
 <!-- docs@tether.io: plugins-manifest → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#manifest-format -->
 
@@ -340,6 +334,9 @@ The plugin loader validates every manifest and handler at startup and throws if 
 
 [plugins-readme-mounting]: ../../../backend/core/plugins/README.md#manifest-validation-errors
 <!-- docs@tether.io: plugins-readme-mounting → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#manifest-validation-errors -->
+
+[plugins-readme-runtime-errors]: ../../../backend/core/plugins/README.md#runtime-plugin-errors
+<!-- docs@tether.io: plugins-readme-runtime-errors → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#runtime-plugin-errors -->
 
 [mdk-client-readme]: ../../../backend/core/client/README.md
 <!-- docs@tether.io: mdk-client-readme → https://github.com/tetherto/mdk/blob/main/backend/core/client/README.md -->
@@ -357,6 +354,9 @@ The plugin loader validates every manifest and handler at startup and throws if 
 <!-- docs@tether.io: minimal-dashboard → tutorials/build-a-dashboard -->
 [build-a-worker]: ../workers/build-a-worker.md
 <!-- docs@tether.io: build-a-worker → guides/workers/build-a-worker -->
+
+[react-adapter]: ../../../ui/packages/react-adapter/README.md
+<!-- docs@tether.io: react-adapter → https://github.com/tetherto/mdk/blob/main/ui/packages/react-adapter/README.md -->
 
 [expose-data]: ../agent/expose-data.md
 <!-- docs@tether.io: expose-data → guides/agent/expose-data -->

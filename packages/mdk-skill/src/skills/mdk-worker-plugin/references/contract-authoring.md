@@ -1,6 +1,6 @@
 # Authoring `mdk-contract.json`
 
-Load this when writing or reviewing a worker contract. The machine-checkable
+Load this when writing or reviewing a Worker contract. The machine-checkable
 shape is [`mdk-contract.schema.json`](../../../mdk-contract.schema.json); validate with
 [`../scripts/validate-contract.mjs`](../scripts/validate-contract.mjs); this file covers the semantics the schema
 can't express. Real contracts to imitate:
@@ -30,7 +30,7 @@ All five fields required:
 ```
 
 `overview` is the agent's first impression — state what the device is, which
-protocol the worker wraps, and any site-level caution (e.g. hydro miners must
+protocol the Worker wraps, and any site-level caution (e.g. hydro miners must
 not run without coolant flow).
 
 ## `capabilities.telemetry`
@@ -81,7 +81,7 @@ One entry per channel:
 - Params arrive at your handler as a named object (`params.pct`). Positional
   legacy payloads (`{ value }` / `{ args: [] }`) are normalized onto declared
   names by the runtime — another reason to declare params accurately.
-- Read-only devices: `"commands": []` (see the abb / seneca contracts).
+- Read-only devices: `"commands": []` (see the ABB / Seneca contracts).
 
 ## `capabilities.health`
 
@@ -116,7 +116,7 @@ payloads — keeping this map complete is what makes them actionable downstream.
 
 - **No device list.** Devices are supplied at runtime
   (`WorkerRuntime opts.devices`); the schema's `devices` block is optional and
-  unused by shipped workers.
+  unused by shipped Workers.
 - **No secrets** (credentials live in per-device `config`).
 - **No handler implementation detail** — `handler` paths are stripped before
   the contract leaves the process.

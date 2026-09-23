@@ -1,0 +1,284 @@
+{
+  "compiledAt": "1970-01-01T00:00:00.000Z",
+  "provenance": {
+    "kind": "fixture",
+    "note": "Fixture envelope for skill eval. Replace eval/profiles with committed harness reports (PE-1) and re-run compile-envelope.mjs."
+  },
+  "thresholds": {
+    "headroomGreenBelow": 0.7,
+    "headroomAmberBelow": 1,
+    "actionSubmitP99Ms": 2000,
+    "steadyCpuPctOfOneCore": 80
+  },
+  "profiles": [
+    {
+      "profileId": "cap-100devices-2workers",
+      "tier": "site-server",
+      "hardware": {
+        "referenceTier": "site-server",
+        "cpuCoresPhysical": 16,
+        "cpuCoresLogical": 32,
+        "ramGiB": 64,
+        "diskType": "nvme"
+      },
+      "deviceCount": 100,
+      "workerCount": 2,
+      "workers": [
+        {
+          "type": "mdk-worker-whatsminer",
+          "model": "m56s",
+          "deviceCount": 100
+        }
+      ],
+      "status": "green",
+      "headroomRatio": 0.55,
+      "rssSumMiB": 1200,
+      "cpuSumPct": 60,
+      "readP99Ms": 70,
+      "actionP99Ms": 110,
+      "source": "fixture"
+    },
+    {
+      "profileId": "cap-100devices-2workers-mixed",
+      "tier": "site-server",
+      "hardware": {
+        "referenceTier": "site-server",
+        "cpuCoresPhysical": 16,
+        "cpuCoresLogical": 32,
+        "ramGiB": 64,
+        "diskType": "nvme"
+      },
+      "deviceCount": 100,
+      "workerCount": 2,
+      "workers": [
+        {
+          "type": "mdk-worker-whatsminer",
+          "model": "m56s",
+          "deviceCount": 60
+        },
+        {
+          "type": "mdk-worker-antminer",
+          "model": "s19xp",
+          "deviceCount": 40
+        }
+      ],
+      "status": "green",
+      "headroomRatio": 0.5,
+      "rssSumMiB": 1300,
+      "cpuSumPct": 65,
+      "readP99Ms": 75,
+      "actionP99Ms": 120,
+      "source": "fixture"
+    },
+    {
+      "profileId": "cap-10devices-1workers",
+      "tier": "edge",
+      "hardware": {
+        "referenceTier": "edge",
+        "cpuCoresPhysical": 4,
+        "cpuCoresLogical": 4,
+        "ramGiB": 8,
+        "diskType": "sata"
+      },
+      "deviceCount": 10,
+      "workerCount": 1,
+      "workers": [
+        {
+          "type": "mdk-worker-whatsminer",
+          "model": "m56s",
+          "deviceCount": 10
+        }
+      ],
+      "status": "green",
+      "headroomRatio": 0.15,
+      "rssSumMiB": 400,
+      "cpuSumPct": 20,
+      "readP99Ms": 40,
+      "actionP99Ms": 70,
+      "source": "fixture"
+    },
+    {
+      "profileId": "cap-15devices-2workers",
+      "tier": "custom",
+      "hardware": {
+        "referenceTier": "custom",
+        "cpuCoresPhysical": 8,
+        "cpuCoresLogical": 16,
+        "ramGiB": 32,
+        "diskType": "sata"
+      },
+      "deviceCount": 15,
+      "workerCount": 2,
+      "workers": [
+        {
+          "type": "mdk-worker-whatsminer",
+          "model": "m56s",
+          "deviceCount": 10
+        },
+        {
+          "type": "mdk-worker-antminer",
+          "model": "s19xp",
+          "deviceCount": 5
+        }
+      ],
+      "status": "green",
+      "headroomRatio": 0.2,
+      "rssSumMiB": 500,
+      "cpuSumPct": 25,
+      "readP99Ms": 50,
+      "actionP99Ms": 85,
+      "source": "fixture"
+    },
+    {
+      "profileId": "cap-200devices-4workers",
+      "tier": "site-server",
+      "hardware": {
+        "referenceTier": "site-server",
+        "cpuCoresPhysical": 16,
+        "cpuCoresLogical": 32,
+        "ramGiB": 64,
+        "diskType": "nvme"
+      },
+      "deviceCount": 200,
+      "workerCount": 4,
+      "workers": [
+        {
+          "type": "mdk-worker-whatsminer",
+          "model": "m56s",
+          "deviceCount": 200
+        }
+      ],
+      "status": "amber",
+      "headroomRatio": 0.85,
+      "rssSumMiB": 2000,
+      "cpuSumPct": 90,
+      "readP99Ms": 140,
+      "actionP99Ms": 220,
+      "source": "fixture"
+    },
+    {
+      "profileId": "cap-500devices-4workers",
+      "tier": "site-server",
+      "hardware": {
+        "referenceTier": "site-server",
+        "cpuCoresPhysical": 16,
+        "cpuCoresLogical": 32,
+        "ramGiB": 64,
+        "diskType": "nvme"
+      },
+      "deviceCount": 500,
+      "workerCount": 4,
+      "workers": [
+        {
+          "type": "mdk-worker-whatsminer",
+          "model": "m56s",
+          "deviceCount": 500
+        }
+      ],
+      "status": "red",
+      "headroomRatio": 1.4,
+      "rssSumMiB": 4500,
+      "cpuSumPct": 180,
+      "readP99Ms": 800,
+      "actionP99Ms": 2100,
+      "source": "fixture"
+    },
+    {
+      "profileId": "cap-50devices-2workers",
+      "tier": "site-server",
+      "hardware": {
+        "referenceTier": "site-server",
+        "cpuCoresPhysical": 16,
+        "cpuCoresLogical": 32,
+        "ramGiB": 64,
+        "diskType": "nvme"
+      },
+      "deviceCount": 50,
+      "workerCount": 2,
+      "workers": [
+        {
+          "type": "mdk-worker-whatsminer",
+          "model": "m56s",
+          "deviceCount": 50
+        }
+      ],
+      "status": "green",
+      "headroomRatio": 0.35,
+      "rssSumMiB": 800,
+      "cpuSumPct": 40,
+      "readP99Ms": 55,
+      "actionP99Ms": 90,
+      "source": "fixture"
+    }
+  ],
+  "supportedUpTo": {
+    "site-server": {
+      "mdk-worker-whatsminer": {
+        "devices": 100,
+        "workers": 2,
+        "profileId": "cap-100devices-2workers"
+      },
+      "mdk-worker-antminer,mdk-worker-whatsminer": {
+        "devices": 100,
+        "workers": 2,
+        "profileId": "cap-100devices-2workers-mixed"
+      }
+    },
+    "edge": {
+      "mdk-worker-whatsminer": {
+        "devices": 10,
+        "workers": 1,
+        "profileId": "cap-10devices-1workers"
+      }
+    },
+    "custom": {
+      "mdk-worker-antminer,mdk-worker-whatsminer": {
+        "devices": 15,
+        "workers": 2,
+        "profileId": "cap-15devices-2workers"
+      }
+    }
+  },
+  "formulas": {
+    "site-server|mdk-worker-whatsminer": {
+      "rssMiB": {
+        "base": 400,
+        "perDevice": 8
+      },
+      "cpuPct": {
+        "base": 23.333333333333336,
+        "perDevice": 0.3333333333333333
+      }
+    },
+    "site-server|mdk-worker-antminer,mdk-worker-whatsminer": {
+      "rssMiB": {
+        "base": 0,
+        "perDevice": 13
+      },
+      "cpuPct": {
+        "base": 0,
+        "perDevice": 0.65
+      }
+    },
+    "edge|mdk-worker-whatsminer": {
+      "rssMiB": {
+        "base": 0,
+        "perDevice": 40
+      },
+      "cpuPct": {
+        "base": 0,
+        "perDevice": 2
+      }
+    },
+    "custom|mdk-worker-antminer,mdk-worker-whatsminer": {
+      "rssMiB": {
+        "base": 0,
+        "perDevice": 33.333333333333336
+      },
+      "cpuPct": {
+        "base": 0,
+        "perDevice": 1.6666666666666667
+      }
+    }
+  }
+}

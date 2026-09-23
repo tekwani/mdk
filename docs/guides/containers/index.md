@@ -24,7 +24,7 @@ The authoritative model list for every Worker is the generated [supported-hardwa
 Every guide assumes:
 
 - [Node.js][node] >=24 (LTS)
-- npm 11 (< 12)
+- npm 11 [(< 12)][npm-version]
 - Dependencies installed (`npm run setup` from the repo root)
 - Commands are run from the repo root
 - Outbound network access for Kernel discovery
@@ -55,6 +55,9 @@ For the deployment path:
 
 [node]: https://nodejs.org/
 <!-- docs@tether.io: external link — preserve URL -->
+
+[npm-version]: ../../reference/environment.md#why-npm-stays-below-12
+<!-- docs@tether.io: npm-version → reference/environment -->
 
 [terminology]: ../../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->

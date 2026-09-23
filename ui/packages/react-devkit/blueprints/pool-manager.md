@@ -37,16 +37,13 @@ using only MDK components and hooks. The single `<PoolManager>` feature
 composes all four sub-views and owns the internal routing; the page only
 supplies data, URL state, and navigation callbacks.
 
-Scaffold via the default template (Pool Manager ships out of the box):
+The `mdk-ui-shell` template ships this page under
+`_managed/pages/PoolManager.tsx`. To use it in an app built from that template:
 
 ```bash
-mdk-ui create my-app --template mdk-ui-shell
-```
-
-Or add it to an existing shell app:
-
-```bash
-mdk-ui add page PoolManager
+cp _managed/pages/PoolManager.tsx src/pages/
+# then add a one-line entry to src/routes.ts and a nav icon in
+# src/constants/navigation.tsx
 ```
 
 ## Page composition

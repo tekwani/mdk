@@ -113,11 +113,19 @@ function isResolvable(projectDir: string, pkg: string): boolean {
   }
 }
 
-/** Probes the Gateway's unauthenticated site route — cheap and always present. */
+/**
+ * Probes the Gateway over HTTP.
+ *
+ * `/echo` is the httpd facility's own debug route, so it is the one path that is
+ * there whatever the stack declares. It used to be `/auth/site`, from the
+ * site-monitor plugin every Gateway registered unasked; now that a Gateway loads
+ * only what `mdk.yaml` names, a healthy stack that never declared that plugin
+ * would have reported its Gateway as down.
+ */
 async function probeGateway(port: number): Promise<{ state: ComponentState; url: string; error: string | null }> {
   const url = `http://127.0.0.1:${port}`;
   try {
-    const res = await fetch(`${url}/auth/site`, {
+    const res = await fetch(`${url}/echo?value=mdk-status`, {
       signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
     });
     if (!res.ok) return { state: 'down', url, error: `HTTP ${res.status}` };

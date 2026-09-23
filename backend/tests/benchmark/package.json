@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-benchmark",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Capacity/metrics benchmark harness for MDK — see docs/guides/deployment/capacity-metrics-template.md",
   "private": true,
   "engines": {
@@ -14,8 +14,5 @@
   "devDependencies": {
     "brittle": "3.18.0",
     "standard": "17.1.0"
-  },
-  "overrides": {
-    "brace-expansion": "5.0.9"
   }
 }

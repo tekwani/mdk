@@ -76,7 +76,7 @@ This tree is [`demo-worker`][demo-worker]'s own layout with its vendor name repl
 ## Prerequisites
 
 - Node.js `>=24` (all MDK core packages declare this `engines` constraint)
-- npm 11 (< 12)
+- npm 11 [(< 12)][npm-version]
 - A device or firmware API you can talk to from Node — HTTP, TCP, Modbus, MQTT, serial, whatever your hardware speaks
 - Comfort with plain async JS — no MDK-specific framework knowledge is required to write the device client
 - A basic understanding of [how MDK works][architecture], the [Worker install pattern][install-pattern], and the
@@ -124,7 +124,7 @@ is **not yet published to the npm registry**. Install it the same way [Test a Wo
 
 ```bash
 npm install github:tetherto/mdk#main
-(cd node_modules/@tetherto/mdk/backend/core && ./install-packages.sh)
+(cd node_modules/@tetherto/mdk && npm install)
 ```
 
 This adds `"@tetherto/mdk": "github:tetherto/mdk#main"` to your `dependencies` and installs the whole monorepo under
@@ -853,6 +853,9 @@ For errors from a live Kernel registration or requests once your Worker is actua
 
 ## Links
 
+[npm-version]: ../../reference/environment.md#why-npm-stays-below-12
+<!-- docs@tether.io: npm-version → reference/environment -->
+
 [demo-worker]: ../../../backend/workers/samples/demo-worker/package.json
 <!-- docs@tether.io: demo-worker → https://github.com/tetherto/mdk/blob/main/backend/workers/samples/demo-worker/package.json -->
 
@@ -896,7 +899,7 @@ For errors from a live Kernel registration or requests once your Worker is actua
 <!-- docs@tether.io: agent-ready-sdk → https://github.com/tetherto/mdk/blob/main/backend/core/README.md -->
 
 [security-boundaries]: ../../concepts/security-boundaries.md
-<!-- docs@tether.io: security-boundaries → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#security-model -->
+<!-- docs@tether.io: security-boundaries → concepts/security-boundaries -->
 
 [test-a-worker]: test-a-worker.md
 <!-- docs@tether.io: test-a-worker → guides/workers/test-a-worker -->

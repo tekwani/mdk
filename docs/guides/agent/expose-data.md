@@ -9,10 +9,14 @@ docs@tether_slug: guides/agent/expose-data
 The operator agent calls fleet data and actions as MCP tools. A Gateway plugin's routes become those tools automatically when
 mounted with `autoGenerateMcp: true`, with no separate MCP manifest to author and keep in sync with the plugin's own routes.
 
+This page shows the shape of that `startGateway()` call, the same way [Mount a plugin][gateway-plugins] does. It's an addition
+to your own embedding code, not a fixture to boot as written. `kernel` and the plugin directory are whatever your app already
+has; `autoGenerateMcp` is set here, in your own `startGateway()` call, not in `mdk.yaml`.
+
 ## Prerequisites
 
-- The [Gateway is running][run-gateway]
-- A [Gateway plugin][gateway-plugins] already mounted via `extraPluginDirs`
+- The [Gateway is running][run-gateway], embedded in your own app via `startGateway()`
+- A [Gateway plugin][gateway-plugins] already mounted through that same call's `extraPluginDirs`
 
 <Steps>
 

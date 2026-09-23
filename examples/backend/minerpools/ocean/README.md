@@ -39,7 +39,7 @@ gateway + `verify`-over-HRPC flow.
 - Worker dependencies installed (from the repo root):
 
 ```bash
-npm run setup:workers   # backend/workers packages (includes minerpool-ocean + its mock)
+npm install   # backend/workers packages (including minerpool-ocean + its mock) are root workspace members
 ```
 
 > Without this you'll get `Cannot find module ...` on first run.
@@ -144,8 +144,8 @@ $TMPDIR/mdk-site-ocean/store/     # the pool's Hyperbee store
 
 | Issue | Fix |
 |---|---|
-| `Cannot find module ...` | Run `npm run setup:workers` from the repo root. |
-| [`verify.js`](./verify.js) errors with `ECONNREFUSED` | Start [`index.js`](./index.js) first — it owns the mock the verifier queries. |
+| `Cannot find module ...` | Run `npm install` from the repo root. |
+| `verify.js` errors with `ECONNREFUSED` | Start `index.js` first — it owns the mock the verifier queries. |
 | `EADDRINUSE :::5040` | A previous run is still bound. `Ctrl+C` it, or change `mock.port`. |
 | All metrics `n/a`/`0` | The mock randomises data; re-run. If persistent, confirm the mock is reachable at `mock.host:mock.port`. |
 
