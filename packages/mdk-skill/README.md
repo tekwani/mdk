@@ -35,7 +35,7 @@ dist/skills/                # Assembled suite — build output, gitignored, neve
 `dist/registry.json`, written by [`docs/scripts/sync-ui-registry.mjs`](../../docs/scripts/sync-ui-registry.mjs). Regenerate it with
 `npm run generate:ui-registry` from the repo root, which rebuilds the devkit registry and rewrites this file. Hand-edits do not survive the next run,
 and a stale copy tells coding agents to use component props that no longer exist. The
-[`docs-freshness`](../../.github/workflows/docs-freshness.yml) workflow watches this file and its devkit source on PRs and
+`docs-freshness` workflow watches this file and its devkit source on PRs and
 warns, rather than blocks, when it drifts.
 
 Skills are assembled and installed **flat** — clients discover

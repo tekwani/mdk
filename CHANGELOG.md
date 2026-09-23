@@ -109,7 +109,7 @@ tier, every plugin route served to any caller) and covers the steps and options 
   inside a flow of content
 - **Scaffolded plugins get a plugin-owned MDK client**: [`templates/plugin/lib/client.js`](packages/cli/templates/plugin/lib/client.js)
   builds it from the ambient Gateway context, so controllers import the module and never take `mdkClient` from a services bag
-- **A scaffold smoke test in CI**: [`scaffold-checks.yml`](.github/workflows/scaffold-checks.yml) scaffolds a plugin with
+- **A scaffold smoke test in CI**: `scaffold-checks.yml` scaffolds a plugin with
   the CLI, boots it behind a real Gateway and asserts a 200, backed by [`examples/backend/mdk-scaffold-e2e`](examples/backend/mdk-scaffold-e2e/run.js)
 - **`setup-config.sh` for the benchmark harness**, seeding a runnable config from the checked-in example
 

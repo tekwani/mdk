@@ -3,7 +3,7 @@
 Maintainer-facing inventory of the lint tooling that guards this monorepo's documentation. Two layers:
 
 - 🚧 Project-specific IA gates 🚧 — five **proposed** gates defined in [`ia.md`](ia.md#qa-gates) (`check:contract`, `check:facets-fresh`, `check:agent-ready`, `check:port-signals`, `check:integrations-fresh`). **If adopted**, they would enforce the contract between code, the docs catalogue, and the port pipeline. The regen-and-diff half of `check:integrations-fresh`, plus `check:plugin-reference-fresh`, now ship as the warn-only `docs-freshness` workflow; the remaining gates are not wired, engineering decides per-gate, and docs maintainers absorb the upkeep manually for any gate not adopted.
-- **Generated-page freshness** — [`npm run regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) reports when a page written by a script no longer matches its sources. The [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow runs it on pull requests and warns rather than blocks.
+- **Generated-page freshness** — [`npm run regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) reports when a page written by a script no longer matches its sources. The `docs-freshness` workflow runs it on pull requests and warns rather than blocks.
 - **General docs hygiene** — the rest of this file. Link verification, anchor validation, spelling. These guard the docs themselves, not the IA contract.
 
 ## Nightly and PR diff link verification — linkinator
@@ -161,7 +161,7 @@ This wraps [`scripts/check-example-paths.mjs`](../../../scripts/check-example-pa
 - `_skip_notes` — mandatory sibling object, one entry per `skipFiles`/`skipPaths` pattern, explaining why. The checker refuses to run if any skip entry lacks a note. An unexplained skip is a silent false negative waiting to happen — the same lesson the linkinator skip list already enforces by convention; here it's enforced by the script itself.
 - Placeholders are dropped automatically, not via the skip list: any candidate token immediately followed by `<`, `>`, `*`, `{`, `}`, or `…` (for example `examples/run-<scenario>.js` or `` examples/run-*.js ``) is treated as unresolved template text, not a real path.
 
-**CI wiring** — [`.github/workflows/example-paths.yml`](../../../.github/workflows/example-paths.yml). Nightly only, deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split: the `example-paths` job (`schedule` + `workflow_dispatch`) runs `npm run check:example-paths`, and on failure opens or (if one is already open) comments on a tracking issue labelled `example-paths`, then exits non-zero so the run shows red. There is no PR gate — this check is not wired into the PR path.
+**CI wiring** — `.github/workflows/example-paths.yml`. Nightly only, deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split: the `example-paths` job (`schedule` + `workflow_dispatch`) runs `npm run check:example-paths`, and on failure opens or (if one is already open) comments on a tracking issue labelled `example-paths`, then exits non-zero so the run shows red. There is no PR gate — this check is not wired into the PR path.
 
 ## 🚧 Spelling — Vale
 
@@ -170,7 +170,7 @@ Vale catches accidental misspellings and enforces a project word list. Configure
 ## Style — Markdownlint
 
 [`markdownlint-cli2`](https://github.com/DavidAnson/markdownlint-cli2) enforces structural consistency — heading hierarchy, list indentation, fenced code block style, reference-link
-hygiene. The ruleset in [`.markdownlint-cli2.jsonc`](../../../.markdownlint-cli2.jsonc) is kept identical to the mdk-docs ruleset so both repos lint the same way; only the globs
+hygiene. The ruleset in `.markdownlint-cli2.jsonc` is kept identical to the mdk-docs ruleset so both repos lint the same way; only the globs
 differ, covering `docs/**/*.md` and the root `README.md`.
 
 Full sweep, from the repo root:
