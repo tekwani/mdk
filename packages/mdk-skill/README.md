@@ -34,7 +34,7 @@ dist/skills/                # Assembled suite — build output, gitignored, neve
 `dist/registry.json`, written by [`docs/scripts/sync-ui-registry.mjs`](../../docs/scripts/sync-ui-registry.mjs). Regenerate it with
 `npm run generate:ui-registry` from the repo root, which rebuilds the devkit registry and rewrites this file. Hand-edits do not survive the next run,
 and a stale copy tells coding agents to use component props that no longer exist. The
-[`docs-freshness`](../../.github/workflows/docs-freshness.yml) workflow watches this file and its devkit source on PRs and
+`docs-freshness` workflow watches this file and its devkit source on PRs and
 fails the check when it drifts. The job summary shows what differs; fix it by running `npm run generate:ui-registry` (or
 `npm run regenerate-docs`) and committing the result.
 

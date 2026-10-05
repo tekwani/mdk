@@ -186,7 +186,7 @@ stay under [`maintainers/`](./README.md) and never graduate to user-facing `docs
 > (run `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` from the repo root for this generator alone)
 > reads each plugin's `mdk-plugin.json` across both plugin roots and regenerates the route tables in
 > [`supported-plugins.md`](../supported-plugins.md). The
-> [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow runs the regen-and-diff check on pull requests.
+> `docs-freshness` workflow runs the regen-and-diff check on pull requests.
 
 Freshness gate for the generated supported-plugins page. The `docs-freshness` workflow runs `npm run regenerate-docs -- --check`, which
 regenerates, compares against the last commit, restores the tree, and reports a non-empty diff in [`supported-plugins.md`](../supported-plugins.md).

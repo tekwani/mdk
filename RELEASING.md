@@ -15,7 +15,7 @@ Copy this into the PR or release ticket for each release.
 - [ ] Confirm no unexpected changes in [`package-lock.json`](./package-lock.json) files
 - [ ] Regenerate the generated pages: `npm run regenerate-docs`, then commit anything it changes
 - [ ] Confirm nothing is left stale: `npm run regenerate-docs -- --check` passes — run this explicitly rather than relying on
-      the [`docs-freshness`](.github/workflows/docs-freshness.yml) CI workflow, which only triggers on a PR that touches the
+      the `docs-freshness` CI workflow, which only triggers on a PR that touches the
       specific source/generated paths it watches, and warns on drift rather than blocking
 - [ ] Update [`README.md`](./README.md) — version badge and any inline version references
 - [ ] Add entry for `v<version>` in [`CHANGELOG.md`](./CHANGELOG.md)

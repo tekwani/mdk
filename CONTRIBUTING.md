@@ -227,7 +227,7 @@ Before submitting your PR, ensure that:
 - [ ] Generated pages affected by the change are regenerated, using the command named in that file's `DO NOT EDIT` header (a Worker contract, a plugin manifest, or devkit component source each rewrite a different file)
 
 > [!NOTE]
-> The [`docs-freshness`](.github/workflows/docs-freshness.yml) workflow also checks this on a PR that touches a Worker
+> The `docs-freshness` workflow also checks this on a PR that touches a Worker
 > contract, a plugin manifest, devkit component source, or one of the generated pages themselves — it warns rather than
 > blocks when a page is stale, so regenerating is still on you, not something CI does for you. It does fail the run if a
 > generator itself breaks.

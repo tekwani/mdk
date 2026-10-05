@@ -3,7 +3,7 @@
 Maintainer-facing inventory of the lint tooling that guards this monorepo's documentation. Two layers:
 
 - 🚧 Project-specific IA gates 🚧 — five **proposed** gates defined in [`ia.md`](ia.md#qa-gates) (`check:contract`, `check:facets-fresh`, `check:agent-ready`, `check:port-signals`, `check:integrations-fresh`). **If adopted**, they would enforce the contract between code, the docs catalogue, and the port pipeline. Of these, `check:agent-ready` is wired as a blocking root-CI gate (the UI agent-readiness contract, paired with a set-monotonic `usage-proptable-baseline.json` guard — see [`single-source-of-truth.md`](single-source-of-truth.md#when-to-regenerate)), and the regen-and-diff half of `check:integrations-fresh` plus `check:plugin-reference-fresh` ship as the **blocking** `docs-freshness` workflow. The remaining gates are not wired, engineering decides per-gate, and docs maintainers absorb the upkeep manually for any gate not adopted.
-- **Generated-page freshness** — [`npm run regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) reports when a page written by a script no longer matches its sources. The [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow runs it on pull requests and **blocks** when any generated page is stale, listing every stale path in the job summary.
+- **Generated-page freshness** — [`npm run regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) reports when a page written by a script no longer matches its sources. The `docs-freshness` workflow runs it on pull requests and **blocks** when any generated page is stale, listing every stale path in the job summary.
 - **General docs hygiene** — the rest of this file. Link verification, anchor validation, spelling. These guard the docs themselves, not the IA contract.
 - **Nightly table-reference check** — [`npm run check:table-refs`](#nightly-table-reference-check) confirms every `ERR_*` code or option/flag/param/key name cited in a canonical error-code or option/config table still exists in its package's source. Existence-only: it does not re-verify a table's claimed condition or default against actual guard/fallback logic.
 
@@ -162,7 +162,7 @@ This wraps [`docs/scripts/check-example-paths.mjs`](../../scripts/check-example-
 - `_skip_notes` — mandatory sibling object, one entry per `skipFiles`/`skipPaths` pattern, explaining why. The checker refuses to run if any skip entry lacks a note. An unexplained skip is a silent false negative waiting to happen — the same lesson the linkinator skip list already enforces by convention; here it's enforced by the script itself.
 - Placeholders are dropped automatically, not via the skip list: any candidate token immediately followed by `<`, `>`, `*`, `{`, `}`, or `…` (for example `examples/run-<scenario>.js` or `` examples/run-*.js ``) is treated as unresolved template text, not a real path.
 
-**CI wiring** — [`.github/workflows/example-paths.yml`](../../../.github/workflows/example-paths.yml). Nightly only, deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split: the `example-paths` job (`schedule` + `workflow_dispatch`) runs `npm run check:example-paths`, and on failure opens or (if one is already open) comments on a tracking issue labelled `example-paths`, then exits non-zero so the run shows red. There is no PR gate — this check is not wired into the PR path.
+**CI wiring** — `.github/workflows/example-paths.yml`. Nightly only, deliberately unlike [`link-check.yml`](../../../.github/workflows/link-check.yml)'s nightly-plus-PR split: the `example-paths` job (`schedule` + `workflow_dispatch`) runs `npm run check:example-paths`, and on failure opens or (if one is already open) comments on a tracking issue labelled `example-paths`, then exits non-zero so the run shows red. There is no PR gate — this check is not wired into the PR path.
 
 ## Nightly table-reference check
 
@@ -197,7 +197,7 @@ This wraps [`docs/scripts/check-table-refs.mjs`](../../scripts/check-table-refs.
 
 Ships with an **empty skip list**. Every table's identifiers in the current repo were spot-checked and resolve; add a targeted entry only if a real, unfixable false positive turns up on an actual nightly run.
 
-**CI wiring** — [`.github/workflows/table-refs.yml`](../../../.github/workflows/table-refs.yml). Nightly only, same structure as `example-paths.yml`: the `table-refs` job (`schedule` + `workflow_dispatch`) runs `npm run check:table-refs`, and on failure opens or (if one is already open) comments on a tracking issue labelled `table-refs`, then exits non-zero so the run shows red. No PR gate — a PR-diff fast mode mirroring `link-check.yml`'s diff job is an explicitly deferred follow-on.
+**CI wiring** — `.github/workflows/table-refs.yml`. Nightly only, same structure as `example-paths.yml`: the `table-refs` job (`schedule` + `workflow_dispatch`) runs `npm run check:table-refs`, and on failure opens or (if one is already open) comments on a tracking issue labelled `table-refs`, then exits non-zero so the run shows red. No PR gate — a PR-diff fast mode mirroring `link-check.yml`'s diff job is an explicitly deferred follow-on.
 
 ## 🚧 Spelling — Vale
 
@@ -206,8 +206,8 @@ Vale catches accidental misspellings and enforces a project word list. Configure
 ## Style — Markdownlint
 
 [`markdownlint-cli`](https://github.com/igorshubovych/markdownlint-cli) enforces structural consistency — heading hierarchy, list indentation, fenced code block style, reference-link
-hygiene. The ruleset in [`.markdownlint.jsonc`](../../../.markdownlint.jsonc) is kept identical to the mdk-docs ruleset so both repos lint the same way. The files covered are set
-by the `lint:md` globs in the root `package.json` (`docs/**/*.md` and every `README.md`) minus the exclusions in [`.markdownlintignore`](../../../.markdownlintignore).
+hygiene. The ruleset in `.markdownlint.jsonc` is kept identical to the mdk-docs ruleset so both repos lint the same way. The files covered are set
+by the `lint:md` globs in the root `package.json` (`docs/**/*.md` and every `README.md`) minus the exclusions in `.markdownlintignore`.
 `markdownlint-cli` runs the same `markdownlint` engine as `markdownlint-cli2`. It replaced `markdownlint-cli2` because that CLI's globby → micromatch → braces chain carries an
 advisory with no patched release (GHSA-vfj7-8cjw-p6xm).
 

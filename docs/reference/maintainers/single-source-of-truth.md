@@ -405,7 +405,7 @@ The copy is verbatim on purpose. Trimming it to what the skill reads today would
 
 ### Freshness in CI
 
-[`.github/workflows/docs-freshness.yml`](../../../.github/workflows/docs-freshness.yml) runs `regenerate-docs --check` on pull requests that touch either the sources or the generated
+`.github/workflows/docs-freshness.yml` runs `regenerate-docs --check` on pull requests that touch either the sources or the generated
 pages. It installs the UI workspace and treats a skipped target as a failure, since there a skip means the install broke rather than that someone is working light. It **blocks** the pull request whenever any generated page is stale — a stale page ships facts the sources no longer support — and lists every stale path in the job summary. When a source change requires regenerated output, run `npm run regenerate-docs` from the repo root and commit the deterministic result in the same pull request. A generator that crashes, or any target skipped in CI, also blocks, because then the run did not verify every page.
 
 ## Next steps
