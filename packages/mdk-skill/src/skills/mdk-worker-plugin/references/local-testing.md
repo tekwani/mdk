@@ -20,6 +20,11 @@ assumes a valid contract.
 node <this-skill>/scripts/worker-smoke.mjs <worker-dir>
 ```
 
+The harness loads `@tetherto/mdk-worker` as the worker dir resolves it (run
+`npm install` there first). Only if that fails does it fall back to
+`backend/core/mdk-worker` in the MDK checkout that contains the skill itself,
+never above that repo's root. `MDK_WORKER_BASE=<dir>` overrides both.
+
 The harness looks for `<worker-dir>/smoke.config.js` (the template ships one):
 `setup()` boots the device mock and returns `{ config, commands?, teardown }`.
 The harness then:
@@ -42,7 +47,7 @@ Alternative to `smoke.config.js`: pass `--config '<json>'` (or a path to a
 
 Host the package's directory on the runtime and drive envelopes through
 `handleRequest` — this exercises envelope dispatch and multi-device routing.
-Model: [`examples/backend/demo-worker-caller/index.js`](../../../../../../examples/backend/demo-worker-caller/index.js). Minimal caller (run the
+Minimal caller (run the
 body inside an `async function main ()` in a `.js` file, or as-is in an
 `.mjs`):
 
@@ -82,10 +87,11 @@ followed by `mdk run kernel` (or `mdk run` to boot both together) — see
 Otherwise, your Worker package doesn't need to live in the MDK monorepo for
 this step — a caller can require it from anywhere; you only need a local
 Kernel to register against. In a checkout of the MDK monorepo, drop the Worker into the
-full-site example: [`examples/full-site/start.js`](../../../../../../examples/full-site/start.js)
-boots mocks + Kernel + Workers + Gateway from `WORKER_SPECS` in
-[`examples/full-site/backend/site.js`](../../../../../../examples/full-site/backend/site.js) — add a spec entry for your Worker (the
-`demo` entry shows the third-party-plugin shape, no worker-infra plumbing).
+mvp-site example: [`examples/mvp-site/deploy/run-process.js`](../../../../../../examples/mvp-site/deploy/run-process.js)
+runs one PM2-supervised process per role (mocks, Kernel, each Worker, Gateway) — add a role that boots your Worker
+and list it under `pm2.roles` in `config/site.deploy.json` (the `worker-antminer` role and
+[`examples/mvp-site/backend/antminer-adapter.js`](../../../../../../examples/mvp-site/backend/antminer-adapter.js) show the
+third-party-plugin shape, no worker-infra plumbing).
 Confirm the Kernel registers it, telemetry flows, and commands round-trip.
 
 ## Unit tests (accompany every step)
@@ -111,12 +117,15 @@ const value = await instance.telemetry.get('hashrate_rt')({})
 const result = await instance.commands.get('setPowerMode')({ mode: 'eco' })
 ```
 
-[`backend/workers/samples/demo-worker/tests/unit/handlers.test.js`](../../../../../../backend/workers/samples/demo-worker/tests/unit/handlers.test.js) is the
-complete worked example of this style. Runner is **brittle** (no mocha, no
-jest):
+[`backend/workers/miners/avalon/tests/unit/miner.test.js`](../../../../../../backend/workers/miners/avalon/tests/unit/miner.test.js)
+is a worked example of brittle tests in this repo. Runner is **brittle** (no mocha, no
+jest). It must be a `devDependency` of the worker, pinned like the rest of the
+repo (`"brittle": "3.18.0"`); `--no-install` makes `npx` fail instead of
+downloading an unpinned copy when it is missing:
 
 ```
-npx brittle tests/unit/*.test.js
+npm install --save-dev --save-exact brittle@3.18.0   # once, if package.json lacks it
+npx --no-install brittle tests/unit/*.test.js
 ```
 
 Cover at minimum: every telemetry handler against mock values, every command's

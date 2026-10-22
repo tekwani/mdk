@@ -1,19 +1,8 @@
-import { actionsStore } from '@tetherto/mdk-ui-foundation'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { AlarmsBellButton } from '../alarms-bell-button'
-import { PendingActionsButton } from '../pending-actions-button'
 import { ProfileMenu } from '../profile-menu'
-
-const mockLiveActions = vi.hoisted(() =>
-  vi.fn(() => ({ myVoting: [], myReady: [], myExecuting: [], othersVoting: [] })),
-)
-
-vi.mock('@tetherto/mdk-react-adapter', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tetherto/mdk-react-adapter')>()
-  return { ...actual, useLiveActions: mockLiveActions }
-})
 
 describe('AlarmsBellButton', () => {
   it('renders without a badge when no counts are provided', () => {
@@ -125,48 +114,5 @@ describe('ProfileMenu', () => {
         />,
       ),
     ).not.toThrow()
-  })
-})
-
-describe('PendingActionsButton', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    actionsStore.getState().clearAllPendingSubmissions()
-    mockLiveActions.mockReturnValue({ myVoting: [], myReady: [], myExecuting: [], othersVoting: [] })
-  })
-
-  afterEach(() => {
-    actionsStore.getState().clearAllPendingSubmissions()
-  })
-
-  it('displays "0" when there are no pending actions', () => {
-    render(<PendingActionsButton />)
-    expect(screen.getByText('0')).toBeInTheDocument()
-  })
-
-  it('displays "99+" when the total count exceeds 99', () => {
-    mockLiveActions.mockReturnValue({
-      myVoting: Array.from({ length: 50 }, (_, i) => ({ id: String(i) })),
-      myReady: Array.from({ length: 30 }, (_, i) => ({ id: String(i + 50) })),
-      myExecuting: Array.from({ length: 21 }, (_, i) => ({ id: String(i + 80) })),
-      othersVoting: [],
-    })
-    render(<PendingActionsButton />)
-    expect(screen.getByText('99+')).toBeInTheDocument()
-  })
-
-  it('calls the custom onClick handler instead of opening the sidebar', () => {
-    const onClick = vi.fn()
-    render(<PendingActionsButton onClick={onClick} />)
-    fireEvent.click(screen.getByRole('button'))
-    expect(onClick).toHaveBeenCalledTimes(1)
-    expect(actionsStore.getState().sidebarOpen).toBe(false)
-  })
-
-  it('opens the sidebar when no onClick prop is provided', () => {
-    actionsStore.setState({ sidebarOpen: false })
-    render(<PendingActionsButton />)
-    fireEvent.click(screen.getByRole('button'))
-    expect(actionsStore.getState().sidebarOpen).toBe(true)
   })
 })

@@ -9,6 +9,7 @@ export type Miner = {
   deviceId: string;
   code: string;
   type: string;
+  workerId: string;
   container: string;
   pos: string;
   status: string;

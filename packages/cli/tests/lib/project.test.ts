@@ -19,7 +19,6 @@ afterEach(() => cleanupTmpDirs());
 describe('DIRS / WORKSPACES', () => {
   it('declares the expected component directories and workspace globs', () => {
     expect(DIRS.workers).toBe('workers');
-    expect(DIRS.plugins).toBe('plugins');
     expect(DIRS.apps).toBe('apps');
     expect(DIRS.dashboard).toBe(join('apps', 'dashboard'));
     expect(WORKSPACES).toEqual(['workers/*', 'plugins/*']);
@@ -266,10 +265,17 @@ describe('ensureProjectGitignore', () => {
     expect(content).toContain('.mdk/');
   });
 
-  it('leaves a .gitignore that already has the MDK block untouched', () => {
+  it('leaves a .gitignore that already has the MDK block and .env untouched', () => {
     const dir = makeTmpDir();
-    writeFileSync(join(dir, '.gitignore'), '.mdk/\n', 'utf8');
+    writeFileSync(join(dir, '.gitignore'), '.mdk/\n.env\n', 'utf8');
     expect(ensureProjectGitignore(dir)).toBe('present');
+  });
+
+  it('adds .env to an MDK .gitignore that lacks it (it holds setup secrets)', () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, '.gitignore'), '.mdk/', 'utf8');
+    expect(ensureProjectGitignore(dir)).toBe('updated');
+    expect(readFileSync(join(dir, '.gitignore'), 'utf8')).toBe('.mdk/\n.env\n');
   });
 });
 

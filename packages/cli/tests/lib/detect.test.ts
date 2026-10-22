@@ -20,7 +20,7 @@ describe('detectEnvironment', () => {
   it('reports the running Node major version against the >= 20 requirement', () => {
     const env = detectEnvironment(makeTmpDir());
     const major = Number(process.versions.node.split('.')[0]);
-    expect(env.nodeOk).toBe(major >= 20);
+    expect(env.nodeOk).toBe(major >= 24);
   });
 
   it('detects pnpm via pnpm-lock.yaml', () => {

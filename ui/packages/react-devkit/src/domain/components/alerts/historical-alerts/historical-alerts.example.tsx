@@ -5,13 +5,13 @@
  * the table can read the timezone store.
  */
 import { useState } from 'react'
-import type { Alert } from '@tetherto/mdk-react-devkit'
+import type { AlertRecord } from '@tetherto/mdk-react-devkit'
 import { HistoricalAlerts } from '@tetherto/mdk-react-devkit'
 
 const NOW = Date.now()
 const DAY = 24 * 60 * 60 * 1000
 
-const mockAlerts: Alert[] = [
+const mockAlerts: AlertRecord[] = [
   {
     id: '1',
     uuid: 'alrt-1',
@@ -46,7 +46,7 @@ export const HistoricalAlertsExample = () => {
       dateRange={range}
       onDateRangeChange={setRange}
       onAlertClick={(id) => {
-        // eslint-disable-next-line no-console
+        // oxlint-disable-next-line no-console
         console.log(`open alert ${id}`)
       }}
     />

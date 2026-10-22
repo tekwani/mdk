@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Generate `dist/stores.json` — the machine-readable manifest of the
  * Zustand vanilla stores and TanStack Query helpers exposed by
@@ -32,11 +32,7 @@ const QUERY_INDEX = join(SRC_ROOT, "query", "index.ts");
 const UTILS_INDEX = join(SRC_ROOT, "utils", "index.ts");
 const CONSTANTS_INDEX = join(SRC_ROOT, "constants", "index.ts");
 const TYPES_INDEX = join(SRC_ROOT, "types", "index.ts");
-/* The mining query dialect moved out of `utils/` into its own preset. It is
- * still re-exported from the package root, so it stays part of the surface
- * agents discover — walk it explicitly or `stores.json` silently loses ~79
- * builders. */
-const MINING_PRESET_INDEX = join(SRC_ROOT, "presets", "mining", "index.ts");
+const AUTH_INDEX = join(SRC_ROOT, "auth", "index.ts");
 const TSCONFIG_PATH = join(PACKAGE_ROOT, "tsconfig.json");
 const PACKAGE_JSON_PATH = join(PACKAGE_ROOT, "package.json");
 const DIST_DIR = join(PACKAGE_ROOT, "dist");
@@ -385,12 +381,12 @@ const collectQueryHelpers = (project: Project): QueryHelperEntry[] => {
 
 /**
  * Collect the public utilities + constants exposed from `src/utils/index.ts`,
- * `src/constants/index.ts` and `src/presets/mining/index.ts` — the helpers and
+ * `src/constants/index.ts` and `src/auth/index.ts` — the helpers and
  * values consumers import from the package root. Functions get a call signature;
  * constants get their value type.
  */
 const collectUtilities = (project: Project): UtilityEntry[] => {
-  const indexes = [UTILS_INDEX, CONSTANTS_INDEX, MINING_PRESET_INDEX].filter((p) =>
+  const indexes = [UTILS_INDEX, CONSTANTS_INDEX, AUTH_INDEX].filter((p) =>
     existsSync(p),
   );
   const utilities: UtilityEntry[] = [];

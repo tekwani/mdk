@@ -218,7 +218,7 @@ test('requiring the ambient device module outside any instance throws ERR_NO_DEV
 // comes back in v1's standard `_pullChannel` shape: `{ name, value }`. The
 // fixture contract declares no `health` telemetry channel of its own — the
 // builtin answers it anyway.
-test('health query addressed to a deviceId returns exactly that device\'s own config, in the standard { name, value } channel shape', async (t) => {
+test('health query addressed to a deviceId returns exactly that device\'s own identity, in the standard { name, value } channel shape', async (t) => {
   const runtime = await createRuntime(FIXTURE_DIR, { env: { TOKEN: 'shared-secret' } })
 
   const res = await pullHealth(runtime, 'cw-a')
@@ -227,9 +227,14 @@ test('health query addressed to a deviceId returns exactly that device\'s own co
   t.is(res.payload.name, 'health', 'health dispatches through the exact same shape as any real named telemetry channel')
   t.is(res.payload.value.status, 'OK')
   t.is(res.payload.value.id, 'cw-a')
-  t.alike(res.payload.value.opts, { label: 'device-a' })
-  t.alike(res.payload.value.env, { TOKEN: 'shared-secret' })
   t.is(res.payload.value.workerId, 'cw-rack-1')
+  // Secrets (env), device credentials (opts) and plugin config never leave
+  // the process through the builtin channel.
+  t.alike(Object.keys(res.payload.value).sort(), ['id', 'status', 'workerId'])
+  t.absent('env' in res.payload.value, 'env is not returned')
+  t.absent('opts' in res.payload.value, 'opts is not returned')
+  t.absent('config' in res.payload.value, 'config is not returned')
+  t.absent(JSON.stringify(res).includes('shared-secret'), 'the secret appears nowhere in the response')
 })
 
 test('health query is not shadowed by (and does not require) a contract-declared channel', async (t) => {
@@ -258,14 +263,14 @@ test('the health shim resolves to a genuine function on entry.instance.telemetry
   // all, proves it is a real per-instance function closed over this device.
   const direct = await entry.instance.telemetry.get('health')()
   t.is(direct.id, 'zt-a')
-  t.alike(direct.opts, { label: 'zt-device-a' })
+  t.is(direct.opts, undefined, 'device opts are not exposed')
 
   // The same result reached through the normal TELEMETRY_PULL dispatch path
   // — v1's own _pullChannel, with zero special-casing in WorkerRuntimeV2.
   const res = await pullHealth(runtime, 'zt-a')
   t.is(res.payload.name, 'health')
   t.is(res.payload.value.id, 'zt-a')
-  t.alike(res.payload.value.opts, { label: 'zt-device-a' })
+  t.is(res.payload.value.workerId, 'zt-rack')
 })
 
 test('a plugin-declared "health" telemetry channel wins over the builtin auto-injected one', async (t) => {
@@ -287,7 +292,7 @@ test('a plugin-declared "health" telemetry channel wins over the builtin auto-in
   t.alike(res.payload.value, { custom: true }, 'TELEMETRY_PULL type=health dispatches to the plugin\'s own handler')
 })
 
-test('health query on multiple devices returns distinct configs with no cross-device leakage', async (t) => {
+test('health query on multiple devices answers from each device\'s own instance with no cross-device leakage', async (t) => {
   const many = [
     { deviceId: 'cw-a', config: { label: 'device-a', port: 18080 } },
     { deviceId: 'cw-b', config: { label: 'device-b', port: 18081 } },
@@ -300,16 +305,13 @@ test('health query on multiple devices returns distinct configs with no cross-de
     results[deviceId] = (await pullHealth(runtime, deviceId)).payload.value
   }
 
-  for (const { deviceId, config } of many) {
+  // Each answer carries the addressed device's own id — proves the runtime
+  // resolved that device's own instance each time, never a sibling's — and
+  // none of them leaks the device's connection opts.
+  for (const { deviceId } of many) {
     t.is(results[deviceId].id, deviceId, `${deviceId} health reports its own id`)
-    t.alike(results[deviceId].opts, config, `${deviceId} health reports its own opts`)
+    t.is(results[deviceId].opts, undefined, `${deviceId} health does not expose its opts`)
   }
-
-  // No two devices' opts are the same object or value — proves the runtime
-  // resolved the addressed device's own entry each time, never a sibling's.
-  t.not(results['cw-a'].opts.port, results['cw-b'].opts.port)
-  t.not(results['cw-b'].opts.port, results['cw-c'].opts.port)
-  t.not(results['cw-a'].opts, results['cw-b'].opts)
 })
 
 test('health query for an unknown deviceId reports ERR_DEVICE_NOT_FOUND', async (t) => {
@@ -339,7 +341,8 @@ test('the default metrics pull now also includes a "health" key, since it shares
 
   t.ok('health' in res.payload.metrics, 'the metrics aggregate now carries the builtin health entry too')
   t.is(res.payload.metrics.health.id, 'cw-a')
-  t.alike(res.payload.metrics.health.opts, { label: 'device-a' })
+  t.absent('env' in res.payload.metrics.health, 'the aggregated health entry does not carry env either')
+  t.absent('opts' in res.payload.metrics.health, 'nor device opts')
   // The fixture's own declared channel is still present alongside it.
   t.ok('status' in res.payload.metrics, 'the plugin\'s own declared channel is unaffected')
 })

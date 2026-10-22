@@ -1,7 +1,8 @@
 # DeviceExplorer
 
-Top-level device explorer: filter toolbar + searchable, sortable table of
-miners, containers, or cabinets. Designed to be controlled by URL state in the host app.
+Device explorer: filter + search toolbar over a sortable, selectable device
+table. Shows the miner columns by default; pass `columns` to change them.
+Designed to be controlled by URL state in the host app.
 
 <!-- BEGIN GENERATED: props — do not edit; npm run generate:usage-proptables (source: component JSDoc/types via registry.json) -->
 ## Props
@@ -9,16 +10,14 @@ miners, containers, or cabinets. Designed to be controlled by URL state in the h
 | Prop | Status | Type / Options | Default | Description |
 |------|--------|----------------|---------|-------------|
 | `data` | Required | `Device[]` | - | Rows |
-| `deviceType` | Required | `"container" \| "miner" \| "cabinet"` | - | Active device-type tab |
 | `filterOptions` | Required | `DeviceExplorerFilterOption[]` | - | Filter category definitions |
-| `getFormattedDate` | Required | `(date: Date) => string` | - | Date formatter from the host's timezone setup |
-| `onDeviceTypeChange` | Required | `(type: DeviceExplorerDeviceType) => void` | - | Setter for the device type |
+| `getFormattedDate` | Required | `(date: Date) => string` | - | Date formatter from the host's timezone setup; used by the default miner columns |
 | `onFiltersChange` | Required | `(value: LocalFilters) => void` | - | Setter for filters |
 | `onSearchTagsChange` | Required | `(tags: string[]) => void` | - | Setter for search tags |
-| `renderAction` | Required | `(device: Device) => React.ReactNode` | - | Renderer for the per-row action cell |
 | `searchOptions` | Required | `DeviceExplorerSearchOption[]` | - | Searchable column definitions |
 | `searchTags` | Required | `string[]` | - | Active search-tag chips |
 | `className` | Optional | `string` | - | Additional class names |
+| `columns` | Optional | `ColumnDef<Device>[]` | - | Table columns. Defaults to the miner columns ({@link getMinerColumns}) |
 | `filters` | Optional | `LocalFilters` | - | Controlled filter values |
 | `onRowClick` | Optional | `((device: Device) => void)` | - | Called when a row is clicked (e.g. to open the device's detail page) |
 | `onSelectedDevicesChange` | Optional | `((selections: RowSelectionState) => void)` | - | Setter for row selection |
@@ -45,8 +44,6 @@ miners, containers, or cabinets. Designed to be controlled by URL state in the h
 
 ```tsx
 <DeviceExplorer
-  deviceType={deviceType}
-  onDeviceTypeChange={setDeviceType}
   data={devices}
   filterOptions={filterOptions}
   searchOptions={searchOptions}
@@ -54,20 +51,33 @@ miners, containers, or cabinets. Designed to be controlled by URL state in the h
   onSearchTagsChange={setSearchTags}
   onFiltersChange={setFilters}
   getFormattedDate={(date) => formatInTimezone(date, tz)}
-  renderAction={(device) => <RowActionMenu device={device} />}
 />
 ```
 
+## Custom columns
+
+Spread the default miner columns and add your own, e.g. a per-row action:
+
+```tsx
+import { DeviceExplorer, getMinerColumns } from "@tetherto/mdk-react-devkit"
+
+const columns = [
+  ...getMinerColumns({ getFormattedDate }),
+  { id: "action", header: "Actions", cell: ({ row }) => <RowActionMenu device={row.original} /> },
+]
+
+<DeviceExplorer {...props} columns={columns} />
+```
+
+An app with several device kinds renders one explorer per kind (e.g. under the
+primitive `Tabs`), each with its own `columns` and `data`.
+
 ## Data contracts
 
-- `DeviceExplorerDeviceType = "container" | "miner" | "cabinet"`
 - `Device` — [`foundation/types/device`](../../types/device.ts)
 - `LocalFilters`, `DataTableRowSelectionState` — re-exported from `core`.
 
 ## Notes
 
-- The component handles the device-type/sorting interaction internally:
-  switching to `cabinet` selects a default sort by `id` desc, switching to
-  any other type clears sort
-- Wrap the page in `<MdkProvider>`; the toolbar calls `useDeviceResolution`
-  and the table consumes `useTimezoneFormatter`
+- Props only: no provider is required. `getFormattedDate` comes from the host,
+  e.g. `useTimezoneFormatter().getFormattedDate` from `@tetherto/mdk-react-adapter`

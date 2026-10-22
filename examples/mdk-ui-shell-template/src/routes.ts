@@ -6,8 +6,7 @@ import type { ComponentType } from 'react'
  *
  * A fresh shell ships with no example pages. To add a page: put the component
  * under `src/pages/`, append a one-line entry below, and add its nav icon in
- * `src/constants/navigation.tsx`. The canonical reference pages live under
- * `_managed/pages/` — copy one into `src/pages/` to use it.
+ * `src/constants/navigation.tsx`.
  *
  * Keep entries on a single line — tooling matches whole lines. Do not remove
  * the `mdk:routes-end` marker.

@@ -1,9 +1,8 @@
 /**
  * Runnable example for MiningPoolsPanel.
  *
- * Pair with `usePoolRows` from `@tetherto/mdk-react-adapter` in production
- * — the example below uses static rows so it can render outside the
- * MdkProvider.
+ * Uses static rows. In an app, map your pools route's response to
+ * `MiningPoolRow`s and pass them in.
  */
 import { type MiningPoolRow, MiningPoolsPanel } from '@tetherto/mdk-react-devkit'
 

@@ -1,6 +1,6 @@
 ---
 title: Run a mining site end to end
-description: "[⏱️ <3 min] From git clone to a live site with three Workers, mock hardware, and a browser dashboard"
+description: "[⏱️ <3 min] From git clone to a live site with six Workers, mock hardware, and a browser dashboard"
 docs@tether_slug: tutorials/run-a-site
 ---
 
@@ -9,21 +9,21 @@ docs@tether_slug: tutorials/run-a-site
 
 ## Overview
 
-This tutorial runs the [Starter site example][mvp-site-example] end to end: a Whatsminer worker, an Ocean pool worker, and a SATEC
-powermeter worker, each backed by mock hardware that speaks the real wire protocol, a Gateway HTTP API, and a React dashboard, all
-supervised by PM2.
+This tutorial runs the [Starter site example][mvp-site-example] end to end: Whatsminer and Antminer Workers, Ocean, EMCD,
+SpiderPool, and Foundry pool Workers, and a SATEC powermeter Worker, each backed by a mock that speaks the real wire protocol, plus a Gateway HTTP
+API and a React dashboard, all supervised by PM2.
 
 What you'll have at the end:
 
-- Mock miners, a mock pool, and a mock powermeter, each driven by the real Worker driver code against a localhost mock instead of
-  hardware
+- Mock miners, three mock pool APIs, and a mock powermeter, each driven by the real Worker driver code against a localhost mock
+  instead of hardware
 - A Gateway API on `:3000` serving `/site/overview`, `/site/history`, `/site/miners/:id/command`, and `/site/miners/:id/pools`
 - A React dashboard on `:3000` with Dashboard, Containers, Monitoring, Pools, and Control pages
 - One MCP surface on `:3101` exposing the site as tools for AI agents, served by a standalone MCP process: a hand-authored,
-  agent-contract tool set alongside the site Gateway plugin's own routes, read off the same plugin dir the Gateway loads
+  agent-contract tool set alongside the site app's own routes, read off the same route table the Gateway forwards
 
-Every component above runs as its own PM2-supervised OS process, discovering the Kernel over a shared local directory rather than a
-DHT.
+Every component above runs as its own PM2-supervised OS process. Kernel discovers the Workers through a shared local directory
+rather than a DHT topic, and the Gateway and MCP server find Kernel through its well-known key file.
 
 ## Prerequisites
 
@@ -71,16 +71,17 @@ npm start
 [`start.js`](../../examples/mvp-site/start.js) generates `deploy/ecosystem.config.js` from [`config/site.deploy.json`](../../examples/mvp-site/config/site.deploy.json.example), starts the PM2 apps, then exits — PM2 itself keeps the processes running in the background.
 
 ```bash
-pm2 list      # mocks, mocks-ocean, mocks-satec, kernel, worker, worker-ocean, worker-satec, gateway, mcp
+pm2 list      # mocks, mocks-antminer, mocks-ocean, mocks-satec, mocks-emcd, mocks-spiderpool, mocks-foundry, kernel, worker, worker-antminer, worker-ocean, worker-satec, worker-emcd, worker-spiderpool, worker-foundry, app-site, gateway, mcp
 ```
 
 Wait for every app to show `online`, then open `http://localhost:3000/` in a browser. The dashboard shows live hashrate, power, and
 per-device status.
 
 > [!IMPORTANT]
-> PM2 showing every app `online` means the processes started, not that the site has fully settled. The Ocean pool worker ticks its
-> mock fetch/save cycle every 10 seconds, and Kernel's local-discovery scan runs every 4 seconds, so `/site/overview` can report
-> `"pools": 0` for 15-20 seconds after `pm2 list` goes green. Retry the command below if the first response comes back short.
+> PM2 showing every app `online` means the processes started, not that the site has fully settled. The pool Workers tick their
+> mock fetch/save cycle every 10 seconds, SpiderPool spaces its API requests one second apart, and Kernel's local-discovery scan
+> runs every 4 seconds, so `/site/overview` can report fewer than 4 pools for 15-20 seconds after `pm2 list` goes green. Retry the
+> command below if the first response comes back short.
 
 Verify via the API:
 
@@ -92,15 +93,17 @@ Expected output:
 
 ```text
 {
-  "miners": 5,
-  "pools": 1,
+  "miners": 8,
+  "pools": 3,
   "powermeters": 1
 }
 ```
 
 > [!NOTE]
-> [`config/devices.json`](../../examples/mvp-site/config/devices.json.example) seeds five miners and one powermeter by default. Add
-> or remove entries there to resize the fleet; [configuring devices][mvp-site-devices] describes the format.
+> [`config/devices.json`](../../examples/mvp-site/config/devices.json.example) seeds five Whatsminer miners, three Antminer miners,
+> and one powermeter by default. Add or remove entries there to resize the fleet; [configuring devices][mvp-site-devices] describes
+> the format. The three pools aren't seeded devices: each pool Worker reports one account from its section of
+> [`config/site.deploy.json`](../../examples/mvp-site/config/site.deploy.json.example).
 
 </Step>
 
@@ -109,8 +112,29 @@ Expected output:
 ### (Optional) Explore the UI pages
 
 The Dashboard, Containers, Monitoring, Pools, and Control pages are all served from `ui/dist` via the Gateway on the same `:3000`
-port. The Pools page reads the Ocean pool worker's stats; the Monitoring page charts the SATEC meter's power series over time. See
-[UI pages][mvp-site-ui] for what each one shows.
+port. The Pools page lists the Ocean, EMCD, SpiderPool, and Foundry accounts side by side; the Monitoring page charts the SATEC meter's power
+series over time. [UI pages][mvp-site-ui] describes what each one shows.
+
+</Step>
+
+<Step>
+
+### (Optional) Report a real EMCD, SpiderPool, or Foundry account
+
+The EMCD, SpiderPool, and Foundry Workers read their API credentials from the environment, never from `config/site.deploy.json`.
+With the variables unset, each Worker logs a warning and authenticates with its package's public mock credentials, which only the
+bundled mock accepts.
+
+| Pool       | Environment variables                           | Accounts setting                                       |
+| ---------- | ----------------------------------------------- | ------------------------------------------------------ |
+| EMCD       | `EMCD_API_KEY`, `EMCD_API_SECRET`               | `emcd.pool.accounts`: subaccount IDs, empty for master |
+| SpiderPool | `SPIDERPOOL_ACCESS_KEY`, `SPIDERPOOL_PRIVATE_KEY` | `spiderpool.pool.accounts`: subaccount names         |
+| Foundry    | `FOUNDRY_API_KEY`                               | `foundry.pool.accounts`: sub-account names, required   |
+
+To switch one pool to the live API, set its variables in the shell you run `npm start` from, then in `config/site.deploy.json`
+remove that pool's `pool.apiUrl` so the Worker uses its package default, set `pool.accounts`, and remove its `mocks-emcd`,
+`mocks-spiderpool`, or `mocks-foundry` entry from `pm2.roles`. Run `npm run stop:pm2` and `npm start` to apply it. The
+[pool config reference][mvp-site-pool-config] covers every setting.
 
 </Step>
 
@@ -129,9 +153,9 @@ The example exposes MCP as a single surface on `:3101`, served by a standalone M
 
 - A hand-authored tool set with agent-contract metadata — [`backend/mcp-plugins/site/mcp-plugin.json`](../../examples/mvp-site/backend/mcp-plugins/site/mcp-plugin.json) — giving an agent summary-first, closed-vocabulary tools (`summarize_site`, `count_devices`, `list_devices`,
   `get_device`, `rank_devices`, `act_device`) instead of raw route exports
-- The site Gateway plugin's own `/site/*` routes, read off the same plugin dir the Gateway loads and converted into tools
+- The site app's own `/site/*` routes, read off the same route table the Gateway forwards and converted into tools
 
-Point an MCP client at that URL and it can query the fleet or, with the agent-contract tools, act on it with operator approval. This local site runs an empty Kernel allowlist; a hardened Kernel restricts the MCP connection through [Kernel's caller allowlist][mcp-allowlist].
+Point an MCP client at that URL and it can query the fleet or, with the agent-contract tools, act on it with operator approval. This local site admits its own processes through the trusted-keys directory on this machine; a hardened Kernel lists the MCP server's key with a role through [Kernel's caller allowlist][mcp-allowlist].
 
 </Step>
 
@@ -158,18 +182,20 @@ This stops and removes every PM2-managed process for this site: mocks, Workers, 
 
 1. **Setup** installed [`backend/core`](../../backend/core/README.md), [`backend/workers`](../../backend/workers/README.md), the
    MDK UI devkit, and this example, then `setup:config` seeded its local config from the committed `*.example` files.
-2. **Mock hardware**: PM2's `mocks`, `mocks-ocean`, and `mocks-satec` roles each started a mock device server — a Whatsminer miner,
-   an Ocean pool, and a SATEC powermeter — speaking the real wire protocol, so the Worker drivers run their true connect, collect,
-   and command paths against them.
+2. **Mock hardware**: PM2's `mocks`, `mocks-antminer`, `mocks-ocean`, `mocks-emcd`, `mocks-spiderpool`, `mocks-foundry`, and `mocks-satec` roles each
+   started a mock server (Whatsminer and Antminer miners, the Ocean, EMCD, SpiderPool, and Foundry pool APIs, and a SATEC powermeter)
+   speaking the real wire protocol, so the Worker drivers run their true connect, collect, and command paths against them.
 3. **Kernel**: the `kernel` role started the orchestration layer in local-discovery mode, watching a shared directory for Workers to
    publish their RPC keys to.
-4. **Workers**: the `worker`, `worker-ocean`, and `worker-satec` roles each dispatched to that family's boot function
-   (`startWhatsminerWorker`, `startOceanPoolWorker`, `startSatecWorker`) to construct a `WorkerRuntime`, seed its devices from
-   `config/devices.json`, and publish its RPC key for the Kernel to discover.
-5. **Gateway**: the `gateway` role mounted the site plugin declared by [`backend/gateway-plugins/site/mdk-plugin.json`](../../examples/mvp-site/backend/gateway-plugins/site/mdk-plugin.json) and the built UI from `ui/dist`, then opened the HTTP server on `:3000`. The plugin aggregates data across the
-   three Workers through `mdkClient`.
+4. **Workers**: the `worker`, `worker-antminer`, `worker-ocean`, `worker-emcd`, `worker-spiderpool`, `worker-foundry`, and `worker-satec` roles each
+   dispatched to that family's boot function to construct a `WorkerRuntime` and publish its RPC key for the Kernel to discover. The
+   miner and powermeter Workers seed their devices from `config/devices.json`. Each pool Worker is one logical device that polls its
+   pool's API. The EMCD and SpiderPool Workers come from external git packages, booted by
+   [`backend/pool-adapter.js`](../../examples/mvp-site/backend/pool-adapter.js).
+5. **App and Gateway**: the `app-site` role ran the site app ([`backend/gateway-plugins/site`](../../examples/mvp-site/backend/gateway-plugins/site/mdk-plugin.json)) in its own app runtime, and the `gateway` role mounted that app's routes at `/` and the built UI from `ui/dist`, then opened the HTTP server on `:3000`, forwarding each `/site/*` request to the app. The app aggregates data across the
+   six Workers through `mdkClient`.
 6. **MCP**: the `mcp` role started the standalone MCP process on `:3101`, serving both tool sources — the hand-authored
-   agent-contract tool set and the site Gateway plugin's own routes, derived from the same plugin dir the Gateway loads.
+   agent-contract tool set and the site app's own routes, derived from the same route table the Gateway forwards.
 
 ## Resetting state
 
@@ -186,8 +212,7 @@ run, [reset it][mvp-site-reset] before restarting — seed devices are only regi
 - Run the same PM2-supervised model as a production deployment, or across hosts with DHT discovery, with the [supervised-services deployment guide][all-workers]
 - Go beyond querying the site's MCP tools by hand: connect [the conversational operator agent][agent-guides], which calls the same
   tools and gates writes behind human approval
-- See the full 11-worker fleet — three miner families, containers, sensors, and two pools — in [`examples/full-site`][full-site-example]
-- Browse [every runnable example in one place][examples-readme]
+- Browse every runnable example in one place
 
 ## Links
 
@@ -208,6 +233,9 @@ run, [reset it][mvp-site-reset] before restarting — seed devices are only regi
 
 [mvp-site-ui]: ../../examples/mvp-site/README.md#ui-pages
 <!-- docs@tether.io: mvp-site-ui → https://github.com/tetherto/mdk/blob/main/examples/mvp-site/README.md#ui-pages -->
+
+[mvp-site-pool-config]: ../../examples/mvp-site/README.md#pool-config-emcd-spiderpool-and-foundry
+<!-- docs@tether.io: mvp-site-pool-config → https://github.com/tetherto/mdk/blob/main/examples/mvp-site/README.md#pool-config-emcd-spiderpool-and-foundry -->
 
 [mvp-site-reset]: ../../examples/mvp-site/README.md#reset-state
 <!-- docs@tether.io: mvp-site-reset → https://github.com/tetherto/mdk/blob/main/examples/mvp-site/README.md#reset-state -->
@@ -233,11 +261,6 @@ run, [reset it][mvp-site-reset] before restarting — seed devices are only regi
 [build-a-dashboard]: build-a-dashboard.md
 <!-- docs@tether.io: build-a-dashboard → tutorials/build-a-dashboard -->
 
-[examples-readme]: ../../examples/backend/README.md
-<!-- docs@tether.io: examples-readme → https://github.com/tetherto/mdk/blob/main/examples/backend/README.md -->
-
-[full-site-example]: ../../examples/full-site/README.md
-<!-- docs@tether.io: full-site-example → https://github.com/tetherto/mdk/tree/main/examples/full-site -->
 
 [agent-guides]: ../guides/agent/index.md
 <!-- docs@tether.io: agent-guides → guides/agent -->

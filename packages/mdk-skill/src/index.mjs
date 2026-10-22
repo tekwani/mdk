@@ -16,10 +16,10 @@ const DIST = path.join(PKG_DIR, 'dist', 'skills')
 
 const SKILL_MD_MAX_LINES = 500
 
-// Every assembled SKILL.md carries this frontmatter line. It is the ownership
-// marker the installer uses to tell a stale MDK-shipped skill (safe to sweep)
-// from a user-authored skill that merely sits in the same directory.
-const SUITE_MARKER = /^\s*suite:\s*mdk-developer-skill\s*$/m
+// Frontmatter key every suite skill carries (`metadata.suite`). installSkills
+// only replaces an existing skill dir that has it, and only sweeps a stale one
+// (no longer shipped) that has it, so a user's own skill is never deleted.
+const SUITE_MARKER = /^\s+suite:\s*["']?mdk-developer-skill["']?\s*$/m
 
 export const CLIENT_DIRS = {
   cursor: ['.cursor', 'skills'],
@@ -36,6 +36,7 @@ const REQUIRED = [
   'mdk/references/glossary.md',
   'mdk/references/mdk-contract.schema.json',
   'mdk-gateway-plugin/SKILL.md',
+  'mdk-create-app/SKILL.md',
   'mdk-ui-component/SKILL.md',
   'mdk-ui-component/references/ui-registry.json',
   'mdk-deployment/SKILL.md',
@@ -139,20 +140,46 @@ export function assemble () {
   return { files: files.length, version: mdkVersion }
 }
 
-/** True when `<dir>/SKILL.md` exists and is stamped as part of the MDK suite. */
 function isSuiteSkill (dir) {
+  let body
   try {
-    return SUITE_MARKER.test(fs.readFileSync(path.join(dir, 'SKILL.md'), 'utf8'))
+    body = fs.readFileSync(path.join(dir, 'SKILL.md'), 'utf8')
   } catch {
     return false
   }
+  const fm = body.match(/^---\r?\n([\s\S]*?)\r?\n---/)
+  return Boolean(fm && SUITE_MARKER.test(fm[1]))
+}
+
+function lstatOrNull (p) {
+  try {
+    return fs.lstatSync(p)
+  } catch (err) {
+    if (err.code === 'ENOENT') return null
+    throw err
+  }
+}
+
+// Create <root>/<segments...> one level at a time, refusing any segment that is
+// a symlink, so a planted `.claude -> /elsewhere` cannot redirect the install
+// (and its deletes) outside the project.
+function ensureRealDir (root, segments) {
+  let dir = root
+  for (const seg of segments) {
+    dir = path.join(dir, seg)
+    const st = lstatOrNull(dir)
+    if (!st) fs.mkdirSync(dir)
+    else if (st.isSymbolicLink()) throw new Error(`refusing to install through symlink ${dir}`)
+    else if (!st.isDirectory()) throw new Error(`${dir} exists and is not a directory`)
+  }
+  return dir
 }
 
 /**
  * Remove MDK-shipped skill dirs in `targetDir` that the current suite no longer
  * ships (renamed or dropped between MDK versions). Installs are copies, so
  * without this a rerun would leave the stale dir behind and the agent would
- * keep loading it. Dirs without the suite marker are left alone.
+ * keep loading it. Dirs without the suite marker, and symlinks, are left alone.
  */
 function sweepStale (targetDir, shipped) {
   const removed = []
@@ -175,9 +202,15 @@ function sweepStale (targetDir, shipped) {
  * @param {'cursor'|'claude'|'all'} [options.client='all']
  * @param {string} [options.target=process.cwd()] Project root to install into.
  * @param {boolean} [options.assembleIfMissing=true] Assemble first if `dist/skills/` is empty.
- * @returns {{ skills: string[], installed: Array<{ client: string, dir: string, removed: string[] }> }}
+ * @param {(msg: string) => void} [options.onWarn=console.warn] Called for each skill dir left untouched.
+ * @returns {{ skills: string[], installed: Array<{ client: string, dir: string, removed: string[] }>, skipped: Array<{ client: string, skill: string, dir: string, reason: string }> }}
+ *
+ * Throws if `.cursor`/`.claude` or `skills` under the target is a symlink. An
+ * existing `<skills-dir>/<name>` is replaced only when its SKILL.md carries the
+ * suite marker (`metadata.suite: mdk-developer-skill`); a symlink or a foreign
+ * skill with the same name is skipped with a warning.
  */
-export function installSkills ({ client = 'all', target = process.cwd(), assembleIfMissing = true } = {}) {
+export function installSkills ({ client = 'all', target = process.cwd(), assembleIfMissing = true, onWarn = console.warn } = {}) {
   const clients = client === 'all' ? Object.keys(CLIENT_DIRS) : [client]
   for (const c of clients) {
     if (!CLIENT_DIRS[c]) throw new Error(`unknown client '${client}' — use cursor | claude | all`)
@@ -191,19 +224,31 @@ export function installSkills ({ client = 'all', target = process.cwd(), assembl
   const skills = fs.readdirSync(DIST, { withFileTypes: true }).filter((e) => e.isDirectory())
   if (!skills.length) throw new Error(`no skills found in ${DIST}`)
 
-  const projectRoot = path.resolve(target)
+  fs.mkdirSync(path.resolve(target), { recursive: true })
+  const projectRoot = fs.realpathSync(path.resolve(target))
   const shipped = new Set(skills.map((s) => s.name))
   const installed = []
+  const skipped = []
   for (const c of clients) {
-    const targetDir = path.join(projectRoot, ...CLIENT_DIRS[c])
-    fs.mkdirSync(targetDir, { recursive: true })
+    const targetDir = ensureRealDir(projectRoot, CLIENT_DIRS[c])
     const removed = sweepStale(targetDir, shipped)
     for (const skill of skills) {
-      fs.rmSync(path.join(targetDir, skill.name), { recursive: true, force: true })
-      fs.cpSync(path.join(DIST, skill.name), path.join(targetDir, skill.name), { recursive: true })
+      const dest = path.join(targetDir, skill.name)
+      const st = lstatOrNull(dest)
+      let reason = null
+      if (st?.isSymbolicLink()) reason = 'is a symlink'
+      else if (st && !st.isDirectory()) reason = 'is not a directory'
+      else if (st && !isSuiteSkill(dest)) reason = 'is not an MDK suite skill (no metadata.suite: mdk-developer-skill)'
+      if (reason) {
+        skipped.push({ client: c, skill: skill.name, dir: dest, reason })
+        onWarn(`mdk-skill: skipped ${dest}: ${reason}; remove or rename it to install ${skill.name}`)
+        continue
+      }
+      if (st) fs.rmSync(dest, { recursive: true, force: true })
+      fs.cpSync(path.join(DIST, skill.name), dest, { recursive: true })
     }
     installed.push({ client: c, dir: targetDir, removed })
   }
 
-  return { skills: skills.map((s) => s.name), installed }
+  return { skills: skills.map((s) => s.name), installed, skipped }
 }

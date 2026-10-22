@@ -1,48 +1,28 @@
-/* eslint-disable ts/ban-ts-comment */
-import { HEATMAP, UNITS } from '@primitives'
+/* oxlint-disable typescript/ban-ts-comment */
+import { UNITS } from '@primitives'
 import { describe, expect, it } from 'vitest'
-import { MINER_TYPE } from '../../constants/device-constants'
 import type { Device } from '../../types/device'
 import {
   appendContainerToTag,
   appendIdToTag,
   appendIdToTags,
-  DEVICE_NOT_FOUND_MESSAGE,
   formatPowerConsumption,
-  getCabinetTitle,
-  getConfig,
-  getContainerSpecificStats,
   getDeviceData,
   getHashrateString,
   getHashrateUnit,
-  getIsMinerPowerReadingAvailable,
-  getLast,
-  getLvCabinetTempSensorColor,
-  getLvCabinetTitle,
   getMinerName,
   getMinerShortCode,
   getOnOffText,
   getPowerModeColor,
-  getRackNameFromId,
-  getRootTempSensorTempValue,
-  getSnap,
-  getStats,
-  getSupportedPowerModes,
-  getTableDeviceData,
-  getTemperatureColor,
-  getTransformerCabinetTitle,
   isAntminer,
   isAvalon,
   isContainer,
   isMiner,
   isMinerOffline,
-  isTransformerCabinet,
   isWhatsminer,
-  megaToTera,
   PowerModeColors,
   removeContainerPrefix,
 } from '../device-utils'
-import { MINER_POWER_MODE } from '../status-utils'
 
 describe('device utils', () => {
   describe('formatHashRate', () => {
@@ -484,24 +464,6 @@ describe('device utils', () => {
     })
   })
 
-  describe('megaToTera', () => {
-    it('should format properly', () => {
-      const cases: Record<number, number> = {
-        1e6: 1,
-        6e6: 6,
-        6e5: 0.6,
-        6.3e5: 0.63,
-      }
-
-      for (const testCase in cases) {
-        if (!Object.hasOwn(cases, testCase)) continue
-
-        const expected = cases[testCase]
-        expect(megaToTera(Number.parseInt(testCase))).toBe(expected)
-      }
-    })
-  })
-
   describe('getOnOffText', () => {
     it('should return correct text', () => {
       expect(getOnOffText(true)).toBe('On')
@@ -510,76 +472,6 @@ describe('device utils', () => {
       expect(getOnOffText(null, 'x')).toBe('x')
     })
   })
-
-  describe('cabinet utils', () => {
-    it('should detect transformer cabinet', () => {
-      expect(isTransformerCabinet({ id: 'tr-1' })).toBe(true)
-      expect(isTransformerCabinet({ id: 'tr-cabinet-01' })).toBe(true)
-      expect(isTransformerCabinet({ id: 'lv-1' })).toBe(false)
-      expect(isTransformerCabinet({ id: 'cabinet' })).toBe(false)
-    })
-
-    it('should get transformer cabinet title', () => {
-      expect(
-        getTransformerCabinetTitle({ id: 'tr-1', connectedDevices: ['c-1', 'c-2'] }),
-      ).toContain('TR')
-      expect(getTransformerCabinetTitle({ id: 'tr-01' })).toContain('TR')
-    })
-
-    it('should get LV cabinet title', () => {
-      expect(getLvCabinetTitle({ id: 'lv-1' })).toBe('LV Cabinet -1')
-      expect(getLvCabinetTitle({ id: 'lv-cabinet-02' })).toContain('LV Cabinet')
-    })
-
-    it('should get correct cabinet title based on type', () => {
-      expect(getCabinetTitle({ id: 'tr-1' })).toContain('TR')
-      expect(getCabinetTitle({ id: 'lv-1' })).toContain('LV Cabinet')
-    })
-
-    it('should get LV cabinet temp sensor color', () => {
-      expect(getLvCabinetTempSensorColor(75)).toBeTruthy()
-      expect(getLvCabinetTempSensorColor(65)).toBeTruthy()
-      expect(getLvCabinetTempSensorColor(50)).toBe('')
-    })
-  })
-
-  describe('device data accessors', () => {
-    it('should get last data', () => {
-      expect(getLast({ last: { value: 1 } })).toEqual({ value: 1 })
-      expect(getLast({})).toEqual({})
-      expect(getLast({ other: 'data' })).toEqual({})
-    })
-
-    it('should get snap data', () => {
-      expect(getSnap({ last: { snap: { temp: 50 } } })).toEqual({ temp: 50 })
-      expect(getSnap({})).toEqual({})
-    })
-
-    it('should get stats data', () => {
-      expect(getStats({ last: { snap: { stats: { power: 100 } } } })).toEqual({ power: 100 })
-      expect(getStats({})).toEqual({})
-    })
-
-    it('should get config data', () => {
-      expect(getConfig({ last: { snap: { config: { mode: 'high' } } } })).toEqual({ mode: 'high' })
-      expect(getConfig({})).toEqual({})
-    })
-
-    it('should get root temp sensor value', () => {
-      const device = {
-        rootTempSensor: {
-          last: {
-            snap: {
-              stats: { temp_c: 45.5 },
-            },
-          },
-        },
-      }
-      expect(getRootTempSensorTempValue(device)).toBe(45.5)
-      expect(getRootTempSensorTempValue({})).toBeUndefined()
-    })
-  })
-
   describe('power mode', () => {
     it('should have power mode colors', () => {
       expect(PowerModeColors.sleep).toBeDefined()
@@ -644,204 +536,15 @@ describe('device utils', () => {
         expect(removeContainerPrefix('container-test')).toEqual('test')
       })
     })
-
-    describe('getContainerSpecificStats', () => {
-      it('returns container_specific stats when present', () => {
-        const data = {
-          last: {
-            snap: {
-              stats: {
-                container_specific: {
-                  cooling_system: { enabled: true },
-                  tank_pressure: 2.5,
-                },
-              },
-            },
-          },
-        } as unknown as Device
-
-        const result = getContainerSpecificStats(data)
-
-        expect(result).toEqual({
-          cooling_system: { enabled: true },
-          tank_pressure: 2.5,
-        })
-      })
-
-      it('returns empty object when container_specific is missing', () => {
-        const data = {
-          last: {
-            snap: {
-              stats: {
-                other_field: 'value',
-              },
-            },
-          },
-        } as unknown as Device
-
-        const result = getContainerSpecificStats(data)
-
-        expect(result).toEqual({})
-      })
-
-      it('returns empty object when stats is missing', () => {
-        const data = {
-          last: {
-            snap: {},
-          },
-        } as unknown as Device
-
-        const result = getContainerSpecificStats(data)
-
-        expect(result).toEqual({})
-      })
-
-      it('returns empty object when snap is missing', () => {
-        const data = {
-          last: {},
-        } as unknown as Device
-
-        const result = getContainerSpecificStats(data)
-
-        expect(result).toEqual({})
-      })
-
-      it('returns empty object when last is missing', () => {
-        const data = {} as unknown as Device
-
-        const result = getContainerSpecificStats(data)
-
-        expect(result).toEqual({})
-      })
-
-      it('returns empty object when data is undefined', () => {
-        const result = getContainerSpecificStats(undefined as unknown as Device)
-
-        expect(result).toEqual({})
-      })
-
-      it('returns empty object when data is null', () => {
-        const result = getContainerSpecificStats(null as unknown as Device)
-
-        expect(result).toEqual({})
-      })
-
-      it('handles nested container_specific data', () => {
-        const data = {
-          last: {
-            snap: {
-              stats: {
-                container_specific: {
-                  dry_cooler: [
-                    { index: 0, enabled: true },
-                    { index: 1, enabled: false },
-                  ],
-                  oil_pump: [{ index: 0, enabled: true }],
-                },
-              },
-            },
-          },
-        } as unknown as Device
-
-        const result = getContainerSpecificStats(data)
-
-        expect(result).toEqual({
-          dry_cooler: [
-            { index: 0, enabled: true },
-            { index: 1, enabled: false },
-          ],
-          oil_pump: [{ index: 0, enabled: true }],
-        })
-      })
-
-      it('handles container_specific with null value', () => {
-        const data = {
-          last: {
-            snap: {
-              stats: {
-                container_specific: null,
-              },
-            },
-          },
-        } as unknown as Device
-
-        const result = getContainerSpecificStats(data)
-
-        expect(result).toEqual({})
-      })
-
-      it('handles container_specific with undefined value', () => {
-        const data = {
-          last: {
-            snap: {
-              stats: {
-                container_specific: undefined,
-              },
-            },
-          },
-        } as unknown as Device
-
-        const result = getContainerSpecificStats(data)
-
-        expect(result).toEqual({})
-      })
-
-      it('preserves all properties in container_specific', () => {
-        const data = {
-          last: {
-            snap: {
-              stats: {
-                container_specific: {
-                  field1: 'value1',
-                  field2: 123,
-                  field3: true,
-                  field4: null,
-                  field5: { nested: 'object' },
-                },
-              },
-            },
-          },
-        } as unknown as Device
-
-        const result = getContainerSpecificStats(data)
-
-        expect(result).toEqual({
-          field1: 'value1',
-          field2: 123,
-          field3: true,
-          field4: null,
-          field5: { nested: 'object' },
-        })
-      })
-    })
   })
 
   describe('getDeviceData', () => {
-    describe('null/undefined handling', () => {
-      it('should return error when device is null', () => {
-        const [error, data] = getDeviceData(null)
-
-        expect(error).toBe(DEVICE_NOT_FOUND_MESSAGE)
-        expect(data).toBeUndefined()
-      })
-
-      it('should return error when device is undefined', () => {
-        const [error, data] = getDeviceData(undefined)
-
-        expect(error).toBe(DEVICE_NOT_FOUND_MESSAGE)
-        expect(data).toBeUndefined()
-      })
-    })
-
     describe('missing last data', () => {
       it('should return device with empty snap when last is missing', () => {
         const device: Device = {
           id: 'device-1',
           type: 'container',
           tags: ['tag1'],
-          rack: 'rack-1',
-          username: 'user1',
-          containerId: 'container-1',
         }
 
         const [error, data] = getDeviceData(device)
@@ -860,9 +563,6 @@ describe('device utils', () => {
           id: 'device-1',
           type: 'container',
           tags: ['tag1'],
-          rack: 'rack-1',
-          username: 'user1',
-          containerId: 'container-1',
           last: {
             snap: {
               stats: { temperature: 25 },
@@ -912,15 +612,12 @@ describe('device utils', () => {
         expect(data?.snap).toEqual({ stats: {}, config: {} })
       })
 
-      it('should preserve all device properties', () => {
+      it('should preserve the device fields it carries', () => {
         const device: Device = {
           id: 'device-1',
           type: 'container',
           tags: ['tag1', 'tag2'],
-          rack: 'rack-1',
-          username: 'user1',
           info: { location: 'datacenter-1' },
-          containerId: 'container-1',
           address: '192.168.1.1',
           last: {
             snap: {
@@ -937,126 +634,12 @@ describe('device utils', () => {
         expect(data?.id).toBe('device-1')
         expect(data?.type).toBe('container')
         expect(data?.tags).toEqual(['tag1', 'tag2'])
-        expect(data?.rack).toBe('rack-1')
-        expect(data?.username).toBe('user1')
         expect(data?.info).toEqual({ location: 'datacenter-1' })
-        expect(data?.containerId).toBe('container-1')
         expect(data?.address).toBe('192.168.1.1')
         expect(data?.alerts).toEqual([{ type: 'warning' }])
       })
     })
   })
-
-  describe('getTableDeviceData', () => {
-    describe('when device has no last data', () => {
-      const device: Device = {
-        id: 'device-1',
-        type: 'miner',
-        rack: 'rack-001',
-        tags: ['Production'],
-        address: '192.168.1.1',
-      }
-
-      it('returns undefined error', () => {
-        expect(getTableDeviceData(device).error).toBeUndefined()
-      })
-
-      it('returns id', () => {
-        expect(getTableDeviceData(device).id).toBe('device-1')
-      })
-
-      it('returns type', () => {
-        expect(getTableDeviceData(device).type).toBe('miner')
-      })
-
-      it('returns empty stats from default snap', () => {
-        expect(getTableDeviceData(device).stats).toEqual({})
-      })
-
-      it('returns empty config from default snap', () => {
-        expect(getTableDeviceData(device).config).toEqual({})
-      })
-
-      it('returns err as "Last Device info not found"', () => {
-        expect(getTableDeviceData(device).err).toBe('Last Device info not found')
-      })
-    })
-
-    describe('when device has valid last data', () => {
-      const device = {
-        id: 'device-1',
-        type: 'miner',
-        rack: 'rack-001',
-        tags: ['Production'],
-        address: '192.168.1.1',
-        info: { serialNum: 'SN-001', macAddress: 'aa:bb:cc:dd:ee:ff' },
-        last: {
-          err: null,
-          alerts: [],
-          snap: {
-            stats: { hashrate: 100 },
-            config: { power_mode: 'normal' },
-          },
-        },
-      } as unknown as Device
-
-      it('returns null error', () => {
-        expect(getTableDeviceData(device).error).toBeNull()
-      })
-
-      it('returns id', () => {
-        expect(getTableDeviceData(device).id).toBe('device-1')
-      })
-
-      it('returns type', () => {
-        expect(getTableDeviceData(device).type).toBe('miner')
-      })
-
-      it('returns rack', () => {
-        expect(getTableDeviceData(device).rack).toBe('rack-001')
-      })
-
-      it('returns address', () => {
-        expect(getTableDeviceData(device).address).toBe('192.168.1.1')
-      })
-
-      it('returns info', () => {
-        expect(getTableDeviceData(device).info).toEqual({
-          serialNum: 'SN-001',
-          macAddress: 'aa:bb:cc:dd:ee:ff',
-        })
-      })
-
-      it('returns null err', () => {
-        expect(getTableDeviceData(device).err).toBeNull()
-      })
-
-      it('returns tags', () => {
-        expect(getTableDeviceData(device).tags).toEqual(['Production'])
-      })
-
-      it('returns alerts', () => {
-        expect(getTableDeviceData(device).alerts).toEqual([])
-      })
-
-      it('returns stats from snap', () => {
-        expect(getTableDeviceData(device).stats).toEqual({ hashrate: 100 })
-      })
-
-      it('returns config from snap', () => {
-        expect(getTableDeviceData(device).config).toEqual({ power_mode: 'normal' })
-      })
-
-      it('forwards last.err as error', () => {
-        const deviceWithErr = {
-          ...device,
-          last: { ...device.last, err: 'Connection timeout' },
-        } as unknown as Device
-        expect(getTableDeviceData(deviceWithErr).error).toBe('Connection timeout')
-      })
-    })
-  })
-
   describe('appendContainerToTag', () => {
     it('should append container to tag', () => {
       const tag = 'tag1'
@@ -1065,48 +648,6 @@ describe('device utils', () => {
       expect(result).toBe('container-tag1')
     })
   })
-
-  describe('getIsMinerPowerReadingAvailable', () => {
-    it('returns undefined when model is undefined', () => {
-      expect(getIsMinerPowerReadingAvailable(undefined)).toBeUndefined()
-    })
-
-    it('returns whatsminer availability', () => {
-      const result = getIsMinerPowerReadingAvailable('wm')
-      expect(result).toBe(true)
-    })
-
-    it('returns antminer availability from map (true case)', () => {
-      const result = getIsMinerPowerReadingAvailable('miner-am-s21')
-      expect(result).toBe(true)
-    })
-
-    it('returns antminer availability from map (false case)', () => {
-      const result = getIsMinerPowerReadingAvailable('miner-am-s19xp')
-      expect(result).toBe(false)
-    })
-
-    it('returns undefined for antminer model not in map', () => {
-      const result = getIsMinerPowerReadingAvailable('antminer-unknown')
-      expect(result).toBeUndefined()
-    })
-
-    it('returns avalon availability', () => {
-      const result = getIsMinerPowerReadingAvailable('av')
-      expect(result).toBe(true)
-    })
-
-    it('is case insensitive', () => {
-      const result = getIsMinerPowerReadingAvailable('WM')
-      expect(result).toBe(true)
-    })
-
-    it('returns undefined for unknown model type', () => {
-      const result = getIsMinerPowerReadingAvailable('random-device')
-      expect(result).toBeUndefined()
-    })
-  })
-
   describe('isMiner', () => {
     it('returns true for miner type', () => {
       expect(isMiner('miner-s19')).toBe(true)
@@ -1142,41 +683,6 @@ describe('device utils', () => {
       expect(isContainer('CONTAINER-s19')).toBe(false)
     })
   })
-
-  describe('getRackNameFromId', () => {
-    it('extracts the first three dash-separated segments', () => {
-      expect(getRackNameFromId('site-row-rack-slot-1')).toBe('site-row-rack')
-    })
-
-    it('returns the full string when it has exactly three segments', () => {
-      expect(getRackNameFromId('site-row-rack')).toBe('site-row-rack')
-    })
-
-    it('returns empty string when fewer than three segments', () => {
-      expect(getRackNameFromId('site-row')).toBe('')
-    })
-
-    it('returns empty string for a single segment', () => {
-      expect(getRackNameFromId('site')).toBe('')
-    })
-
-    it('returns empty string for an empty string', () => {
-      expect(getRackNameFromId('')).toBe('')
-    })
-
-    it('handles segments with numbers', () => {
-      expect(getRackNameFromId('dc1-row2-rack3-slot4')).toBe('dc1-row2-rack3')
-    })
-
-    it('handles long ids with many segments', () => {
-      expect(getRackNameFromId('a-b-c-d-e-f')).toBe('a-b-c')
-    })
-
-    it('handles ids where segments contain underscores', () => {
-      expect(getRackNameFromId('site_1-row_2-rack_3-extra')).toBe('site_1-row_2-rack_3')
-    })
-  })
-
   describe('appendIdToTag', () => {
     it('prepends "id-" to a device id', () => {
       expect(appendIdToTag('abc123')).toBe('id-abc123')
@@ -1232,166 +738,6 @@ describe('device utils', () => {
       })
     })
   })
-
-  describe('getSupportedPowerModes', () => {
-    describe('undefined / unrecognised model', () => {
-      it('returns empty array when model is undefined', () => {
-        expect(getSupportedPowerModes(undefined)).toEqual([])
-      })
-
-      it('returns empty array when model is an empty string', () => {
-        expect(getSupportedPowerModes('')).toEqual([])
-      })
-
-      it('returns empty array for an unrecognised model', () => {
-        expect(getSupportedPowerModes('unknown-device-x')).toEqual([])
-      })
-    })
-
-    describe('Whatsminer', () => {
-      it('returns SLEEP, LOW, NORMAL, HIGH for an exact whatsminer model', () => {
-        expect(getSupportedPowerModes(MINER_TYPE.WHATSMINER)).toEqual([
-          MINER_POWER_MODE.SLEEP,
-          MINER_POWER_MODE.LOW,
-          MINER_POWER_MODE.NORMAL,
-          MINER_POWER_MODE.HIGH,
-        ])
-      })
-
-      it('matches case-insensitively', () => {
-        const model = MINER_TYPE.WHATSMINER.toUpperCase()
-        expect(getSupportedPowerModes(model)).toEqual([
-          MINER_POWER_MODE.SLEEP,
-          MINER_POWER_MODE.LOW,
-          MINER_POWER_MODE.NORMAL,
-          MINER_POWER_MODE.HIGH,
-        ])
-      })
-
-      it('matches when model is a longer type string containing whatsminer', () => {
-        expect(getSupportedPowerModes(`container-${MINER_TYPE.WHATSMINER}-m56`)).toEqual([
-          MINER_POWER_MODE.SLEEP,
-          MINER_POWER_MODE.LOW,
-          MINER_POWER_MODE.NORMAL,
-          MINER_POWER_MODE.HIGH,
-        ])
-      })
-
-      it('includes LOW mode (unlike antminer)', () => {
-        const modes = getSupportedPowerModes(MINER_TYPE.WHATSMINER)
-        expect(modes).toContain(MINER_POWER_MODE.LOW)
-      })
-    })
-
-    describe('Antminer', () => {
-      it('returns SLEEP and NORMAL for an exact antminer model', () => {
-        expect(getSupportedPowerModes(MINER_TYPE.ANTMINER)).toEqual([
-          MINER_POWER_MODE.SLEEP,
-          MINER_POWER_MODE.NORMAL,
-        ])
-      })
-
-      it('matches case-insensitively', () => {
-        const model = MINER_TYPE.ANTMINER.toUpperCase()
-        expect(getSupportedPowerModes(model)).toEqual([
-          MINER_POWER_MODE.SLEEP,
-          MINER_POWER_MODE.NORMAL,
-        ])
-      })
-
-      it('matches when model is a longer type string containing antminer', () => {
-        expect(getSupportedPowerModes(`${MINER_TYPE.ANTMINER}-s19-pro`)).toEqual([
-          MINER_POWER_MODE.SLEEP,
-          MINER_POWER_MODE.NORMAL,
-        ])
-      })
-
-      it('does not include LOW or HIGH modes', () => {
-        const modes = getSupportedPowerModes(MINER_TYPE.ANTMINER)
-        expect(modes).not.toContain(MINER_POWER_MODE.LOW)
-        expect(modes).not.toContain(MINER_POWER_MODE.HIGH)
-      })
-    })
-
-    describe('Avalon', () => {
-      it('returns SLEEP, NORMAL, HIGH for an exact avalon model', () => {
-        expect(getSupportedPowerModes(MINER_TYPE.AVALON)).toEqual([
-          MINER_POWER_MODE.SLEEP,
-          MINER_POWER_MODE.NORMAL,
-          MINER_POWER_MODE.HIGH,
-        ])
-      })
-
-      it('matches case-insensitively', () => {
-        const model = MINER_TYPE.AVALON.toUpperCase()
-        expect(getSupportedPowerModes(model)).toEqual([
-          MINER_POWER_MODE.SLEEP,
-          MINER_POWER_MODE.NORMAL,
-          MINER_POWER_MODE.HIGH,
-        ])
-      })
-
-      it('matches when model is a longer type string containing avalon', () => {
-        expect(getSupportedPowerModes(`${MINER_TYPE.AVALON}-a1346`)).toEqual([
-          MINER_POWER_MODE.SLEEP,
-          MINER_POWER_MODE.NORMAL,
-          MINER_POWER_MODE.HIGH,
-        ])
-      })
-
-      it('does not include LOW mode', () => {
-        const modes = getSupportedPowerModes(MINER_TYPE.AVALON)
-        expect(modes).not.toContain(MINER_POWER_MODE.LOW)
-      })
-
-      it('includes HIGH mode (unlike antminer)', () => {
-        const modes = getSupportedPowerModes(MINER_TYPE.AVALON)
-        expect(modes).toContain(MINER_POWER_MODE.HIGH)
-      })
-    })
-
-    describe('SLEEP mode present for all recognised types', () => {
-      it.each([MINER_TYPE.WHATSMINER, MINER_TYPE.ANTMINER, MINER_TYPE.AVALON])(
-        'includes SLEEP for %s',
-        (model) => {
-          expect(getSupportedPowerModes(model)).toContain(MINER_POWER_MODE.SLEEP)
-        },
-      )
-    })
-
-    describe('return value order', () => {
-      it('Whatsminer modes are in the order SLEEP, LOW, NORMAL, HIGH', () => {
-        const modes = getSupportedPowerModes(MINER_TYPE.WHATSMINER)
-        expect(modes.indexOf(MINER_POWER_MODE.SLEEP)).toBeLessThan(
-          modes.indexOf(MINER_POWER_MODE.LOW),
-        )
-        expect(modes.indexOf(MINER_POWER_MODE.LOW)).toBeLessThan(
-          modes.indexOf(MINER_POWER_MODE.NORMAL),
-        )
-        expect(modes.indexOf(MINER_POWER_MODE.NORMAL)).toBeLessThan(
-          modes.indexOf(MINER_POWER_MODE.HIGH),
-        )
-      })
-
-      it('Antminer modes are in the order SLEEP, NORMAL', () => {
-        const modes = getSupportedPowerModes(MINER_TYPE.ANTMINER)
-        expect(modes.indexOf(MINER_POWER_MODE.SLEEP)).toBeLessThan(
-          modes.indexOf(MINER_POWER_MODE.NORMAL),
-        )
-      })
-
-      it('Avalon modes are in the order SLEEP, NORMAL, HIGH', () => {
-        const modes = getSupportedPowerModes(MINER_TYPE.AVALON)
-        expect(modes.indexOf(MINER_POWER_MODE.SLEEP)).toBeLessThan(
-          modes.indexOf(MINER_POWER_MODE.NORMAL),
-        )
-        expect(modes.indexOf(MINER_POWER_MODE.NORMAL)).toBeLessThan(
-          modes.indexOf(MINER_POWER_MODE.HIGH),
-        )
-      })
-    })
-  })
-
   describe('isAvalon', () => {
     it('returns true for avalon model', () => {
       expect(isAvalon('miner-av')).toBe(true)
@@ -1449,62 +795,6 @@ describe('device utils', () => {
       const tags = ['code-FIRST', 'code-SECOND']
       const result = getMinerShortCode(undefined, tags)
       expect(result).toBe('FIRST')
-    })
-  })
-
-  describe('getTemperatureColor', () => {
-    const MIN = 20
-    const MAX = 100
-
-    describe('Boundary and Edge Cases', () => {
-      it('returns UNKNOWN if any input is null', () => {
-        // @ts-ignore: testing runtime null checks
-        expect(getTemperatureColor(null, 100, 50)).toBe(HEATMAP.UNKNOWN)
-        // @ts-ignore
-        expect(getTemperatureColor(20, null, 50)).toBe(HEATMAP.UNKNOWN)
-        // @ts-ignore
-        expect(getTemperatureColor(20, 100, null)).toBe(HEATMAP.UNKNOWN)
-      })
-
-      it('returns HEATMAP.LOW if current is less than or equal to min', () => {
-        expect(getTemperatureColor(MIN, MAX, 10)).toBe(HEATMAP.LOW)
-        expect(getTemperatureColor(MIN, MAX, 20)).toBe(HEATMAP.LOW)
-      })
-
-      it('returns HEATMAP.HIGH if current is greater than or equal to max', () => {
-        expect(getTemperatureColor(MIN, MAX, 110)).toBe(HEATMAP.HIGH)
-        expect(getTemperatureColor(MIN, MAX, 100)).toBe(HEATMAP.HIGH)
-      })
-    })
-
-    describe('Gradient Anchor Points', () => {
-      it('returns HEATMAP.LOW_MEDIUM exactly at the 35% mark', () => {
-        expect(getTemperatureColor(MIN, MAX, 48)).toBe(HEATMAP.LOW_MEDIUM)
-      })
-
-      it('returns HEATMAP.HIGH_MEDIUM exactly at the 70% mark', () => {
-        expect(getTemperatureColor(MIN, MAX, 76)).toBe(HEATMAP.HIGH_MEDIUM)
-      })
-    })
-
-    describe('Interpolation Logic', () => {
-      it('interpolates correctly between LOW (0%) and LOW_MEDIUM (35%)', () => {
-        const result = getTemperatureColor(MIN, MAX, 34)
-        expect(result).toBe('#006981')
-      })
-
-      it('interpolates correctly between HIGH_MEDIUM (70%) and HIGH (100%)', () => {
-        const result = getTemperatureColor(MIN, MAX, 88)
-        expect(result).toBe('#eb973f')
-      })
-    })
-
-    describe('Hex Formatting', () => {
-      it('pads single-digit hex values with a leading zero', () => {
-        const result = getTemperatureColor(0, 100, 1)
-        expect(result?.length).toBe(7)
-        expect(result).toMatch(/^#[0-9a-f]{6}$/)
-      })
     })
   })
 })

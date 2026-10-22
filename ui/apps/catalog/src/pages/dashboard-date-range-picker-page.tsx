@@ -23,7 +23,7 @@ export const DashboardDateRangePickerPage = (): JSX.Element => {
     <section className="demo-section">
       <DemoPageHeader
         title="Dashboard Date Range Picker"
-        description="Wrapper around the core DateRangePicker that speaks { start, end } epoch milliseconds — drops straight into useDashboardDateRange from @tetherto/mdk-react-adapter."
+        description="Wrapper around the core DateRangePicker that speaks { start, end } epoch milliseconds — so a page can pass the range straight to its history queries."
       />
 
       <DemoBlock

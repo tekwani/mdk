@@ -53,7 +53,7 @@ npm run benchmark
 ```
 
 Every combination step writes `results/<profileId>.json` and `.md`, named by that step's total device count and Worker
-  count (e.g. `cap-150devices-2workers` for 100 Antminers + 50 Avalons on 2 Workers).
+  count (e.g. `cap-150devices-2workers` for 150 Avalons across 2 Workers).
 
 The filename encodes only those two numbers, not the per-family split, so two combinations that reach the same
 total device count and Worker count collide: the later one's report overwrites the earlier one's. The run
@@ -76,8 +76,8 @@ for example, one entry from [`config/benchmark.config.json.example`][benchmark-c
 
 ```json
 {
-  "type": "mdk-worker-antminer",
-  "model": "s21",
+  "type": "mdk-worker-avalon",
+  "model": "a1346",
   "simulateMocks": true,
   "ceiling": { "startDeviceCount": 10, "stepDeviceCount": 10, "maxDeviceCount": 30 }
 }
@@ -132,13 +132,14 @@ a whole sweep would take days. Any run shorter than 24h still produces an RSS sl
 Measured automatically:
 
 - **Read path**: single-device telemetry both through the Gateway
-  (`GET /api/fleet/device/{id}/telemetry`, a plugin route this harness
-  adds) and bypassing it (Client → Kernel → Worker directly); the aggregate
-  fleet-wide read (Gateway → Kernel → every Worker, through the harness's
-  own generic [`plugin/fleet-summary`][benchmark-fleet-summary-plugin] plugin); device list/registry read.
+  (`GET /api/fleet/device/{id}/telemetry`, a route of the harness's own
+  app) and bypassing it (Client → Kernel → Worker directly); the aggregate
+  fleet-wide read (Gateway → app runtime → Kernel → every Worker, through the harness's
+  own generic [`plugin/fleet-summary`][benchmark-fleet-summary-plugin] app); device list/registry read.
+  Every Gateway route takes one extra HRPC hop, Gateway → app runtime, that the
+  direct Client path does not.
 - **Write/action path**: submit through the Gateway
-  (`POST /api/fleet/device/{id}/action`, another plugin route this harness
-  adds) and the direct Client → Kernel path — both real HTTP/RPC round
+  (`POST /api/fleet/device/{id}/action`, another route of that app) and the direct Client → Kernel path — both real HTTP/RPC round
   trips, not simulated. Submit and execute collapse into one measured step;
   see "Action-approval workflow steps" under Left blank for why.
 - **Cycle headroom** (worst Worker) and **sustained read/action throughput**
@@ -148,7 +149,8 @@ Measured automatically:
   `lsof -p <pid>` — more expensive than `ps`, so not sampled every tick),
   each with a real slope across the run (`ResourceSampler` in
   [`lib/metrics.js`][benchmark-metrics-lib]) — **indicative** below a 24h soak, same as everywhere
-  else growth/leak claims show up in this harness.
+  else growth/leak claims show up in this harness. The app runtime runs inside the
+  `gateway` role's process, so the Gateway's samples include the app.
 - An **approximate** device-only baseline (raw TCP connect to the mock's
   port — a floor, not the full vendor-protocol round trip).
 - **Alerts path**: every device's temperature-warning threshold is forced
@@ -158,8 +160,8 @@ Measured automatically:
   long after it starts watching that alert first becomes visible both via
   the Kernel directly (`pollAlerts` in [`lib/load.js`][benchmark-load-lib]) and via the Gateway
   (`pollAlertsViaGateway`, hitting `GET /api/fleet/device/{id}/alerts` — a
-  third plugin route this harness adds, since the Gateway had no way to
-  surface `last.alerts` before) — `n = 0` on either just means the Worker's
+  third route of the harness's app, since the Gateway has no other way to
+  surface `last.alerts`) — `n = 0` on either just means the Worker's
   own snap interval (default 60s) didn't complete a cycle within this run's
   soak, not that induction failed.
 - **Storage breakdown**: real on-disk size per Worker store, plus a real
@@ -200,7 +202,8 @@ lib/constants.js               Worker-type registry + fixed defaults (never edit
                                  ALERT_INDUCTION (per-family threshold used to trip a real alert) +
                                  RUN_REPRODUCIBILITY.runFailureDrills/*TimeoutMs/deviceOutageMs
 lib/site.js                    boot primitives (bootKernel/bootWorker/bootGateway/startMocks) — one
-                                 mock server per Worker, and bootWorker wires ALERT_INDUCTION in
+                                 mock server per Worker, bootWorker wires ALERT_INDUCTION in, and
+                                 bootGateway starts the fleet-summary app runtime before the Gateway
 lib/metrics.js                 per-process CPU/RSS sampler (ps -o rss,pcpu -p <pid>, every tick) +
                                  open-FD sampler (lsof -p <pid>, start/stop only) + dirSizeBytes
 lib/latency.js                 per-operation latency recorder (p50/p95/p99/max/n/errors)
@@ -208,7 +211,8 @@ lib/load.js                    read/action load generators, cycle headroom, devi
                                  pollAlerts/pollAlertsViaGateway (alert-visibility latency pollers)
 lib/report.js                  pass/fail evaluation + Markdown/JSON report + comparison matrix
 lib/sweep-runner.js            spawns one child process per profile, folds results into entries
-plugin/fleet-summary/          Gateway plugin every profile run loads: fleet-wide aggregate
+plugin/fleet-summary/          app (mdk-app.yaml + mdk-plugin.json) every profile run mounts at `/`, run in an
+                                 app runtime inside the gateway role's process: fleet-wide aggregate
                                  (listWorkers→pullTelemetry) plus per-device telemetry/action/alerts
                                  routes (controllers/device-telemetry.js, device-action.js, device-alerts.js)
 processes/run-process.js       --role mocks|kernel|worker|gateway|profile (defaults to profile);
@@ -222,7 +226,7 @@ results/                       generated reports (gitignored)
 ## Add a device family
 
 [`lib/constants.js`][benchmark-constants]'s `WORKER_REGISTRY` covers every package under
-[`backend/workers/miners/`][workers-miners-readme] (Antminer, Avalon) — any of them can be
+[`backend/workers/miners/`][workers-miners-readme] (Avalon) — any of them can be
 used in `config.workers[].type`. To benchmark a family outside that
 directory (container, power meter, ...), add an entry to the registry's
 `WORKER_PACKAGES` map pointing at the target package's `start<Type>Worker`
@@ -233,7 +237,7 @@ device-family agnostic because it only talks to the family through
 ## Next steps
 
 - Fill in the [capacity and metrics template](../../../docs/guides/deployment/capacity-metrics-template.md) by hand for a topology this harness doesn't cover yet
-- Run [a multi-Worker site](../../../docs/guides/deployment/run-all-workers-site.md) or [a single-process site](../../../docs/guides/deployment/run-single-process-site.md) to reproduce a profile's topology before benchmarking it
+- Run [a multi-Worker site](../../../docs/guides/deployment/run-all-workers-site.md) to reproduce a profile's topology before benchmarking it
 
 ## Links
 

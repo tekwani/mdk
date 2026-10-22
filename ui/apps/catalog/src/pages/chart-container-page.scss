@@ -1,8 +1,10 @@
 @layer app {
   .chart-container-page {
+    // A grid, not a wrapping flex row: ChartContainer sets `container-type:
+    // inline-size`, so it has no intrinsic width and collapses in a flex row.
     &__states {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 2rem;
     }
 

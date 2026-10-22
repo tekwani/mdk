@@ -30,14 +30,18 @@ test('wrong_miner_pool: valid false when no pool config', (t) => {
   t.ok(!specs.wrong_miner_pool.valid(ctx, snap))
 })
 
-test('wrong_miner_pool: probe true when config pools empty', (t) => {
-  const ctx = { thingConf: { pools: [] } }
-  const snap = {
-    config: {
-      pool_config: [{ url: 'x' }]
-    }
-  }
+test('wrong_miner_pool: probe true when a reported pool url differs from the configured one', (t) => {
+  const ctx = { thingConf: { pools: [{ url: 'stratum+tcp://pool.example.com:3333' }] } }
+  const snap = { stats: { status: 'mining' }, config: { pool_config: [{ url: 'stratum+tcp://attacker.example.com:3333' }] } }
+  t.ok(specs.wrong_miner_pool.valid(ctx, snap))
   t.ok(specs.wrong_miner_pool.probe(ctx, snap))
+})
+
+test('wrong_miner_pool: probe false when reported pool urls match the configured ones', (t) => {
+  const ctx = { thingConf: { pools: [{ url: 'stratum+tcp://pool.example.com:3333' }] } }
+  const snap = { stats: { status: 'mining' }, config: { pool_config: [{ url: 'stratum+tcp://pool.example.com:3333' }, { url: '' }] } }
+  t.ok(specs.wrong_miner_pool.valid(ctx, snap))
+  t.ok(!specs.wrong_miner_pool.probe(ctx, snap))
 })
 
 test('wrong_miner_subaccount: probe true when worker_name not in username', (t) => {

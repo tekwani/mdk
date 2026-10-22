@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { EVENT } from './events.js'
 import { VERB, validateToolResult } from './tools.js'
 import { CHARTER, CHARTER_VERSION } from './charter.js'
+import { unwrapToolText } from './mcp.js'
 
 /**
  * The eval battery: the questions an operator actually asks, each pinned to the tool that
@@ -304,7 +305,7 @@ export async function probeTruth (mcp) {
     if (isError) throw new Error(`probe: ${name} returned an error: ${text}`)
     let payload
     try {
-      payload = JSON.parse(text)
+      payload = JSON.parse(unwrapToolText(text))
     } catch {
       throw new Error(`probe: ${name} did not return JSON`)
     }
@@ -383,7 +384,7 @@ function checkResultContract (ev) {
   if (ev.isError) return [] // a tool reporting a failure is not a contract breach
   let payload
   try {
-    payload = JSON.parse(ev.text)
+    payload = JSON.parse(unwrapToolText(ev.text))
   } catch {
     return [`${ev.name}: result is not JSON`]
   }

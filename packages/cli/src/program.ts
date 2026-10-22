@@ -1,65 +1,72 @@
 import { Command } from 'commander';
 import { pkg } from './lib/pkg.js';
+import { configureHelp, examples } from './lib/help.js';
 import { registerOnboard } from './commands/onboard.js';
 import { registerCreate } from './commands/create.js';
+import { registerAdd } from './commands/add.js';
+import { registerValidate } from './commands/validate.js';
 import { registerRun } from './commands/run.js';
-import {
-  registerGet,
-  registerDescribe,
-  registerLogs,
-  registerStatus,
-} from './commands/inspect.js';
-import { registerDiscover } from './commands/discover.js';
-import { registerSkill, registerMcp } from './commands/agent.js';
-import { registerManifest, registerVersion } from './commands/meta.js';
+import { registerStatus } from './commands/inspect.js';
+import { registerSkill } from './commands/agent.js';
+import { registerVersion } from './commands/meta.js';
+
+/** The help heading each top-level command is listed under. */
+const HELP_GROUPS: Record<string, string> = {
+  onboard: 'Set up:',
+  create: 'Build:',
+  add: 'Build:',
+  validate: 'Build:',
+  run: 'Run:',
+  status: 'Run:',
+  skill: 'Other:',
+  version: 'Other:',
+};
 
 /**
- * Builds the full `mdk` command tree.
+ * Builds the full `mdk` command tree. Every command reads `mdk <verb> [noun]`.
  *
- * Every command is registered with its real name, arguments, options, and help
- * text. `onboard`, `create`, `run`, `status`, `skill add` and `version` are
- * implemented; the rest are no-op stubs (see `lib/stub.ts`) and mark themselves
- * "(stub)" in help. Implement one by replacing its `stub(...)` call with the real
- * behavior — no wiring changes required.
+ * `onboard`, `create`, `add`, `validate`, `run`, `status`, `skill add` and
+ * `version` are implemented.
  */
 export function buildProgram(): Command {
-  const program = new Command();
+  const program = configureHelp(new Command());
 
   program
     .name('mdk')
-    .description(
-      'MDK command-line tool — onboard, scaffold, run and inspect an MDK stack. ' +
-        'Commands marked "(stub)" are wired up but not implemented yet.',
-    )
+    .usage('<command> [options]')
+    .description('Build, run and check an MDK stack: workers, apps, the Kernel and the Gateway.')
     .version(pkg.version, '--version', 'Print the CLI version')
     .option('-o, --output <fmt>', 'Output format for data: table | json | yaml', 'table')
     .option('-v, --verbose', 'Increase log detail', false)
     .option('--debug', 'Print stack traces for unexpected failures', false)
     .showHelpAfterError();
 
-  // Group A — Onboarding & project lifecycle
   registerOnboard(program);
-
-  // Group B — Scaffold (backend only)
   registerCreate(program);
-
-  // Group C — Run & manage
+  registerAdd(program);
+  registerValidate(program);
   registerRun(program);
-  registerGet(program);
-  registerDescribe(program);
-  registerLogs(program);
   registerStatus(program);
-
-  // Group D — Discover
-  registerDiscover(program);
-
-  // Group F — Agent enablement
   registerSkill(program);
-  registerMcp(program);
-
-  // Group G — Meta & agent discovery
-  registerManifest(program);
   registerVersion(program);
+
+  for (const command of program.commands) {
+    const group = HELP_GROUPS[command.name()];
+    if (group) command.helpGroup(group);
+  }
+  // Its own instance: the one the subcommands inherited stays under their `Commands:`.
+  program.addHelpCommand(new Command('help').argument('[command]').description('Show help for a command').helpGroup('Other:'));
+
+  program.addHelpText(
+    'after',
+    examples(
+      'mdk onboard                              # new project: writes mdk.yaml',
+      'mdk create app ops-center                # scaffold an app into apps/ops-center',
+      'mdk add worker @your-org/mdk-worker-rig      # install a worker from npm',
+      'mdk validate app ops-center              # check it before publishing',
+      'mdk run                                  # start the Kernel, workers, apps and Gateway',
+    ) + '\nRun `mdk <command> --help` for the options of a command.\n',
+  );
 
   return program;
 }

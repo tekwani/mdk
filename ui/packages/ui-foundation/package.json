@@ -1,8 +1,8 @@
 {
   "name": "@tetherto/mdk-ui-foundation",
   "type": "module",
-  "version": "0.11.0",
-  "private": true,
+  "version": "0.12.0",
+  "private": false,
   "description": "Framework-agnostic headless foundation for the MDK Devkit. Currently exposes Zustand vanilla stores and a TanStack QueryClient factory. No React.",
   "sideEffects": false,
   "exports": {
@@ -21,15 +21,20 @@
       "import": "./dist/query/index.js",
       "default": "./dist/query/index.js"
     },
-    "./presets/mining": {
-      "types": "./dist/presets/mining/index.d.ts",
-      "import": "./dist/presets/mining/index.js",
-      "default": "./dist/presets/mining/index.js"
-    },
     "./types": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/types/index.js",
       "default": "./dist/types/index.js"
+    },
+    "./app-shared-modules": {
+      "types": "./dist/apps/shared-modules.d.ts",
+      "import": "./dist/apps/shared-modules.js",
+      "default": "./dist/apps/shared-modules.js"
+    },
+    "./app-ui-paths": {
+      "types": "./dist/apps/ui-paths.d.ts",
+      "import": "./dist/apps/ui-paths.js",
+      "default": "./dist/apps/ui-paths.js"
     },
     "./stores.json": "./dist/stores.json"
   },
@@ -43,9 +48,9 @@
     "build:stores": "tsx scripts/generate-stores.mts",
     "clean": "rimraf dist node_modules .turbo",
     "dev": "tsc --watch -p tsconfig.build.json",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "eslint . --fix",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxlint --fix",
     "test": "vitest run --config vitest.config.js",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --config vitest.config.js --coverage",

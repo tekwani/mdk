@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Strip side-effect `.scss` and `.css` imports from compiled JS in `dist/`.
  *

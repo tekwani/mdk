@@ -4,14 +4,24 @@ const test = require('brittle')
 const fs = require('fs')
 const path = require('path')
 const { createWorker } = require('@tetherto/tether-svc-test-helper').worker
+const os = require('os')
 const { setTimeout: sleep } = require('timers/promises')
 
-// The plugins this file exercises used to arrive on their own, so it declared
-// none of them. A gateway now loads only what it is handed, so the routes under
-// test have to be asked for — by the same directory a stack names when it writes
-// `package: "@tetherto/mdk-plugins/telemetry"`.
-const BUNDLED_PLUGINS_ROOT = path.dirname(require.resolve('@tetherto/mdk-plugins/package.json'))
-const DECLARED_PLUGINS = ['telemetry', 'site-hashrate', 'site-monitor'].map((name) => path.join(BUNDLED_PLUGINS_ROOT, name))
+// A gateway mounts only the apps it is handed. The demo app is declared here
+// (mounted at the root) so there is a real route to exercise; with no runtime
+// publishing a key it answers 503. Anything not declared must not be served.
+const DECLARED_APPS = [{ name: 'demo', appDir: path.resolve(__dirname, '..', '..', '..', '..', 'apps', 'demo'), keyFile: 'tests/integration/run/demo.key', mount: '/' }]
+
+// An app with one `auth: true` route, to check the gateway closes it when no
+// authVerifier is configured (before it would forward to a runtime).
+const SECURED_PLUGIN = path.join(os.tmpdir(), 'mdk-gateway-api-secured-' + Date.now())
+fs.mkdirSync(SECURED_PLUGIN, { recursive: true })
+fs.writeFileSync(path.join(SECURED_PLUGIN, 'mdk-plugin.json'), JSON.stringify({
+  name: '@test/secured',
+  version: '1.0.0',
+  routes: [{ id: 'secured.me', method: 'GET', path: '/api/test/me', handler: './me.js', auth: true }]
+}))
+fs.writeFileSync(path.join(SECURED_PLUGIN, 'me.js'), '\'use strict\'\nmodule.exports = async (req) => req._info\n')
 
 test('Api', { timeout: 90000 }, async (main) => {
   const baseDir = 'tests/integration'
@@ -19,12 +29,12 @@ test('Api', { timeout: 90000 }, async (main) => {
   const gatewayPort = 5000
   const gatewayBaseUrl = `http://127.0.0.1:${gatewayPort}`
   const site = 'test-site'
-  const featureConfig = { telemetry: true }
 
   const cleanDirs = () => {
     fs.rmSync(`./${baseDir}/store`, { recursive: true, force: true })
     fs.rmSync(`./${baseDir}/status`, { recursive: true, force: true })
     fs.rmSync(`./${baseDir}/config`, { recursive: true, force: true })
+    fs.rmSync(`./${baseDir}/identity`, { recursive: true, force: true })
   }
 
   main.teardown(async () => {
@@ -32,6 +42,7 @@ test('Api', { timeout: 90000 }, async (main) => {
     // wait for worker to stop
     await sleep(2000)
     cleanDirs()
+    fs.rmSync(SECURED_PLUGIN, { recursive: true, force: true })
   })
 
   const createConfig = () => {
@@ -42,9 +53,7 @@ test('Api', { timeout: 90000 }, async (main) => {
     const commonConf = {
       dir_log: 'logs',
       debug: 0,
-      site,
-      featureConfig,
-      cacheTiming: {}
+      site
     }
     fs.writeFileSync(`./${baseDir}/config/common.json`, JSON.stringify(commonConf))
     fs.writeFileSync(`./${baseDir}/config/facs/net.config.json`, JSON.stringify({ r0: {} }))
@@ -60,7 +69,7 @@ test('Api', { timeout: 90000 }, async (main) => {
       storeDir: 'test-store',
       serviceRoot: `${process.cwd()}/${baseDir}`,
       port: gatewayPort,
-      extraPluginDirs: DECLARED_PLUGINS
+      apps: [...DECLARED_APPS, { name: 'secured', appDir: SECURED_PLUGIN, keyFile: path.join(SECURED_PLUGIN, 'runtime.key'), mount: '/' }]
     })
 
     await worker.start()
@@ -76,39 +85,21 @@ test('Api', { timeout: 90000 }, async (main) => {
   await sleep(2000)
 
   await main.test('Api: worker boots and serves HTTP', async (t) => {
-    const { status, body } = await getJson(`${gatewayBaseUrl}/auth/site`)
-    t.is(status, 200, 'gateway responds over HTTP without any auth token')
-    t.ok(body, 'response has a JSON body')
+    const { status, body } = await getJson(`${gatewayBaseUrl}/api/demo/summary`)
+    t.is(status, 503, 'route mounted from the route table, without any auth token')
+    t.is(body.message, 'ERR_APP_RUNTIME_UNAVAILABLE: demo', 'no runtime has published a key')
   })
 
-  await main.test('Api: get /auth/site', async (t) => {
-    const { body } = await getJson(`${gatewayBaseUrl}/auth/site`)
-    t.is(body.site, site, 'should return the configured site value')
-  })
-
-  await main.test('Api: get /auth/featureConfig', async (t) => {
-    const { body } = await getJson(`${gatewayBaseUrl}/auth/featureConfig`)
-    t.alike(body, featureConfig, 'should return the configured featureConfig')
-  })
-
-  await main.test('Api: get /site-monitor/hashrate without kernel', async (t) => {
-    const { status, body } = await getJson(`${gatewayBaseUrl}/site-monitor/hashrate`)
-    t.is(status, 400, 'should respond 400 when no kernel is connected')
-    t.ok(body.message.includes('ERR_KERNEL_CLIENT_NOT_CONNECTED'), 'should surface ERR_KERNEL_CLIENT_NOT_CONNECTED')
-  })
-
-  await main.test('Api: removed auth routes respond 404', async (n) => {
-    const removedRoutes = [
-      '/oauth/google/callback',
-      '/auth/userinfo',
-      '/auth/users',
-      '/auth/user/settings',
-      '/auth/miners',
-      '/auth/list-things',
-      '/auth/actions'
+  await main.test('Api: undeclared app routes respond 404', async (n) => {
+    const undeclared = [
+      '/auth/site',
+      '/auth/featureConfig',
+      '/auth/metrics/hashrate',
+      '/site-monitor/hashrate',
+      '/site-hashrate/summary'
     ]
 
-    for (const route of removedRoutes) {
+    for (const route of undeclared) {
       await n.test(`get ${route}`, async (t) => {
         const { status } = await getJson(`${gatewayBaseUrl}${route}`)
         t.is(status, 404, `${route} should respond 404`)
@@ -116,10 +107,24 @@ test('Api', { timeout: 90000 }, async (main) => {
     }
   })
 
-  await main.test('Api: telemetry history route without a kernel answers the zero shape', async (t) => {
-    const api = `${gatewayBaseUrl}/auth/metrics/hashrate?start=1700000000000&end=1700086400000`
-    const { body } = await getJson(api)
-    t.alike(body.log, [], 'no kernel: empty log, not an error')
-    t.is(body.summary.totalHashrateMhs, 0, 'should return zero total hashrate')
+  await main.test('Api: auth: true route answers 401 without an authVerifier', async (t) => {
+    const { status, body } = await getJson(`${gatewayBaseUrl}/api/test/me`)
+    t.is(status, 401)
+    t.is(body.message, 'ERR_AUTH_UNAUTHORIZED')
+  })
+
+  await main.test('Api: hardening defaults', async (t) => {
+    const echo = await fetch(`${gatewayBaseUrl}/echo?value=x`)
+    t.is(echo.status, 404, 'no default /echo route')
+
+    const res = await fetch(`${gatewayBaseUrl}/api/demo/summary`)
+    t.is(res.headers.get('x-content-type-options'), 'nosniff', 'security headers are set')
+    t.ok(res.headers.get('x-ratelimit-limit'), 'rate limit is on')
+
+    const rebound = await new Promise((resolve, reject) => {
+      require('http').get({ host: '127.0.0.1', port: gatewayPort, path: '/api/demo/summary', headers: { host: 'evil.example:' + gatewayPort } }, resolve).on('error', reject)
+    })
+    t.is(rebound.statusCode, 403, 'a foreign Host header is refused')
+    rebound.resume()
   })
 })

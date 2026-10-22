@@ -19,16 +19,16 @@ Worker plugin package from their own public or private repository — no fork of
 
 It walks through building a Worker from scratch, end to end:
 
-- The [device client][demo-worker-client]
+- The device client
 - The [`mdk-contract.json`][contract-schema]
 - The [handlers][worker-runtime-v2]
-- The [mock][demo-worker-mock]
-- The [tests][demo-worker-plugin-test]
+- The mock
+- The tests
 
 > [!NOTE]
 > Hosting the finished package (pointing [`WorkerRuntimeV2`][worker-runtime-v2] at it and registering with a live
-> Kernel) is a separate concern, covered in [Test a Worker with MDK][test-a-worker]. [`demo-worker-caller`][demo-worker-caller]
-> shows one host doing exactly that for this guide's own reference implementation.
+> Kernel) is a separate concern, covered in [Test a Worker with MDK][test-a-worker], which hosts the package this
+> guide builds.
 
 A Worker plugin package is **loaded from its own directory**: [`mdk-contract.json`][contract-schema] declares each handler by path, `src/`
 holds the handler modules, and the host points `WorkerRuntimeV2` at the directory. The package ships only its contract
@@ -36,11 +36,10 @@ and handler files; `WorkerRuntimeV2` loads them directly rather than requiring a
 `(params)` functions that read their device from the ambient `@tetherto/mdk-worker/device` module. See
 [`worker-runtime-v2.js`][worker-runtime-v2] for the full shape of that module.
 
-This guide generalizes one real, runnable reference implementation already in this repo:
-[`backend/workers/samples/demo-worker/`][demo-worker]. It proves this pattern works with **zero**
-dependency on this monorepo's optional worker-infra services (provisioning stores, alert templates, stats
+The same shape ships as the template `mdk create worker` scaffolds ([`packages/cli/templates/worker/`][worker-template]).
+It needs **zero** of this monorepo's optional worker-infra services (provisioning stores, alert templates, stats
 aggregation), just [`WorkerRuntimeV2`][worker-runtime-v2] and the directory-loaded Worker plugin shape.
-This guide adds production-oriented validation, recovery, and security boundaries that the deliberately small sample does not implement.
+This guide adds production-oriented validation, recovery, audit, and tests that the deliberately small template does not include.
 
 > [!NOTE]
 > This guide uses **partner integration** for the complete integration, **Worker plugin package** for the static
@@ -64,14 +63,14 @@ your-worker-repo/
                             # (no WorkerRuntimeV2 involved)
 ```
 
-This tree is [`demo-worker`][demo-worker]'s own layout with its vendor name replaced by the placeholder `vendor`:
-`demo-worker` itself builds and tests with **zero** dependency on `WorkerRuntimeV2`, and your package does too.
+This tree is the `mdk create worker` template's layout plus a `tests/` directory, with the vendor name as the
+placeholder `vendor`. Its tests run with **zero** dependency on `WorkerRuntimeV2`.
 
 > [!NOTE]
 > The `src/telemetry/`, `src/commands/`, and `client.js` naming above is a convention, **not** a requirement.
 > [`WorkerRuntimeV2`][worker-runtime-v2] only requires two things: [`mdk-contract.json`][contract-schema] at the
 > package root, and a real file at whatever path each contract entry's `handler` field names. Following the same
-> layout as `demo-worker` just keeps your package legible to anyone who has read another MDK Worker.
+> layout as the template just keeps your package legible to anyone who has read another MDK Worker.
 
 ## Prerequisites
 
@@ -161,7 +160,7 @@ the runtime.
 > instance alone. `WorkerRuntimeV2`, the Gateway, and the MCP server each build one per plugin. `WorkerRuntime` v1 has
 > no notion of per-device isolation and does not use it, which is why a v1 plugin needs an explicit `connect()`.
 
-`src/client.js`, modeled on [`demo-worker`'s own `client.js`][demo-worker-client]:
+`src/client.js`, a trimmed version of the template's own `client.js`:
 
 ```js
 'use strict'
@@ -312,9 +311,17 @@ A few fields worth calling out because they aren't just documentation:
 
 - `description` is read by AI agents as the semantic boundary for that field — put the actual constraint in it (e.g.
   _"Above 85C requires intervention"_), not just a label
-- `params`, `enum`, numeric ranges, and `constraints` are published metadata; `WorkerRuntimeV2` normalizes positional
-  parameters but does not validate or enforce them. The command handler must reject missing, wrong-type, out-of-range,
-  or disallowed values with stable `ERR_*` failures and enforce every declared cooldown.
+- `WorkerRuntimeV2` normalizes positional parameters, then checks each declared `params` entry's `required`, `type`,
+  `enum` and `min`/`max` before the handler runs, failing with `ERR_PARAM_*`. `constraints` is published metadata
+  only: nothing enforces it. Validate in the handler as well, with your own stable `ERR_*` codes, because
+  `createInstance` (Step 7) and any other direct caller skip the runtime's check, and enforce every declared cooldown
+  there.
+- `verify` (optional, per command) tells Kernel how to confirm the physical result, e.g.
+  `"verify": { "telemetry": "power_mode", "param": "mode", "withinMs": 60000 }`. After the command settles `SUCCESS` (or `TIMEOUT`),
+  Kernel reads that telemetry entry back through your Worker until it equals the request's `mode` or `withinMs` (default 60000) passes, and
+  reports `verification` `VERIFIED` or `UNVERIFIED` in `command.status`. Declare it only when a telemetry entry reports the exact value the
+  param sets; without it, callers only ever learn that the handler returned. The readback runs your telemetry handler, so keep any device
+  read cache shorter than the Kernel's verify interval (`commandVerifyIntervalMs`, default 5 s) or a stale reading can confirm the command
 - `errors` maps your device's error codes to human-readable text; throw `Error` messages that contain these codes so
   operators and agents can look them up
 - `health.alerts` is optional because a plugin without an alerting layer must not invent alerts. `metadata`,
@@ -507,8 +514,7 @@ if (params.percent < 0 || params.percent > 100) throw new Error('ERR_PERCENT_RAN
 `lastAttemptAt` and `running` above are deliberately process-local teaching state, scoped to one device by the
 runtime's per-device module registry rather than by a `Map` keyed on device ID. If a physical cooldown must survive
 restarts or multiple Worker hosts, store `lastAttemptAt` in process-owned persistent storage and update it atomically
-before device I/O; [`demo-worker`'s own `db.js`][demo-worker-db] shows the same per-device-instance pattern applied
-to a local SQLite file. The JSON audit lines demonstrate the minimum event shape, including rejected and
+before device I/O. The JSON audit lines demonstrate the minimum event shape, including rejected and
 failed outcomes; production hosts must send these events to a durable audit sink. Actor identity and request
 correlation are owned by the authenticated Gateway/control plane because they are not currently present in the
 handler arguments. Never include credentials or raw device responses in audit events.
@@ -526,12 +532,13 @@ handler arguments. Never include credentials or raw device responses in audit ev
 
 [`WorkerRuntimeV2`][worker-runtime-v2] also auto-registers a builtin `health` channel on every device, with no contract
 entry required: a plugin that doesn't declare its own `health` telemetry handler still answers
-`{ query: { type: "health" } }` with `{ status: "OK", id, opts, env, config, workerId }`. Declaring a `health` entry in
+`{ query: { type: "health" } }` with `{ status: "OK", id, workerId }` (never `env`, `opts` or `config`, which can hold
+secrets and device credentials). Declaring a `health` entry in
 [`capabilities.telemetry`][contract-schema] yourself overrides the builtin with your own handler.
 
 ```js
 await mdkClient.pullTelemetry(deviceId, 'health')
-// → { status: 'OK', id: 'wm-001', opts: {...}, env: {...}, config: {...}, workerId: '...' }
+// → { status: 'OK', id: 'wm-001', workerId: '...' }
 ```
 
 </Step>
@@ -576,7 +583,7 @@ Ship a standalone fake of your vendor's native API so anyone (including your own
 Worker without real hardware. It should know nothing about MDK; it's the same surface a real device on the LAN would
 present.
 
-`mock/server.js`, modeled on [`demo-worker/mock/server.js`][demo-worker-mock]:
+`mock/server.js`, a trimmed version of the template's own `mock/server.js`:
 
 ```js
 'use strict'
@@ -647,9 +654,9 @@ The mock must cover every device-client path your handlers call: summary fields 
 
 Drive [`loadContract`][mdk-worker-index] and [`createInstance`][mdk-worker-index] directly against the mock. This
 exercises your whole plugin (telemetry translation, command dispatch, error mapping) with **no** `WorkerRuntimeV2`
-in the loop, so it needs nothing beyond what you've already written in Steps 1–6. `demo-worker`'s own
-[`tests/unit/handlers.test.js`][demo-worker-plugin-test] is the complete worked example of this style; the harness
-below is the same pattern trimmed to this guide's contract.
+in the loop, so it needs nothing beyond what you've already written in Steps 1–6.
+
+`tests/unit/handlers.test.js`:
 
 ```js
 'use strict'
@@ -744,7 +751,7 @@ test('reboot enforces concurrency and cooldown after every attempt', async (t) =
 > [!TIP]
 > `createInstance` builds one plugin instance for one device: the same call [`WorkerRuntimeV2`][worker-runtime-v2] makes per configured
 > device at `runtime.start()`. Building two instances against
-> distinct mocks and distinct `deviceId`s (as `demo-worker`'s own test file does) proves device isolation: a command
+> distinct mocks and distinct `deviceId`s proves device isolation: a command
 > against one instance never reaches the other's client, because each device's `src/client.js` was loaded into its
 > own private module registry.
 
@@ -859,11 +866,7 @@ For errors from a live Kernel registration or requests once your Worker is actua
 [npm-version]: ../../reference/environment.md#why-npm-stays-below-12
 <!-- docs@tether.io: npm-version → reference/environment -->
 
-[demo-worker]: ../../../backend/workers/samples/demo-worker/package.json
-<!-- docs@tether.io: demo-worker → https://github.com/tetherto/mdk/blob/main/backend/workers/samples/demo-worker/package.json -->
 
-[demo-worker-caller]: ../../../examples/backend/demo-worker-caller/index.js
-<!-- docs@tether.io: demo-worker-caller → https://github.com/tetherto/mdk/blob/main/examples/backend/demo-worker-caller/index.js -->
 
 [architecture]: ../../concepts/architecture.md
 <!-- docs@tether.io: architecture → concepts/architecture -->
@@ -874,20 +877,15 @@ For errors from a live Kernel registration or requests once your Worker is actua
 [workers-concept]: ../../../backend/workers/README.md
 <!-- docs@tether.io: workers-concept → https://github.com/tetherto/mdk/blob/main/backend/workers/README.md -->
 
-[demo-worker-client]: ../../../backend/workers/samples/demo-worker/src/client.js
-<!-- docs@tether.io: demo-worker-client → https://github.com/tetherto/mdk/blob/main/backend/workers/samples/demo-worker/src/client.js -->
 
-[demo-worker-db]: ../../../backend/workers/samples/demo-worker/src/db.js
-<!-- docs@tether.io: demo-worker-db → https://github.com/tetherto/mdk/blob/main/backend/workers/samples/demo-worker/src/db.js -->
+
+[worker-template]: ../../../packages/cli/templates/worker/README.md
+<!-- docs@tether.io: worker-template → https://github.com/tetherto/mdk/blob/main/packages/cli/templates/worker/README.md -->
 
 [contract-schema]: ../../../backend/core/mdk-worker/mdk-contract.schema.json
 <!-- docs@tether.io: contract-schema → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/mdk-contract.schema.json -->
 
-[demo-worker-mock]: ../../../backend/workers/samples/demo-worker/mock/server.js
-<!-- docs@tether.io: demo-worker-mock → https://github.com/tetherto/mdk/blob/main/backend/workers/samples/demo-worker/mock/server.js -->
 
-[demo-worker-plugin-test]: ../../../backend/workers/samples/demo-worker/tests/unit/handlers.test.js
-<!-- docs@tether.io: demo-worker-plugin-test → https://github.com/tetherto/mdk/blob/main/backend/workers/samples/demo-worker/tests/unit/handlers.test.js -->
 
 [mdk-worker-index]: ../../../backend/core/mdk-worker/index.js
 <!-- docs@tether.io: mdk-worker-index → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/index.js -->

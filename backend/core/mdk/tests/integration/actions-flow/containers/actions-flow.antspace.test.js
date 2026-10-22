@@ -33,6 +33,7 @@ const makeFixture = (model) => {
         model,
         storeDir,
         bootstrap,
+        allowedKeys: [kernel.getClientPublicKey()],
         seedDevices: [{
           info: { serialNum: 'AS-E2E-001', container: 'e2e-container' },
           opts: { address: '127.0.0.1', port: 58004 }

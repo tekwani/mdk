@@ -16,6 +16,15 @@ afterEach(() => {
 });
 
 describe('createWorker', () => {
+  it('reports a write failure instead of throwing', () => {
+    const dir = makeTmpDir();
+    const blocker = join(dir, 'not-a-dir');
+    writeFileSync(blocker, '');
+    const result = createWorker({ name: 'demo', parentDir: blocker });
+    expect(result).toMatchObject({ ok: false, message: 'Could not scaffold the worker.' });
+    expect(result.detail).toBeTruthy();
+  });
+
   it('rejects an invalid worker name', () => {
     const result = createWorker({ name: 'Not Valid!', parentDir: makeTmpDir() });
     expect(result.ok).toBe(false);
@@ -33,6 +42,21 @@ describe('createWorker', () => {
     const pkg = JSON.parse(readFileSync(join(result.workerPath!, 'package.json'), 'utf8'));
     expect(pkg.name).toBe('demo-miner');
     expect(installScaffoldMock).toHaveBeenCalledWith(dir, result.workerPath, true);
+  });
+
+  it('rejects an --org that is not a valid npm scope', () => {
+    const result = createWorker({ name: 'demo', parentDir: makeTmpDir(), org: 'evil\nid: x' });
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/Invalid --org/);
+  });
+
+  it('scaffolds a client that never logs credential values', () => {
+    const result = createWorker({ name: 'safe-log', parentDir: makeTmpDir() });
+    const client = readFileSync(join(result.workerPath!, 'src', 'client.js'), 'utf8');
+    const logCall = client.slice(client.indexOf('logger('), client.indexOf(')\n', client.indexOf('logger(')));
+    expect(logCall).toContain('Object.keys(env');
+    expect(logCall).not.toMatch(/,\s*env\s*[,)]/);
+    expect(logCall).not.toMatch(/,\s*opts\s*[,)]/);
   });
 
   it('scopes the package name under --org', () => {
@@ -120,6 +144,10 @@ describe('createWorker', () => {
 
     const dup = createWorker({ name: 'demo-miner', parentDir: dir, force: true });
     expect(dup.stackFile).toBe('exists');
+
+    const yaml = readFileSync(join(dir, 'mdk.yaml'), 'utf8');
+    writeFileSync(join(dir, 'mdk.yaml'), yaml.replace('package: ./workers/demo-miner', 'package: @your-org/other-rig'), 'utf8');
+    expect(createWorker({ name: 'demo-miner', parentDir: dir, force: true }).stackFile).toBe('name-taken');
   });
 
   it('reports "no-file" when there is no mdk.yaml, and "no-stack-entry"-style skip via updateStackFile:false', () => {

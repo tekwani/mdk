@@ -1,6 +1,4 @@
 import {
-  actionsStore,
-  type ActionsStore,
   authStore,
   type AuthStore,
   devicesStore,
@@ -37,9 +35,3 @@ export const useNotifications = (): NotificationStore => useStore(notificationSt
  * @category store
  */
 export const useTimezone = (): TimezoneStore => useStore(timezoneStore)
-
-/**
- * React-bound view of the headless `actionsStore` (command queue + lifecycle).
- * @category store
- */
-export const useActions = (): ActionsStore => useStore(actionsStore)

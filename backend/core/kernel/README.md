@@ -49,7 +49,7 @@ const { createKernel } = require('@tetherto/mdk-kernel')
 const kernel = createKernel({
   db: './data/kernel-db',
   root: './data',
-  discovery: { topic: '<32-byte hex topic>' }
+  discovery: { topic: '<32-byte hex topic>', workerKeys: ['<worker RPC key hex>'] }
 })
 
 await kernel.init()
@@ -75,11 +75,20 @@ Factory that returns a configured, unstarted `KernelManager`. Caller controls th
 | `opts.db`                       | Optional | `string`   | `os.tmpdir()/mdk/...` | Hyperbee store directory                             |
 | `opts.root`                     | Optional | `string`   | `os.tmpdir()/mdk`     | Config root directory                                |
 | `opts.listeners.hrpc`           | Optional | `object\|false` | Enabled          | HRPC listener config; `false` to disable             |
-| `opts.auth.whitelist`           | Optional | `string[]` | `[]`                  | HRPC firewall — hex public keys of allowed callers   |
+| `opts.listeners.hrpc.bootstrap` | Optional | `array`    | Public DHT            | HyperDHT bootstrap nodes; pass the same list to every component on a private DHT network |
+| `opts.auth.whitelist`           | Optional | `Array<string\|{key, roles}>` | `[]` (admits nobody) | HRPC caller allowlist — see [Caller admission and roles](#caller-admission-and-roles) |
+| `opts.auth.allowAll`            | Optional | `boolean`  | `false`               | Admit every DHT peer. Development only; logs a warning |
+| `opts.discovery.workerKeys`     | Optional | `string[]` | `[]` (admits nobody)  | Worker RPC keys accepted from the discovery topic — see [Kernel → Worker](#kernel--worker) |
+| `opts.discovery.allowAnyWorker` | Optional | `boolean`  | `false`               | Admit every Worker that announces on the topic. Development only; logs a warning |
 | `opts.discovery.topic`          | Optional | `string`   | None; no DHT listener without one | 32-byte hex DHT topic Workers join       |
 | `opts.cadences.telemetryPullMs` | Optional | `number`   | `10000`               | Telemetry poll interval                              |
 | `opts.cadences.healthPingMs`    | Optional | `number`   | `5000`                | Health ping interval                                 |
 | `opts.cadences.statePullMs`     | Optional | `number`   | `5000`                | DHT Worker identity and device-list refresh interval |
+
+`createKernel()` and the core SDK's `getKernel()` do not forward `commandResultTtlMs` or `healthFailureThreshold` options.
+These settings are read from `conf.kernel` by `KernelManager`; the factories use the manager's defaults of 24 hours and three
+failed health checks. Both factories construct their own configuration and disable config-file loading, so a separate `kernel.json`
+does not supply these settings to a factory-created Kernel. A caller that needs to set them directly uses `new KernelManager(conf, ctx)`.
 
 ### `KernelManager`
 
@@ -90,7 +99,13 @@ await kernel.init()    // Creates facilities, stores, modules
 await kernel.start()   // Starts transports, discovery, scheduler, health monitor
 await kernel.stop()    // Graceful shutdown
 
-kernel.getPublicKey()  // Buffer — HRPC public key (clients connect with it; share with Workers for allowlisting)
+kernel.getPublicKey()        // Buffer — HRPC listener key (callers connect to it)
+kernel.getClientPublicKey()  // Buffer — the key Kernel dials Workers with; Workers must allow it
+kernel.allowKey(hex, roles?) // admit an HRPC caller at runtime (default full access)
+kernel.revokeKey(hex)        // remove it; open connections stop being served
+kernel.listAllowedKeys(minRole?) // hex keys admitted with at least that role
+kernel.allowWorkerKey(hex)   // admit a Worker RPC key on the discovery topic at runtime
+kernel.registerWorker(hex)   // register a Worker by its RPC key directly (skips the topic)
 ```
 
 Each running Kernel needs its own Hyperbee store directory. Two Kernel instances that use the same `opts.db` path contend for the same files and fail on file locks. The default development root is `os.tmpdir()/mdk`; production deployments should use an explicit, instance-specific path.
@@ -100,6 +115,8 @@ Each running Kernel needs its own Hyperbee store directory. Two Kernel instances
 **Events:**
 - `'started'` — emitted after `start()` completes
 - `'stopped'` — emitted after `stop()` completes
+- `'caller-allowed'` `{ key, roles }` / `'caller-revoked'` `{ key }` — after `allowKey()` / `revokeKey()`; in-process hosts
+  use them to mirror write-capable callers (a Gateway also calls Workers directly) onto Worker allowlists
 
 **Module access:**
 
@@ -152,16 +169,30 @@ See [Command control](#command-control) for how scopes and targets are handled.
 
 Tracks every command's full execution lifecycle, backed by a Write-Ahead Log (WAL) in Hyperbee. The guarantee that matters is on the
 outbound side: a command's RPC to its Worker is issued only after the `DISPATCHED` and `EXECUTING` transitions have been appended to
-the WAL, so a crash mid-flight leaves a durable record of what was in progress. On restart, `recover()` sweeps the whole WAL: in-flight commands with
-retries left are restored to `QUEUED`, those out of retries are failed with `ERR_RECOVERY_EXHAUSTED`, and terminal entries are deleted to
-compact the log. Restoring to `QUEUED` does not re-send the command; `recover()` never calls `_dispatch`, so a recovered command waits for a
-caller to drive it.
+the WAL, so a crash mid-flight leaves a durable record of what was in progress. A command that was sent but got no response may already
+have run on the device, so Kernel never re-sends it: a send that times out or errors settles the command as `TIMEOUT` with
+`ERR_COMMAND_UNCONFIRMED`, and the caller reconciles by reading the device state back. On restart, `recover()` sweeps the whole WAL: in-flight
+commands settle the same way, `QUEUED` commands are restored, and terminal entries older than `kernel.commandResultTtlMs` (default 24 h)
+are logically deleted from the current database view; the same pruning runs at most hourly while new commands arrive. These deletes
+do not reclaim historical Hypercore blocks, so the result TTL is not a physical disk-space limit. `recover()` never calls `_dispatch`, so a
+restored `QUEUED` command waits for a caller to drive it.
+
+A command reports three result levels, and success at one level never stands in for the next:
+
+1. **Accepted**: `command.request` answers `{ commandId, status: 'QUEUED' }`. Nothing has reached the device yet.
+2. **Terminal**: `command.status` answers `SUCCESS`, `FAILED` or `TIMEOUT` once the Worker replies or the send goes unconfirmed. It stays
+   readable for `commandResultTtlMs`.
+3. **Device verified**: `command.status` carries `verification`. When the command's contract entry declares `verify`, Kernel reads the named
+   telemetry back through the Worker every `kernel.commandVerifyIntervalMs` (default 5 s), starting one interval after `SUCCESS` or
+   `TIMEOUT`, until it equals the requested param (`VERIFIED`) or `withinMs` passes (`UNVERIFIED`). It is `PENDING` while Kernel reads,
+   `NOT_DECLARED` when the contract has no `verify`, and `null` for `FAILED` and in-flight commands. A Kernel restart settles `PENDING` as
+   `UNVERIFIED`.
 
 **State machine:**
 ```text
 QUEUED → DISPATCHED → EXECUTING → SUCCESS
                               └→ FAILED
-                              └→ TIMEOUT → QUEUED (retry) or FAILED (max retries)
+                              └→ TIMEOUT (sent, outcome unconfirmed; never retried)
 ```
 
 ### `TelemetryCollector`
@@ -181,14 +212,19 @@ System metronome. Runs non-overlapping interval jobs for telemetry pulls, health
 | Job              | Default  | Operation                                                               |
 | ---------------- | -------- | ----------------------------------------------------------------------- |
 | `telemetry.pull` | 10000 ms | Pulls telemetry from ready Workers over HRPC                            |
-| `health.ping`    | 5000 ms  | Checks registered Worker liveness over HRPC                             |
+| `health.ping`    | 5000 ms  | Checks that each ready Worker process answers HRPC; it does not contact devices |
 | `state.pull`     | 5000 ms  | Refreshes Worker identity and device lists when DHT discovery is active |
 
-Configure all three intervals with `createKernel({ cadences: { telemetryPullMs, healthPingMs, statePullMs } })`. The higher-level `getKernel()` API exposes `telemetryPullMs` and `healthPingMs` as flat options. These cadences affect scheduled HRPC calls after discovery; they do not change DHT discovery traffic.
+Configure all three intervals with `createKernel({ cadences: { telemetryPullMs, healthPingMs, statePullMs } })`. The higher-level `getKernel()` API exposes `telemetryPullMs`, `healthPingMs` and `statePullMs` as flat options. These cadences affect scheduled HRPC calls after discovery; they do not change DHT discovery traffic.
 
 ### `HealthMonitor`
 
-Ping-based liveness checker. Sends `health.ping` to every registered Worker on a configurable cadence and updates the registry with the result.
+Ping-based checker for the Worker process, not for the devices behind it. Sends `health.ping` to every `READY` Worker on the
+`healthPingMs` cadence with a 3 s timeout; the Worker answers from memory with a constant `OK` and performs no device I/O. One or
+two misses mark the Worker `SICK`, `healthFailureThreshold` misses (default 3) mark it `DEAD`, and one reply restores `HEALTHY`. The
+only effect of `SICK` and `DEAD` is routing: `isRoutable()` returns false, so command dispatch is refused, while the registry state
+stays `READY` and telemetry pulls continue. A `READY` and `HEALTHY` Worker says nothing about whether its devices are reachable; that
+is reported per device in the telemetry channel.
 
 **State machine per Worker:**
 ```text
@@ -204,14 +240,21 @@ Handles the write-action approval lifecycle at the Kernel layer. Methods are inv
 - `pushAction()` / `pushActionsBatch()` — stage an action, resolve targets via `ActionCaller`, record votes required
 - Vote counting against `ACTION_NEG_VOTES_THRESHOLD`; delegates to Workers once the configured positive vote threshold is met
 - Wraps `@tetherto/svc-facs-action-approver` behind MDK protocol envelopes
+- `action.get`, `action.get-batch` and `action.query` return a copy of each record with secret-looking `params` fields
+  (`password`, `secret`, `token`, `apiKey`, `privateKey`, `credentials`, and similar) replaced by `[REDACTED]`; the stored
+  copy the approver executes is unchanged
 
 ### `ActionCaller`
 
 Resolves a staged action into per-Worker write calls via `getWriteCalls(query, action, params, authPerms)`. Returns the targets
 map, required permission strings, and per-Worker call payloads that `ActionManager` passes to the action approver.
 
-Once an action clears its vote threshold, the approver calls back into `callTargets()`, which builds a `command.request` envelope and
-hands it to `CommandDispatcher` — the same path a direct write takes. Approval gates which writes execute; it does not give them a
+A Worker's `write.calls.response` is schema-checked (at most `LIMITS.writeCalls` calls, `reqVotes` an integer from 1 to
+`LIMITS.reqVotes`). Only calls for devices that Worker owns are kept; a rack action keeps only the call for the rack id the
+Kernel asked about.
+
+Once an action clears its vote threshold, the approver calls back into `callTargets()`, which re-checks device ownership,
+builds a `command.request` envelope and hands it to `CommandDispatcher` — the same path a direct write takes. Approval gates which writes execute; it does not give them a
 separate execution route.
 
 ### Permissions
@@ -241,20 +284,69 @@ How the caller obtains that key depends on where it runs:
   regenerated. Override the path with `opts.keyFile`, or pass `keyFile: false` to disable publishing
 - **Remote or multi-host**: share the key from `kernel.getPublicKey()` with the caller out-of-band
 
-Admission is controlled by an allowlist of hex public keys. An empty allowlist admits any HRPC caller; a configured allowlist
-restricts to approved callers:
+### Caller admission and roles
+
+Admission is **fail-closed**. Only public keys on the allowlist may connect; an **empty allowlist admits nobody**. The
+firewall rejects unknown keys at connect time, and every request is re-checked, so `revokeKey()` takes effect on
+connections that are already open (`ERR_KERNEL_CALLER_NOT_ALLOWED`).
 
 ```js
 createKernel({
-  auth: { whitelist: ['<gateway-pubkey-hex>', '<mcp-pubkey-hex>'] }
+  auth: {
+    whitelist: [
+      '<gateway-pubkey-hex>',                                // plain key: full access
+      { key: '<dashboard-pubkey-hex>', roles: ['read'] },     // read-only
+      { key: '<operator-cli-pubkey-hex>', roles: ['write'] }
+    ]
+  }
 })
+kernel.allowKey('<mcp-pubkey-hex>')   // at runtime, after init()
 ```
 
-The Gateway publishes the key it dials with as `status.rpcClientKey` in its status file; it is derived from a seed persisted in the
-Gateway store, so one allowlist entry survives Gateway restarts.
+| Role    | Actions                                                                                              |
+| ------- | ---------------------------------------------------------------------------------------------------- |
+| `read`  | `worker.list`, `device.capabilities`, `telemetry.pull`, `state.pull`, `command.status`, `action.get`, `action.get-batch`, `action.query` |
+| `write` | everything in `read`, plus `command.request`, `command.cancel`, `action.push`, `action.push-batch`, `action.vote`, `action.cancel-batch` |
+| `admin` | everything, plus `worker.terminate`. A plain-string entry is `admin` (the pre-roles behavior)          |
+
+A caller without the role gets `ERR_KERNEL_ACTION_FORBIDDEN`. Identity comes from the transport, not the payload:
+`command.request` records the caller's public key as `requesterId` (not `envelope.sender`), and a non-`admin` caller
+votes, pushes and cancels as its own public key whatever `voter` it sends. An `admin` caller is treated as a trusted
+delegate (a Gateway that authenticated its own users), so its payload `voter` is kept.
+
+`auth.allowAll: true` (or `hrpc.allowAll` in `kernel.json`) admits every DHT peer with full access. It exists for local
+experiments only and logs a warning at start.
+
+The Gateway dials with `status.rpcClientKey` (in its status file), derived from a seed persisted in the Gateway store, so
+one allowlist entry survives Gateway restarts. `@tetherto/mdk-core` wires the common cases for you:
+`startGateway({ kernel })` admits the Gateway key with full (`admin`) access on an in-process Kernel, and `getKernel()` admits keys that same-machine
+processes publish to its trusted-keys dir (see the [mdk-core README](../mdk/README.md#trust-and-admission)).
+
+### Kernel → Worker
+
+Workers are fail-closed too: a Worker only answers the keys on its own allowlist. Kernel dials Workers with
+`kernel.getClientPublicKey()` (its DHT keypair, not the listener key), so hand that key to every Worker
+(`WorkerRuntime` `allowedKeys`).
+
+Topic discovery is fail-closed as well. Anyone who knows the topic can announce on it, so the Kernel registers only Worker RPC
+keys on `discovery.workerKeys` (or added at runtime with `kernel.allowWorkerKey()`); an empty list admits nobody.
+`discovery.allowAnyWorker: true` admits every topic peer; it exists for local experiments only and logs a warning at start.
+`kernel.registerWorker()` and the `mdk-core` local-discovery mode hand the key in directly and skip the topic allowlist.
+Identity and capability replies are validated against the protocol schemas, and each `workerId` is bound to the first RPC key it registered with (persisted), so a second key claiming that id is refused
+until an admin terminates the old registration (`worker.terminate`).
+
+### Input limits
+
+Every request runs `validateFull` (envelope plus per-action payload schema) before routing. Caller arrays are capped
+(`LIMITS` in [`protocol/schemas.js`](lib/protocol/schemas.js): 1000 `targets`/`ids`, 100 `batchActionsPayload`, 50
+`queries`, 256 `authPerms`/`params`). `action.query` filters accept only plain comparison and logical operators
+(`$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$and`, `$or`, `$nor`, `$not`, `$exists`, `$type`, `$size`,
+`$all`, `$elemMatch`); `$regex`, `$where`, `$expr` and anything else is `ERR_QUERY_INVALID`.
 
 > [!NOTE]
-> The [`auth-whitelist` example](../../../examples/backend/kernel/auth-whitelist.js) shows the two-run key exchange, and
+> The [`auth-whitelist` example](../../../examples/mvp-site/backend/auth-whitelist.example.js) shows the two-run key exchange with
+> explicit admission. It starts the Gateway with `kernelKey` rather than the live Kernel, so the first run refuses the published
+> Gateway key and the second admits it with the `read` role. Each run calls Kernel to show the outcome.
 > [Step 2 of the security blueprint](../../../docs/guides/security/index.md#step-2-admit-the-gateway-to-kernel) covers admitting the Gateway in
 > production.
 
@@ -310,7 +402,7 @@ All messages use the envelope format:
 
 Beyond the basic dispatch/result cycle, three exported constants extend the CSM with status queries, cancellation, and scoped fan-out.
 
-**`COMMAND_STATUS` / `COMMAND_STATUS_RESPONSE`**: query the live state of an in-flight or recently settled command. The Gateway sends `command.status` with a `commandId`; Kernel replies with the current CSM state (`QUEUED`, `DISPATCHED`, `EXECUTING`, `SUCCESS`, `FAILED`, or `TIMEOUT`). Routed by [`envelope-router.js`](./lib/transport/envelope-router.js) → `dispatcher.getStatus(commandId)`.
+**`COMMAND_STATUS` / `COMMAND_STATUS_RESPONSE`**: query the state of an in-flight command, or of a settled one for `commandResultTtlMs` after it settles. The Gateway sends `command.status` with a `commandId` (`mdkClient.getCommandStatus(commandId)`); Kernel replies with the current CSM state (`QUEUED`, `DISPATCHED`, `EXECUTING`, `SUCCESS`, `FAILED`, or `TIMEOUT`), its `result` or `error`, and the device `verification` described under [`CommandStateMachine`](#commandstatemachine). Routed by [`envelope-router.js`](./lib/transport/envelope-router.js) → `dispatcher.getStatus(commandId)`.
 
 **`COMMAND_CANCEL` / `COMMAND_CANCEL_RESPONSE`**: attempt to cancel a command before or during execution. Cancellation succeeds only when the command is in a `QUEUED` or `DISPATCHED` state; commands already in `EXECUTING` or a terminal state return an error response. Routed → `dispatcher.cancel(commandId)`.
 
@@ -365,14 +457,14 @@ Tests use real Corestore + `tmpdir` — no mocks for storage.
 | `ERR_COMMAND_NOT_FOUND`  | The requested `commandId` has no tracked command                            | Use a `commandId` that is still tracked; a completed command may have been evicted |
 | `ERR_COMMAND_NOT_IN_CAPABILITIES` | The requested command is not declared in the target Worker's capabilities | Issue a command the Worker advertises |
 | `ERR_COMMAND_REQUIRED`   | A dispatched command payload omits `command`                                | Include the command name in the payload |
+| `ERR_COMMAND_UNCONFIRMED` | A command was sent to its Worker but no response arrived (send timeout, channel error, or Kernel crash mid-flight); it may have run | Read the device state back and resubmit only if the command did not take effect; Kernel never retries it |
 | `ERR_DEVICE_ID_REQUIRED` | A device-scoped command omits `deviceId` on the envelope                    | Set `deviceId` on the envelope |
 | `ERR_DEVICE_NOT_FOUND`   | No registered Worker owns the given `deviceId`                              | Target a `deviceId` registered by a ready Worker |
 | `ERR_KERNEL_ACTION_CALLS_EMPTY` | An action push resolves to no executable write calls, either for a specific Worker or across all Workers | Confirm the query matches ready Workers and the caller holds the required write permissions |
-| `ERR_KERNEL_NO_DISCOVERY` | `registerWorker` runs on a Kernel started without discovery configured     | Configure DHT discovery before registering Workers |
+| `ERR_KERNEL_NO_DISCOVERY` | `registerWorker` runs on a Kernel started without discovery configured     | Pass `discovery.topic` (DHT mode) or `discovery: { mode: 'local' }` before registering Workers |
 | `ERR_KERNEL_NOT_INITIALIZED` | `start()` is called before the Kernel is initialized                    | Call `init()` before `start()` |
 | `ERR_KERNEL_NOT_STARTED` | `registerWorker` is called before the Kernel is started                     | Start the Kernel before registering Workers |
-| `ERR_KERNEL_SHUTDOWN`    | A command is executing or dispatched when the Kernel drains for shutdown    | Resubmit the command after the Kernel restarts |
-| `ERR_MAX_RETRIES_EXHAUSTED` | A command's send to the Worker keeps failing (timeout or channel error) until its retries are exhausted                         | Confirm the Worker is reachable and the channel is wired; raise retries or the timeout if it is merely slow |
+| `ERR_KERNEL_SHUTDOWN`    | A command is executing or dispatched when the Kernel drains for shutdown    | After the Kernel restarts, read the device state back and resubmit only if the command did not take effect |
 | `ERR_PARAM_RANGE`        | A numeric command parameter falls below its declared `min` or above its `max` | Pass a value within the parameter's declared range |
 | `ERR_PARAM_TYPE`         | A command parameter's value does not match its declared type                | Pass the parameter as its declared type |
 | `ERR_PARAMS_INVALID`     | A write-call request's `params` is not an array                             | Pass `params` as an array |
@@ -380,7 +472,6 @@ Tests use real Corestore + `tmpdir` — no mocks for storage.
 | `ERR_QUERIES_INVALID`    | `queryActions` receives a `queries` value that is not an array              | Pass `queries` as an array |
 | `ERR_QUERIES_TYPE_INVALID` | A query entry omits a string `type`                                       | Give every query entry a string `type` |
 | `ERR_QUERY_INVALID`      | A write-call `query` is not a plain object or is not a valid mingo query    | Pass a valid mingo query object |
-| `ERR_RECOVERY_EXHAUSTED` | A command recovered after restart was in flight and has no retries remaining | Resubmit the command and investigate why it kept failing before shutdown |
 | `ERR_RPC_NOT_INITIALIZED` | A channel request runs before the transport's RPC layer is initialized     | Initialize the Kernel transport before sending over the channel |
 | `ERR_UNKNOWN_ACTION`     | An incoming envelope's `action` has no route handler                        | Send a supported action |
 | `ERR_WORKER_ID_REQUIRED` | A `worker.terminate` envelope, or a Worker- or rack-scoped command, omits `workerId` | Include `workerId` in the payload |
@@ -401,7 +492,7 @@ kernel/
 ├── index.js                  # Exports: KernelManager, createKernel
 ├── setup-config.sh           # Copies config/*.example to real config files
 ├── config/
-│   └── kernel.json.example   # Config template: HRPC allowlist, discovery topic, cadences
+│   └── kernel.json.example   # Config template: HRPC allowlist (empty = nobody), allowAll, discovery topic/workerKeys/allowAnyWorker, cadences
 ├── lib/
 │   ├── kernel.manager.js        # KernelManager (EventEmitter) — lifecycle orchestration
 │   ├── protocol/

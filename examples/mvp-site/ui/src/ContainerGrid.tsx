@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 
-import { Socket } from "@tetherto/mdk-react-devkit/domain";
+import { getHashrateString } from "@tetherto/mdk-react-devkit/domain";
 import { Typography } from "@tetherto/mdk-react-devkit/primitives";
 
 import type { Container, Miner } from "./types";
-import { groupByPdu, toSocketMiner } from "./utils";
+import { groupByPdu } from "./utils";
 
 export function ContainerGrid({ container, miners }: { container: Container; miners: Miner[] }) {
   const pduGroups = useMemo(() => groupByPdu(miners), [miners]);
@@ -26,13 +26,19 @@ export function ContainerGrid({ container, miners }: { container: Container; min
               <Typography variant="caption">PDU {pdu}</Typography>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
                 {pduMiners.map((m) => (
-                  <Socket
+                  <div
                     key={m.deviceId}
-                    socket={Number(m.pos.split("_").pop())}
-                    enabled
-                    power_w={m.powerW}
-                    miner={toSocketMiner(m)}
-                  />
+                    data-testid={`miner-tile-${m.deviceId}`}
+                    title={`${m.code} · ${m.status}`}
+                    style={{ background: "#1f1f1f", borderRadius: 6, padding: "6px 8px", minWidth: 72 }}
+                  >
+                    <Typography variant="caption" style={{ display: "block" }}>
+                      #{m.pos.split("_").pop()} · {m.status}
+                    </Typography>
+                    <Typography variant="caption" style={{ display: "block" }}>
+                      {getHashrateString(m.hashrateMhs)} · {m.powerW.toFixed(0)} W · {m.temperature.toFixed(0)}°C
+                    </Typography>
+                  </div>
                 ))}
               </div>
             </div>

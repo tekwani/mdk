@@ -71,7 +71,18 @@ class LogsService {
     }
   }
 
+  // `offset` counts rotations back from the current bee. It reaches the
+  // store as part of a bee name, and store.getBee() creates whatever it is
+  // asked for — so a negative, fractional or out-of-window offset would mint
+  // a fresh hypercore per call. Only integers in 0..logMaxHeight are valid.
+  _checkOffset (offset) {
+    if (!Number.isInteger(offset) || offset < 0) throw new Error('ERR_LOG_OFFSET_INVALID')
+    return offset <= getLogMaxHeight(this.conf.logKeepCount)
+  }
+
   async getBeeTimeLog (logKey, offset = 0, init = false) {
+    if (!this._checkOffset(offset)) return null
+
     const meta = await this.getBeeLogMeta(logKey, init)
 
     if (!meta) {

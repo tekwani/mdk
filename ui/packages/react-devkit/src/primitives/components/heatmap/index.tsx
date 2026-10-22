@@ -1,6 +1,7 @@
 import { forwardRef } from "react"
 
 import { cn, getHeatmapColor, HEATMAP_FALLBACK_COLOR, HEATMAP_GRADIENT } from "../../utils"
+// oxlint-disable-next-line no-unused-vars -- in scope for the {@link HeatmapLegend} below
 import { HeatmapLegend } from "./heatmap-legend"
 import type { HeatmapCell, HeatmapProps } from "./types"
 import { getHeatmapRange } from "./utils"

@@ -1,12 +1,8 @@
 node_modules/
 .site-data/
-.mdk-data/
+store/
 ui/node_modules/
 ui/dist/
-store/
-status/
-logs/
-db/
 deploy/ecosystem.config.js
 !config/*.json.example
 config/*.json

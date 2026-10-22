@@ -9,6 +9,8 @@ const {
 } = require('./constants')
 const { hasWritePermission } = require('../../permissions')
 const { createActionCallerProxy } = require('./caller-proxy')
+const { assertSafeQuery, assertSafeProjection } = require('./query-guard')
+const { redactSecrets } = require('./redact')
 
 const isNil = (value) => value === null || value === undefined
 
@@ -156,9 +158,11 @@ class ActionManager {
     }
 
     queries.forEach(query => {
-      if (!query.type || typeof query.type !== 'string') {
+      if (!query || !query.type || typeof query.type !== 'string') {
         throw new Error('ERR_QUERIES_TYPE_INVALID')
       }
+      assertSafeQuery(query.query)
+      assertSafeProjection(query.fields)
     })
 
     const res = {}
@@ -169,10 +173,12 @@ class ActionManager {
     return res
   }
 
+  // Shapes a stored record for a caller. Params are redacted here, before any
+  // caller query filter runs, so secrets can neither be read nor probed.
   _unpackActionData (data) {
     data.requiredPerms = data.payload[2]
     data.targets = data.payload[1]
-    data.params = data.payload[0]
+    data.params = redactSecrets(data.payload[0])
     delete data.payload
     return data
   }

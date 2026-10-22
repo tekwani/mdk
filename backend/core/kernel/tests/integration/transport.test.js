@@ -56,8 +56,10 @@ test('hrpc-listener - starts, accepts request, returns response', async (t) => {
   t.ok(publicKey, 'server has public key')
   t.is(publicKey.length, 32, 'public key is 32 bytes')
 
-  // Create a client
-  const clientDht = new DHT()
+  // Create a client, admitted at runtime
+  const clientKeyPair = DHT.keyPair()
+  listener.allowKey(clientKeyPair.publicKey)
+  const clientDht = new DHT({ keyPair: clientKeyPair })
   const clientRpc = new HyperswarmRPC({ dht: clientDht })
 
   t.teardown(async () => {
@@ -157,6 +159,49 @@ test('hrpc-listener - whitelist admits authorized client', async (t) => {
 
   t.ok(response.workers, 'authorized client received response')
   t.is(response.workers.length, 1, 'response contains workers')
+})
+
+test('hrpc-listener - empty whitelist rejects every caller (fail closed)', async (t) => {
+  const listener = new HRPCListener({ ...createMockModules(), whitelist: [] })
+  const { publicKey } = await listener.start()
+  const clientDht = new DHT()
+  const clientRpc = new HyperswarmRPC({ dht: clientDht })
+  t.teardown(async () => {
+    await clientRpc.destroy()
+    await clientDht.destroy()
+    await listener.stop()
+  })
+
+  const envelope = buildEnvelope({ action: 'worker.list', type: MESSAGE_TYPES.REQUEST, sender: 'x', payload: {} })
+  await t.exception(() => clientRpc.request(publicKey, 'mdk', serialize(envelope)), 'unknown caller rejected')
+  t.is(listener.getCallerRoles(clientDht.defaultKeyPair.publicKey), null)
+})
+
+test('hrpc-listener - roles gate actions, revokeKey cuts an open connection, allowAll admits all', async (t) => {
+  const readKeyPair = DHT.keyPair()
+  const listener = new HRPCListener({
+    ...createMockModules(),
+    whitelist: [{ key: readKeyPair.publicKey.toString('hex'), roles: ['read'] }]
+  })
+  const { publicKey } = await listener.start()
+  const dht = new DHT({ keyPair: readKeyPair })
+  const rpc = new HyperswarmRPC({ dht })
+  t.teardown(async () => {
+    await rpc.destroy()
+    await dht.destroy()
+    await listener.stop()
+  })
+  const send = async (action, payload, deviceId) => deserialize(await rpc.request(publicKey, 'mdk', serialize(
+    buildEnvelope({ action, type: MESSAGE_TYPES.REQUEST, sender: 'x', deviceId, payload })
+  )))
+
+  t.ok((await send(ACTIONS.WORKER_LIST, {})).workers, 'read allowed')
+  t.ok(/ERR_KERNEL_ACTION_FORBIDDEN/.test((await send(ACTIONS.COMMAND_REQUEST, { command: 'reboot' }, 'wm001')).error), 'write refused')
+
+  listener.revokeKey(readKeyPair.publicKey)
+  t.is((await send(ACTIONS.WORKER_LIST, {})).error, 'ERR_KERNEL_CALLER_NOT_ALLOWED')
+
+  t.ok(new HRPCListener({ ...createMockModules(), allowAll: true }).getCallerRoles(DHT.keyPair().publicKey), 'allowAll admits any key')
 })
 
 test('hrpc-listener - getRpc returns rpc instance', async (t) => {

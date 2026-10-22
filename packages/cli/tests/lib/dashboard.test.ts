@@ -38,9 +38,11 @@ describe('dashboardNameFromStack / shellTemplateUrl', () => {
     expect(dashboardNameFromStack('demo')).toBe('demo-dashboard');
   });
 
-  it('builds the GitHub tree URL for a ref, defaulting to main', () => {
-    expect(shellTemplateUrl()).toContain('/tree/main/examples/mdk-ui-shell-template');
+  it('builds the GitHub tree URL for a ref, defaulting to the CLI release tag', () => {
+    const { version } = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'package.json'), 'utf8'));
+    expect(shellTemplateUrl()).toContain(`/tree/v${version}/examples/mdk-ui-shell-template`);
     expect(shellTemplateUrl('v1.2.3')).toContain('/tree/v1.2.3/');
+    expect(() => shellTemplateUrl('../../evil')).toThrow(/Invalid git ref/);
   });
 });
 
@@ -91,6 +93,21 @@ describe('runDashboard', () => {
     expect(child.kill).toHaveBeenCalledWith('SIGTERM');
   });
 
+  it('hands the installed apps to the dev server in MDK_DASHBOARD_APPS', async () => {
+    const child = new FakeChild();
+    spawnMock.mockReturnValue(child);
+    const apps = [
+      { name: 'sentinel', id: 'io.tether.sentinel', version: '0.1.0', displayName: 'Sentinel', apiBase: '/apps/sentinel', dir: '/a' },
+    ];
+
+    const promise = runDashboard('/some/dir', apps);
+    child.emit('spawn');
+    await promise;
+
+    const { env } = spawnMock.mock.calls.at(-1)![2] as { env: NodeJS.ProcessEnv };
+    expect(JSON.parse(env.MDK_DASHBOARD_APPS!)).toEqual(apps);
+  });
+
   it('resolves stop() immediately when the child already exited', async () => {
     const child = new FakeChild();
     spawnMock.mockReturnValue(child);
@@ -122,6 +139,19 @@ describe('runDashboard', () => {
 });
 
 describe('createDashboard (monorepo template)', () => {
+  it('rejects an unsafe name and a target outside <parentDir>/apps before touching disk', async () => {
+    const parentDir = makeTmpDir();
+    for (const name of ["x'; alert(1); '", '../../etc', 'A']) {
+      expect((await createDashboard({ name, parentDir })).message).toMatch(/Invalid dashboard name/);
+    }
+    for (const subdir of ['apps', '..', join('apps', '..', '..', 'victim')]) {
+      const result = await createDashboard({ name: 'ok', parentDir, subdir, force: true });
+      expect(result.message).toMatch(/Refusing to scaffold outside/);
+    }
+    expect(existsSync(parentDir)).toBe(true);
+    expect(installDepsMock).not.toHaveBeenCalled();
+  });
+
   it('refuses to overwrite an existing target without force', async () => {
     const parentDir = makeTmpDir();
     mkdirSync(join(parentDir, 'apps', 'dashboard'), { recursive: true });
@@ -154,7 +184,6 @@ describe('createDashboard (monorepo template)', () => {
 
     // Excluded scaffold artifacts never make it into the copy.
     expect(existsSync(join(result.appPath!, 'node_modules'))).toBe(false);
-    expect(existsSync(join(result.appPath!, '_managed'))).toBe(false);
   });
 
   it('accepts an explicit gatewayUrl and an explicit subdir', async () => {

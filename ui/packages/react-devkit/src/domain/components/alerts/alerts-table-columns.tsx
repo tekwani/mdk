@@ -97,9 +97,7 @@ export const getAlertsTableColumns = ({
       new Date(a.original.createdAt).getTime() - new Date(b.original.createdAt).getTime(),
   },
   // NOTE: The "Actions" column (right-arrow → open alert) is intentionally
-  // omitted. In the source app it navigates to the mining explorer, which
-  // does not exist in this shell yet, so the button had no meaningful
-  // destination. The `actions` / `onAlertClick` plumbing is kept on the
+  // omitted: there is no built-in alert detail page for it to open. The `actions` / `onAlertClick` plumbing is kept on the
   // records so the column can be reinstated once an explorer/detail view
   // lands. See AlertActions in alerts-types.ts.
 ]

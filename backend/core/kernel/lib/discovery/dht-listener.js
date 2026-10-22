@@ -3,7 +3,12 @@
 const Hyperswarm = require('hyperswarm')
 const debug = require('debug')('mdk:kernel:discovery')
 const { ACTIONS, MESSAGE_TYPES } = require('../protocol/actions')
-const { build: buildEnvelope } = require('../protocol/envelope')
+const { build: buildEnvelope, validate: validateEnvelope } = require('../protocol/envelope')
+const { validateIdentityResponse, validateCapabilityResponse } = require('../protocol/schemas')
+
+function normalizeKey (key) {
+  return Buffer.isBuffer(key) ? key.toString('hex') : String(key).toLowerCase()
+}
 
 /**
  * DHT Listener — Worker Discovery
@@ -18,6 +23,15 @@ const { build: buildEnvelope } = require('../protocol/envelope')
  *
  * The swarm stream is only used for key exchange. All protocol communication
  * goes through @hyperswarm/rpc (stateless request/response, pooled connections).
+ *
+ * Any peer can announce on the topic, so a topic-discovered key is only a
+ * candidate. Admission is fail-closed: only keys on `workerKeys` (or added at
+ * runtime with allowWorkerKey()) are registered, and an empty allowlist admits
+ * nobody. `allowAnyWorker: true` is the one explicit way to admit every topic
+ * peer (development only; logged loudly). Every identity/capability reply is
+ * schema-checked, and the registry binds each workerId to the first key it
+ * registered with. Keys handed in directly (discoverWorker / Kernel
+ * registerWorker) come from the caller and skip the topic allowlist.
  */
 class DHTListener {
   constructor (opts) {
@@ -32,6 +46,20 @@ class DHTListener {
     this._ownsDht = false
     this._kernelId = 'kernel:kernel:default'
     this._discoveredPeers = new Set()
+    this._workerKeys = new Set((opts.workerKeys || []).map(normalizeKey))
+    this.allowAnyWorker = opts.allowAnyWorker === true
+  }
+
+  // Add a worker RPC key to the topic allowlist at runtime.
+  allowWorkerKey (rpcKey) {
+    const hex = normalizeKey(rpcKey)
+    this._workerKeys.add(hex)
+    return hex
+  }
+
+  /** Whether a topic-announced RPC key (hex) may register. */
+  isWorkerKeyAllowed (rpcKey) {
+    return this.allowAnyWorker || this._workerKeys.has(rpcKey)
   }
 
   setDht (dht) {
@@ -42,6 +70,12 @@ class DHTListener {
     if (!this.topic) {
       debug('DHT listener: no topic configured, skipping')
       return
+    }
+
+    if (this.allowAnyWorker) {
+      console.warn('[mdk-kernel] WARNING: discovery allowAnyWorker is enabled — every DHT peer that knows the discovery topic can register as a Worker and receive its device family\'s commands. Never use this outside local development.')
+    } else if (this._workerKeys.size === 0) {
+      debug('discovery workerKeys is empty: every topic peer is rejected until allowWorkerKey() admits one')
     }
 
     if (this._dht) {
@@ -103,6 +137,10 @@ class DHTListener {
       if (received.length >= 32) {
         const rpcKey = received.subarray(0, 32).toString('hex')
         stream.destroy()
+        if (!this.isWorkerKeyAllowed(rpcKey)) {
+          debug(`topic peer key not on workerKeys allowlist: ${rpcKey.slice(0, 16)}...`)
+          return
+        }
         this._onWorkerKeyReceived(rpcKey)
       }
     })
@@ -187,9 +225,7 @@ class DHTListener {
       }
 
       const contract = await this._pullCapabilities(channel)
-      if (!contract) return
-
-      if (!this._validateContract(contract)) {
+      if (!contract || !this._validateContract(contract)) {
         debug(`invalid contract from ${identity.workerId}`)
         await this.registry.terminate(identity.workerId)
         this._discoveredPeers.delete(rpcKey)
@@ -213,7 +249,12 @@ class DHTListener {
     })
     try {
       const response = await this.workerChannel.send(channel, envelope, { timeout: 10000 })
-      return response && response.payload ? response.payload : null
+      const check = this._checkReply(response, ACTIONS.IDENTITY_RESPONSE, validateIdentityResponse)
+      if (!check.valid) {
+        debug(`invalid identity.response: ${check.error}`)
+        return null
+      }
+      return response.payload
     } catch (err) {
       debug(`identity.request failed: ${err.message}`)
       return null
@@ -229,11 +270,23 @@ class DHTListener {
     })
     try {
       const response = await this.workerChannel.send(channel, envelope, { timeout: 10000 })
-      return response && response.payload ? response.payload.contract : null
+      const check = this._checkReply(response, ACTIONS.CAPABILITY_RESPONSE, validateCapabilityResponse)
+      if (!check.valid) {
+        debug(`invalid capability.response: ${check.error}`)
+        return null
+      }
+      return response.payload.contract
     } catch (err) {
       debug(`capability.request failed: ${err.message}`)
       return null
     }
+  }
+
+  _checkReply (response, expectedAction, validatePayload) {
+    const env = validateEnvelope(response)
+    if (!env.valid) return env
+    if (response.action !== expectedAction) return { valid: false, error: `ERR_UNEXPECTED_ACTION: ${response.action}` }
+    return validatePayload(response.payload)
   }
 
   _validateContract (contract) {

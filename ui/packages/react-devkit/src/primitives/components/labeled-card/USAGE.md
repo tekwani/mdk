@@ -19,6 +19,7 @@ A generic card container with a header label, optional navigation link, and conf
 | `isRelative` | Optional | `boolean` | `false` | Sets `position: relative` on the container |
 | `isScrollable` | Optional | `boolean` | `false` | Enables vertical scroll on the card body |
 | `label` | Optional | `React.ReactNode` | - | Header content shown above the card body |
+| `labelTooltip` | Optional | `React.ReactNode` | - | Tooltip shown when hovering the label, e.g. to explain what a count includes |
 <!-- END GENERATED: props -->
 
 ## Example
@@ -30,9 +31,10 @@ import { LabeledCard } from "@tetherto/mdk-react-devkit"
   <p>Content goes here.</p>
 </LabeledCard>
 
-// With a navigation link on the label
+// With a navigation link and a tooltip on the label
 <LabeledCard
   label="Miners with error"
+  labelTooltip="Excludes minor errors that don't affect hashrate"
   getNavigateOptions={(label) => ({ href: "/miners?filter=error" })}
 >
   <MinerList />
@@ -41,5 +43,5 @@ import { LabeledCard } from "@tetherto/mdk-react-devkit"
 
 ## Notes
 
-- If `label` is the string `'Miners with error'`, the label automatically receives an informational tooltip explaining that minor errors not affecting hashrate are excluded
+- `labelTooltip` wraps the label in a tooltip; any label can have one
 - `getNavigateOptions` only activates when `label` is a plain string

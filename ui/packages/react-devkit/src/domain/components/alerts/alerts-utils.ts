@@ -2,6 +2,7 @@ import _compact from 'lodash/compact'
 import _concat from 'lodash/concat'
 import _filter from 'lodash/filter'
 import _includes from 'lodash/includes'
+import _join from 'lodash/join'
 import _isEmpty from 'lodash/isEmpty'
 import _map from 'lodash/map'
 import _reduce from 'lodash/reduce'
@@ -9,11 +10,10 @@ import _some from 'lodash/some'
 import _toLower from 'lodash/toLower'
 import _uniq from 'lodash/uniq'
 
-import type { Alert } from '../../types/alerts'
+import type { AlertRecord } from '../../types/alerts'
 import type { Device } from '../../types/device'
 import { getContainerName } from '../../utils/container-utils'
 import { getDeviceData, getMinerShortCode } from '../../utils/device-utils'
-import { getByTagsWithAlertsQuery, getDeviceByAlertId } from '../../utils/query-utils'
 
 import type { AlertLocalFilters, ParsedAlertEntry } from './alerts-types'
 
@@ -38,7 +38,7 @@ type DeviceStats = Record<string, unknown> &
         status?: string
       }
     }>
-    alerts: Alert[]
+    alerts: AlertRecord[]
     last: {
       snap?: {
         stats?: {
@@ -59,7 +59,7 @@ type GetCurrentAlertsArgs = GetAlertsArgs & {
 }
 
 const parseAlertEntry = (
-  alert: Alert,
+  alert: AlertRecord,
   device: Device | undefined,
   onAlertClick?: (id: string, uuid: string) => void,
 ): ParsedAlertEntry | null => {
@@ -229,7 +229,7 @@ const composeFilters = (
 }
 
 export const getHistoricalAlertsData = (
-  alerts: Alert[],
+  alerts: AlertRecord[],
   { filterTags, localFilters, onAlertClick }: GetAlertsArgs,
 ): ParsedAlertEntry[] => {
   const allAlerts = _compact(
@@ -272,14 +272,6 @@ export const onLogClicked = (navigate?: (path: string) => void, id?: string): vo
   navigate(`/alerts/${id}`)
 }
 
-export const getAlertsThingsQuery = (
-  id?: string,
-  filterTags?: string[],
-  allowEmptyArray?: boolean,
-): string => {
-  if (id) return getDeviceByAlertId(id)
-  return getByTagsWithAlertsQuery(filterTags || [], allowEmptyArray)
-}
 
 export const getCurrentAlerts = (
   data: Device[],
@@ -292,4 +284,36 @@ export const getCurrentAlerts = (
     effectiveTags,
   )
   return id ? _filter(devicesAlerts, { uuid: id }) : devicesAlerts
+}
+
+export const getAlertsString = (
+  alerts: AlertRecord[],
+  getFormattedDate?: (date: Date) => string,
+): string => {
+  const formattedMessages = _map(
+    alerts,
+    (alert: AlertRecord) =>
+      `(${alert.severity}) ${
+        getFormattedDate
+          ? getFormattedDate(new Date(alert.createdAt))
+          : new Date(alert.createdAt).toLocaleString()
+      } : ${alert.name} Description: ${alert.description} ${alert.message ? alert.message : ''}`,
+  )
+  return _join(formattedMessages, ',\n\n')
+}
+
+export const getAlertsDescription = (
+  alerts: AlertRecord[],
+  getFormattedDate?: (date: Date) => string,
+): string => {
+  const formattedMessages = _map(
+    alerts,
+    (alert: AlertRecord) =>
+      `${
+        getFormattedDate
+          ? getFormattedDate(new Date(alert.createdAt))
+          : new Date(alert.createdAt).toLocaleString()
+      } : ${alert.description}`,
+  )
+  return _join(formattedMessages, ',\n\n')
 }

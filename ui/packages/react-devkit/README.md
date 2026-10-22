@@ -10,14 +10,14 @@ internal layout keeps the two layers clearly separated:
 > requirements). `npm run check:agent-ready` enforces it.
 
 > **Building features in a consuming app?** Read the machine-readable
-> manifests — `registry.json` and `blueprints.json` here,
+> manifests — `registry.json` here,
 > `@tetherto/mdk-react-adapter/hooks.json` and
 > `@tetherto/mdk-ui-foundation/stores.json` next door. See
 > [`AGENTS.md`](../../AGENTS.md) for how to navigate them.
 
 - [`src/primitives/`](./src/primitives/index.ts) — framework-agnostic-ish UI primitives built on Radix UI,
   design tokens, formatting utilities and types.
-- [`src/domain/`](./src/domain/index.ts) — mining-domain components, features, presentation
+- [`src/domain/`](./src/domain/index.ts) — mining-domain components, presentation
   hooks (under `utils/`), constants, and types. Zustand stores live in
   `@tetherto/mdk-ui-foundation`; store hooks and `MdkProvider` live in
   `@tetherto/mdk-react-adapter`.
@@ -42,8 +42,8 @@ This is a workspace package; depend on it from another workspace:
 import { Button, Dialog } from "@tetherto/mdk-react-devkit/primitives";
 import { useNotification } from "@tetherto/mdk-react-devkit/domain";
 // Store hooks and Query client — not separate devkit subpaths:
-import { actionsStore, devicesStore } from "@tetherto/mdk-ui-foundation";
-import { useActions, useDevices, useTimezone } from "@tetherto/mdk-react-adapter";
+import { devicesStore } from "@tetherto/mdk-ui-foundation";
+import { useDevices, useTimezone } from "@tetherto/mdk-react-adapter";
 ```
 
 Presentation hooks ship on `./domain` (or the top-level barrel), not
@@ -82,9 +82,8 @@ overrides.
 | --- | --- | --- |
 | `.` | `dist/index.{js,d.ts}` | Top-level barrel (`primitives` + `domain`) |
 | `./primitives` | `dist/primitives/index.{js,d.ts}` | Generic UI primitives |
-| `./domain` | `dist/domain/index.{js,d.ts}` | Mining-domain layer: components, features, presentation hooks, constants, types |
+| `./domain` | `dist/domain/index.{js,d.ts}` | Mining-domain layer: components, presentation hooks, constants, types |
 | `./registry.json` | [`dist/registry.json`](./dist/registry.json) | Machine-readable component + hook registry |
-| `./blueprints.json` | [`dist/blueprints.json`](./dist/blueprints.json) | Intent → recipe index |
 | `./styles.css` | [`dist/styles.css`](./dist/styles.css) | Design tokens + core primitives (~18 KB gz) |
 | `./styles-domain.css` | [`dist/styles-domain.css`](./dist/styles-domain.css) | Mining-domain component styles (~70 KB gz); import after `styles.css` |
 | `./styles` | [`src/primitives/styles/_mixins.scss`](./src/primitives/styles/_mixins.scss) | SCSS mixins (`@use`) |
@@ -101,11 +100,26 @@ For reading `registry.json`, `USAGE.md` files, and examples, see
 | --- | --- |
 | Store hooks (`useAuth`, `useDevices`, `useTimezone`, …) | `@tetherto/mdk-react-adapter` |
 | Zustand stores outside React | `@tetherto/mdk-ui-foundation` |
-| Presentation hooks (`useNotification`, `useListViewFilters`, …) | `@tetherto/mdk-react-devkit/domain` or `.` |
+| Presentation hooks (`useNotification`, …) | `@tetherto/mdk-react-devkit/domain` or `.` |
 | TanStack `QueryClient` factory | `@tetherto/mdk-ui-foundation` (`createMdkQueryClient`) |
 
 There is no `./hooks` or `./api` export today; those capabilities are reached
 through `./domain`, the adapter, or the foundation package.
+
+## Charts: which engine
+
+The devkit ships two charting engines, each for a different kind of data:
+
+| Data | Use | Engine |
+| --- | --- | --- |
+| A time series: values over time, zoomable, with a time-range selector | `LineChart`, `LineChartCard`, `ThresholdLineChart` | `lightweight-charts` |
+| Categories or parts of a whole: per site, per period, shares | `BarChart`, `AreaChart`, `DoughnutChart`, `AverageDowntimeChart`, `OperationsEnergyCostChart` | Chart.js (`react-chartjs-2`) |
+| A single value against a range | `GaugeChart` | SVG, no chart engine |
+| A grid of cells coloured by value | `Heatmap` | DOM, no chart engine |
+
+Wrap any of them in `ChartContainer` for the title, legend, range selector and loading / empty states; `LineChartCard`
+already does. Both engines are code-split into async chunks that load when a chart first renders, so an app that uses only
+one never downloads the other.
 
 ## Build strategy
 
@@ -115,8 +129,7 @@ through `./domain`, the adapter, or the foundation package.
   because styles are in the Vite-built [`dist/styles.css`](./dist/styles.css) and
   [`dist/styles-domain.css`](./dist/styles-domain.css), not in the TS output.
 - **CSS** — Vite compiles two SCSS entry points into [`dist/styles.css`](./dist/styles.css) (design tokens + core primitives) and [`dist/styles-domain.css`](./dist/styles-domain.css) (mining-domain components). PostCSS ([`postcss-mdk-layer.mjs`](./postcss-mdk-layer.mjs)) wraps top-level rules in `@layer mdk` and prepends `@layer base, mdk, app;`.
-- **Registry** — `npm run build:registry` emits [`dist/registry.json`](./dist/registry.json) and
-  [`dist/blueprints.json`](./dist/blueprints.json). Run `npm run check:agent-ready` before changing
+- **Registry** — `npm run build:registry` emits [`dist/registry.json`](./dist/registry.json). Run `npm run check:agent-ready` before changing
   public exports (also runs in root `npm run fullcheck`).
 - **SCSS source** — [`_mixins.scss`](./src/primitives/styles/_mixins.scss) and [`_colors.scss`](./src/primitives/styles/_colors.scss) stay exposed as
   subpath exports so downstream apps can `@use` them from their own SCSS.
@@ -128,7 +141,7 @@ npm run dev                    # watch CSS + TS
 npm run build                  # build:ts + build:scss + build:registry
 npm run build:ts               # TypeScript only
 npm run build:scss             # Vite → dist/styles.css + dist/styles-domain.css
-npm run build:registry         # dist/registry.json + dist/blueprints.json
+npm run build:registry         # dist/registry.json
 npm run check:agent-ready      # contract gate (needs registry build)
 npm run typecheck
 npm run test

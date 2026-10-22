@@ -274,3 +274,126 @@ test('without store or storeDir, seeds are random per call', async (t) => {
   const b = await runtime._getOrCreateSeed('seedRpc')
   t.is(a.equals(b), false)
 })
+
+// A sim-plugin copy whose setPowerLimit declares the full param vocabulary
+// (required, enum, min/max) so the runtime-side validation can be exercised.
+function strictPlugin () {
+  const contract = JSON.parse(JSON.stringify(simPlugin.contract))
+  const entry = contract.capabilities.commands.find((c) => c.name === 'setPowerLimit')
+  entry.params = [
+    { name: 'limit_watts', type: 'number', min: 100, max: 5000, required: true },
+    { name: 'mode', type: 'string', enum: ['eco', 'normal'] },
+    { name: 'force', type: 'boolean' },
+    { name: 'extra', type: 'object' }
+  ]
+  return { ...simPlugin, contract }
+}
+
+test('command params are validated against the contract before dispatch', async (t) => {
+  const runtime = await createRuntime(strictPlugin())
+  const run = (params) => runtime.handleRequest(req(ACTIONS.COMMAND_REQUEST, { commandId: 'c', command: 'setPowerLimit', params }, 'SIM-001'))
+  const powerLimit = () => runtime._devices.get('SIM-001').device.powerLimit
+
+  const cases = [
+    [{}, 'ERR_PARAM_REQUIRED: limit_watts'],
+    [{ limit_watts: null }, 'ERR_PARAM_REQUIRED: limit_watts'],
+    [{ limit_watts: '2800' }, 'ERR_PARAM_TYPE: limit_watts must be number'],
+    [{ limit_watts: Infinity }, 'ERR_PARAM_TYPE: limit_watts must be number'],
+    [{ limit_watts: 50 }, 'ERR_PARAM_RANGE: limit_watts below min 100'],
+    [{ limit_watts: 9000 }, 'ERR_PARAM_RANGE: limit_watts above max 5000'],
+    [{ limit_watts: 2800, mode: 'turbo' }, 'ERR_PARAM_ENUM: mode'],
+    [{ limit_watts: 2800, force: 'yes' }, 'ERR_PARAM_TYPE: force must be boolean'],
+    [{ limit_watts: 2800, extra: 'x' }, 'ERR_PARAM_TYPE: extra must be object'],
+    ['2800', 'ERR_PARAMS_INVALID']
+  ]
+  for (const [params, error] of cases) {
+    const res = await run(params)
+    t.is(res.payload.status, 'FAILED', `rejected: ${JSON.stringify(params)}`)
+    t.is(res.payload.error, error)
+  }
+  t.is(powerLimit(), 3500, 'no rejected call reached the handler')
+
+  const ok = await run({ limit_watts: 2800, mode: 'eco', force: true, extra: [1], undeclared: 1 })
+  t.is(ok.payload.status, 'SUCCESS', 'valid params (plus undeclared keys, and an array for an object param) pass')
+  t.is(powerLimit(), 2800)
+
+  // Positional dispatch is normalized first, then validated.
+  const positional = await run({ value: 99999 })
+  t.is(positional.payload.error, 'ERR_PARAM_RANGE: limit_watts above max 5000')
+})
+
+test('non-ERR_ handler errors are mapped to a code and not sent over RPC', async (t) => {
+  const leaky = {
+    ...simPlugin,
+    connect: async (config, info) => {
+      const device = await simPlugin.connect(config, info)
+      Object.defineProperty(device, 'hashrate', { get () { throw new Error('connect ECONNREFUSED 10.0.0.7:4028 user=root pass=hunter2') } })
+      return device
+    }
+  }
+  const runtime = await createRuntime(leaky)
+
+  const metrics = await runtime.handleRequest(req(ACTIONS.TELEMETRY_PULL, { query: {} }, 'SIM-001'))
+  t.alike(metrics.payload.metrics.hashrate_rt, { error: 'ERR_TELEMETRY_FAILED' })
+
+  const channel = await runtime.handleRequest(req(ACTIONS.TELEMETRY_PULL, { query: { type: 'hashrate_rt' } }, 'SIM-001'))
+  t.is(channel.payload.error, 'ERR_TELEMETRY_FAILED')
+
+  runtime._plugin.handlers.commands.set('reboot', async () => { throw new TypeError('Cannot read properties of undefined (reading \'secret\')') })
+  const cmd = await runtime.handleRequest(req(ACTIONS.COMMAND_REQUEST, { commandId: 'c', command: 'reboot', params: {} }, 'SIM-001'))
+  t.is(cmd.payload.error, 'ERR_COMMAND_FAILED')
+
+  t.absent(JSON.stringify([metrics, channel, cmd]).includes('hunter2'), 'raw message never leaves the process')
+})
+
+test('seed files: malformed seeds fail instead of rotating the identity', async (t) => {
+  const fs = require('fs')
+  const os = require('os')
+  const path = require('path')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdk-worker-seed-'))
+  t.teardown(() => { try { fs.rmSync(dir, { recursive: true, force: true }) } catch {} })
+
+  fs.writeFileSync(path.join(dir, 'seedRpc'), Buffer.alloc(16), { mode: 0o600 })
+  const runtime = new WorkerRuntime(simPlugin, { workerId: 'w', devices: DEVICES, storeDir: dir })
+  await t.exception(() => runtime._getOrCreateSeed('seedRpc'), /ERR_SEED_FILE_MALFORMED/)
+  t.is(fs.readFileSync(path.join(dir, 'seedRpc')).length, 16, 'the malformed seed was left untouched')
+})
+
+test('seed files: symlinks are refused and new seeds are created 0600', { skip: process.platform === 'win32' }, async (t) => {
+  const fs = require('fs')
+  const os = require('os')
+  const path = require('path')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdk-worker-seed-'))
+  t.teardown(() => { try { fs.rmSync(dir, { recursive: true, force: true }) } catch {} })
+
+  const target = path.join(dir, 'elsewhere')
+  fs.writeFileSync(target, Buffer.alloc(32, 1))
+  fs.symlinkSync(target, path.join(dir, 'seedDht'))
+  fs.symlinkSync(path.join(dir, 'missing'), path.join(dir, 'seedRpc'))
+
+  const runtime = new WorkerRuntime(simPlugin, { workerId: 'w', devices: DEVICES, storeDir: dir })
+  await t.exception(() => runtime._getOrCreateSeed('seedDht'), /ERR_SEED_FILE_SYMLINK/)
+  await t.exception(() => runtime._getOrCreateSeed('seedRpc'), /ERR_SEED_FILE_SYMLINK/, 'a dangling link is not written through')
+  t.absent(fs.existsSync(path.join(dir, 'missing')), 'nothing created at the link target')
+
+  const fresh = await runtime._getOrCreateSeed('seedNew')
+  t.is(fresh.length, 32)
+  t.is(fs.statSync(path.join(dir, 'seedNew')).mode & 0o777, 0o600)
+})
+
+test('seed files: group/world-readable seeds are tightened to 0600', { skip: process.platform === 'win32' }, async (t) => {
+  const fs = require('fs')
+  const os = require('os')
+  const path = require('path')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdk-worker-seed-'))
+  t.teardown(() => { try { fs.rmSync(dir, { recursive: true, force: true }) } catch {} })
+
+  const seedPath = path.join(dir, 'seedDht')
+  const seed = Buffer.alloc(32, 7)
+  fs.writeFileSync(seedPath, seed)
+  fs.chmodSync(seedPath, 0o644)
+
+  const runtime = new WorkerRuntime(simPlugin, { workerId: 'w', devices: DEVICES, storeDir: dir })
+  t.alike(await runtime._getOrCreateSeed('seedDht'), seed, 'the existing seed is kept')
+  t.is(fs.statSync(seedPath).mode & 0o777, 0o600, 'and its mode tightened')
+})

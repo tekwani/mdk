@@ -1,20 +1,20 @@
 import { DataTable } from '@primitives'
-import type { DataTableRowSelectionState, DataTableSortingState } from '@primitives'
-import type { DeviceExplorerDeviceData, DeviceExplorerDeviceType } from './types'
-import { getColumnConfig } from './columns/device-explorer.columns'
+import type { DataTableColumnDef, DataTableRowSelectionState, DataTableSortingState } from '@primitives'
+import { useMemo } from 'react'
+import type { DeviceExplorerDeviceData } from './types'
+import { getMinerColumns } from './columns/miner-columns'
 
 import type { JSX } from 'react'
 
 export type DeviceExplorerTableProps = {
   /** Rows */
   data: DeviceExplorerDeviceData[]
-  deviceType: DeviceExplorerDeviceType
+  /** Table columns. Defaults to the miner columns ({@link getMinerColumns}). */
+  columns?: DataTableColumnDef<DeviceExplorerDeviceData>[]
   selections: DataTableRowSelectionState
   onSelectionsChange: (selections: DataTableRowSelectionState) => void
-  /** Date formatter from the host's timezone setup */
+  /** Date formatter from the host's timezone setup; used by the default miner columns */
   getFormattedDate: (date: Date) => string
-  /** Renderer for the per-row action cell */
-  renderAction: (device: DeviceExplorerDeviceData) => React.ReactNode
   sorting: DataTableSortingState
   onSortingChange: (sorting: DataTableSortingState) => void
   /** Called when a row is clicked (e.g. to open the device's detail page). */
@@ -23,19 +23,18 @@ export type DeviceExplorerTableProps = {
 
 export const DeviceExplorerTable = ({
   data,
-  deviceType,
+  columns: providedColumns,
   selections,
   onSelectionsChange,
   getFormattedDate,
-  renderAction,
   sorting,
   onSortingChange,
   onRowClick,
 }: DeviceExplorerTableProps): JSX.Element => {
-  const columns = getColumnConfig({
-    getFormattedDate,
-    renderAction,
-  })[deviceType]
+  const columns = useMemo(
+    () => providedColumns ?? getMinerColumns({ getFormattedDate }),
+    [providedColumns, getFormattedDate],
+  )
 
   return (
     <DataTable

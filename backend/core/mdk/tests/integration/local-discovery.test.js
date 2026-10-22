@@ -3,14 +3,14 @@
 // Local discovery mode (discovery: { mode: 'local' }): getKernel watches a shared
 // keys dir and a runtime-hosted worker publishes its RPC key there, so the worker
 // registers to READY by key — no Hyperswarm topic rendezvous. Connect-by-key
-// still rides hyperdht (the same path the full-site e2e exercises).
+// still rides hyperdht (the same path the mvp-site example exercises).
 
 const test = require('brittle')
 const os = require('os')
 const fs = require('fs')
 const path = require('path')
 const sdk = require('../..')
-const { keysDir, publishWorkerKey } = require('../../lib/local-discovery')
+const { keysDir, publishWorkerKey, trustKeysFromDir, readTrustedKeys } = require('../../lib/local-discovery')
 const WorkerRuntime = require('../../../mdk-worker/lib/worker-runtime')
 const simPlugin = require('../../../mdk-worker/tests/fixtures/sim-plugin')
 
@@ -26,12 +26,18 @@ test('local discovery - getKernel + a runtime worker register to READY via the s
 
   t.is(kernel.topic, undefined, 'no DHT topic resolved in local mode')
 
+  t.alike(readTrustedKeys(kernel.trustedKeysDir).map((k) => k.name), ['kernel'], 'kernel published its client key')
+
+  // Out-of-process style: the worker learns who to admit from the trusted-keys dir.
   const runtime = new WorkerRuntime(simPlugin, {
     workerId: 'test-miner-1',
     devices: [{ deviceId: 'd1', config: { hashrate: 100, power: 3000 } }]
   })
+  const trust = trustKeysFromDir(runtime, kernel.trustedKeysDir)
+  t.alike(runtime.getAllowedKeys(), [kernel.getClientPublicKey().toString('hex')])
   await runtime.start()
   t.teardown(async () => {
+    trust.stop()
     try { await runtime.stop() } catch {}
   })
 

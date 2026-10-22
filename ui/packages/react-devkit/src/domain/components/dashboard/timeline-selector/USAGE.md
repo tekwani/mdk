@@ -1,9 +1,8 @@
 # `TimelineSelector`
 
 Dropdown for picking the dashboard time range — wraps [`core/Select`](../../../../primitives/components/select/index.tsx) with the
-canonical option list from `getTimelineOptions`. Pair with
-`useDashboardTimeRange` from `@tetherto/mdk-react-adapter` to drive the
-hashrate / consumption / power-mode chart hooks.
+canonical option list from `getTimelineOptions`. Controlled: the page owns
+the selected timeline and passes it to its chart queries.
 
 <!-- BEGIN GENERATED: props — do not edit; npm run generate:usage-proptables (source: component JSDoc/types via registry.json) -->
 ## Props
@@ -20,7 +19,7 @@ hashrate / consumption / power-mode chart hooks.
 ## Example
 
 ```tsx
-const { timeline, setTimeline, options } = useDashboardTimeRange()
+const [timeline, setTimeline] = useState("5m")
 
-<TimelineSelector value={timeline} onChange={setTimeline} options={options} />
+<TimelineSelector value={timeline} onChange={setTimeline} />
 ```

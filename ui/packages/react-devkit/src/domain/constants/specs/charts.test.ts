@@ -1,20 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { CHART_EMPTY_DESCRIPTION, CHART_LABELS, CHART_TITLES, CHART_TYPES } from '../charts'
+import { CHART_EMPTY_DESCRIPTION, CHART_TITLES } from '../charts'
 
 describe('chart constants', () => {
-  it('should have chart labels', () => {
-    expect(CHART_LABELS.HASHRATE).toBe('Hashrate')
-    expect(CHART_LABELS.EFFICIENCY).toBe('Efficiency')
-  })
-
-  it('should have chart types', () => {
-    expect(CHART_TYPES.MINER).toBe('miner')
-    expect(CHART_TYPES.MINERPOOL).toBe('minerpool')
-    expect(CHART_TYPES.POWERMETER).toBe('powermeter')
-    expect(CHART_TYPES.CONTAINER).toBe('container')
-    expect(CHART_TYPES.ELECTRICITY).toBe('electricity')
-  })
-
   it('should have chart titles', () => {
     expect(CHART_TITLES.HASH_RATE).toBe('Hash Rate')
     expect(CHART_TITLES.POWER_CONSUMPTION).toBe('Power Consumption')
@@ -31,10 +18,5 @@ describe('chart constants', () => {
 
   it('should have empty state description', () => {
     expect(CHART_EMPTY_DESCRIPTION).toBe('No data available at the moment')
-  })
-
-  it('should have all chart type options', () => {
-    const types = Object.values(CHART_TYPES)
-    expect(types).toHaveLength(5)
   })
 })

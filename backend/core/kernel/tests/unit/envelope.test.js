@@ -236,8 +236,10 @@ test('schemas - validatePayload identity.response', (t) => {
 })
 
 test('schemas - validatePayload capability.response', (t) => {
-  t.ok(validatePayload('capability.response', { contract: { capabilities: {} } }).valid)
+  t.ok(validatePayload('capability.response', { contract: { capabilities: {}, metadata: {} } }).valid)
   t.is(validatePayload('capability.response', {}).error, 'ERR_PAYLOAD_CONTRACT_REQUIRED')
+  t.is(validatePayload('capability.response', { contract: { metadata: {} } }).error, 'ERR_PAYLOAD_CONTRACT_CAPABILITIES_REQUIRED')
+  t.is(validatePayload('capability.response', { contract: { capabilities: {} } }).error, 'ERR_PAYLOAD_CONTRACT_METADATA_REQUIRED')
 })
 
 test('schemas - validatePayload command.request', (t) => {

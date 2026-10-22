@@ -110,8 +110,8 @@ device's context opens.
   automatically.
 - **Builtin `health` channel**: every directory-loaded plugin answers
   `telemetry.pull { query: { type: 'health' } }` automatically — `{ status,
-  id, opts, env, config, workerId }` for the addressed device — unless the
-  contract itself declares a `health` channel, which always wins.
+  id, workerId }` for the addressed device (never `env`, `opts` or `config`)
+  — unless the contract itself declares a `health` channel, which always wins.
 
 `loadContract(dir)` and `createInstance({ dir, entries, device })` are also
 usable directly, without a runtime, for contract-level tests — see
@@ -149,4 +149,4 @@ provided the contract declares params accurately.
   dispatcher does, and only for declared bounds. In-process callers of
   `handleRequest` bypass that check (the smoke harness replicates it).
 - It has no HTTP mode and no CLI — a caller process constructs it (see
-  [`examples/backend/demo-worker-caller/index.js`](../../../../../../examples/backend/demo-worker-caller/index.js)).
+  the minimal caller in [`local-testing.md`](./local-testing.md#3-standalone-protocol-check-workerruntimev2-real-envelopes-still-no-kernel)).

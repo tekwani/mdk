@@ -6,9 +6,12 @@ docs@tether_slug: concepts/security-boundaries
 
 ## TL;DR
 
-No tier of MDK enforces user identity. The Gateway serves its plugin routes to any caller, Kernel inspects no user identity, and `WorkerRuntime`
-applies no caller allowlist, so the only user authentication on the Gateway path is what you build into your plugin controllers. Until you do,
-network policy and process isolation are the fleet's only boundaries.
+- **User identity.** MDK does not identify users for you. Your site supplies user authentication; Gateway routes that do not require it
+  remain open to anyone who can reach them.
+- **Backend access.** Kernel and Workers check backend keys, not human identity. Kernel roles apply to calls through Kernel; direct
+  Worker access is a separate permission without read/write roles.
+- **Site controls.** Your site owns network access, process isolation, and key permissions, including permissions granted automatically
+  during startup.
 
 > [!NOTE]
 > Assembling a site from UI, Gateway, Kernel, and Workers? The [site security blueprint][security-blueprint] provides the steps, options, and
@@ -35,13 +38,16 @@ backups as secrets. A DHT topic is only a discovery rendezvous — not a credent
 
 ### Reachability and network controls
 
-The `WorkerRuntime` does not enforce a caller allowlist before dispatching the requests it supports: any backend peer that knows the Worker's
-public key and can reach it with HRPC over the network may send requests.
+The `WorkerRuntime` enforces a caller allowlist at connection time and on every request. Unless `allowAll` is enabled, unlisted keys
+are rejected and an empty list prevents startup. The list has no roles: an admitted key can send any request the Worker supports,
+including commands. A public key addresses a Worker; it does not grant a caller admission.
 
-The Kernel's [HRPC allowlist][kernel-hrpc-allowlist] protects clients connecting to Kernel, not direct callers to a Worker. Consumers
-must enter through the Gateway → Kernel path, with request authentication in the Gateway's plugin controllers. AI agents enter through the MCP server → Kernel path instead, where authentication is the MCP endpoint's concern — native MCP tools do not pass through those Gateway controllers. [Kernel's caller allowlist][mcp-allowlist] admits each path's caller by its HRPC public key.
+The Kernel's [HRPC allowlist][kernel-hrpc-allowlist] and roles apply to requests sent to Kernel. Direct Worker clients pass the Worker's
+own allowlist instead; Kernel's command controls do not run on that path. A site that requires Kernel-mediated access admits only
+Kernel's client key on Workers and avoids startup helpers that add other callers. Granting direct access to another process is a separate
+authorization decision, not a firewall bypass. User-facing Gateway and MCP entry points still need their own authentication and authorization.
 
-Given that the Worker does not turn an unwanted caller away, the surrounding controls are yours:
+In addition to caller admission, the surrounding controls are yours:
 
 - Restrict direct Worker reachability to trusted backend networks, and apply a host/container firewall policy
 - Never expose device management interfaces publicly
@@ -77,9 +83,6 @@ records.
 
 [security-blueprint]: ../guides/security/index.md
 <!-- docs@tether.io: security-blueprint → guides/security -->
-
-[mcp-allowlist]: ../guides/security/index.md#step-2-admit-the-gateway-to-kernel
-<!-- docs@tether.io: mcp-allowlist → guides/security#step-2-admit-the-gateway-to-kernel -->
 
 [gateway-auth-design]: ../../backend/core/gateway/README.md#security-model
 <!-- docs@tether.io: gateway-auth-design → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md#security-model -->

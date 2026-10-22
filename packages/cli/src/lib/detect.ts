@@ -1,6 +1,9 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
+/** Lowest Node major the CLI and the MDK runtime packages support (their `engines`). */
+export const NODE_MIN_MAJOR = 24;
+
 export interface Environment {
   nodeVersion: string;
   nodeOk: boolean;
@@ -32,7 +35,7 @@ export function detectEnvironment(cwd: string = process.cwd()): Environment {
 
   return {
     nodeVersion,
-    nodeOk: major >= 20,
+    nodeOk: major >= NODE_MIN_MAJOR,
     packageManager,
     git: existsSync(join(cwd, '.git')),
     existingSpec: existsSync(join(cwd, 'mdk.yaml')),

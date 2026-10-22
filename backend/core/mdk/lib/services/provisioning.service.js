@@ -4,7 +4,63 @@ const debug = require('debug')('mdk:provisioning')
 const { v4: uuidv4 } = require('uuid')
 const gLibUtilBase = require('@bitfinex/lib-js-util-base')
 const utilsStore = require('@tetherto/hp-svc-facs-store/utils')
-const { applyFilters, getJsonChanges } = require('../utils')
+const { applyFilters, getJsonChanges, redactSecrets, stripRedacted, isSecretKey } = require('../utils')
+const { validateAddress, validatePort } = require('../address-policy')
+
+// Drops every secret-named key (deep) — used when a device is repointed to a
+// new address so the stored credentials are not sent to the new host.
+function omitSecrets (value) {
+  if (value === null || typeof value !== 'object') return value
+  if (Array.isArray(value)) return value.map(omitSecrets)
+  const out = {}
+  for (const [k, v] of Object.entries(value)) {
+    if (isSecretKey(k)) continue
+    out[k] = omitSecrets(v)
+  }
+  return out
+}
+
+// info.container / info.pos become stats group keys (groupBy('info.container'))
+// and `container-*` / `pos-*` tags, so they are kept to short labels. The
+// prototype-reaching names are refused even though the stats ops skip them.
+const INFO_LABEL_MAX_LENGTH = 64
+const INFO_LABEL_RE = /^[A-Za-z0-9][A-Za-z0-9 _.:#-]*$/
+const INFO_LABEL_FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype'])
+
+function validateInfoLabel (value, code) {
+  if (value === undefined || value === null || value === '') return
+  if (
+    typeof value !== 'string' ||
+    value.length > INFO_LABEL_MAX_LENGTH ||
+    !INFO_LABEL_RE.test(value) ||
+    INFO_LABEL_FORBIDDEN.has(value)
+  ) {
+    throw new Error(code)
+  }
+}
+
+// Caller-supplied tags become stats group keys and each gets its own time-log
+// store per stats interval, so they get the same label rules and a count cap.
+const MAX_AUX_TAGS = 32
+
+function validateAuxTags (tags) {
+  if (!Array.isArray(tags) || tags.length > MAX_AUX_TAGS) {
+    throw new Error('ERR_THING_TAGS_INVALID')
+  }
+  for (const tag of tags) {
+    if (typeof tag !== 'string' || tag === '') throw new Error('ERR_THING_TAGS_INVALID')
+    validateInfoLabel(tag, 'ERR_THING_TAGS_INVALID')
+  }
+}
+
+function validateInfo (info) {
+  if (info === undefined || info === null) return
+  if (typeof info !== 'object' || Array.isArray(info)) {
+    throw new Error('ERR_THING_INFO_INVALID')
+  }
+  validateInfoLabel(info.container, 'ERR_THING_INFO_CONTAINER_INVALID')
+  validateInfoLabel(info.pos, 'ERR_THING_INFO_POS_INVALID')
+}
 
 /**
  * Persisted device configs for a runtime-hosted worker. Replaces the
@@ -17,9 +73,17 @@ const { applyFilters, getJsonChanges } = require('../utils')
  * Record shape (kept compatible with the legacy thing record so comments,
  * tailLog transforms and stats tags keep working):
  *   { id, type, opts, info, code, tags, comments }
+ *
+ * Caller-facing reads (getThingConf, getDeviceMeta, listDevices) return
+ * redacted copies: secret fields (password, apiKey, token, pools[].pass, ...)
+ * read as '[REDACTED]', and list filters run over that redacted projection.
+ * Remote writes validate opts.address/opts.port (see lib/address-policy.js);
+ * conf.allowedAddressCidrs is the operator allowlist that replaces the
+ * default loopback/link-local/metadata blocklist. Changing a device's address
+ * drops its stored credentials unless the update supplies new ones.
  */
 class DeviceProvisioningService {
-  constructor ({ db, logs = null, deviceType, deviceTags = [], conf = {} }) {
+  constructor ({ db, logs = null, deviceType, deviceTags = [], conf = {}, lookup = null }) {
     if (!db) throw new Error('ERR_PROVISIONING_DB_REQUIRED')
     if (!deviceType || typeof deviceType !== 'string') throw new Error('ERR_PROVISIONING_DEVICE_TYPE_REQUIRED')
     this.db = db
@@ -27,6 +91,7 @@ class DeviceProvisioningService {
     this.deviceType = deviceType
     this.deviceTags = deviceTags
     this.conf = conf
+    this._lookup = lookup
     this._devices = {}
     this._initialized = false
   }
@@ -54,14 +119,18 @@ class DeviceProvisioningService {
     return Object.keys(this._devices)
   }
 
+  _redactedDevices () {
+    return Object.values(this._devices).map((dev) => redactSecrets(dev))
+  }
+
   listDevices (req = {}) {
-    return applyFilters(Object.values(this._devices), req, true)
+    return applyFilters(this._redactedDevices(), req, true)
   }
 
   getDeviceMeta (id) {
     const dev = this._devices[id]
     if (!dev) return null
-    return gLibUtilBase.pick(dev, ['id', 'tags', 'info', 'opts', 'type', 'code'])
+    return redactSecrets(gLibUtilBase.pick(dev, ['id', 'tags', 'info', 'opts', 'type', 'code']))
   }
 
   buildRuntimeDevices () {
@@ -72,9 +141,24 @@ class DeviceProvisioningService {
   }
 
   getThingConf (query = {}) {
-    if (query.requestType === 'poolConfig') return this.conf.pools
+    if (query.requestType === 'poolConfig') return redactSecrets(this.conf.pools)
     const dev = query.thingId ? this._devices[query.thingId] : null
-    return dev ? gLibUtilBase.pick(dev, ['id', 'type', 'opts', 'info', 'code', 'tags', 'comments']) : null
+    return dev ? redactSecrets(gLibUtilBase.pick(dev, ['id', 'type', 'opts', 'info', 'code', 'tags', 'comments'])) : null
+  }
+
+  // Remote-write validation of the dialable part of opts. Throws
+  // ERR_THING_ADDRESS_* / ERR_THING_PORT_INVALID.
+  async _validateOptsTarget (opts) {
+    if (!opts || typeof opts !== 'object' || Array.isArray(opts)) {
+      throw new Error('ERR_THING_VALIDATE_OPTS_INVALID')
+    }
+    if (opts.address !== undefined) {
+      await validateAddress(opts.address, {
+        allowedCidrs: this.conf.allowedAddressCidrs,
+        ...(this._lookup ? { lookup: this._lookup } : {})
+      })
+    }
+    if (opts.port !== undefined) opts.port = validatePort(opts.port)
   }
 
   _prepDeviceTags (dev, aux, devPrev) {
@@ -90,9 +174,7 @@ class DeviceProvisioningService {
     tags = tags.concat(this.deviceTags)
 
     if (aux) {
-      if (!Array.isArray(aux)) {
-        throw new Error('ERR_THING_TAGS_INVALID')
-      }
+      validateAuxTags(aux)
       tags = tags.concat(aux)
     }
 
@@ -138,6 +220,7 @@ class DeviceProvisioningService {
     if (!data.opts) {
       throw new Error('ERR_THING_VALIDATE_OPTS_INVALID')
     }
+    validateInfo(data.info)
     this._validateDeviceDataChange(data)
   }
 
@@ -164,8 +247,16 @@ class DeviceProvisioningService {
     await this.db.put(dev.id, Buffer.from(JSON.stringify(dev)))
   }
 
-  async registerThing (req) {
+  /**
+   * @param {object} req       registerThing payload ({ id?, code?, opts, info, tags, ... })
+   * @param {object} [options]
+   * @param {boolean} [options.trusted] skip the address policy — for
+   *   operator-supplied seed configs only, never for remote callers.
+   */
+  async registerThing (req, { trusted = false } = {}) {
     this.validateRegisterThing(req)
+    req = { ...req, opts: stripRedacted(req.opts) }
+    if (!trusted) await this._validateOptsTarget(req.opts)
 
     let info = req.info || {}
     const comments = []
@@ -210,6 +301,7 @@ class DeviceProvisioningService {
     if (!req.id || !this._devices[req.id]) {
       throw new Error('ERR_THING_NOTFOUND')
     }
+    validateInfo(req.info)
     this._validateDeviceDataChange(req)
 
     let dev = await this.db.get(req.id)
@@ -221,7 +313,15 @@ class DeviceProvisioningService {
     }
 
     if (req.opts) {
-      dev.opts = req.forceOverwrite ? req.opts : { ...dev.opts, ...req.opts }
+      const reqOpts = stripRedacted(req.opts)
+      await this._validateOptsTarget(reqOpts)
+      // Repointing a device must not carry its stored credentials to the new
+      // host: keep them only when the address is unchanged or the update
+      // supplies its own.
+      const prevOpts = reqOpts.address !== undefined && reqOpts.address !== dev.opts?.address
+        ? omitSecrets(dev.opts || {})
+        : dev.opts
+      dev.opts = req.forceOverwrite ? reqOpts : { ...prevOpts, ...reqOpts }
     }
 
     if (!Array.isArray(dev.comments)) {

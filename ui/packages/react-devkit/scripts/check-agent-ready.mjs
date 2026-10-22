@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Agent-readiness contract gate.
  *
@@ -31,7 +31,6 @@ import { fileURLToPath } from 'node:url'
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const PACKAGE_ROOT = resolve(SCRIPT_DIR, '..')
 const REGISTRY_PATH = join(PACKAGE_ROOT, 'dist', 'registry.json')
-const BLUEPRINTS_PATH = join(PACKAGE_ROOT, 'dist', 'blueprints.json')
 const BASELINE_PATH = join(SCRIPT_DIR, 'agent-ready-baseline.json')
 const CONTRACT_DOC = 'packages/react-devkit/AGENT_READY.md'
 
@@ -171,32 +170,6 @@ const collectViolations = () => {
   return out
 }
 
-const blueprintErrors = []
-if (existsSync(BLUEPRINTS_PATH)) {
-  const bp = JSON.parse(readFileSync(BLUEPRINTS_PATH, 'utf8'))
-  const componentsByName = new Map(registry.components.map((c) => [c.name, c]))
-  const hooksByName = new Map(registry.hooks.map((h) => [h.name, h]))
-  for (const b of bp.blueprints ?? []) {
-    for (const compName of b.components ?? []) {
-      const c = componentsByName.get(compName)
-      if (!c) {
-        blueprintErrors.push(
-          `blueprint:${b.id}: component \`${compName}\` does not exist in registry`,
-        )
-      } else if (c.tier !== 'agent-ready') {
-        blueprintErrors.push(
-          `blueprint:${b.id}: component \`${compName}\` is \`${c.tier}\` — blueprints may only reference agent-ready components`,
-        )
-      }
-    }
-    for (const hookName of b.hooks ?? []) {
-      if (!hooksByName.has(hookName)) {
-        blueprintErrors.push(`blueprint:${b.id}: hook \`${hookName}\` does not exist in registry`)
-      }
-    }
-  }
-}
-
 const violations = collectViolations()
 violations.sort((a, b) => a.entry.localeCompare(b.entry) || a.rule.localeCompare(b.rule))
 
@@ -253,13 +226,6 @@ if (newViolations.length > 0) {
   console.error('')
 }
 
-if (blueprintErrors.length > 0) {
-  console.error(`✗ ${blueprintErrors.length} blueprint validation error(s):`)
-  for (const err of blueprintErrors) console.error(`  - ${err}`)
-  console.error(`  Edit the offending blueprint under packages/react-devkit/blueprints/`)
-  console.error('')
-}
-
 if (fixed.length > 0) {
   console.log(`✓ ${fixed.length} previously-baselined violation(s) are now fixed.`)
   console.log(`  Run \`npm run check:agent-ready -- --update-baseline\` to shrink the baseline.`)
@@ -273,5 +239,5 @@ console.log(
     `baseline size: ${baseline.size}`,
 )
 
-if (newViolations.length > 0 || blueprintErrors.length > 0) process.exit(1)
+if (newViolations.length > 0) process.exit(1)
 process.exit(0)

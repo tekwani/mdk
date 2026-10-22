@@ -12,8 +12,7 @@ Core infrastructure packages for MDK. These packages form the coordination layer
 | [`gateway/`](./gateway/README.md) | `@tetherto/mdk-gateway` | HTTP server — fleet aggregation via plugins |
 | [`mcp/`](./mcp/README.md) | `@tetherto/mdk-mcp` | Standalone MCP server — exposes Gateway plugin routes and native tools to AI agents |
 | [`client/`](./client/README.md) | `@tetherto/mdk-client` | Client — connects Gateway to Kernel over HRPC |
-| [`lib-stats/`](./lib-stats/README.md) | _(internal)_ | Telemetry aggregation operations (count, sum, avg, `groupBy`, …) |
-| [`examples/`](../../examples/backend/README.md) | _(runnable demos)_ | End-to-end examples — single Worker, full site, DHT multi-process |
+| `examples/` | _(runnable demos)_ | End-to-end examples — single Worker, full site, DHT multi-process |
 
 ## Dependency graph
 
@@ -22,6 +21,10 @@ Core infrastructure packages for MDK. These packages form the coordination layer
   └── @tetherto/mdk-client   (HRPC to Kernel)
   └── @tetherto/mdk-core     (bootstrap helpers)
         └── @tetherto/mdk-kernel  (kernel)
+  └── @tetherto/mdk-app-runtime  (forwarding client, plugin loader)
+
+@tetherto/mdk-app-runtime     (runs one app's handlers; no Gateway dependency)
+  └── @tetherto/mdk-worker    (module-context, to isolate an app's own require()s)
 
 @tetherto/mdk-mcp              (standalone MCP server — a separate process, not a Gateway dependency)
   └── @tetherto/mdk-gateway   (workers/lib/plugin-loader + plugin-gateway, to load a Gateway plugin's routes as tools)

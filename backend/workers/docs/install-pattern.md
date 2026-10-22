@@ -14,12 +14,12 @@ backend/workers/<family>/<provider>/
   setup-config.sh       # copies *.example -> active config files
   mdk-contract.json     # runtime contract: metadata, telemetry, commands, errors
   tests/                # unit + integration tests
-  package.json          # vendor-specific deps (e.g. digest-fetch for antminer)
+  package.json          # vendor-specific deps
   USAGE.md              # this package's install/run notes (per-package)
   examples/             # runnable scenarios per the qvac model
 ```
 
-The contract — [`mdk-contract.json`](../../workers/miners/antminer/plugin/mdk-contract.json) is the engineering source of truth for telemetry units, command 
+The contract — [`mdk-contract.json`](../../workers/miners/avalon/plugin/mdk-contract.json) is the engineering source of truth for telemetry units, command 
 shapes, and supported models. 
 
 ## The two ways to run a Worker
@@ -31,31 +31,36 @@ function that constructs a [`WorkerRuntime`](../../core/mdk-worker/lib/worker-ru
 
 ```js
 const { getKernel } = require('@tetherto/mdk-core')
-const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
+const { startAvalonWorker } = require('@tetherto/mdk-worker-avalon')
 
 const kernel = await getKernel()
 
-const { runtime } = await startAntminerWorker({
-  workerId: 'antminer-rack-1',
-  model: 's19xp',
-  storeDir: './data/antminer',
+const { runtime } = await startAvalonWorker({
+  workerId: 'avalon-rack-1',
+  model: 'a1346',
+  storeDir: './data/avalon',
+  allowedKeys: [kernel.getClientPublicKey()],
   seedDevices: [{
-    id: 'AM-001',
-    opts: { address: '127.0.0.1', port: 14021, username: 'root', password: 'root' }
+    id: 'AV-001',
+    opts: { address: '127.0.0.1', port: 14030, password: 'admin' }
   }]
 })
 
 await kernel.registerWorker(runtime.getPublicKey())
 ```
 
-This is what every example under [`examples/backend/README.md`](../../../examples/backend/README.md) does. The per-package `USAGE.md` documents which 
-boot function a given Worker exports, its `model` values, and the `opts` it needs.
+`allowedKeys` is required: the Worker refuses to start without the Kernel's client key (`ERR_WORKER_ALLOWED_KEYS_REQUIRED`).
+The [Avalon](../../../docs/guides/miners/run-avalon-worker.md), [Antspace](../../../docs/guides/containers/run-antspace-worker.md)
+and [Bitdeer](../../../docs/guides/containers/run-bitdeer-worker.md) guides run this shape against each Worker's mock.
+The per-package `USAGE.md` documents which boot function a given Worker exports, its `model` values, and the `opts` it needs.
 
 ### Standalone via [`worker.js`](../../core/mdk/worker.js)
 
 The core SDK ships [`backend/core/mdk/worker.js`](../../core/mdk/worker.js): a shared process entry compatible with pm2, Docker, or `node worker.js` 
 directly. It is driven by environment variables, not CLI flags — [`utils/service-bootstrap.js`](../../core/mdk/utils/service-bootstrap.js) reads `SERVICE` 
-(and, for a Worker, `WORKER`/`TYPE`/`RACK`) and bootstraps the matching manager. (The only `--wtype` in play is the one it passes when spawning the Gateway's own Worker;
+(and, for a Worker, `WORKER`/`TYPE`/`RACK`, plus `MDK_REPO_ROOT` naming the MDK source checkout) and bootstraps the matching manager.
+A Worker started this way joins the DHT topic, and the Kernel admits it only if its RPC key is in `discovery.workerKeys` (or
+`discovery.allowAnyWorker: true` is set for development). (The only `--wtype` in play is the one it passes when spawning the Gateway's own Worker;
 miner Workers run with a fixed internal `wtype`.)
 
 Choosing this over the library shape is a deployment-topology decision, not just "for production": running each service as its own OS process
@@ -65,17 +70,24 @@ See [`docs/concepts/deployment-topologies.md`](../../../docs/concepts/deployment
 
 ## Run a mock device
 
-Every Worker bundles a mock server next to its real-device code. To run a mock Antminer S19XP on port 14021:
+Every Worker bundles a mock server next to its real-device code. From the repo root, `npm run mock` starts any of them by
+type, with the port as a bare number (run it with no arguments to list every device and its types):
 
 ```bash
-node backend/workers/miners/antminer/mock/server.js --port 14021 --type s19xp
+npm run mock a1346 14030
 ```
 
-Or programmatically (this is what the examples do):
+To run the same mock directly:
+
+```bash
+node backend/workers/miners/avalon/mock/server.js --port 14030 --type a1346
+```
+
+Or programmatically:
 
 ```js
-const amMock = require('@tetherto/mdk-worker-antminer/mock/server')
-amMock.createServer({ port: 14021, host: '127.0.0.1', type: 's19xp', serial: 'AM-001', password: 'root' })
+const avMock = require('@tetherto/mdk-worker-avalon/mock/server')
+avMock.createServer({ port: 14030, host: '127.0.0.1', type: 'a1346', serial: 'AV-001' })
 ```
 
 The mock binds an HTTP server that answers the vendor's native API with canned data from `mock/initial_states/`. Per-Worker mock options (supported types,
@@ -86,7 +98,7 @@ default credentials, control port) are documented in each Worker's `USAGE.md`.
 `setup-config.sh` copies every `config/*.example` into an active config file (strips the `.example` suffix). Pass `-t` to also seed test variants:
 
 ```bash
-cd backend/workers/miners/antminer
+cd backend/workers/miners/avalon
 ./setup-config.sh        # copies *.example -> active
 ./setup-config.sh -t     # additionally seeds tests/test.*.json
 ```
@@ -97,11 +109,12 @@ The example files are checked in; the copied actives are gitignored, leaving roo
 
 | Worker | USAGE.md | examples | manifest entry |
 | --- | --- | --- | --- |
-| [`miners/antminer`](../miners/antminer/README.md) | [USAGE.md](../miners/antminer/USAGE.md) | [repo example](../../../examples/backend/miners/antminer/README.md) | [workers-manifest.yaml](workers-manifest.yaml) |
-| [`miners/avalon`](../miners/avalon/README.md) | [USAGE.md](../miners/avalon/USAGE.md) | [repo example](../../../examples/backend/miners/avalon/README.md)| [workers-manifest.yaml](workers-manifest.yaml) |
-| containers, minerpools, power-meter, temperature | _Phase 3+_ | varies under [`examples/backend/`](../../../examples/backend/README.md) | _Phase 3+_ |
+| [`miners/avalon`](../miners/avalon/README.md) | [USAGE.md](../miners/avalon/USAGE.md) | [`avalon-dev.js`](../../../docs/guides/miners/run-avalon-worker.md) | [workers-manifest.yaml](workers-manifest.yaml) |
+| containers, minerpools, power-meter, temperature | _Phase 3+_ | `npm run mock` plus the per-family guide | _Phase 3+_ |
 
 The full model coverage for every Worker (all families) is generated from the contracts: see [`docs/supported-hardware.md`](supported-hardware.md).
+Manufacturer-maintained Workers (Antminer, Whatsminer) are plain contract plugins in their own repositories, hosted on
+`WorkerRuntimeV2` rather than through a boot function — see [`run-antminer-worker.md`](../../../docs/guides/miners/run-antminer-worker.md).
 
 ## Next steps
 

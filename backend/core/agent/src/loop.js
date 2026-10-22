@@ -2,6 +2,7 @@ import { generateText, streamText } from 'ai'
 import { DEFAULT_LIMITS, REQUEST_TIMEOUT_MS, requiresApproval, MAX_REPAIR_RETRIES, MAX_ARG_FIXES, MAX_ECHO_RETRIES, MAX_STALE_RETRIES } from './constants.js'
 import { EVENT } from './events.js'
 import { renderTools, renderCoverage, RESULT, validateToolResult, agentMeta, verbOf } from './tools.js'
+import { unwrapToolText } from './mcp.js'
 
 export const TRUNCATED_NOTE = '\n\n[cut off at the output limit — ask for fewer items, or raise the token limit]'
 
@@ -82,7 +83,7 @@ function canonicalFingerprint (tool, args) {
  * plain-text answer; tool calls run against the MCP server and their result is fed back,
  * until an answer arrives or maxSteps is reached.
  */
-export async function * runToolLoop ({ model, system, messages, tools, mcp, notCovered, strictToolGating = true, maxSteps = DEFAULT_LIMITS.maxSteps, maxOutputTokens = DEFAULT_LIMITS.maxOutputTokens, requestTimeoutMs = REQUEST_TIMEOUT_MS }) {
+export async function * runToolLoop ({ model, system, messages, tools, mcp, notCovered, strictToolGating = true, maxSteps = DEFAULT_LIMITS.maxSteps, maxOutputTokens = DEFAULT_LIMITS.maxOutputTokens, requestTimeoutMs = REQUEST_TIMEOUT_MS, abortSignal }) {
   const toolSystem = buildToolSystem(system, tools, { notCovered, strictToolGating })
   const toolByName = new Map((tools ?? []).map((t) => [t.name, t])) // for readOnlyHint lookup
   const toolNames = [...toolByName.keys()].sort((a, b) => b.length - a.length)
@@ -105,7 +106,7 @@ export async function * runToolLoop ({ model, system, messages, tools, mcp, notC
     let streamedProse = false
     let finishReason = null
     const asked = lastUserMessage()
-    const signal = deadline(requestTimeoutMs)
+    const signal = deadline(requestTimeoutMs, abortSignal)
     try {
       // onError is a noop because stream errors surface as part.type === 'error' parts in
       // the stream below and are yielded as EVENT.ERROR; the SDK's default would print the
@@ -135,11 +136,13 @@ export async function * runToolLoop ({ model, system, messages, tools, mcp, notC
         }
       }
     } catch (err) {
+      if (abortSignal?.aborted) return // the caller stopped the turn: nobody is waiting for an error
       yield { type: EVENT.ERROR, error: describeCallError(err, requestTimeoutMs) }
       return
     }
 
     if (signal?.aborted) { // not redundant: the SDK reports an abort as a clean close, not a throw
+      if (abortSignal?.aborted) return
       yield { type: EVENT.ERROR, error: describeCallError(signal.reason, requestTimeoutMs) }
       return
     }
@@ -306,7 +309,7 @@ export async function * runToolLoop ({ model, system, messages, tools, mcp, notC
 
   let final
   try {
-    const { text, finishReason } = await generateText({ model, system: toolSystem, messages: convo, maxOutputTokens, maxRetries: 1, abortSignal: deadline(requestTimeoutMs) })
+    const { text, finishReason } = await generateText({ model, system: toolSystem, messages: convo, maxOutputTokens, maxRetries: 1, abortSignal: deadline(requestTimeoutMs, abortSignal) })
     final = text + (finishReason === 'length' ? TRUNCATED_NOTE : '')
   } catch (err) {
     yield { type: EVENT.ERROR, error: describeCallError(err, requestTimeoutMs) }
@@ -504,7 +507,11 @@ export function mentionsATool (text, toolNames = []) {
   return toolNames.some((name) => name && new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(body))
 }
 
-export const deadline = (ms) => (ms > 0 ? AbortSignal.timeout(ms) : undefined)
+export const deadline = (ms, abortSignal) => {
+  const timeout = ms > 0 ? AbortSignal.timeout(ms) : undefined
+  if (!abortSignal) return timeout
+  return timeout ? AbortSignal.any([timeout, abortSignal]) : abortSignal
+}
 
 /**
  * The ways a model call fails, each with what an operator can do about it.
@@ -580,7 +587,7 @@ export function contractViolation (tool, text) {
 
   let payload
   try {
-    payload = JSON.parse(text)
+    payload = JSON.parse(unwrapToolText(text))
   } catch {
     return null // not JSON, so not a contract this agent can judge
   }

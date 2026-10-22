@@ -168,13 +168,6 @@ describe('createMdkQueryClient — provider wiring', () => {
     expect(headers.get('Authorization')).toBeNull()
   })
 
-  it('an explicit fetcher wins over the provider-derived one', () => {
-    const custom = vi.fn()
-    const client = createMdkQueryClient({ fetcher: custom as never, auth: noAuth() })
-
-    expect(client.getDefaultOptions().queries?.meta?.fetcher).toBe(custom)
-  })
-
   it('signs out and notifies once when several requests report the session ended', () => {
     const store = freshStore()
     store.getState().setToken('tok-1')

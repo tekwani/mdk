@@ -9,12 +9,16 @@ const path = require('path')
 const fs = require('fs')
 const crypto = require('crypto')
 const { startGateway, onShutdown } = require('@tetherto/mdk-core')
+const { createAppRuntime } = require('@tetherto/mdk-app-runtime')
 const { createMcpServer } = require('@tetherto/mdk-mcp')
+const { trustedKeysDir, publishTrustedKey, callerKeyPair } = require('@tetherto/mdk-core/lib/local-discovery')
 const {
-  ROOT, GATEWAY_PORT, GATEWAY_HOST, PLUGIN_DIRS, STATIC_ROOT_PATH, DISCOVERY,
+  ROOT, GATEWAY_PORT, GATEWAY_HOST, GATEWAY_ALLOWED_HOSTS, GATEWAY_AUTH_VERIFIER, PLUGIN_DIRS, STATIC_ROOT_PATH, DISCOVERY,
   MCP_AGENT_TOOLS_PORT, MCP_PLUGIN_DIRS,
-  loadSeedDevices, startMocks, startSatecMocks, startOceanMock,
-  bootKernel, bootWorker, bootOceanWorker, bootSatecWorker
+  loadSeedDevices, startMocks, startAntminerMocks, startSealminerMocks, startSatecMocks, startOceanMock, startEmcdMock,
+  startSpiderpoolMock, startFoundryMock,
+  bootKernel, bootWorker, bootAntminerWorker, bootSealminerWorker, bootOceanWorker, bootSatecWorker, bootEmcdWorker,
+  bootSpiderpoolWorker, bootFoundryWorker
 } = require('../backend/site')
 
 const arg = (name, fallback) => {
@@ -42,19 +46,74 @@ const runMocks = async () => {
   console.log('MDK_READY mocks devices=%d', miners.length)
 }
 
-const runOceanMock = async () => {
-  const { miners } = loadSeedDevices()
-  const { ready, close } = startOceanMock(miners.length)
+// One Antminer CGI mock per seed entry under `antminers` in config/devices.json.
+const runAntminerMocks = async () => {
+  const { antminers } = loadSeedDevices()
+  const { ready, close } = startAntminerMocks(antminers)
   await ready
 
   onShutdown(async () => close())
 
-  console.log('MDK_READY mocks-ocean workers=%d', miners.length)
+  console.log('MDK_READY mocks-antminer devices=%d', antminers.length)
+}
+
+// One SealMiner 4028 API mock per seed entry under `sealminers` in config/devices.json.
+const runSealminerMocks = async () => {
+  const { sealminers } = loadSeedDevices()
+  const { ready, close } = startSealminerMocks(sealminers)
+  await ready
+
+  onShutdown(async () => close())
+
+  console.log('MDK_READY mocks-sealminer devices=%d', sealminers.length)
+}
+
+// Pool workers and the meter's power reading track the whole fleet —
+// Whatsminer, Antminer and SealMiner seeds together.
+const fleetSize = ({ miners, antminers, sealminers }) => miners.length + antminers.length + sealminers.length
+
+const runOceanMock = async () => {
+  const minerCount = fleetSize(loadSeedDevices())
+  const { ready, close } = startOceanMock(minerCount)
+  await ready
+
+  onShutdown(async () => close())
+
+  console.log('MDK_READY mocks-ocean workers=%d', minerCount)
+}
+
+// The EMCD, SpiderPool and Foundry API mocks serve their packages' fixture accounts.
+const runEmcdMock = async () => {
+  const { ready, close } = startEmcdMock()
+  await ready
+
+  onShutdown(async () => close())
+
+  console.log('MDK_READY mocks-emcd')
+}
+
+const runSpiderpoolMock = async () => {
+  const { ready, close } = startSpiderpoolMock()
+  await ready
+
+  onShutdown(async () => close())
+
+  console.log('MDK_READY mocks-spiderpool')
+}
+
+const runFoundryMock = async () => {
+  const { ready, close } = startFoundryMock()
+  await ready
+
+  onShutdown(async () => close())
+
+  console.log('MDK_READY mocks-foundry')
 }
 
 const runSatecMocks = async () => {
-  const { miners, powermeters } = loadSeedDevices()
-  const { ready, close } = startSatecMocks(powermeters, miners.length)
+  const seeds = loadSeedDevices()
+  const { powermeters } = seeds
+  const { ready, close } = startSatecMocks(powermeters, fleetSize(seeds))
   await ready
 
   onShutdown(async () => close())
@@ -86,7 +145,7 @@ const runKernel = async () => {
   const kernelKey = kernel.getPublicKey().toString('hex')
   fs.writeFileSync(path.join(root, '.kernel-key'), kernelKey, 'utf8')
 
-  // getKernel handles SIGINT/SIGTERM (drains kernel._cleanup, then kernel.stop()).
+  // getKernel({ handleSignals: true }) handles SIGINT/SIGTERM (drains kernel._cleanup, then kernel.stop()).
   console.log('MDK_READY kernel key=%s mode=%s%s', kernelKey, mode, topic ? ` topic=${topic}` : '')
 }
 
@@ -106,6 +165,32 @@ const runWorker = async () => {
   console.log('MDK_READY worker devices=%d', seeded)
 }
 
+// Boots the Antminer worker — same discovery handling as runWorker; seed
+// devices come from config/devices.json (antminers).
+const runAntminerWorker = async () => {
+  const root = arg('--root', ROOT)
+  const mode = arg('--discovery', DISCOVERY)
+  const kernelTopic = readKernelTopic(root, mode)
+
+  const { antminers } = loadSeedDevices()
+  const handle = await bootAntminerWorker({ kernelTopic, root, mode, devices: antminers })
+
+  console.log('MDK_READY worker-antminer devices=%d', handle.seeded)
+}
+
+// Boots the SealMiner worker — same discovery handling as runWorker; seed
+// devices come from config/devices.json (sealminers).
+const runSealminerWorker = async () => {
+  const root = arg('--root', ROOT)
+  const mode = arg('--discovery', DISCOVERY)
+  const kernelTopic = readKernelTopic(root, mode)
+
+  const { sealminers } = loadSeedDevices()
+  const handle = await bootSealminerWorker({ kernelTopic, root, mode, devices: sealminers })
+
+  console.log('MDK_READY worker-sealminer devices=%d', handle.seeded)
+}
+
 const runOceanWorker = async () => {
   const root = arg('--root', ROOT)
   const mode = arg('--discovery', DISCOVERY)
@@ -114,6 +199,36 @@ const runOceanWorker = async () => {
   await bootOceanWorker({ kernelTopic, root, mode })
 
   console.log('MDK_READY worker-ocean')
+}
+
+const runEmcdWorker = async () => {
+  const root = arg('--root', ROOT)
+  const mode = arg('--discovery', DISCOVERY)
+  const kernelTopic = readKernelTopic(root, mode)
+
+  await bootEmcdWorker({ kernelTopic, root, mode })
+
+  console.log('MDK_READY worker-emcd')
+}
+
+const runSpiderpoolWorker = async () => {
+  const root = arg('--root', ROOT)
+  const mode = arg('--discovery', DISCOVERY)
+  const kernelTopic = readKernelTopic(root, mode)
+
+  await bootSpiderpoolWorker({ kernelTopic, root, mode })
+
+  console.log('MDK_READY worker-spiderpool')
+}
+
+const runFoundryWorker = async () => {
+  const root = arg('--root', ROOT)
+  const mode = arg('--discovery', DISCOVERY)
+  const kernelTopic = readKernelTopic(root, mode)
+
+  await bootFoundryWorker({ kernelTopic, root, mode })
+
+  console.log('MDK_READY worker-foundry')
 }
 
 const runSatecWorker = async () => {
@@ -128,75 +243,147 @@ const runSatecWorker = async () => {
   console.log('MDK_READY worker-satec devices=%d', seeded)
 }
 
-// Boots the gateway (HRPC mdkClient + site plugin + static UI), connecting to
-// the Kernel by its .kernel-key public key (RPC-listener-only — no in-process
-// Kernel handle). HTTP only: the site plugin's routes also reach agents as MCP
-// tools, but that is the --role mcp process reading the same plugin dir, not
+// Each gateway plugin dir <name> runs as an app in its own `app-<name>` process.
+// Keys travel through files under the data root, re-read on every connection
+// or request, so the roles start in any order.
+// PM2 starts every role at once: wait for the Kernel to publish its key instead
+// of exiting and crash-looping until it has.
+const KERNEL_KEY_WAIT_MS = 30000
+const readKernelKey = async (root) => {
+  const file = path.join(root, '.kernel-key')
+  const deadline = Date.now() + KERNEL_KEY_WAIT_MS
+  while (!fs.existsSync(file)) {
+    if (Date.now() > deadline) throw new Error('ERR_KERNEL_KEY_MISSING: start the Kernel first')
+    await new Promise((resolve) => setTimeout(resolve, 200))
+  }
+  return fs.readFileSync(file, 'utf8').trim()
+}
+
+const appKeyFile = (root, name) => path.join(root, 'apps', name, 'runtime.key')
+const gatewayKeyFile = (root) => path.join(root, 'gateway.key')
+const mcpKeyFile = (root) => path.join(root, 'mcp.key')
+
+// The app runtimes the Gateway and the MCP server forward to.
+const siteApps = (root) => PLUGIN_DIRS.map((appDir) => {
+  const name = path.basename(appDir)
+  return { name, appDir, keyFile: appKeyFile(root, name), mount: '/' }
+})
+
+// Boots one app runtime (--role app-<name>), with its own Kernel keypair under
+// apps/<name>/ (published to the trusted-keys dir), accepting calls only from
+// the gateway's key.
+const runApp = async (name) => {
+  const root = arg('--root', ROOT)
+  const appDir = PLUGIN_DIRS.find((dir) => path.basename(dir) === name)
+  if (!appDir) throw new Error(`ERR_UNKNOWN_APP: no gateway plugin dir named "${name}"`)
+
+  const kernelKey = await readKernelKey(root)
+
+  const runtime = createAppRuntime({
+    name,
+    appDir,
+    kernelKey,
+    storeDir: path.join(root, 'apps', name),
+    keyFile: appKeyFile(root, name),
+    allowedKeyFiles: [gatewayKeyFile(root), mcpKeyFile(root)],
+    // The Kernel is fail-closed: it admits the app's Kernel key from the trusted-keys dir.
+    kernelKeyFile: path.join(trustedKeysDir(root), `app-${name}.pub`)
+  })
+  await runtime.start()
+  onShutdown(() => runtime.stop())
+  console.log('MDK_READY app name=%s kernel=%s', name, kernelKey.slice(0, 16))
+}
+
+// Boots the gateway (static UI + app routes forwarded to the app runtimes,
+// mounted at `/` because the UI calls root paths), connecting to the Kernel by
+// its .kernel-key public key (RPC-listener-only — no in-process Kernel handle).
+// HTTP only: the site plugin's routes also reach agents as MCP
+// tools, but that is the --role mcp process forwarding to the same runtime, not
 // anything this gateway hosts.
 const runGateway = async () => {
   const root = arg('--root', ROOT)
   const port = Number(arg('--port', GATEWAY_PORT))
 
-  const kernelKeyFile = path.join(root, '.kernel-key')
-  if (!fs.existsSync(kernelKeyFile)) throw new Error('ERR_KERNEL_KEY_MISSING: start the Kernel first')
-  const kernelKey = fs.readFileSync(kernelKeyFile, 'utf8').trim()
+  const kernelKey = await readKernelKey(root)
 
   await startGateway({
+    handleSignals: true,
     kernelKey,
-    extraPluginDirs: PLUGIN_DIRS,
+    apps: siteApps(root),
+    gatewayKeyFile: gatewayKeyFile(root),
+    // The Kernel (and workers) are fail-closed: publish this gateway's client
+    // key where the separately-running Kernel and workers admit it from.
+    trustedKeysDir: trustedKeysDir(root),
     port,
     httpd: { h0: { host: GATEWAY_HOST } },
+    allowedHosts: GATEWAY_ALLOWED_HOSTS,
+    authVerifier: GATEWAY_AUTH_VERIFIER,
     root: path.join(root, 'gateway'),
     common: { staticRootPath: STATIC_ROOT_PATH }
   })
 
-  // The site plugin's own mdk client (lib/client.js) dials the Kernel lazily
-  // per-request, so gateway boot doesn't need the Kernel to be up yet — no
-  // depends_on/ordering required between the two PM2 apps.
-  // Standalone startGateway handles SIGINT/SIGTERM (hnd.stop()).
+  // An app runtime that is not up yet answers 503, so no depends_on/ordering
+  // is required between the PM2 apps.
+  // startGateway({ handleSignals: true }) handles SIGINT/SIGTERM (hnd.stop()).
   console.log('MDK_READY gateway port=%d kernel=%s', port, kernelKey.slice(0, 16))
 }
 
 // Boots the standalone MCP server (Streamable HTTP) serving both tool sources
 // this example has: the hand-authored agent-contract tools from MCP_PLUGIN_DIRS
 // (mcp-plugin.json manifests — curated granularity and descriptions), and the
-// site gateway plugin's own HTTP routes, read straight off PLUGIN_DIRS and
-// converted into tools (site_overview, site_history, site_miner_command,
-// site_miner_pools). The gateway serves those routes over HTTP; this process
-// reads the same contract to serve them over MCP, and neither knows about the
-// other. The Kernel's .kernel-key public key goes into the ambient plugin
+// site app's own HTTP routes, read off its route table and converted into tools
+// (site_overview, site_history, site_miner_command, site_miner_pools) whose
+// calls are forwarded to the site app's runtime, as the gateway's are. The
+// Kernel's .kernel-key public key goes into the ambient plugin
 // config — each tool plugin authors its own HRPC client from it (lib/client.js),
 // so no client is built here.
 const runMcp = async () => {
   const root = arg('--root', ROOT)
   const port = Number(arg('--port', MCP_AGENT_TOOLS_PORT))
 
-  const kernelKeyFile = path.join(root, '.kernel-key')
-  if (!fs.existsSync(kernelKeyFile)) throw new Error('ERR_KERNEL_KEY_MISSING: start the Kernel first')
-  const kernelKey = fs.readFileSync(kernelKeyFile, 'utf8').trim()
+  const kernelKey = await readKernelKey(root)
 
-  await createMcpServer(root, port, { kernelKey }, MCP_PLUGIN_DIRS, PLUGIN_DIRS)
+  // Write tools (act_device, Gateway `safety: "write"` routes) stay withheld:
+  // pass allowWrite/allowTools here to expose them. handleSignals stops the
+  // HTTP server on SIGINT/SIGTERM.
+  // A persistent caller identity the Kernel admits from the trusted-keys dir;
+  // every tool plugin's client dials with it (config.kernelKeyPair).
+  const kernelKeyPair = callerKeyPair(path.join(root, 'mcp', 'identity'))
+  publishTrustedKey(trustedKeysDir(root), 'mcp', kernelKeyPair.publicKey)
+  await createMcpServer(path.join(root, 'mcp'), port, { kernelKey, kernelKeyPair }, MCP_PLUGIN_DIRS, siteApps(root), {
+    handleSignals: true,
+    keyFile: mcpKeyFile(root)
+  })
 
-  // createMcpServer handles SIGINT/SIGTERM (stops the HTTP server).
   console.log('MDK_READY mcp port=%d kernel=%s', port, kernelKey.slice(0, 16))
 }
 
 const ROLES = {
   mocks: runMocks,
+  'mocks-antminer': runAntminerMocks,
+  'mocks-sealminer': runSealminerMocks,
   'mocks-ocean': runOceanMock,
   'mocks-satec': runSatecMocks,
+  'mocks-emcd': runEmcdMock,
+  'mocks-spiderpool': runSpiderpoolMock,
+  'mocks-foundry': runFoundryMock,
   kernel: runKernel,
   worker: runWorker,
+  'worker-antminer': runAntminerWorker,
+  'worker-sealminer': runSealminerWorker,
   'worker-ocean': runOceanWorker,
   'worker-satec': runSatecWorker,
+  'worker-emcd': runEmcdWorker,
+  'worker-spiderpool': runSpiderpoolWorker,
+  'worker-foundry': runFoundryWorker,
   gateway: runGateway,
   mcp: runMcp
 }
 
 const main = async () => {
   const role = arg('--role')
-  const run = ROLES[role]
-  if (!run) throw new Error(`ERR_UNKNOWN_ROLE: --role must be one of ${Object.keys(ROLES).join(', ')}`)
+  const run = ROLES[role] || (role?.startsWith('app-') && (() => runApp(role.slice(4))))
+  if (!run) throw new Error(`ERR_UNKNOWN_ROLE: --role must be one of ${Object.keys(ROLES).join(', ')}, or app-<name>`)
   await run()
 }
 

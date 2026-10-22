@@ -7,10 +7,17 @@ const HyperswarmRPC = require('@hyperswarm/rpc')
 const Hyperswarm = require('hyperswarm')
 const DHT = require('hyperdht')
 const debug = require('debug')('mdk:worker:runtime')
-const { ACTIONS } = require('../../kernel/lib/protocol/actions')
-const { buildResponse, serialize, deserialize } = require('../../kernel/lib/protocol/envelope')
+const { ACTIONS } = require('@tetherto/mdk-kernel/protocol/actions')
+const { buildResponse, serialize, deserialize, validateFull: validateEnvelope } = require('@tetherto/mdk-kernel/protocol/envelope')
 const { loadPlugin } = require('./plugin-loader')
-const { telemetryBuiltin, commandBuiltin, mergeBuiltinCommands } = require('./service-builtins')
+const { telemetryBuiltin, commandBuiltin, mergeBuiltinCommands, builtinCommandParams } = require('./service-builtins')
+const { validateParams } = require('./param-validator')
+
+// Errors that already carry a protocol code (ERR_*) are part of the wire
+// contract and go back as-is; anything else (a stack-less TypeError from a
+// handler, a driver message with an address or a credential in it) is logged
+// here and replaced by the fallback code before it crosses the RPC boundary.
+const ERR_CODE = /^ERR_[A-Z0-9_]+/
 
 /**
  * Generic host for a Worker Plugin: N same-type devices behind one HRPC
@@ -32,6 +39,12 @@ const { telemetryBuiltin, commandBuiltin, mergeBuiltinCommands } = require('./se
  * DHT/RPC identity: pass `opts.store` (Hyperbee-style) or `opts.storeDir`
  * (directory of seed files) so the public key is stable across restarts.
  * Without either, seeds are random per boot.
+ *
+ * RPC admission is fail closed: `opts.allowedKeys` (hex/Buffer public keys —
+ * the Kernel's kernel.getClientPublicKey()) or runtime allowKey() name who may
+ * call; start() throws ERR_WORKER_ALLOWED_KEYS_REQUIRED with none, unless
+ * `opts.allowAll: true` (development only, logs a warning). Every request is
+ * envelope-validated (validateFull) before dispatch.
  */
 class WorkerRuntime {
   constructor (plugin, opts) {
@@ -47,12 +60,21 @@ class WorkerRuntime {
     this._publishedContract = mergeBuiltinCommands(this._plugin.publishedContract, this.services)
 
     this._commandParamNames = new Map()
+    this._commandParams = new Map()
     for (const entry of this._plugin.contract.capabilities.commands || []) {
       this._commandParamNames.set(entry.name, (entry.params || []).map((p) => p.name))
+      this._commandParams.set(entry.name, Array.isArray(entry.params) ? entry.params : [])
     }
     // Optional DHT bootstrap override. Defaults to hyperdht's public bootstrap;
     // set only for a custom DHT network or hermetic tests (hyperdht/testnet).
     this._bootstrap = opts.bootstrap || null
+
+    // RPC caller allowlist (fail closed). Only these public keys — normally
+    // the Kernel's client key, kernel.getClientPublicKey() — may connect;
+    // start() refuses to run with none unless allowAll is set explicitly.
+    this._allowedKeys = new Set()
+    for (const key of opts.allowedKeys || []) this.allowKey(key)
+    this._allowAll = opts.allowAll === true
 
     this._devices = new Map()
     for (const spec of this._validateDeviceSpecs(opts.devices, opts.allowEmptyDevices)) {
@@ -94,6 +116,12 @@ class WorkerRuntime {
   }
 
   async start () {
+    if (this._allowAll) {
+      console.warn(`[mdk-worker] WARNING: worker ${this.workerId} runs with allowAll — any DHT peer that learns its key can command its devices. Never use this outside local development.`)
+    } else if (this._allowedKeys.size === 0) {
+      throw new Error('ERR_WORKER_ALLOWED_KEYS_REQUIRED: pass opts.allowedKeys (the Kernel client key, kernel.getClientPublicKey()) or opts.allowAll: true for local development')
+    }
+
     await this._openContexts()
 
     const seedDht = await this._getOrCreateSeed('seedDht')
@@ -101,16 +129,20 @@ class WorkerRuntime {
 
     this._dht = new DHT({ keyPair: DHT.keyPair(seedDht), ...(this._bootstrap ? { bootstrap: this._bootstrap } : {}) })
     this._rpc = new HyperswarmRPC({ dht: this._dht, seed: seedRpc })
-    this._server = this._rpc.createServer()
+    this._server = this._rpc.createServer({ firewall: (remotePublicKey) => !this._isAllowed(remotePublicKey) })
 
-    this._server.respond('mdk', async (reqBuf) => {
+    this._server.respond('mdk', async (reqBuf, rpc) => {
       try {
+        // Re-checked per request so revokeKey() takes effect on open connections.
+        const remote = rpc && rpc.stream && rpc.stream.remotePublicKey
+        if (!remote || !this._isAllowed(remote)) return serialize({ error: 'ERR_WORKER_CALLER_NOT_ALLOWED' })
         const envelope = deserialize(reqBuf)
+        const validation = validateEnvelope(envelope)
+        if (!validation.valid) return serialize({ error: validation.error })
         const result = await this.handleRequest(envelope)
         return serialize(result)
       } catch (err) {
-        debug('request error: %s', err.message)
-        return serialize({ error: err.message })
+        return serialize({ error: _publicError(err, 'ERR_REQUEST_FAILED') })
       }
     })
 
@@ -133,6 +165,31 @@ class WorkerRuntime {
     if (this._dht) { await this._dht.destroy(); this._dht = null }
     await this._closeContexts()
     debug('worker runtime stopped')
+  }
+
+  /**
+   * Admit an RPC caller (hex or Buffer public key), e.g. a Kernel's
+   * getClientPublicKey(). Works before or after start().
+   */
+  allowKey (key) {
+    const hex = _normalizeKey(key)
+    this._allowedKeys.add(hex)
+    return hex
+  }
+
+  revokeKey (key) {
+    return this._allowedKeys.delete(_normalizeKey(key))
+  }
+
+  getAllowedKeys () {
+    return [...this._allowedKeys]
+  }
+
+  _isAllowed (remotePublicKey) {
+    if (this._allowAll) return true
+    const ok = this._allowedKeys.has(remotePublicKey.toString('hex'))
+    if (!ok) debug('blocked caller: %s...', remotePublicKey.toString('hex').slice(0, 16))
+    return ok
   }
 
   getPublicKey () {
@@ -202,21 +259,32 @@ class WorkerRuntime {
   }
 
   // File-backed seeds for hosts that own a directory but not a Hyperbee store
-  // (WorkerRuntimeV2 / CLI / demo-worker-caller). Same 32-byte seedDht/seedRpc
+  // (WorkerRuntimeV2 / CLI). Same 32-byte seedDht/seedRpc
   // names the Hyperbee path uses, so the RPC public key stays stable across
   // process restarts without pulling in worker-infra.
+  //
+  // The seed IS the worker's identity, so this fails closed: a malformed
+  // seed is an error (never silently replaced, which would rotate the key the
+  // Kernel knows), a symlink is refused, a file owned by another user is
+  // refused, and group/other permission bits are stripped. A new seed is
+  // created exclusively (O_EXCL, so a planted file or link is never written
+  // through) with mode 0600.
   _getOrCreateSeedFile (name) {
     fs.mkdirSync(this.storeDir, { recursive: true, mode: 0o700 })
     const seedPath = path.join(this.storeDir, name)
-    try {
-      const existing = fs.readFileSync(seedPath)
-      if (existing.length === 32) return existing
-    } catch (err) {
-      if (err.code !== 'ENOENT') throw err
-    }
+
+    const existing = _readSeedFile(seedPath)
+    if (existing) return existing
 
     const seed = crypto.randomBytes(32)
-    fs.writeFileSync(seedPath, seed, { mode: 0o600 })
+    const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants
+    const fd = fs.openSync(seedPath, O_WRONLY | O_CREAT | O_EXCL, 0o600)
+    try {
+      fs.writeSync(fd, seed)
+      fs.fsyncSync(fd)
+    } finally {
+      fs.closeSync(fd)
+    }
     debug('created persistent seed file: %s', name)
     return seed
   }
@@ -314,7 +382,7 @@ class WorkerRuntime {
           deviceIds: [...this._devices.keys()]
         })
       } catch (err) {
-        result = { error: err.message }
+        result = { error: _publicError(err, 'ERR_TELEMETRY_FAILED') }
       }
     } else if (type === 'list') {
       result = { devices: [...this._devices.values()].map((e) => ({ deviceId: e.deviceId, status: e.status })) }
@@ -356,7 +424,7 @@ class WorkerRuntime {
       try {
         metrics[name] = await fn(entry.ctx, params)
       } catch (err) {
-        metrics[name] = { error: err.message }
+        metrics[name] = { error: _publicError(err, 'ERR_TELEMETRY_FAILED') }
       }
     }
     return { metrics }
@@ -368,7 +436,7 @@ class WorkerRuntime {
     try {
       return { name, value: await this._plugin.handlers.telemetry.get(name)(entry.ctx, params) }
     } catch (err) {
-      return { error: err.message }
+      return { error: _publicError(err, 'ERR_TELEMETRY_FAILED') }
     }
   }
 
@@ -386,6 +454,8 @@ class WorkerRuntime {
     // devices the runtime holds offline.
     const builtin = commandBuiltin(this.services, command)
     if (builtin) {
+      const invalid = validateParams(builtinCommandParams(command), params || {})
+      if (invalid) return fail(invalid)
       try {
         const result = await builtin.handle(this.services, deviceId, params || {})
         return buildResponse(envelope, ACTIONS.COMMAND_RESULT, {
@@ -394,7 +464,7 @@ class WorkerRuntime {
           result: result === undefined ? {} : result
         }, this.workerId)
       } catch (err) {
-        return fail(err.message)
+        return fail(_publicError(err, 'ERR_COMMAND_FAILED'))
       }
     }
 
@@ -405,15 +475,21 @@ class WorkerRuntime {
     const handler = this._plugin.handlers.commands.get(command)
     if (!handler) return fail(`ERR_UNKNOWN_COMMAND: ${command}`)
 
+    // Declared params are checked here, not left to each handler: the worker
+    // is reachable on its own RPC key, so the Kernel's check is not enough.
+    const normalized = this._normalizeParams(command, params)
+    const invalid = validateParams(this._commandParams.get(command), normalized)
+    if (invalid) return fail(invalid)
+
     try {
-      const result = await handler(entry.ctx, this._normalizeParams(command, params))
+      const result = await handler(entry.ctx, normalized)
       return buildResponse(envelope, ACTIONS.COMMAND_RESULT, {
         commandId,
         status: 'SUCCESS',
         result: result === undefined ? {} : result
       }, this.workerId)
     } catch (err) {
-      return fail(err.message)
+      return fail(_publicError(err, 'ERR_COMMAND_FAILED'))
     }
   }
 
@@ -462,6 +538,52 @@ class WorkerRuntime {
       workerId: this.workerId
     }, this.workerId)
   }
+}
+
+// Returns the 32-byte seed at seedPath, or null when there is none yet.
+function _readSeedFile (seedPath) {
+  let lst
+  try {
+    lst = fs.lstatSync(seedPath)
+  } catch (err) {
+    if (err.code === 'ENOENT') return null
+    throw err
+  }
+  if (lst.isSymbolicLink()) throw new Error(`ERR_SEED_FILE_SYMLINK: ${seedPath}`)
+  if (!lst.isFile()) throw new Error(`ERR_SEED_FILE_INVALID: ${seedPath}`)
+
+  // O_NOFOLLOW closes the window between the lstat above and the open.
+  const fd = fs.openSync(seedPath, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0))
+  try {
+    const st = fs.fstatSync(fd)
+    if (!st.isFile()) throw new Error(`ERR_SEED_FILE_INVALID: ${seedPath}`)
+    if (typeof process.getuid === 'function' && st.uid !== process.getuid()) {
+      throw new Error(`ERR_SEED_FILE_OWNER: ${seedPath}`)
+    }
+    if (process.platform !== 'win32' && (st.mode & 0o077)) {
+      fs.fchmodSync(fd, 0o600)
+      debug('tightened seed file permissions to 0600: %s', seedPath)
+    }
+    const buf = Buffer.alloc(33)
+    const n = fs.readSync(fd, buf, 0, 33, 0)
+    if (n !== 32) throw new Error(`ERR_SEED_FILE_MALFORMED: ${seedPath}`)
+    return buf.subarray(0, 32)
+  } finally {
+    fs.closeSync(fd)
+  }
+}
+
+function _normalizeKey (key) {
+  const hex = Buffer.isBuffer(key) ? key.toString('hex') : (typeof key === 'string' ? key.trim().toLowerCase() : '')
+  if (!/^[0-9a-f]{64}$/.test(hex)) throw new Error('ERR_WORKER_ALLOWED_KEY_INVALID: expected a 32-byte hex public key')
+  return hex
+}
+
+function _publicError (err, fallback) {
+  const message = err && typeof err.message === 'string' ? err.message : String(err)
+  if (ERR_CODE.test(message)) return message
+  debug('%s: %s', fallback, (err && err.stack) || message)
+  return fallback
 }
 
 module.exports = WorkerRuntime

@@ -31,7 +31,72 @@ test('tailLog validates key and tag', async (t) => {
 
 test('tailLog throws ERR_LOG_NOTFOUND for missing log', async (t) => {
   const { history } = await createServices(t)
-  await t.exception(history.tailLog({ key: 'thing-5m', tag: 'dev-x' }), /ERR_LOG_NOTFOUND/)
+  await t.exception(history.tailLog({ key: 'thing-5m', tag: 'dev-1' }), /ERR_LOG_NOTFOUND/)
+})
+
+test('tailLog only opens device-scoped snapshot logs and stat logs', async (t) => {
+  const { logs, history } = await createServices(t)
+  const base = Date.now()
+  await logs.saveLogData('thing-5m-dev-1', base, { ts: base, n: 0 }, 0, true)
+  await logs.saveLogData('stat-5m-t-miner', base, { ts: base, s: 1 }, 0, true)
+  await logs.saveLogData('thing-alerts', base, { a: 1 }, 0, true)
+
+  // Unknown device tag, non-log keys and malformed names are refused.
+  await t.exception(history.tailLog({ key: 'thing-5m', tag: 'dev-x' }), /ERR_LOG_TAG_FORBIDDEN/)
+  await t.exception(history.tailLog({ key: 'thing', tag: 'alerts' }), /ERR_LOG_KEY_INVALID/)
+  await t.exception(history.tailLog({ key: 'meta', tag: 'x' }), /ERR_LOG_KEY_INVALID/)
+  await t.exception(history.tailLog({ key: 'stat-5m', tag: '../x' }), /ERR_LOG_TAG_INVALID/)
+  await t.exception(history.tailLog({ key: 'stat 5m', tag: 't-miner' }), /ERR_LOG_KEY_INVALID/)
+
+  // Device-scoped: the snapshot log is derived from thingId, whatever tag says.
+  const own = await history.tailLog({ key: 'thing-5m', tag: 'dev-x', thingId: 'dev-1' })
+  t.is(own[0].n, 0)
+
+  // Device-scoped stat reads are limited to the device's own tags.
+  t.is((await history.tailLog({ key: 'stat-5m', tag: 't-miner', thingId: 'dev-1' }))[0].s, 1)
+  await t.exception(history.tailLog({ key: 'stat-5m', tag: 't-container', thingId: 'dev-1' }), /ERR_LOG_TAG_FORBIDDEN/)
+  await t.exception(history.tailLog({ key: 'stat-5m', tag: 't-miner', thingId: 'dev-x' }), /ERR_LOG_TAG_FORBIDDEN/)
+
+  // Worker-scoped aggregate read.
+  t.is((await history.tailLog({ key: 'stat-5m', tag: 't-miner' }))[0].s, 1)
+})
+
+test('tailLog / getHistoricalLogs bound offset, limit and range', async (t) => {
+  const { logs, history } = await createServices(t)
+  const base = 1700000000000
+  for (let i = 0; i < 3; i++) {
+    await logs.saveLogData('thing-5m-dev-1', base + i, { ts: base + i, n: i }, 0, true)
+  }
+
+  for (const offset of [-1, 1.5, '2.5', 100, 'x']) {
+    await t.exception(history.tailLog({ key: 'thing-5m', tag: 'dev-1', offset }), /ERR_LOG_OFFSET_INVALID/, `offset ${offset}`)
+    await t.exception(history.getHistoricalLogs({ logType: 'info', offset }), /ERR_LOG_OFFSET_INVALID/, `hist offset ${offset}`)
+  }
+  await t.exception(history.tailLog({ key: 'thing-5m', tag: 'dev-1', limit: -5 }), /ERR_LOG_LIMIT_INVALID/)
+  await t.exception(history.tailLog({ key: 'thing-5m', tag: 'dev-1', start: 'abc' }), /ERR_LOG_START_INVALID/)
+  await t.exception(history.tailLog({ key: 'thing-5m', tag: 'dev-1', end: -1 }), /ERR_LOG_END_INVALID/)
+
+  const capped = new LogHistoryService({ logs, getDeviceInfo: (id) => DEVICES[id], conf: { logKeepCount: 3, logMaxLimit: 2 } })
+  t.is((await capped.tailLog({ key: 'thing-5m', tag: 'dev-1', limit: 1000 })).length, 2, 'limit capped at conf.logMaxLimit')
+  t.is((await capped.tailLog({ key: 'thing-5m', tag: 'dev-1', start: base })).length, 2, 'range read capped too')
+})
+
+test('LogsService.getBeeTimeLog never mints a core for an invalid offset', async (t) => {
+  const { store, teardown } = await createTestStore()
+  t.teardown(teardown)
+  const db = await createTestBee(store, 'main')
+  const logs = new LogsService({ store, metaLogs: db.sub('meta_logs_00'), conf: { logKeepCount: 3 } })
+  await logs.saveLogData('k1', 1, { a: 1 }, 0, true)
+
+  let created = 0
+  const orig = store.getBee.bind(store)
+  store.getBee = (...args) => { created++; return orig(...args) }
+
+  await t.exception(logs.getBeeTimeLog('k1', -3), /ERR_LOG_OFFSET_INVALID/)
+  await t.exception(logs.getBeeTimeLog('k1', 0.5), /ERR_LOG_OFFSET_INVALID/)
+  t.is(await logs.getBeeTimeLog('k1', 1000), null)
+  t.is(await logs.getBeeTimeLog('unknown-key', 0), null)
+  t.is(created, 0, 'no bee opened')
 })
 
 test('tailLog returns newest-first entries written by LogsService', async (t) => {

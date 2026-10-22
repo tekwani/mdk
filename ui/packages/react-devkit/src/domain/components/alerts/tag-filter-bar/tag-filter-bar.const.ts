@@ -3,7 +3,7 @@ import _capitalize from 'lodash/capitalize'
 import _map from 'lodash/map'
 
 import { MinerStatuses } from '../../../constants/device-constants'
-import { TYPE_FILTER_MAP } from '../../../utils/action-utils'
+import { TYPE_FILTER_MAP } from './type-filter-map'
 
 export const FILTERABLE_MINER_STATUSES: Record<string, string> = {
   Mining: MinerStatuses.MINING,

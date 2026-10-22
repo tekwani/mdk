@@ -6,7 +6,9 @@ docs@tether_slug: reference/environment
 
 ## Overview
 
-Every guide and tutorial in this repo assumes the same baseline; this page explains the npm ceiling.
+Every guide and tutorial in this repo assumes the same baseline; this page explains the npm ceiling. Runtime environment variables
+are documented by the package that reads them: the `worker.js` variables in the [core SDK README][mdk-readme], and the full set a
+managed site touches in the [hosted-site settings table][hosted-site].
 
 ## Requirements
 
@@ -25,7 +27,7 @@ npm error code EALLOWGIT
 npm error Fetching packages of type "git" have been disabled
 ```
 
-[`examples/full-site`][full-site] and [`examples/mvp-site`][mvp-site] depend on the Whatsminer Worker directly from its
+[`examples/mvp-site`][mvp-site] depends on the Whatsminer Worker directly from its
 git repository, so `npm install` on npm 12 fails on that dependency before it reaches anything else.
 
 If `npm --version` already reports 12 or higher, repin with:
@@ -39,8 +41,11 @@ npm install -g npm@11
 [node]: https://nodejs.org/
 <!-- docs@tether.io: external link — preserve URL -->
 
-[full-site]: ../../examples/full-site/README.md
-<!-- docs@tether.io: no parity link -->
-
 [mvp-site]: ../../examples/mvp-site/README.md
 <!-- docs@tether.io: no parity link -->
+
+[mdk-readme]: ../../backend/core/mdk/README.md#trust-and-admission
+<!-- docs@tether.io: mdk-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/README.md#trust-and-admission -->
+
+[hosted-site]: ../guides/deployment/hosted-site.md#gateway-and-kernel-settings
+<!-- docs@tether.io: hosted-site → guides/deployment/hosted-site#gateway-and-kernel-settings -->

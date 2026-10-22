@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react'
-import { ChartContainer, Loader } from '@primitives'
+import { ChartContainer } from '@primitives'
 import type { AxisTitleText, TimelineChartData, TimelineChartProps } from './timeline-chart.types'
 import { TimelineLegend } from './timeline-legend'
 import { TimelineVisualization } from './timeline-visualization'
@@ -69,20 +69,12 @@ export const TimelineChart = memo(
           empty={isEmpty}
           emptyMessage="No timeline data available"
         >
-          {isLoading ? (
-            <div className="mdk-timeline-chart__loading">
-              <Loader />
-            </div>
-          ) : (
-            <>
-              <TimelineLegend datasets={chartData.datasets} />
-              <TimelineVisualization
-                chartData={chartData}
-                range={range}
-                axisTitleText={axisTitleText}
-              />
-            </>
-          )}
+          <TimelineLegend datasets={chartData.datasets} />
+          <TimelineVisualization
+            chartData={chartData}
+            range={range}
+            axisTitleText={axisTitleText}
+          />
         </ChartContainer>
       </div>
     )

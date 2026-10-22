@@ -16,7 +16,7 @@ export type HeaderStatsBarProps = {
  *
  * Slot-based: the caller decides which boxes to render and in which
  * order. The bar interleaves an angled chevron divider between
- * adjacent children to match the reference app visual treatment.
+ * adjacent children.
  *
  * @category dashboard
  * @kernelCapability site-overview

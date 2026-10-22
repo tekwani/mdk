@@ -2,7 +2,7 @@
  * @tetherto/mdk-ui-agent
  *
  * The operator Co-pilot, as a drop-in for any MDK UI shell. Talks to the agent
- * gateway plugin (`@tetherto/mdk-plugin-agent`) over SSE and renders its
+ * gateway plugin (`@tetherto/mdk-app-agent`) over SSE and renders its
  * six-event contract as a conversation.
  *
  * ```tsx

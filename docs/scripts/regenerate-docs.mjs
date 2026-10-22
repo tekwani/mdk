@@ -49,7 +49,7 @@ const TARGETS = [
     label: 'Supported plugins page',
     cwd: '.',
     command: ['npm', ['run', 'generate:plugin-reference']],
-    paths: ['docs/reference/supported-plugins.md', 'backend/plugins/docs/plugins.json']
+    paths: ['docs/reference/supported-plugins.md']
   },
   {
     key: 'packages',

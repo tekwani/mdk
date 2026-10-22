@@ -59,6 +59,10 @@ const fixtures = [
         model: 'a1346',
         storeDir,
         bootstrap,
+        allowedKeys: [kernel.getClientPublicKey()],
+        // REGISTER_THING below targets a loopback mock address, which the
+        // default device-address policy refuses for remote callers.
+        conf: { thing: { allowedAddressCidrs: ['127.0.0.0/8'] } },
         seedDevices: [{
           info: { serialNum: 'AV-E2E-001', container: 'e2e-site' },
           opts: { address: '127.0.0.1', port: 58001, password: 'admin' }

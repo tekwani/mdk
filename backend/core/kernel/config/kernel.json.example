@@ -1,17 +1,21 @@
 {
   "hrpc": {
-    "whitelist": []
+    "whitelist": [],
+    "allowAll": false
   },
   "ipc": {
     "path": ""
   },
   "discovery": {
-    "topic": null
+    "topic": null,
+    "workerKeys": [],
+    "allowAnyWorker": false
   },
   "telemetryPullMs": 10000,
   "statePullMs": 60000,
   "healthPingMs": 5000,
   "healthFailureThreshold": 3,
-  "commandMaxRetries": 3,
-  "commandTimeoutMs": 30000
+  "commandTimeoutMs": 30000,
+  "commandResultTtlMs": 86400000,
+  "commandVerifyIntervalMs": 5000
 }

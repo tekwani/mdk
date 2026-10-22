@@ -10,9 +10,9 @@ corepack enable && npm install
 npm run build          # build all packages (required before first dev)
 npm run dev            # watch all packages + catalog app
 npm run test           # vitest, all packages
-npm run lint           # eslint, all packages
+npm run lint           # oxlint, all packages
 npm run typecheck      # tsc --noEmit, all packages
-npm run fullcheck      # build + lint + typecheck + format + check:agent-ready + test:coverage + docs tests
+npm run fullcheck      # build + lint + typecheck + format + check:agent-ready + check:api-surface + test:coverage
 npm run check:agent-ready --workspace @tetherto/mdk-react-devkit  # after devkit export changes
 ```
 
@@ -34,20 +34,19 @@ added later without touching the core. Dependency flow:
 
 - **[`packages/ui-foundation`](./packages/ui-foundation/README.md)** (`@tetherto/mdk-ui-foundation`) — framework-agnostic
   headless layer: Zustand vanilla stores (`authStore`, `devicesStore`,
-  `notificationStore`, `timezoneStore`, `actionsStore`), TanStack
-  `QueryClient` factory, telemetry primitives, command lifecycle state
-  machine, shared types. Pure TS, no React.
+  `notificationStore`, `timezoneStore`), the TanStack `QueryClient`
+  factory, auth providers, shared types. Pure TS, no React.
 - **[`packages/react-adapter`](./packages/react-adapter/README.md)** (`@tetherto/mdk-react-adapter`) — React
   bindings: `<MdkProvider>`, store hooks (`useAuth`, `useDevices`,
-  `useNotifications`, `useTimezone`, `useActions`), pass-through
+  `useNotifications`, `useTimezone`), pass-through
   re-exports of `useQuery` / `useMutation`.
 - **[`packages/react-devkit`](./packages/react-devkit/README.md)** (`@tetherto/mdk-react-devkit`) — React UI
   library. [`src/primitives/`](./packages/react-devkit/src/primitives/) exports generic primitives on Radix UI with BEM
   + SCSS tokens; [`src/domain/`](./packages/react-devkit/src/domain/) exports mining-domain components and
   hooks.
 - **[`packages/ui-agent`](./packages/ui-agent/README.md)** (`@tetherto/mdk-ui-agent`) — the operator agent
-  chat, as one drop-in (`<CoPilot />`). Talks to the agent gateway plugin
-  over SSE. Keeps its own layering inside the package — headless `core/`,
+  chat, as one drop-in (`<CoPilot />`). Talks to the agent app through the
+  Gateway over SSE. Keeps its own layering inside the package — headless `core/`,
   `hooks/`, presentational `components/` — because the deliverable is a
   single injectable unit; it borrows `Button`, `Loader` and `createIcon`
   from the devkit and themes off `--mdk-color-*` tokens. `private: true`,
@@ -71,9 +70,11 @@ or write the stores directly via `store.getState()` / `store.setState()`.
 
 ### Data fetching
 
-API layer is a placeholder under
-`packages/react-devkit/src/domain/api/`. New hooks use TanStack Query
-via `createMdkQueryClient` from `@tetherto/mdk-ui-foundation` and `<MdkProvider>`.
+MDK ships no data hooks for specific endpoints. An app reads the routes
+its Gateway plugins serve with `useQuery` (re-exported by
+`@tetherto/mdk-react-adapter`, on the client `<MdkProvider>` builds via
+`createMdkQueryClient`), in small hooks of its own, and passes the result
+to devkit components as props.
 
 ### Styling
 
@@ -104,21 +105,21 @@ This is the rule that organises everything else — break it and the layers coll
 - **Components render data; nothing else.** No data fetching, no
   business rules, no unit conversion, no telemetry shaping inside JSX or
   component files. Accept already-shaped props, return markup.
-- **Hooks connect data to components.** Adapter hooks own the data
-  fetching, unit conversion, formatting, and "latest sample" derivation
-  — they return chart-ready / table-ready / card-ready payloads.
+- **Hooks connect data to components.** The app's own hooks wrap its
+  Gateway routes with `useQuery` and own the unit conversion,
+  formatting, and "latest sample" derivation in `select` — they return
+  chart-ready / table-ready / card-ready payloads.
 - **Pages are thin glue.** A dashboard page reads hooks and passes their
   output straight to components. If you see a `useMemo` in a page that
   divides by 1e6 or builds a `datasets` array, that logic belongs in a
   hook.
-- **All API + state interaction lives in `@tetherto/mdk-ui-foundation`.**
-  Query factories, query keys, query-param builders, Zustand stores,
-  token utilities, type contracts. The adapter and devkit consume them
-  but never reimplement them.
+- **Shared state lives in `@tetherto/mdk-ui-foundation`.** Zustand
+  stores, auth, the query client, token utilities, type contracts. The
+  adapter and devkit consume them but never reimplement them.
 - **No tag / aggregate-field strings leak past the data layer.** Page
   files must never reference `t-miner`, `t-powermeter`, `power_w_sum_aggr`,
-  `site_power_w`, etc. Those belong in [`packages/ui-foundation/src/utils/dashboard-queries.ts`](./packages/ui-foundation/src/presets/mining/dialect/dashboard-queries.ts)
-  (and similar builders) and are consumed by adapter hooks.
+  `site_power_w`, etc. Those belong in the Gateway plugin or the hook's
+  `select`.
 
 **Red flag — stop and refactor (or file techdebt):**
 
@@ -127,7 +128,7 @@ This is the rule that organises everything else — break it and the layers coll
   `LineChartCardData` / table rows inline.
 - A "fat" domain component that embeds telemetry shaping (the
   retired `ConsumptionLineChart` / `HashRateLineChart` are the
-  canonical anti-examples — use `<LineChartCard>` with adapter hooks
+  canonical anti-examples — use `<LineChartCard>` fed by a hook
   instead).
 - A hook that returns raw backend entries when its callers all need
   the same derived shape — push the shaping into the hook.
@@ -144,7 +145,7 @@ violates) — see [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md#tracking-tech-de
 - Charts: Chart.js / react-chartjs-2; `lightweight-charts` for financial.
 - Dashboard line charts: `<LineChartCard>` from
   `@tetherto/mdk-react-devkit` is the canonical primitive — pure
-  presentation. Adapter hooks build the `ChartCardData` payload.
+  presentation. The app's hook builds the `ChartCardData` payload.
 
 ### Testing
 
@@ -166,12 +167,12 @@ target ES2022, ESM-only. All packages extend [`tsconfig.base.json`](./tsconfig.b
 
 ### Code style
 
-Formatting is owned by Prettier (`.prettierrc`); ESLint
-(`@antfu/eslint-config`) runs lint rules only, with its stylistic ruleset off
-(`stylistic: false`) so the two never fight. Prettier enforces: **single
-quotes** (double in JSX), **no semicolons**, 2-space indent, 100-char width,
-trailing commas. Husky + lint-staged run `eslint --fix` then `prettier --write`
-on staged files.
+Formatting is owned by Prettier (`.prettierrc`); oxlint
+([`.oxlintrc.json`](./.oxlintrc.json)) runs lint rules only, so the two never
+fight. Prettier enforces: **single quotes** (double in JSX), **no semicolons**,
+2-space indent, 100-char width, trailing commas. Husky + lint-staged run
+`oxlint --fix` then `prettier --write` on staged files. Suppress a rule inline
+with `// oxlint-disable-next-line <rule> -- <reason>`.
 
 ### Commits
 

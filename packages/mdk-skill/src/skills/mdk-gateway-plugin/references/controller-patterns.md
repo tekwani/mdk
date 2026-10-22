@@ -1,8 +1,16 @@
 # Controller patterns
 
-Build the client once per plugin, in a `lib/client.js` every controller requires. Copy
-[`backend/core/plugins/telemetry/lib/client.js`](../../../../../../backend/core/plugins/telemetry/lib/client.js) verbatim,
-it's the shipping example of this exact pattern.
+Build the client once per app, in a `lib/client.js` every controller requires. The
+`plugin/lib/client.js` that `mdk create app` scaffolds is this exact pattern:
+
+```js
+const { config } = require('@tetherto/mdk-gateway/plugin')
+const { createMdkClient } = require('@tetherto/mdk-client')
+module.exports = createMdkClient(config)
+```
+
+`config` carries the app's own Kernel identity (`kernelKey`, `kernelKeyPair`), so the client connects with the app
+runtime's key.
 
 Controllers are plain async functions that require it:
 

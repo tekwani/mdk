@@ -1,8 +1,9 @@
 'use strict'
 
-// The real Whatsminer setPowerMode accepts low | normal | high (sleep would
-// power the miner down, so it is excluded from the demo action).
-const POWER_MODES = ['low', 'normal', 'high']
+// Union of the demo's per-family modes: Whatsminer accepts low | normal |
+// high, SealMiner names its boost high_performance. Sleep would power the
+// miner down, so it is excluded from the demo action on every family.
+const POWER_MODES = ['low', 'normal', 'high', 'high_performance']
 
 // Live miner action: round-trips setPowerMode through mdkClient → Kernel → miner.
 // The command must be an allowed capability (validated by the Kernel dispatcher

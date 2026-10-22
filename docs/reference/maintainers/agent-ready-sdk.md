@@ -41,7 +41,7 @@ Where they live inside the shape above:
 - `troubleshooting` is an array of conditional remediation strings at the health level (`capabilities.health.troubleshooting`), each entry a vendor-validated *if X then Y* runbook step.
 - `errors` is its own top-level map under `capabilities` (`capabilities.errors.<E_CODE>`), shown in the shape above; each value is the sentence the agent surfaces to the user when that code is reported.
 
-See [`backend/workers/miners/antminer/plugin/mdk-contract.json`](../../../backend/workers/miners/antminer/plugin/mdk-contract.json) for a complete worked example with every load-bearing field populated.
+See [`backend/workers/miners/avalon/plugin/mdk-contract.json`](../../../backend/workers/miners/avalon/plugin/mdk-contract.json) for a complete worked example with all four populated.
 
 ### Core
 
@@ -52,7 +52,7 @@ Nothing yet. Core monorepo presence today. The open question is whether [`backen
 `mdk-contract.json` covers the **runtime** contract. For the **docs / discovery** layer the monorepo adds co-located files per artefact:
 
 ```text
-backend/workers/miners/antminer/
+backend/workers/miners/avalon/
   package.json
   plugin/
     mdk-contract.json  # ← already exists, governs runtime
@@ -61,8 +61,8 @@ backend/workers/miners/antminer/
     run-<scenario>.js
 ```
 
-(Whatsminer is a manufacturer-maintained external Worker as of 0.9.0 — see [`backend/workers/external-workers.json`](../../../backend/workers/external-workers.json) — so
-`antminer`/`avalon` are the current in-repo examples of this shape; neither has an `examples/` directory yet, only `USAGE.md`.)
+(Whatsminer and Antminer are manufacturer-maintained external Workers — see [`backend/workers/external-workers.json`](../../../backend/workers/external-workers.json) — so
+`avalon` is the current in-repo miner example of this shape; it has no `examples/` directory yet, only `USAGE.md`.)
 
 `USAGE.md` and `examples/` are the only **new** conventions. The contract itself is unchanged.
 
@@ -107,7 +107,9 @@ Once `dist/index.json` is shipping, it would also unlock [`check:integrations-fr
 
 ## Gateway plugin reference
 
-The Gateway plugins that ship in the repo generate their HTTP route tables from each plugin's `mdk-plugin.json`, the same read-source-of-truth, generate, ship pattern as the Worker catalogue. [`single-source-of-truth.md`](single-source-of-truth.md#supported-plugins-page) owns the generator, its sources across both plugin roots, and the output; [`check:plugin-reference-fresh`](ia.md#checkplugin-reference-fresh) is the blocking freshness gate. Plugins mounted at runtime via `startGateway({ extraPluginDirs })` live outside the repo and document their own routes.
+The apps MDK ships in [`backend/apps/`](../../../backend/apps/) each carry an `mdk-plugin.json` route table — the source of truth for their HTTP routes. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js) (run via `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` there for this generator alone) reads those route tables and regenerates the tables inside the marked region of [`supported-plugins.md`](../supported-plugins.md), so the published route list never drifts from the manifests. This is the same read-source-of-truth, generate, ship pattern as the Worker catalogue.
+
+Only apps that ship in the repo are generated — third-party apps a stack declares in `spec.apps` live outside the repo and document their own routes. The [`check:plugin-reference-fresh`](ia.md#checkplugin-reference-fresh) gate keeps the generated tables honest, shipping as the **blocking** `docs-freshness` workflow. A stale table fails the pull request, so when a shipped app's routes change, run `npm run regenerate-docs` and commit the result in the same pull request.
 
 ## Decisions deferred
 

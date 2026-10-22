@@ -27,8 +27,7 @@ This example runs the [local topology][deployment-topologies] under PM2 supervis
 > [!NOTE]
 > This example's [`config/site.deploy.json`][site-backend-config] sets `discovery` to `"local"` by default (Kernel and Workers share
 > one machine, discovery via shared directory). Setting it to `"dht"` moves discovery onto Hyperswarm so Workers can run on separate
-> hosts, but the example's own README doesn't walk through that mode end-to-end. For a worked cross-host walkthrough today, see
-> [`examples/full-site`'s `cli.js --discovery dht`][full-site-dht].
+> hosts, but the example's own README doesn't walk through that mode end-to-end.
 
 ## Run the example
 
@@ -41,7 +40,6 @@ Follow the [Starter site example][site-backend-example]:
 ## Next steps
 
 - Understand the trade-offs between [deployment topologies][deployment-topologies]
-- Run [a single-process site][single-process] for the simpler single-process topology
 - [Register a single miner][miner-how-to] before building a site config
 - Extend the Gateway HTTP API with [custom plugins][plugins]
 - Browse the [functions][mdk-functions] that wire together the [Kernel][kernel-concept], [device Workers][workers-concept], and the [Gateway][gateway-concept] HTTP
@@ -51,9 +49,6 @@ Follow the [Starter site example][site-backend-example]:
 
 [deployment-topologies]: index.md
 <!-- docs@tether.io: deployment-topologies → guides/deployment -->
-
-[single-process]: run-single-process-site.md
-<!-- docs@tether.io: single-process → guides/deployment/run-single-process-site -->
 
 [miner-how-to]: ../miners/index.md
 <!-- docs@tether.io: miner-how-to → guides/miners -->
@@ -75,9 +70,6 @@ Follow the [Starter site example][site-backend-example]:
 
 [site-backend-config]: ../../../examples/mvp-site/config/site.deploy.json.example
 <!-- docs@tether.io: site-backend-config → https://github.com/tetherto/mdk/blob/main/examples/mvp-site/config/site.deploy.json.example -->
-
-[full-site-dht]: ../../../examples/full-site/README.md#how-out-of-process-workers-find-the-kernel
-<!-- docs@tether.io: full-site-dht → https://github.com/tetherto/mdk/blob/main/examples/full-site/README.md#how-out-of-process-workers-find-the-kernel -->
 
 [mdk-functions]: ../../../backend/core/mdk/README.md
 <!-- docs@tether.io: mdk-functions → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/README.md -->

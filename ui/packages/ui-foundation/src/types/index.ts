@@ -8,7 +8,6 @@
 
 export * from './api-mining.types'
 export * from './chart.types'
-export * from './pool.types'
 export * from './settings.types'
 
 export type SubscriberCallback<T> = (value: T) => void

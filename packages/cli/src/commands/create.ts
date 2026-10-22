@@ -1,11 +1,13 @@
 import type { Command } from 'commander';
+import { examples } from '../lib/help.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import { createDashboard, dashboardNameFromStack } from '../lib/dashboard.js';
+import { createDashboard, dashboardNameFromStack, defaultTemplateRef } from '../lib/dashboard.js';
+import { NAME_RE } from '../lib/names.js';
 import { createWorker } from '../lib/worker-scaffold.js';
 import { deviceId, deviceSerial } from '../lib/spec.js';
-import { createPlugin } from '../lib/plugin-scaffold.js';
+import { createApp } from '../lib/app-scaffold.js';
 import { DIRS } from '../lib/project.js';
 import { theme, tick, arrow } from '../lib/theme.js';
 
@@ -15,39 +17,65 @@ import { theme, tick, arrow } from '../lib/theme.js';
  * With no name the app takes the canonical `apps/dashboard` path and a
  * `<stack>-dashboard` package name read from mdk.yaml — so the path never churns
  * when the stack is renamed. An explicit name gets its own `apps/<name>` slot,
- * which is how a project ends up with more than one app.
+ * which is how a project ends up with more than one dashboard.
  */
 function resolveDashboard(
   explicit: string | undefined,
   parentDir: string,
-): { name: string; subdir: string } | null {
-  if (explicit) return { name: explicit, subdir: join(DIRS.apps, explicit) };
+): { name: string; subdir: string } | { error: string } | null {
+  if (explicit) {
+    const name = explicit.trim();
+    if (!NAME_RE.test(name)) {
+      return { error: `invalid dashboard name "${explicit}". Use lowercase letters, digits, '.', '_' or '-'.` };
+    }
+    return { name, subdir: join(DIRS.apps, name) };
+  }
 
   const specPath = resolve(parentDir, 'mdk.yaml');
   if (!existsSync(specPath)) return null;
+  let stack: string | undefined;
   try {
-    const doc = parseYaml(readFileSync(specPath, 'utf8')) as { metadata?: { name?: string } };
-    const stack = doc.metadata?.name?.trim();
-    return stack ? { name: dashboardNameFromStack(stack), subdir: DIRS.dashboard } : null;
+    const doc = parseYaml(readFileSync(specPath, 'utf8')) as { metadata?: { name?: unknown } };
+    stack = typeof doc.metadata?.name === 'string' ? doc.metadata.name.trim() : undefined;
   } catch {
     return null;
   }
+  if (!stack) return null;
+  const name = dashboardNameFromStack(stack);
+  if (!NAME_RE.test(name)) {
+    return {
+      error: `mdk.yaml metadata.name "${stack}" is not a valid name. Use lowercase letters, digits, '.', '_' or '-', or pass a dashboard name.`,
+    };
+  }
+  return { name, subdir: DIRS.dashboard };
 }
 
 // Group B — Scaffold
 export function registerCreate(program: Command): void {
   const create = program
     .command('create')
-    .description('Scaffold MDK components');
+    .usage('<command> [options]')
+    .summary('Scaffold a worker, app or dashboard')
+    .description('Scaffold a new worker, app or dashboard from the bundled templates and register it in mdk.yaml.')
+    .addHelpText(
+      'after',
+      examples('mdk create worker rig', 'mdk create app ops-center --org your-org', 'mdk create dashboard'),
+    );
 
   create
-    .command('worker <name>')
-    .description('Scaffold a Worker Plugin package into <dir>/workers/<name>')
-    .option('--org <scope>', 'npm scope/org for the generated package name')
-    .option('--dir <path>', 'Project directory (worker is created under <dir>/workers/<name>)', '.')
+    .command('worker')
+    .argument('<name>', "Worker name: lowercase letters, digits, '.', '_' or '-'")
+    .summary('Scaffold a Worker Plugin into workers/<name>')
+    .description(
+      'Scaffold a Worker Plugin (mdk-contract.json, handlers and a mock device) into <dir>/workers/<name>, ' +
+        'link it into package.json and add it to mdk.yaml under spec.workers with a mock device.',
+    )
+    .option('--org <scope>', 'npm scope for the package name, e.g. your-org -> @your-org/<name>')
+    .option('--dir <path>', 'Project directory', '.')
     .option('--force', 'Overwrite the target if it already exists', false)
-    .option('--no-install', 'Skip running `npm install` in the scaffolded worker')
-    .option('--no-stack-entry', 'Skip adding the worker to mdk.yaml under spec.workers')
+    .option('--no-install', 'Skip `npm install`')
+    .option('--no-stack-entry', 'Do not add the worker to mdk.yaml')
+    .addHelpText('after', examples('mdk create worker rig', 'mdk create worker rig --org your-org --no-install'))
     .action(
       (
         name: string,
@@ -99,9 +127,14 @@ export function registerCreate(program: Command): void {
           case 'exists':
             out += `  ${theme.muted(`spec.workers already has "${name}" in mdk.yaml — left unchanged`)}\n`;
             break;
+          case 'name-taken':
+            out += `  ${theme.warn('!')} spec.workers already has a worker named "${name}" with another package; mdk.yaml was not changed\n`;
+            process.exitCode = 1;
+            break;
           case 'no-file':
             out +=
-              `\n${theme.warn('No mdk.yaml found')} in ${theme.value(opts.dir)}. Add this under ${theme.key('spec.workers')}:\n\n` +
+              `\n${theme.warn('No mdk.yaml found')} in ${theme.value(opts.dir)}. Start a project with ${theme.cmd('mdk onboard')}, ` +
+              `or add this under ${theme.key('spec.workers')} of an existing one:\n\n` +
               manualSnippet;
             break;
           case 'error':
@@ -126,19 +159,25 @@ export function registerCreate(program: Command): void {
     );
 
   create
-    .command('plugin <name>')
-    .description(`Scaffold a Gateway Plugin package into <dir>/${DIRS.plugins}/<name>`)
-    .option('--org <scope>', 'npm scope/org for the generated package name')
-    .option('--dir <path>', `Project directory (plugin is created under <dir>/${DIRS.plugins}/<name>)`, '.')
+    .command('app')
+    .argument('<name>', "App name: lowercase letters, digits, '.', '_' or '-'")
+    .summary(`Scaffold an app into ${DIRS.apps}/<name>`)
+    .description(
+      `Scaffold an app (mdk-app.yaml, plugin/ route table and controllers, and a starter UI built into ui/) ` +
+        `into <dir>/${DIRS.apps}/<name>, link it into package.json and add it to mdk.yaml under spec.apps.`,
+    )
+    .option('--org <scope>', 'npm scope for the package name, e.g. your-org -> @your-org/<name>')
+    .option('--dir <path>', 'Project directory', '.')
     .option('--force', 'Overwrite the target if it already exists', false)
-    .option('--no-install', 'Skip running `npm install` in the scaffolded plugin')
-    .option('--no-stack-entry', 'Skip adding the plugin to mdk.yaml under spec.gateway.plugins')
+    .option('--no-install', 'Skip `npm install` and building the starter UI')
+    .option('--no-stack-entry', 'Do not add the app to mdk.yaml')
+    .addHelpText('after', examples('mdk create app ops-center', 'mdk create app ops-center --org your-org'))
     .action(
       (
         name: string,
         opts: { org?: string; dir: string; force: boolean; install: boolean; stackEntry: boolean },
       ) => {
-        const result = createPlugin({
+        const result = createApp({
           name,
           parentDir: opts.dir,
           org: opts.org,
@@ -161,57 +200,71 @@ export function registerCreate(program: Command): void {
         }
 
         let out =
-          `${tick} Scaffolded plugin ${theme.label(name)} ${arrow} ${theme.value(result.pluginPath!)}\n` +
-          `  ${theme.muted('package')} ${theme.value(result.packageName!)}\n`;
+          `${tick} Scaffolded app ${theme.label(name)} ${arrow} ${theme.value(result.appPath!)}\n` +
+          `  ${theme.muted('package')} ${theme.value(result.packageName!)}\n` +
+          (result.uiBuilt
+            ? `  ${tick} Built the starter UI ${arrow} ${theme.value('ui/index.js')} ${theme.muted('(source in ui-src/)')}\n`
+            : `  ${theme.warn('!')} Starter UI not built: ${result.uiWarning}\n` +
+              `    ${theme.muted('Build it yourself:')} ${theme.cmd(`cd ${result.appPath} && npm --prefix ui-src install && npm run build:ui`)}\n`);
 
-        // Gateway plugins are referenced by package name (resolved via the
-        // plugins/* workspace), so the manual snippet uses the package name too.
+        // Apps are referenced by package name (resolved via the `file:` link),
+        // so the manual snippet uses the package name too.
         const manualSnippet =
-          `${theme.cmd(`    - package: ${result.packageName}\n` + `      config: {}`)}\n`;
+          `${theme.cmd(`    - name: ${result.appName}\n      package: ${result.packageName}\n      config: {}`)}\n`;
 
         switch (result.stackFile) {
           case 'added':
-            out += `  ${tick} Added to ${theme.value('mdk.yaml')} under ${theme.key('spec.gateway.plugins')}\n`;
+            out += `  ${tick} Added to ${theme.value('mdk.yaml')} under ${theme.key('spec.apps')}\n`;
             break;
           case 'exists':
-            out += `  ${theme.muted(`spec.gateway.plugins already lists "${result.packageName}" — left unchanged`)}\n`;
+            out += `  ${theme.muted(`spec.apps already lists "${result.packageName}" — left unchanged`)}\n`;
+            break;
+          case 'name-taken':
+            out += `  ${theme.warn('!')} spec.apps already has an app named "${result.appName}" with another package; mdk.yaml was not changed\n`;
+            process.exitCode = 1;
             break;
           case 'no-file':
             out +=
-              `\n${theme.warn('No mdk.yaml found')} in ${theme.value(opts.dir)}. Add this under ${theme.key('spec.gateway.plugins')}:\n\n` +
+              `\n${theme.warn('No mdk.yaml found')} in ${theme.value(opts.dir)}. Start a project with ${theme.cmd('mdk onboard')}, ` +
+              `or add this under ${theme.key('spec.apps')} of an existing one:\n\n` +
               manualSnippet;
             break;
           case 'error':
             out +=
-              `\n${theme.warn('Could not update mdk.yaml automatically')}. Add this under ${theme.key('spec.gateway.plugins')}:\n\n` +
+              `\n${theme.warn('Could not update mdk.yaml automatically')}. Add this under ${theme.key('spec.apps')}:\n\n` +
               manualSnippet;
             break;
           default:
             // --no-stack-entry
             out +=
-              `\n${theme.muted('Add this to')} ${theme.value('mdk.yaml')} under ${theme.key('spec.gateway.plugins')}:\n\n` +
+              `\n${theme.muted('Add this to')} ${theme.value('mdk.yaml')} under ${theme.key('spec.apps')}:\n\n` +
               manualSnippet;
         }
 
         out +=
           `\n${theme.label('Next steps')}\n` +
-          `  ${theme.muted('1.')} Add routes in ${theme.value('mdk-plugin.json')} + ${theme.value('controllers/')}.\n` +
-          `  ${theme.muted('2.')} Run it: ${theme.cmd('mdk run gateway')} ${theme.muted('(or `mdk run` to boot everything together)')}\n`;
+          `  ${theme.muted('1.')} Add routes in ${theme.value('plugin/mdk-plugin.json')} + ${theme.value('plugin/controllers/')}.\n` +
+          `  ${theme.muted('2.')} Set ${theme.key('id')} and ${theme.key('permissions')} in ${theme.value('mdk-app.yaml')}, then check it: ${theme.cmd(`mdk validate app ${result.appName}`)}\n` +
+          `  ${theme.muted('3.')} Run it: ${theme.cmd('mdk run')} ${theme.muted(`(or \`mdk run app ${result.appName}\` + \`mdk run gateway\`)`)}, then ${theme.cmd('mdk run dashboard')} to see its UI\n` +
+          `  ${theme.muted('4.')} Edit the UI in ${theme.value('ui-src/')}; rebuild with ${theme.cmd('npm run build:ui')} (or ${theme.cmd('npm run dev:ui')} to rebuild on save).\n`;
 
         process.stdout.write(out);
       },
     );
 
   create
-    .command('dashboard [name]')
+    .command('dashboard')
+    .argument('[name]', `Dashboard name (default: <stack>-dashboard in ${DIRS.dashboard})`)
+    .summary(`Scaffold the UI dashboard into ${DIRS.dashboard}`)
     .description(
       `Scaffold the MDK UI shell into <dir>/${DIRS.dashboard}, named <stack>-dashboard from mdk.yaml. ` +
-        'With a name it lands in <dir>/apps/<name> instead',
+        `With a name it goes to <dir>/${DIRS.apps}/<name> instead.`,
     )
-    .option('--dir <path>', 'Project directory the app is created under', '.')
-    .option('--ref <git-ref>', 'Branch or tag to fetch the UI shell from', 'main')
-    .option('--force', 'Overwrite the target directory if it already exists', false)
-    .option('--no-install', 'Skip running `npm install` in the scaffolded dashboard')
+    .option('--dir <path>', 'Project directory', '.')
+    .option('--ref <git-ref>', 'Branch, tag or SHA to fetch the UI shell from', defaultTemplateRef())
+    .option('--force', 'Overwrite the target if it already exists', false)
+    .option('--no-install', 'Skip `npm install`')
+    .addHelpText('after', examples('mdk create dashboard', 'mdk create dashboard ops-ui --ref v0.10.0'))
     .action(
       async (
         name: string | undefined,
@@ -222,6 +275,11 @@ export function registerCreate(program: Command): void {
           process.stderr.write(
             'mdk create dashboard: pass a name, or run from a directory with mdk.yaml (uses <stack>-dashboard).\n',
           );
+          process.exitCode = 1;
+          return;
+        }
+        if ('error' in app) {
+          process.stderr.write(`mdk create dashboard: ${app.error}\n`);
           process.exitCode = 1;
           return;
         }

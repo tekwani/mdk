@@ -1,4 +1,4 @@
-import { ChartContainer } from '@tetherto/mdk-react-devkit/primitives'
+import { ChartContainer, EmptyState, Spinner } from '@tetherto/mdk-react-devkit/primitives'
 
 import type { JSX } from 'react'
 import { DemoBlock } from '../components/demo-block'
@@ -18,6 +18,23 @@ export const ChartContainerPage = (): JSX.Element => {
             <div className="chart-container-page__placeholder" />
           </ChartContainer>
           <ChartContainer title="Empty" empty emptyMessage="No data for this period">
+            <div className="chart-container-page__placeholder" />
+          </ChartContainer>
+        </div>
+      </DemoBlock>
+      <DemoBlock
+        title="Custom loader and empty state"
+        description="`loader` replaces the default spinner; `emptyMessage` also takes an element. With data in a dataset shape, derive `empty` from `useChartDataCheck({ data })`."
+      >
+        <div className="chart-container-page__states">
+          <ChartContainer title="Custom loader" loading loader={<Spinner type="circle" />}>
+            <div className="chart-container-page__placeholder" />
+          </ChartContainer>
+          <ChartContainer
+            title="Custom empty state"
+            empty
+            emptyMessage={<EmptyState description="No hashrate reported in this range" />}
+          >
             <div className="chart-container-page__placeholder" />
           </ChartContainer>
         </div>

@@ -111,6 +111,87 @@ describe('form Validators', () => {
   })
 })
 
+describe('form Validators: options', () => {
+  const issue = (schema: z.ZodTypeAny, value: unknown): string | undefined => {
+    const result = schema.safeParse(value)
+    return result.success ? undefined : result.error.issues[0]?.message
+  }
+
+  it('url: required by default, optional when required is false, with a custom message', () => {
+    expect(validators.url().safeParse('https://mdk.dev').success).toBe(true)
+    expect(issue(validators.url(), 'nope')).toBe('Please enter a valid URL')
+    expect(validators.url({ required: false }).safeParse(undefined).success).toBe(true)
+    expect(issue(validators.url({ required: false, message: 'Bad link' }), 'nope')).toBe('Bad link')
+  })
+
+  it('requiredString: a custom minimum and an optional maximum length', () => {
+    const schema = validators.requiredString({ minLength: 3, maxLength: 5 })
+    expect(issue(schema, 'ab')).toBe('This field must be at least 3 characters')
+    expect(issue(schema, 'abcdef')).toBe('This field must not exceed 5 characters')
+    expect(schema.safeParse('abcd').success).toBe(true)
+    expect(issue(validators.requiredString(), '')).toBe('This field must be at least 1 characters')
+  })
+
+  it('optionalString: unlimited by default, capped with maxLength', () => {
+    expect(validators.optionalString().safeParse(undefined).success).toBe(true)
+    expect(validators.optionalString().safeParse('x'.repeat(500)).success).toBe(true)
+    expect(issue(validators.optionalString({ maxLength: 3 }), 'abcd')).toBe(
+      'This field must not exceed 3 characters',
+    )
+  })
+
+  it('number: optional bounds and a custom type message', () => {
+    const schema = validators.number({ min: 1, max: 10, message: 'Enter a number' })
+    expect(issue(schema, 0)).toBe('Value must be at least 1')
+    expect(issue(schema, 11)).toBe('Value must not exceed 10')
+    expect(issue(schema, 'five')).toBe('Enter a number')
+    expect(validators.number().safeParse(-100).success).toBe(true)
+  })
+
+  it('date: required by default with bounds, optional when required is false', () => {
+    const min = new Date(2026, 0, 1)
+    const max = new Date(2026, 11, 31)
+    const schema = validators.date({ min, max })
+    expect(issue(schema, undefined)).toBe('Please select a date')
+    expect(issue(schema, new Date(2025, 5, 1))).toMatch(/^Date must be after /)
+    expect(issue(schema, new Date(2027, 5, 1))).toMatch(/^Date must be before /)
+    expect(schema.safeParse(new Date(2026, 5, 1)).success).toBe(true)
+    expect(validators.date({ required: false }).safeParse(undefined).success).toBe(true)
+  })
+
+  it('enum: the default and a custom required message', () => {
+    expect(issue(validators.enum(['a', 'b']), undefined)).toBe('Please select a valid option')
+    expect(issue(validators.enum(['a', 'b'], 'Pick one'), undefined)).toBe('Pick one')
+    expect(validators.enum(['a', 'b']).safeParse('b').success).toBe(true)
+  })
+
+  it('requiredBoolean: a custom message', () => {
+    expect(issue(validators.requiredBoolean('Accept the terms'), false)).toBe('Accept the terms')
+  })
+
+  it('macAddress and ipAddress: optional when required is false, with custom messages', () => {
+    expect(validators.macAddress({ required: false }).safeParse(undefined).success).toBe(true)
+    expect(issue(validators.macAddress({ required: false, message: 'Bad MAC' }), 'zz')).toBe(
+      'Bad MAC',
+    )
+    expect(issue(validators.macAddress({ message: 'Bad MAC' }), 'zz')).toBe('Bad MAC')
+    expect(validators.ipAddress({ required: false }).safeParse(undefined).success).toBe(true)
+    expect(issue(validators.ipAddress({ required: false, message: 'Bad IP' }), '999.1.1.1')).toBe(
+      'Bad IP',
+    )
+    expect(issue(validators.ipAddress({ message: 'Bad IP' }), '1.2.3')).toBe('Bad IP')
+  })
+})
+
+describe('createDateRange: incomplete ranges', () => {
+  it('passes when either date is missing, so the required check reports it instead', () => {
+    const [check] = createDateRange('start', 'end')
+    expect(check({ start: new Date(2026, 0, 1) })).toBe(true)
+    expect(check({ end: new Date(2026, 0, 1) })).toBe(true)
+    expect(check({ start: new Date(2026, 0, 2), end: new Date(2026, 0, 1) })).toBe(false)
+  })
+})
+
 describe('type-safe Field Names', () => {
   it('should create type-safe field name accessor', () => {
     type FormValues = {

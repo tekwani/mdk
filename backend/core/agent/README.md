@@ -9,7 +9,7 @@ The model routes and narrates; the tools compute. Nothing leaves the machine.
 > [!NOTE]
 > This page is reference: the model, the CLI flags, the capability budgets, and the session-store contract. For a
 > walkthrough that runs it end to end, see [Run the agent as a standalone CLI](../../../docs/guides/agent/run-standalone.md).
-> In production, this agent is deployed behind the Gateway by [`@tetherto/mdk-plugin-agent`](../../plugins/agent/README.md),
+> In production, this agent is deployed behind the Gateway by [`@tetherto/mdk-app-agent`](../../apps/agent/README.md),
 > which mounts it as a chat API instead; the [agent guide chooser](../../../docs/guides/agent/index.md) covers both paths.
 
 ## Prerequisites

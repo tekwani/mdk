@@ -80,19 +80,35 @@ never calls Kernel unprompted.
 Workers, routes commands to the one that owns a device, and pulls telemetry and health on its own cadence. It performs no
 aggregation and stores no telemetry itself.
 
+## How Kernel communicates with a Worker
+
+Suppose Kernel needs a temperature reading from a Worker's device. Four separate questions explain how that
+telemetry reaches Kernel:
+
+1. **Discovery**: Which Worker should Kernel contact? Kernel learns the Worker's [public key][worker-discovery],
+which identifies the Worker.
+2. **Connection**: How can Kernel reach that Worker? [HyperDHT][deployment-connectivity] helps locate and
+establish a connection to the peer (Worker) identified by that key.
+3. **Permission**: Does the Worker allow Kernel to call it? The Worker checks the caller's key against its
+[allowlist][worker-allowlist].
+4. **Request**: What does Kernel want the Worker to do? Kernel sends a [telemetry pull][mdk-protocol] (in
+our scenario, the temperature reading request) over HRPC, and the Worker replies.
+
+Knowing a public key does not by itself grant a connection or permission to call; the allowlist check happens when
+connections are established and requests are handled.
+
 ## Why HRPC?
 
-Every hop above (Gateway to Kernel, Kernel to Worker) speaks [Hyperswarm RPC (HRPC)][hrpc-glossary]: an encrypted,
-key-addressed peer-to-peer transport, not HTTP. A site network connects a fixed, known set of processes to each other, not
-the open web; HRPC's key-based addressing means a Worker or Gateway is reachable the same way whether it sits on the same
-host or across a DHT, with no separate TLS/cert story and no public-facing port to secure. The trade-off is a caller must
-hold or discover the callee's public key before it can connect: there is no URL to type into a browser.
+Gateway to Kernel and Kernel to Worker communications use [Hyperswarm RPC (HRPC)][hrpc-glossary] to connect known backend peers through the same
+encrypted, public-key-addressed interface, irrespective of whether they run together or on separate hosts. This suits a site's backend communication:
+callers identify peers by key instead of addressing public HTTP endpoints.
 
-In practice: a caller sends one request and receives one response over that channel; a dropped connection is the client's problem
-to recover from: the next call through [`@tetherto/mdk-client`][client-concept] reconnects; Kernel does not buffer or replay what it couldn't
-deliver while a link was down.
+> [!NOTE]
+> The [HRPC connection model][hrpc-glossary] explains key addressing and encryption. The [deployment network requirements][deployment-connectivity]
+> cover bootstrap reachability in every shape, and the [client transport reference][client-transport] explains request/response communication
+> and recovery after a connection drops, including how that differs from replaying a command.
 
-## What's authoritative, and what's cached
+## What's authoritative vs. cached
 
 Kernel's own store holds only its Worker registry, device capabilities, and the write-command log: never telemetry.
 Telemetry is Worker-owned: a Worker persists its own device history, and every telemetry read anywhere above it (Gateway
@@ -102,19 +118,19 @@ plugin, dashboard, agent) is a live pull through that chain, not a read from a K
 
 Discover each layer's canonical docs:
 
-| Layer | Package | Canonical doc |
-|---|---|---|
-| Workers | `@tetherto/mdk-worker-*`, one per vendor | [Device protocol adapters][workers-concept] |
-| Worker Runtime | `@tetherto/mdk-worker` | [Worker runtime][worker-runtime] |
-| Kernel | `@tetherto/mdk-kernel` | [Coordination kernel][kernel-concept] |
-| Client SDK | `@tetherto/mdk-client` | [Protocol connector][client-concept] |
-| Gateway | `@tetherto/mdk-gateway` | [Plugin host and HTTP surface][gateway-concept] |
-| Gateway plugins | `@tetherto/mdk-plugins` | [Bundled plugins and the manifest format][plugins-readme] |
-| MCP server | `@tetherto/mdk-mcp` | [Tools for AI agents][mcp-readme] |
-| App Toolkit | Frontend packages | [The supported development path][app-toolkit] |
+| Layer           | Package                | Canonical doc                                          |
+| --------------- | ---------------------- | ------------------------------------------------------ |
+| Workers         | `@tetherto/mdk-worker-*`, one per vendor | [Device protocol adapters][workers-concept] |
+| Worker Runtime  | `@tetherto/mdk-worker` | [Worker runtime][worker-runtime]                       |
+| Kernel          | `@tetherto/mdk-kernel` | [Coordination kernel][kernel-concept]                  |
+| Client SDK      | `@tetherto/mdk-client` | [Protocol connector][client-concept]                   |
+| Gateway         | `@tetherto/mdk-gateway` | [Plugin host and HTTP surface][gateway-concept]       |
+| Gateway plugins | `@tetherto/mdk-plugins` | Bundled plugins and the manifest format               |
+| MCP server      | `@tetherto/mdk-mcp`    | [Tools for AI agents][mcp-readme]                      |
+| App Toolkit     | Frontend packages      | [The supported development path][app-toolkit]          |
 
-For the per-package detail in each workspace, read the [core package index][core-docs] and the [UI toolkit index][ui-index]. How many of
-each a deployment runs is covered by [scalability][scalability].
+For the per-package detail in each workspace, read the [core package index][core-docs] and the [UI toolkit index][ui-index].
+How many of each a deployment runs is covered by [scalability][scalability].
 
 ## Next steps
 
@@ -127,6 +143,21 @@ each a deployment runs is covered by [scalability][scalability].
 - [Connect an AI agent over MCP][ai-agents-docs]: the endpoint agents reach the fleet through, and the security envelope you supply
 
 ## Links
+
+[worker-discovery]: ../../backend/workers/docs/architecture.md#discovery-model
+<!-- docs@tether.io: worker-discovery → https://github.com/tetherto/mdk/blob/main/backend/workers/docs/architecture.md#discovery-model -->
+
+[deployment-connectivity]: deployment-topologies.md#discovery-vs-transport
+<!-- docs@tether.io: deployment-connectivity → concepts/deployment-topologies#discovery-vs-transport -->
+
+[worker-allowlist]: ../../backend/core/mdk-worker/README.md#caller-allowlist
+<!-- docs@tether.io: worker-allowlist → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/README.md#caller-allowlist -->
+
+[mdk-protocol]: ../../backend/core/kernel/README.md#mdk-protocol
+<!-- docs@tether.io: mdk-protocol → https://github.com/tetherto/mdk/blob/main/backend/core/kernel/README.md#mdk-protocol -->
+
+[client-transport]: ../../backend/core/client/README.md#transport-details
+<!-- docs@tether.io: client-transport → https://github.com/tetherto/mdk/blob/main/backend/core/client/README.md#transport-details -->
 
 [client-concept]: ../../backend/core/client/README.md
 <!-- docs@tether.io: client-concept → https://github.com/tetherto/mdk/blob/main/backend/core/client/README.md -->
@@ -170,8 +201,6 @@ each a deployment runs is covered by [scalability][scalability].
 [worker-runtime]: ../../backend/core/docs/README.md#worker-runtime-tethertomdk-worker
 <!-- docs@tether.io: worker-runtime → https://github.com/tetherto/mdk/blob/main/backend/core/docs/README.md#worker-runtime-tethertomdk-worker -->
 
-[plugins-readme]: ../../backend/core/plugins/README.md
-<!-- docs@tether.io: plugins-readme → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md -->
 
 [core-docs]: ../../backend/core/docs/README.md
 <!-- docs@tether.io: core-docs → https://github.com/tetherto/mdk/blob/main/backend/core/docs/README.md -->

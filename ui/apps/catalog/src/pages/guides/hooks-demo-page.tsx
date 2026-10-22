@@ -2,7 +2,6 @@ import type { JSX } from 'react'
 
 import { Button } from '@tetherto/mdk-react-devkit/primitives'
 import {
-  useActions,
   useAuth,
   useDevices,
   useNotifications,
@@ -97,47 +96,13 @@ const DevicesDemo = (): JSX.Element => {
   )
 }
 
-const ActionsDemo = (): JSX.Element => {
-  const { pendingSubmissions, setAddPendingSubmissionAction, clearAllPendingSubmissions } =
-    useActions()
-  return (
-    <div>
-      <p>
-        <strong>pendingSubmissions:</strong> <code>{pendingSubmissions.length}</code> in queue
-      </p>
-      <ul style={{ maxHeight: 120, overflow: 'auto' }}>
-        {pendingSubmissions.map((submission) => (
-          <li key={submission.id}>
-            <code>{submission.id}</code> —{' '}
-            {(submission.action as string | undefined) ?? '(no action)'}
-          </li>
-        ))}
-      </ul>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <Button
-          onClick={() =>
-            setAddPendingSubmissionAction({
-              action: `demo:tick-${Date.now()}`,
-              tags: ['demo'],
-            })
-          }
-        >
-          Enqueue submission
-        </Button>
-        <Button variant="secondary" onClick={() => clearAllPendingSubmissions()}>
-          Clear all
-        </Button>
-      </div>
-    </div>
-  )
-}
 
 export const HooksDemoPage = (): JSX.Element => {
   return (
     <div>
       <DemoPageHeader
         title="Adapter Hooks"
-        description="Live demonstration of the five MDK React adapter hooks. Each hook is backed by a Zustand vanilla store from @tetherto/mdk-ui-foundation and re-renders only when its selected slice changes."
+        description="Live demonstration of the four MDK React adapter store hooks. Each hook is backed by a Zustand vanilla store from @tetherto/mdk-ui-foundation and re-renders only when its selected slice changes."
       />
 
       <DemoBlock
@@ -166,13 +131,6 @@ export const HooksDemoPage = (): JSX.Element => {
         description="Selected devices, containers and sockets across the explorer."
       >
         <DevicesDemo />
-      </DemoBlock>
-
-      <DemoBlock
-        title="useActions"
-        description="Queue of pending action submissions, e.g. miner controls and pool changes."
-      >
-        <ActionsDemo />
       </DemoBlock>
     </div>
   )

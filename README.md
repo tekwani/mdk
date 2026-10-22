@@ -1,6 +1,6 @@
 # MDK
 
-[![Release](https://img.shields.io/github/v/release/tetherto/mdk?display_name=tag&style=flat-square)](https://github.com/tetherto/mdk/releases/tag/v0.11.0)
+[![Release](https://img.shields.io/github/v/release/tetherto/mdk?display_name=tag&style=flat-square)](https://github.com/tetherto/mdk/releases/tag/v0.12.0)
 [![CI](https://img.shields.io/github/actions/workflow/status/tetherto/mdk/ci.yml?branch=main&label=CI&style=flat-square&logo=github)](https://github.com/tetherto/mdk/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/tetherto/mdk/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/tetherto/mdk/actions/workflows/github-code-scanning/codeql)
 [![Documentation](https://img.shields.io/badge/docs-mdk.tether.io-2ea44f?style=flat-square)](https://docs.mdk.tether.io)
@@ -11,7 +11,10 @@
 
 MDK is under active development and is **not yet considered stable**.
 
-Current release [v0.11.0](https://github.com/tetherto/mdk/releases/tag/v0.11.0).
+Current release [v0.12.0](https://github.com/tetherto/mdk/releases/tag/v0.12.0).
+
+> v0.12.0 will be a 2 stage release. First to release the code and support the public release
+> of npm packages, followed by a patch release of the documentation updates and any hotfixes.
 
 ## Table of contents
 
@@ -56,58 +59,37 @@ instructions to, Workers.
 ### Run the demo site
 
 The fastest way to see MDK working end to end. This boots the
-[full-site example](examples/full-site/README.md): a Kernel, 11 real Workers, their mock device servers, a Gateway HTTP API,
-and a React dashboard.
+[MVP site example](examples/mvp-site/README.md): a Kernel, a Gateway HTTP API, Whatsminer and Antminer Workers, an Ocean
+pool Worker, a SATEC power meter Worker, their mock device servers, an MCP server, and a React dashboard, each as its own
+PM2-supervised process.
 
-**Requirements:** Node.js >=24, npm 11 [(< 12)](docs/reference/environment.md#why-npm-stays-below-12).
+**Requirements:** Node.js >=24, npm 11 [(< 12)](docs/reference/environment.md#why-npm-stays-below-12), and PM2
+(`npm install -g pm2`).
 
 ```bash
 git clone git@github.com:tetherto/mdk.git
-cd mdk/examples/full-site
+cd mdk/examples/mvp-site
 
-npm run setup                  # one time: installs every workspace and builds the devkit packages
-node start.js --miners 3       # small fleet — fastest first boot
+npm run setup          # one time: installs backend/core, backend/workers, this example and its UI
+npm run setup:config   # one time: writes config/devices.json and config/site.deploy.json from the examples
+npm start              # starts every component under PM2, then exits
 ```
 
-`npm run setup` walks the root workspace (`backend/core/*`, `backend/workers/*`), the `ui/` workspace, this example, and its
-dashboard, then builds the devkit packages the dashboard imports. First run takes 1-2 minutes; later starts skip it.
-
-Boot takes 30-60s. Wait for these lines:
-
-```text
-  Kernel ready — HRPC key 74d6ba2cccbbf54b…
-  Workers registered: 11 (39 devices)
-  Gateway ready — http://localhost:3007 (HRPC → Kernel)
-  Site live: 9 miners, containers [container-antspace, container-bitdeer], site power 100608 W, 2 pool(s)
-  UI starting — http://localhost:3040
-  MCP server starting — http://localhost:3008/mcp
-```
-
-Then open the dashboard:
-
-| Surface | URL |
-| --- | --- |
-| Dashboard (UI) | `http://localhost:3040` |
-| Gateway API | `http://localhost:3007` |
-| MCP server | `http://localhost:3008/mcp` |
-
-Check the API directly:
+Check the processes, then open the dashboard at `http://localhost:3000/` once every app shows `online`:
 
 ```bash
-curl -s http://localhost:3007/site/overview | jq '{miners: (.miners|length), containers: (.containers|length), pools: (.pools|length)}'
+pm2 list   # mocks, kernel, worker, worker-antminer, worker-ocean, worker-satec, worker-emcd, worker-spiderpool, gateway, mcp, ...
+pm2 logs
 ```
 
-Stop with `Ctrl-C`. State persists under `examples/full-site/.mdk-data/`, so the next `node start.js` resumes the same site
-without re-seeding — delete that directory to start clean.
+Stop with `npm run stop:pm2`. State persists under `examples/mvp-site/.site-data/`, so the next `npm start` resumes the
+same site without re-seeding — delete that directory to start clean.
 
 > [!NOTE]
-> Every device is a **mock server speaking the real wire protocol** (Modbus TCP, MQTT, REST, TCP), not a simulated manager. The
-> Workers run their genuine `connect()` and telemetry paths; only the endpoints are localhost instead of hardware. All telemetry
-> values are synthetic.
+> Every device is a **mock server speaking the real wire protocol**, not a simulated manager. The Workers run their genuine
+> `connect()` and telemetry paths; only the endpoints are localhost instead of hardware. All telemetry values are synthetic.
 
-Useful flags: `--miners N` (per family, default 10 → 30 total), `--no-ui` (backend only), `DEBUG=mdk:example:*` (verbose boot).
-Above ~30 miners raise the descriptor limit first with `ulimit -n 4096`. For a multi-process REPL that supervises each component
-separately, run `node cli.js` instead. Full walkthrough: [Run a mining site end to end](docs/tutorials/run-a-site.md).
+Full walkthrough: [Run a mining site end to end](docs/tutorials/run-a-site.md).
 
 ### Find your lane
 
@@ -115,10 +97,10 @@ MDK ships a backend SDK and an optional dashboarding layer. Find your lane:
 
 - **I'm a hardware provider**: where do I start? Build a Worker and author its [`mdk-contract.json`](docs/guides/workers/build-a-worker.md)
 - **I'm a site operator**: how do I connect my Workers to a Gateway? Run an MDK site as a
-[single process](docs/guides/deployment/run-single-process-site.md), or [choose another deployment shape](docs/guides/deployment/index.md)
+[supervised services](docs/guides/deployment/run-all-workers-site.md), or [choose another deployment shape](docs/guides/deployment/index.md)
 - **I'm a site operator** how do I manage my site with a conversational agent?: start from the [operator agent guides](docs/guides/agent/index.md)
 - **I'm an app developer building a React UI**: start from the [UI toolkit](ui/README.md#getting-started), or add MDK to an existing app
-- **I'm an app developer building backend services or Gateway plugins**: run the [backend stack locally](examples/backend/README.md) or start with
+- **I'm an app developer building backend services or Gateway plugins**: run the backend stack locally or start with
 the [Gateway API surfaces](docs/guides/gateway/index.md)
 - **I'm an app developer building a dashboard end to end**: follow [build a dashboard](docs/tutorials/build-a-dashboard.md), or scaffold one against
 a running stack with [`mdk create dashboard`](packages/cli/README.md) (`@tetherto/mdk-cli`)
@@ -133,12 +115,12 @@ If you are an LLM being pointed at this repo, read these first:
 - [`backend/core/mcp/README.md`](backend/core/mcp/README.md): connect an agent to MDK over MCP
 - [`ui/AGENTS.md`](ui/AGENTS.md): contract overview and a quick recipe
 - [`ui/docs/AGENT_FIRST.md`](ui/docs/AGENT_FIRST.md): manifests, blueprints, registry
-- [`examples/backend/README.md`](examples/backend/README.md): catalogue of runnable example backends, each with a start command
+- [`backend/workers/docs/install-pattern.md`](backend/workers/docs/install-pattern.md): boot any Worker and run it against its bundled mock with `npm run mock`
 
 ## Build and develop
 
-The repo root is a real npm workspace: every `backend/core/*`, `backend/plugins/*`, `backend/workers/**` and `backend/tests/*`
-package, the standalone `packages/*` tools, and `examples/full-site` + `examples/mvp-site` are workspace members, so a single
+The repo root is a real npm workspace: every `backend/core/*`, `backend/apps/*`, `backend/workers/**` and `backend/tests/*`
+package, the standalone `packages/*` tools, and `examples/mvp-site` are workspace members, so a single
 `npm install` (or `npm ci`) at the root installs and links them all together. `ui/` stays a separate, nested npm workspace
 with its own `apps/*` + `packages/*` members and its own lockfile; the root itself has no Turbo configuration.
 
@@ -166,12 +148,13 @@ to tear down the UI's build artifacts and installed dependencies; most backend a
 
 The following example trees ship with the repo — they answer different questions, so start from the one that matches what you are doing:
 
-| Example                                               | Use it for                  | Status      |
-| ----------------------------------------------------- | --------------------------- | ----------- |
-| [`examples/full-site/`](examples/full-site/README.md) | The canonical end-to-end demo: Kernel + 11 Workers + Gateway + React dashboard + MCP, in one process or an interactive REPL | Actively developed — start here |
-| [`examples/backend/`](examples/backend/README.md)     | Per-family backend snippets (miners, containers, power meters, sensors, pools, kernel, plugin e2e) with no UI | Actively developed     |
-| [`examples/mvp-site/`](examples/mvp-site/README.md)   | The same fleet as separate PM2-supervised processes, for deployment-shaped experiments | Maintained; overlaps `full-site`, which is the richer of the two |
-| [`examples/mdk-ui-shell-template/`](examples/mdk-ui-shell-template/README.md) | A runnable sign-in-gated operator shell, and the source `mdk create dashboard` copies when scaffolding a new app | Maintained as a template |
+| Example                                                                       | Use it for                                                                                                         | Status                          |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| [`examples/mvp-site/`](examples/mvp-site/README.md)                           | The end-to-end demo: Kernel + Workers + Gateway + React dashboard + MCP, each as a separate PM2-supervised process | Actively developed — start here |
+| [`examples/mdk-ui-shell-template/`](examples/mdk-ui-shell-template/README.md) | A runnable sign-in-gated operator shell, and the source `mdk create dashboard` copies when scaffolding a new app   | Maintained as a template        |
+
+To run a single Worker against a mock device with no site around it, start the mock with `npm run mock` and follow the Worker's guide,
+for example [run an Avalon Worker](docs/guides/miners/run-avalon-worker.md).
 
 > [!NOTE]
 > Apps scaffolded into `ui/apps/<name>/` are gitignored except for `apps/catalog`, but they are still npm workspace

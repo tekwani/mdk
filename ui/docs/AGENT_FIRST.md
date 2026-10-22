@@ -16,8 +16,8 @@ It is intentionally not the contract — the strict contract lives in
 - **If `agent-ready`** → also ship `USAGE.md` + `*.example.tsx` (+
   `@kernelCapability` if domain-specific).
 - **`npm run fullcheck`**: when green, the repo is shippable.
-- **Agents** read `blueprints.json` first, then drill into
-  `registry.json` / `hooks.json` / `stores.json`, `USAGE.md`, and
+- **Agents** read `registry.json` first, then drill into
+  `hooks.json` / `stores.json`, `USAGE.md`, and
   examples — all local files, no network.
 - **Baseline is empty** → should be empty in CI; run
   `npm run check:agent-ready --workspace @tetherto/mdk-react-devkit -- --no-baseline`
@@ -32,8 +32,7 @@ component, hook, and store, and scaffold real features without guessing.
 It ships three TypeScript packages and one font package:
 
 - [`@tetherto/mdk-ui-foundation`](../packages/ui-foundation/README.md) — framework-agnostic
-  state (Zustand stores), the command lifecycle state machine, telemetry
-  primitives.
+  state (Zustand stores), the TanStack Query client and auth providers.
 - [`@tetherto/mdk-react-adapter`](../packages/react-adapter/README.md) — React
   bindings for the stores and TanStack Query.
 - [`@tetherto/mdk-react-devkit`](../packages/react-devkit/README.md) — the
@@ -57,14 +56,12 @@ build with this".
 ```mermaid
 flowchart LR
   src["src/**/*.tsx + JSDoc tags"]
-  blueprintsMd["blueprints/*.md"]
   adapterSrc["react-adapter/src/hooks/**"]
   coreSrc["ui-foundation/src/store/** + query/**"]
   gen["scripts/generate-registry.mts"]
   genHooks["generate-hooks.mts"]
   genStores["generate-stores.mts"]
   reg["dist/registry.json"]
-  bp["dist/blueprints.json"]
   hooks["dist/hooks.json"]
   stores["dist/stores.json"]
   baseline["agent-ready-baseline.json"]
@@ -74,31 +71,27 @@ flowchart LR
   app["Consumer app"]
 
   src --> gen
-  blueprintsMd --> gen
   adapterSrc --> genHooks
   coreSrc --> genStores
   gen --> reg
-  gen --> bp
   genHooks --> hooks
   genStores --> stores
   reg --> check
-  bp --> check
   baseline --> check
   reg --> smoke
   reg --> agent
-  bp --> agent
   hooks --> agent
   stores --> agent
   agent --> scaffold["write src/pages/&lt;Name&gt;.tsx + routes.ts entry"]
-  scaffold --> verify["tsc --noEmit + eslint"]
+  scaffold --> verify["tsc --noEmit + oxlint"]
   verify --> app
 ```
 
 The artifacts an agent ultimately sees are: `registry.json`,
-`blueprints.json`, `hooks.json`, `stores.json`, `USAGE.md` files, and
+`hooks.json`, `stores.json`, `USAGE.md` files, and
 `*.example.tsx` files. Everything else is either authoring inputs
 (source + tags) or quality gates. That JSON is the agent's source of
-truth; the blueprints and docs just make it easier to navigate.
+truth; the docs just make it easier to navigate.
 
 ## The three tiers
 
@@ -187,10 +180,9 @@ on every build. Covers every hook exported from
 
 | Category | What it contains |
 | --- | --- |
-| `store` | React bindings for the five Zustand singletons (`useAuth`, `useDevices`, …). |
+| `store` | React bindings for the four Zustand singletons (`useAuth`, `useDevices`, …). |
 | `utility` | Generic UI helpers (`usePagination`, `useLocalStorage`, `useWindowSize`, …). |
 | `permission` | Auth-gate hooks (`useCheckPerm`, `useHasPerms`, `useIsFeatureEditingEnabled`). |
-| `ui` | Domain-specific UI hooks (`useMinerDuplicateValidation`, `usePduViewer`, …). |
 | `external` | Re-exported TanStack Query hooks (`useQuery`, `useMutation`, …). |
 
 Also records the `MdkProvider` component (description + prop list) so
@@ -209,29 +201,7 @@ signatures. Also captures the TanStack Query helper signatures
 
 Import directly: `require('@tetherto/mdk-ui-foundation/stores.json')`.
 
-### 5. Blueprints (intent → recipe)
-
-Curated Markdown recipes under
-[`packages/react-devkit/blueprints/`](../packages/react-devkit/blueprints/README.md),
-each with YAML frontmatter listing the components and hooks an agent
-should reach for given a high-level intent. The generator parses these
-and emits `dist/blueprints.json` with its own indexes (`byId`,
-`byDomain`, `byKernelCapability`, `byComponent`).
-
-V1 ships four blueprints:
-
-| Blueprint                       | Use when…                                                       |
-| ------------------------------- | --------------------------------------------------------------- |
-| `mining-operations-dashboard`   | "Show me my miners" / live operator dashboard                   |
-| `reporting`                     | "Monthly report" / CSV export / historical numbers              |
-| `device-management`             | "Manage miners" / drill into one device                         |
-| `custom-feature`                | The user's domain is out-of-scope for MDK (weather, inventory…) |
-
-Blueprints are validated by `check:agent-ready`: every referenced
-component must exist in the registry **and** be `tier: agent-ready` —
-agents following a blueprint can never land on an advanced API.
-
-### 6. The decision flow
+### 5. The decision flow
 
 Everything above is a plain file read — no tooling, no network, no model
 calls. The deterministic path from intent to code:
@@ -239,22 +209,15 @@ calls. The deterministic path from intent to code:
 ```mermaid
 flowchart TD
   intent["Plain-language intent"]
-  bp["blueprints.json — scan `intent` fields"]
-  match{"Matching blueprint?"}
-  body["Read the blueprint's markdown `body`"]
   facets["registry.json — intersect `indexes`\n(byDomain / byKernelCapability / byCategory / byTier)"]
   state{"Needs state or data?"}
   hooks["hooks.json — adapter hooks"]
   stores["stores.json — stores + query helpers"]
   contract["Read the entry's `usageDoc` + `examples`"]
   scaffold["Write src/pages/&lt;Name&gt;.tsx\n+ routes.ts entry + nav icon"]
-  verify["tsc --noEmit + eslint"]
+  verify["tsc --noEmit + oxlint"]
 
-  intent --> bp
-  bp --> match
-  match -- yes --> body
-  match -- no --> facets
-  body --> facets
+  intent --> facets
   facets --> state
   state -- yes --> hooks
   state -- yes --> stores
@@ -269,24 +232,20 @@ flowchart TD
 
 Imagine a user says *"build me a mining dashboard with weather"*:
 
-1. **Agent reads `dist/blueprints.json`** → high-level recipes
-   (`mining-operations-dashboard`, `device-management`, `custom-feature`)
-   that map intent → concrete components/hooks. "Weather" matches no
-   mining blueprint, so it lands on `custom-feature`.
-2. **Agent reads `dist/registry.json`** → O(1) lookup tables:
+1. **Agent reads `dist/registry.json`** → O(1) lookup tables:
    `componentsByTier`, `componentsByDomain`, `componentsByKernelCapability`,
    `componentsByCategory`. Intersecting them narrows to the dashboard
    components the intent implies.
-3. **Agent reads `dist/hooks.json` and `dist/stores.json`** to find the
+2. **Agent reads `dist/hooks.json` and `dist/stores.json`** to find the
    right React bindings (`useAuth`, `useDevices`, …) and what state and
    query helpers already exist.
-4. **Agent reads each entry's `usageDoc` and `examples`** — the paths are
+3. **Agent reads each entry's `usageDoc` and `examples`** — the paths are
    in the registry entry, relative to the package root — so prop names and
    types are copied, never guessed.
-5. **Agent writes the page** (`src/pages/<Name>.tsx` + a one-line
+4. **Agent writes the page** (`src/pages/<Name>.tsx` + a one-line
    `routes.ts` entry + a nav icon) and **verifies** with `tsc --noEmit`
-   and `eslint`.
-6. **Agent composes only `agent-ready` exports** by default. Advanced
+   and `oxlint`.
+5. **Agent composes only `agent-ready` exports** by default. Advanced
    ones require an explicit user request.
 
 Result: the agent never hallucinates props or imports — it pulls real
@@ -302,11 +261,11 @@ plug into the normal `fullcheck` / CI flow.
 
 Runs three steps in order:
 
-1. **`build:registry`** — regenerates `dist/registry.json` and `dist/blueprints.json` from source
+1. **`build:registry`** — regenerates `dist/registry.json` from source
 2. **[`check-registry-completeness.mts`](../packages/react-devkit/scripts/check-registry-completeness.mts)** — scans source directly for `@tier agent-ready` declarations and fails if any are absent from the registry. This closes the source-vs-registry drift gap: the registry generator walks the public barrel and can silently skip an export it cannot resolve, so source and registry can diverge without anyone noticing. Deliberate exceptions live in [`scripts/registry-completeness-exceptions.json`](../packages/react-devkit/scripts/registry-completeness-exceptions.json) — every exemption is an explicit, reviewable entry in the PR diff
 3. **[`check-agent-ready.mjs`](../packages/react-devkit/scripts/check-agent-ready.mjs)** — the strict contract gate described below
 
-The strict gate. Loads `dist/registry.json` and `dist/blueprints.json`,
+The strict gate. Loads `dist/registry.json`,
 applies the agent-ready contract rules, and compares against
 [`agent-ready-baseline.json`](../packages/react-devkit/scripts/agent-ready-baseline.json).
 It yells if:
@@ -314,7 +273,6 @@ It yells if:
 - An export has no `@tier`.
 - An `agent-ready` component is missing `USAGE.md` or `*.example.tsx`.
 - An `agent-ready` non-generic component has no `@kernelCapability`.
-- A blueprint references a non-existent or non-`agent-ready` component.
 - Anything else drifts from the contract in
   [`AGENT_READY.md`](../packages/react-devkit/AGENT_READY.md).
 
@@ -342,11 +300,12 @@ contract gate passes.
 
 ```
 npm run fullcheck
-  ├─ npm run build              # builds packages + registry + blueprints
+  ├─ npm run build              # builds packages + registry
   ├─ npm run lint
   ├─ npm run typecheck
   ├─ npm run format
   ├─ npm run check:agent-ready  # the strict contract gate
+  ├─ npm run check:api-surface  # exported names match ui/api-surface/*.json
   └─ npm run test:coverage      # includes the registry smoke test
 ```
 
@@ -376,12 +335,8 @@ UI workspace after `npm run build`:
 ```bash
 node --input-type=module -e '
 import registry from "./packages/react-devkit/dist/registry.json" with { type: "json" }
-import blueprints from "./packages/react-devkit/dist/blueprints.json" with { type: "json" }
 import hooks from "./packages/react-adapter/dist/hooks.json" with { type: "json" }
 import stores from "./packages/ui-foundation/dist/stores.json" with { type: "json" }
-
-// Find a curated recipe
-console.log(blueprints.blueprints.map((b) => `${b.id}: ${b.intent}`))
 
 // Discover the component layer, narrowed by facet
 const { componentsByDomain: byDomain, componentsByKernelCapability: byCap } = registry.indexes
@@ -398,7 +353,7 @@ console.log(entry.usageDoc, entry.examples, entry.props.map((p) => p.name))
 ```
 
 Then verify generated code the way CI does: `npx tsc --noEmit` and
-`npx eslint <file>`.
+`npx oxlint --type-aware <file>`.
 
 ### 3. Prove the gate works (negative test)
 
@@ -418,7 +373,7 @@ npm run fullcheck
 ```
 
 Runs build + lint + typecheck + format + `check:agent-ready` +
-test:coverage. If this is green, the repo is shippable and agent-ready.
+`check:api-surface` + test:coverage. If this is green, the repo is shippable and agent-ready.
 
 ### 5. Eyeball the registry
 
@@ -435,7 +390,7 @@ generated output). In a consuming app, load
   `generic`, …).
 - `indexes.hooksByDomain`: grouped hooks by domain.
 
-That JSON is the agent's source of truth. Everything else (blueprints,
+That JSON is the agent's source of truth. Everything else (the
 docs) just makes it easier to navigate.
 
 ## Glossary
@@ -450,8 +405,6 @@ docs) just makes it easier to navigate.
 - **Domain** — mining business area
   (`mining-operations`, `financial-reporting`, `device-management`,
   `generic`).
-- **Blueprint** — curated Markdown recipe mapping a user intent to a
-  concrete set of `agent-ready` components and hooks.
 - **Agent-ready** — a component or hook stable and well-documented
   enough that an LLM can pick it directly when generating code. Ships
   JSDoc, `USAGE.md`, and a runnable example.
@@ -461,7 +414,6 @@ docs) just makes it easier to navigate.
 | If you want to…                                          | Read                                                                                                                |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Contribute or tier a new component                       | [`../packages/react-devkit/AGENT_READY.md`](../packages/react-devkit/AGENT_READY.md)                                |
-| Author a new blueprint                                   | [`../packages/react-devkit/blueprints/README.md`](../packages/react-devkit/blueprints/README.md)                    |
 | Consume MDK from an app (or wire an agent into one)      | [`../AGENTS.md`](../AGENTS.md) — the manifests and how to read them                                                 |
 | Understand the registry generator internals              | [`../packages/react-devkit/scripts/generate-registry.mts`](../packages/react-devkit/scripts/generate-registry.mts)  |
 | Understand the build & monorepo layout                   | [`ARCHITECTURE.md`](ARCHITECTURE.md), [`BUILD.md`](BUILD.md)                                                         |
@@ -479,7 +431,7 @@ You can run it two ways, with or without authentication:
 - **[Without sign-in](#run-it-without-sign-in)** — where to start. Two edits to
   the scaffolded app and the dashboard loads against your Gateway.
 - **[With Google sign-in](#add-google-sign-in)** — needs your
-  [identity plugin](../../docs/guides/gateway/plugins.md) you write. Do this when you
+  [identity app](../../docs/guides/gateway/plugins.md) you write. Do this when you
   need real sessions.
 
 > **Audience:** community developers evaluating MDK, contributors writing
@@ -511,15 +463,14 @@ shell is built around a session it has no way to obtain yet. Pick
 
 ## Auth in this shell — what ships
 
-The Gateway is a plugin host with no API of its own, and no built-in auth or
+The Gateway routes requests to apps and has no API of its own, and no built-in auth or
 OAuth2 facilities. That has two consequences here:
 
-- **No OAuth implementation ships.** Sign-in is a Gateway plugin you write.
-  `@tetherto/mdk-plugin-auth` is bundled but unwired, and it consumes a token
-  rather than issuing one.
-- **The Gateway does not validate tokens.** Plugin routes can declare
-  `"auth": true`, but nothing enforces it — a controller gets no injected
-  identity layer to check against. An unauthenticated frontend talks to it
+- **No OAuth implementation ships.** Sign-in is an app you write.
+- **The Gateway does not validate tokens itself.** A route marked `"auth": true`
+  answers `401` unless the `authVerifier` passed to `startGateway()` returns an
+  identity; checking your token is that verifier's job. Routes without
+  `"auth": true` are open, so an unauthenticated frontend talks to them
   fine, which is what makes [running it without sign-in](#run-it-without-sign-in) work.
 
 The frontend half is all present — the auth seam (`AuthProvider`,
@@ -540,12 +491,12 @@ refresh cadence is disabled for this stub session in [`App.tsx`](../../examples/
 Never carry this past local evaluation: the stub token is sent as a real
 `Authorization` header, and the Gateway does not check it.
 
-The dashboard then loads against the Gateway. Write affordances (vote, submit,
-cancel, comment) may still be inert, since nothing has granted a permission set.
+The shell then loads: header, sidebar and an empty Home page. A write action on a
+page you add may still be rejected, since nothing has granted a permission set.
 
 ## Add Google sign-in
 
-Two pieces: a Google OAuth client, and the identity plugin that uses it.
+Two pieces: a Google OAuth client, and the identity app that uses it.
 
 ### Step 1: Register a Google OAuth client
 
@@ -556,7 +507,7 @@ Google OAuth 2.0 client.
    the Google account you'll be testing with).
 2. **Create credentials** → **OAuth client ID**.
 3. Application type: **Web application**.
-4. **Authorised redirect URIs** — add the callback URL your identity plugin
+4. **Authorised redirect URIs** — add the callback URL your identity app
    serves (step 2). The path is yours to choose; the conventional one, with
    the Gateway on its default port, is:
    ```
@@ -568,16 +519,17 @@ Google OAuth 2.0 client.
    **External** + **Testing**. Add your own email under "Test users" so
    you can sign in.
 
-Step 2 hands these to your identity plugin.
+Step 2 hands these to your identity app.
 
-### Step 2: Supply the identity plugin
+### Step 2: Supply the identity app
 
-MDK ships no OAuth implementation, so this is the part you write. Mount it with
-`startGateway({ extraPluginDirs: [...] })`; the
-[plugin authoring guide](../../docs/guides/gateway/plugins.md) covers the
-manifest and controller contract.
+MDK ships no OAuth implementation, so this is the part you write. Scaffold it
+with `mdk create app <name>` and declare it under `spec.apps` with `mount: /`, so
+its routes sit at the Gateway root; the
+[app authoring guide](../../docs/guides/gateway/plugins.md) covers the
+manifests and controller contract.
 
-The frontend only requires that plugin to honour two ends of a redirect:
+The frontend only requires that app to honour two ends of a redirect:
 
 - a **start endpoint** at `${VITE_OAUTH_BASE_URL}/oauth/google`, which
   `<SignInGoogleButton>` navigates to;
@@ -588,9 +540,9 @@ The frontend only requires that plugin to honour two ends of a redirect:
   `useTokenPolling` then refreshes it before it expires.
 
 Everything else — which provider, where the client id and secret live, who
-counts as an allowed user — is your plugin's business.
+counts as an allowed user — is your app's business.
 
-Restart the Gateway with the plugin mounted. The template needs no change:
+Restart the stack with the app declared. The template needs no change:
 `gatewayRedirectAuth()`'s `bootstrap` already captures the returned
 `?authToken=` into `authStore` and scrubs it from the address bar, and
 `useTokenPolling` refreshes it before expiry.
@@ -628,22 +580,23 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:3030`. On the no-sign-in path the dashboard renders
+Open `http://localhost:3030`. On the no-sign-in path the shell renders
 straight away. With sign-in wired, click **Sign in with Google** and use an
-account your identity plugin allows: you land back at `/?authToken=…`, the FE
-extracts the token, strips it from the URL, and shows the dashboard.
+account your identity app allows: you land back at `/?authToken=…`, the FE
+extracts the token, strips it from the URL, and shows the shell.
 
 ## Known limitation — no data without miners
 
-`@tetherto/mdk-gateway` is the **API surface**, not the data producer. It
+The template ships a static Home page and no data pages; this applies once you
+add one. `@tetherto/mdk-gateway` is the **API surface**, not the data producer. It
 relays data from Kernel (orchestrator) clusters with real mining hardware.
-**Without that data flowing, the dashboard renders empty states.**
+**Without that data flowing, a page you add renders empty states.**
 
 This is the expected first-run experience for someone evaluating MDK. The
-empty states are intentional — the dashboard tells the truth about "no
-data" rather than synthesizing mock telemetry.
+empty states are intentional — a page tells the truth about "no data" rather
+than synthesizing mock telemetry.
 
-If you need to exercise the charts:
+If you need to exercise a data-backed page:
 
 - Run the backend's integration test harness (see
   [`backend/core/gateway/tests/integration/`](../../backend/core/gateway/tests/integration/)) — it stubs Kernel clusters with
@@ -657,7 +610,7 @@ Both are out of scope for this guide and for the MDK UI Shell template.
 
 ### Sign-in redirect lands at the wrong port
 
-The redirect your identity plugin sends the token to doesn't match the FE port.
+The redirect your identity app sends the token to doesn't match the FE port.
 MDK UI Shell's [`vite.config.ts`](../../examples/mdk-ui-shell-template/vite.config.ts) defaults to **3030**. Change one side to
 match the other.
 
@@ -666,7 +619,7 @@ match the other.
 The backend issued a token but doesn't recognize it on subsequent calls.
 Common causes:
 
-1. Your Google email isn't on your identity plugin's allowed-users list.
+1. Your Google email isn't on your identity app's allowed-users list.
 2. The backend's auth-cache TTL is < the FE polling interval — restart the
    backend after changing it.
 3. Token TTL is too short — the backend default is 300 s;
@@ -676,15 +629,15 @@ Common causes:
 ### CORS errors in the browser console
 
 The Vite proxy isn't catching your requests. Don't call the backend
-directly (`fetch('http://localhost:3000/...')`); use the data hooks,
-which read base URL from the `<MdkProvider apiBaseUrl>` you set in
+directly (`fetch('http://localhost:3000/...')`); write your hooks with `useQuery`
+and the base URL from `useMdkContext().apiBaseUrl`, which comes from the `<MdkProvider apiBaseUrl>` you set in
 [`main.tsx`](../../examples/mdk-ui-shell-template/src/main.tsx). If you've changed the FE port, make sure the proxy in
 [`vite.config.ts`](../../examples/mdk-ui-shell-template/vite.config.ts) still covers all four paths (`/auth`, `/oauth`, `/api`,
 `/pub`).
 
-### Charts are empty
+### Charts on a page you added are empty
 
-You're hitting the "no miners reporting" reality above. The dashboard is
+You're hitting the "no miners reporting" reality above. The page is
 working correctly — the data source just doesn't have anything to show.
 Inspect a chart query in the Network tab: it'll succeed with `[[]]`
 (empty inner array).
@@ -698,15 +651,16 @@ mdk monorepo                            # This repo
  │    ├── /oauth/google                 # OAuth start
  │    └── /oauth/google/callback        # OAuth callback → FE w/ ?authToken=
  ├── ui/packages/ui-foundation/         # API contracts + mappers + Bearer fetch
- ├── ui/packages/react-adapter/         # Data hooks + auth hooks
- ├── ui/packages/react-devkit/          # Chart components + RequireAuth + dashboard widgets
+ ├── ui/packages/react-adapter/         # MdkProvider + store, auth and utility hooks
+ ├── ui/packages/react-devkit/          # UI components (primitives + mining-domain) + RequireAuth
  └── examples/mdk-ui-shell-template/    # The runnable app template — what `create` produces
 
 your scaffolded app                     # What you cd into to run `npm run dev`
  ├── src/main.tsx                       # MdkProvider wiring
  ├── src/App.tsx                        # Shell + useTokenPolling
  ├── src/pages/SignIn.tsx               # Google button
- ├── src/pages/Dashboard.tsx            # The ~70-line reference composition
+ ├── src/pages/Home.tsx                 # Static landing page; add your pages next to it
+ ├── src/routes.ts                      # One line per page you add
  └── vite.config.ts                     # Proxy + port 3030
 ```
 

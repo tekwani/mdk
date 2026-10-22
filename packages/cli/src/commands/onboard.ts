@@ -1,4 +1,5 @@
 import type { Command } from 'commander';
+import { examples } from '../lib/help.js';
 import {
   intro,
   outro,
@@ -15,24 +16,26 @@ import {
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { stringify as toYaml } from 'yaml';
-import { detectEnvironment } from '../lib/detect.js';
+import { detectEnvironment, NODE_MIN_MAJOR } from '../lib/detect.js';
 import { buildStackSpec, isLocalPackagePath } from '../lib/spec.js';
 import {
-  findCatalogGatewayPlugin,
+  findCatalogApp,
   findCatalogWorker,
   resolveCatalogPackage,
-  GATEWAY_CATALOG,
+  APP_CATALOG,
   WORKER_CATALOG,
-  type CatalogPlugin,
+  type CatalogEntry,
 } from '../lib/catalog.js';
 import { installSkill as installSkillSuite, type SkillClient } from '../lib/skill.js';
 import { installDeps, installPackages } from '../lib/npm.js';
 import {
   applySetupAnswers,
   applySetupAnswersToStackFile,
+  externalizeSecrets,
   promptSetup,
   readSetupQuestions,
 } from '../lib/plugin-setup.js';
+import { writeProjectEnv } from '../lib/env-file.js';
 import { resolveProjectPackageDir } from '../lib/runtime.js';
 import { createDashboard, dashboardNameFromStack } from '../lib/dashboard.js';
 import {
@@ -43,6 +46,7 @@ import {
 } from '../lib/project.js';
 import { theme, badge, banner, kvBlock, cmdBlock, tick } from '../lib/theme.js';
 import { pkg } from '../lib/pkg.js';
+import { NAME_RE } from '../lib/names.js';
 
 const AGENT_CLIENTS = [
   { value: 'cursor', label: 'Cursor' },
@@ -70,7 +74,13 @@ function shortLabel(pkgName: string): string {
 export function registerOnboard(program: Command): void {
   program
     .command('onboard')
-    .description('Guided setup wizard: detect, configure, write mdk.yaml, print run commands')
+    .summary('Set up a new MDK project interactively')
+    .description(
+      'Set up a new MDK project interactively: checks the environment, asks which workers, apps and ' +
+        'dashboard to include, writes mdk.yaml and package.json, and prints the commands to run it. ' +
+        'Needs an interactive terminal.',
+    )
+    .addHelpText('after', examples('mdk onboard'))
     .action(runOnboard);
 }
 
@@ -97,7 +107,7 @@ async function runOnboard(): Promise<void> {
     kvBlock([
       [
         'Node',
-        env.nodeOk ? theme.ok(env.nodeVersion) : theme.warn(`${env.nodeVersion} (need >= 20)`),
+        env.nodeOk ? theme.ok(env.nodeVersion) : theme.warn(`${env.nodeVersion} (need >= ${NODE_MIN_MAJOR})`),
       ],
       ['Package manager', theme.value(env.packageManager)],
       ['Git repo', env.git ? theme.ok('yes') : theme.muted('no')],
@@ -118,13 +128,20 @@ async function runOnboard(): Promise<void> {
   });
   if (isCancel(projectDir)) bail();
 
-  const stackName = await text({
+  // The stack name becomes `<stack>-dashboard`, a folder and package name, so it
+  // is held to the same rule as worker/plugin/app names.
+  const stackNameInput = await text({
     message: 'Stack name',
     placeholder: 'my-stack',
     defaultValue: 'my-stack',
     initialValue: 'my-stack',
+    validate: (v) =>
+      !v?.trim() || NAME_RE.test(v.trim())
+        ? undefined
+        : "Use lowercase letters, digits, '.', '_' or '-' (starting with a letter or digit).",
   });
-  if (isCancel(stackName)) bail();
+  if (isCancel(stackNameInput)) bail();
+  const stackName = (stackNameInput as string).trim() || 'my-stack';
 
   // 3. Runtime — fixed defaults, not prompted --------------------------------
   // Ports land in `mdk.yaml`, but are not a real upfront decision: whether you
@@ -136,15 +153,20 @@ async function runOnboard(): Promise<void> {
   const kernelPort = 3848;
   const workerBasePort = 3850;
 
-  // 4. Plugins --------------------------------------------------------------
-  section('Plugins');
+  // 4. Workers and apps -----------------------------------------------------
+  section('Workers and apps');
 
-  const workerPackages = await multiselect({
-    message: 'Worker plugins to install',
-    options: WORKER_CATALOG.map(({ value, label, hint }) => ({ value, label, hint })),
-    required: false,
-  });
-  if (isCancel(workerPackages)) bail();
+  // Nothing to offer while the worker catalog is empty — skip the prompt rather
+  // than show a multiselect with no options.
+  let workerPackages: string[] | symbol = [];
+  if (WORKER_CATALOG.length > 0) {
+    workerPackages = await multiselect({
+      message: 'Worker plugins to install',
+      options: WORKER_CATALOG.map(({ value, label, hint }) => ({ value, label, hint })),
+      required: false,
+    });
+    if (isCancel(workerPackages)) bail();
+  }
 
   // A bundled worker is only runnable from an MDK checkout — its device mock
   // loads a framework that sits beside it in the source tree. Say so now rather
@@ -159,15 +181,15 @@ async function runOnboard(): Promise<void> {
     }
   }
 
-  const gatewayPackages = await multiselect({
-    message: 'Gateway plugins to install',
-    options: GATEWAY_CATALOG.map(({ value, label, hint }) => ({ value, label, hint })),
+  const appPackages = await multiselect({
+    message: 'Apps to install',
+    options: APP_CATALOG.map(({ value, label, hint }) => ({ value, label, hint })),
     required: false,
   });
-  if (isCancel(gatewayPackages)) bail();
+  if (isCancel(appPackages)) bail();
 
-  for (const pkg of gatewayPackages as string[]) {
-    const entry = findCatalogGatewayPlugin(pkg);
+  for (const pkg of appPackages as string[]) {
+    const entry = findCatalogApp(pkg);
     if (entry && resolveCatalogPackage(entry).unavailable) {
       log.warn(
         `${shortLabel(pkg)} ships with the MDK source tree, which is not present here — ` +
@@ -176,15 +198,18 @@ async function runOnboard(): Promise<void> {
     }
   }
 
-  // Bundled plugins' manifests are readable from the checkout before any
+  // Bundled apps' manifests are readable from the checkout before any
   // install, so their setup questions are asked now and the answers (defaults
-  // included) are part of mdk.yaml from the first write — each plugin's
-  // answers under its own `spec.gateway.plugins[].config` block, the spec the
-  // source of truth and the plugin's built-in defaults only a fallback.
+  // included) are part of mdk.yaml from the first write — each app's
+  // answers under its own `spec.apps[].config` block, the spec the
+  // source of truth and the app's built-in defaults only a fallback.
   const pluginConfigs: Record<string, Record<string, unknown>> = {};
+  // Secret answers, held until the project files are written (cancelling must
+  // leave nothing on disk); mdk.yaml only gets `${MDK_<PLUGIN>_<KEY>}` placeholders.
+  const pendingSecrets: Record<string, string> = {};
   const askedUpfront = new Set<string>();
-  for (const pkg of gatewayPackages as string[]) {
-    const entry = findCatalogGatewayPlugin(pkg);
+  for (const pkg of appPackages as string[]) {
+    const entry = findCatalogApp(pkg);
     const resolved = entry ? resolveCatalogPackage(entry) : undefined;
     if (!resolved?.bundled || !resolved.checkoutDir) continue;
     let questions;
@@ -195,7 +220,9 @@ async function runOnboard(): Promise<void> {
     }
     if (!questions.length) continue;
     section(`${shortLabel(pkg)} setup`);
-    pluginConfigs[pkg] = applySetupAnswers({}, await promptSetup(questions, bail));
+    const { answers, env: secrets } = externalizeSecrets(pkg, questions, await promptSetup(questions, bail));
+    Object.assign(pendingSecrets, secrets);
+    pluginConfigs[pkg] = applySetupAnswers({}, answers);
     askedUpfront.add(pkg);
   }
 
@@ -228,12 +255,12 @@ async function runOnboard(): Promise<void> {
 
   // 6. Build spec + review --------------------------------------------------
   const spec = buildStackSpec({
-    stackName: stackName as string,
+    stackName,
     gatewayPort,
     kernelPort,
     workerBasePort,
     workerPackages: workerPackages as string[],
-    gatewayPackages: gatewayPackages as string[],
+    appPackages: appPackages as string[],
     pluginConfigs,
   });
   const workers = spec.spec.workers;
@@ -253,10 +280,10 @@ async function runOnboard(): Promise<void> {
         })
         .join(', ')
     : theme.muted('none');
-  const gatewaySummary = (gatewayPackages as string[]).length
-    ? (gatewayPackages as string[])
+  const appSummary = (appPackages as string[]).length
+    ? (appPackages as string[])
         .map((pkg) => {
-          const entry = findCatalogGatewayPlugin(pkg);
+          const entry = findCatalogApp(pkg);
           const bundled = entry ? resolveCatalogPackage(entry).bundled : false;
           return bundled ? `${shortLabel(pkg)} ${theme.muted('(bundled)')}` : shortLabel(pkg);
         })
@@ -265,10 +292,10 @@ async function runOnboard(): Promise<void> {
 
   note(
     kvBlock([
-      ['Stack', theme.value(stackName as string)],
+      ['Stack', theme.value(stackName)],
       ['Ports', theme.value(`gateway ${gatewayPort} · kernel ${kernelPort} · workers ${workerBasePort}+`)],
       ['Workers', workerSummary],
-      ['Gateway plugins', gatewaySummary],
+      ['Apps', appSummary],
       ['UI dashboard', addUi ? theme.ok('yes') : theme.muted('no')],
       ['Developer Skill', installSkill ? theme.ok(`yes (${client})`) : theme.muted('no')],
       ['Spec file', specExists ? theme.warn(`${specPath} (overwrite)`) : theme.value(specPath)],
@@ -291,8 +318,9 @@ async function runOnboard(): Promise<void> {
   try {
     mkdirSync(targetDir, { recursive: true });
     writeFileSync(specPath, toYaml(spec), 'utf8');
-    const manifest = ensureProjectManifest(targetDir, stackName as string);
+    const manifest = ensureProjectManifest(targetDir, stackName);
     const gitignore = ensureProjectGitignore(targetDir);
+    if (Object.keys(pendingSecrets).length) writeProjectEnv(targetDir, pendingSecrets);
     w.stop(`${tick} Wrote ${theme.value(specPath)}`);
     if (manifest !== 'present') {
       log.message(
@@ -317,7 +345,7 @@ async function runOnboard(): Promise<void> {
   // project's node_modules. A bundled package is path-backed with a relative
   // `file:` dependency to its checkout (inside or outside the project folder);
   // no checkout path is written into `workspaces`. `npm install` links it into
-  // `node_modules` under the package name; no `workers/<name>`/`plugins/<name>`
+  // `node_modules` under the package name; no `workers/<name>`/`apps/<name>`
   // folder is created (those are only for packages the user owns via
   // `mdk create`). Registry packages install normally. Local-path packages
   // (scaffolded workers) are skipped — they are linked by `file:` deps from
@@ -326,14 +354,14 @@ async function runOnboard(): Promise<void> {
   const registryPackages: string[] = [];
   let linkedBundled = false;
 
-  const selections: Array<[string, CatalogPlugin | undefined]> = [
-    ...spec.spec.workers.map((wk): [string, CatalogPlugin | undefined] => [
+  const selections: Array<[string, CatalogEntry | undefined]> = [
+    ...spec.spec.workers.map((wk): [string, CatalogEntry | undefined] => [
       wk.package,
       findCatalogWorker(wk.package),
     ]),
-    ...spec.spec.gateway.plugins.map((p): [string, CatalogPlugin | undefined] => [
-      p.package,
-      findCatalogGatewayPlugin(p.package),
+    ...spec.spec.apps.map((a): [string, CatalogEntry | undefined] => [
+      a.package,
+      findCatalogApp(a.package),
     ]),
   ];
 
@@ -359,14 +387,14 @@ async function runOnboard(): Promise<void> {
 
   if (needsInstall) {
     const count = (linkedBundled ? 1 : 0) + npmPlugins.length;
-    log.step(theme.brand(`Installing ${count} plugin package${count === 1 ? '' : 's'}`));
+    log.step(theme.brand(`Installing ${count} package${count === 1 ? '' : 's'}`));
     const result = npmPlugins.length
       ? installPackages(targetDir, npmPlugins)
       : installDeps(targetDir);
     if (result.ok) {
-      log.success(`${tick} Plugins installed`);
+      log.success(`${tick} Packages installed`);
     } else {
-      log.warn(`Plugin install skipped: ${result.message}`);
+      log.warn(`Package install skipped: ${result.message}`);
       log.message(
         theme.muted(
           npmPlugins.length
@@ -377,12 +405,12 @@ async function runOnboard(): Promise<void> {
     }
   }
 
-  // Registry-installed gateway plugins may declare their own setup questions —
+  // Registry-installed apps may declare their own setup questions —
   // only readable now that their packages are in node_modules. Answers are
-  // patched into the already-written mdk.yaml under the plugin's own entry in
-  // `spec.gateway.plugins[].config`. Bundled plugins were asked before the
+  // patched into the already-written mdk.yaml under the app's own entry in
+  // `spec.apps[].config`. Bundled apps were asked before the
   // spec was written.
-  for (const pluginPkg of spec.spec.gateway.plugins.map((p) => p.package)) {
+  for (const pluginPkg of spec.spec.apps.map((a) => a.package)) {
     if (askedUpfront.has(pluginPkg)) continue;
     let questions;
     try {
@@ -392,9 +420,20 @@ async function runOnboard(): Promise<void> {
     }
     if (!questions.length) continue;
     section(`${shortLabel(pluginPkg)} setup`);
-    const answers = await promptSetup(questions, bail);
+    const { answers, env: secrets } = externalizeSecrets(
+      pluginPkg,
+      questions,
+      await promptSetup(questions, bail),
+    );
+    if (Object.keys(secrets).length) {
+      try {
+        writeProjectEnv(targetDir, secrets);
+      } catch (error) {
+        log.warn(`Could not write ${shortLabel(pluginPkg)} secrets to .env: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
     if (Object.keys(answers).length && !applySetupAnswersToStackFile(targetDir, pluginPkg, answers)) {
-      log.warn(`Could not write ${shortLabel(pluginPkg)} setup answers to mdk.yaml — add them manually under its config in spec.gateway.plugins.`);
+      log.warn(`Could not write ${shortLabel(pluginPkg)} setup answers to mdk.yaml — add them manually under its config in spec.apps.`);
     }
   }
 
@@ -406,6 +445,7 @@ async function runOnboard(): Promise<void> {
       sk.stop(`${tick} Developer Skill installed`);
       if (result.message) log.message(theme.muted(result.message));
       if (result.detail) log.message(theme.muted(result.detail));
+      if (result.warning) log.warn(result.warning);
     } else {
       sk.stop(theme.warn(`Skill install skipped: ${result.message}`));
       if (result.detail) log.message(theme.muted(result.detail));
@@ -419,7 +459,7 @@ async function runOnboard(): Promise<void> {
     const ui = spinner();
     ui.start('Downloading UI dashboard (MDK UI shell)');
     const result = await createDashboard({
-      name: dashboardNameFromStack(stackName as string),
+      name: dashboardNameFromStack(stackName),
       parentDir: targetDir,
     });
     if (result.ok) {
@@ -434,7 +474,7 @@ async function runOnboard(): Promise<void> {
   // The README documents the layout, so it is written last — once it is known
   // whether this project has a dashboard.
   const readme = ensureProjectReadme(targetDir, {
-    stackName: stackName as string,
+    stackName,
     workerNames: workers.map((wk) => wk.name),
     dashboardDir: dashboardPath ? relative(targetDir, dashboardPath) : undefined,
   });
@@ -444,7 +484,7 @@ async function runOnboard(): Promise<void> {
 
   // 9. Next steps -----------------------------------------------------------
   const runRows: Array<[string, string?]> = [
-    ['mdk run', 'boots Kernel + Gateway + workers together'],
+    ['mdk run', 'boots Kernel, workers, apps and Gateway together'],
   ];
   const perComponentHint = workers.length
     ? workers.map((wk) => `mdk run worker ${wk.name}`).join(' · ')
@@ -465,12 +505,13 @@ async function runOnboard(): Promise<void> {
     '',
     theme.label('2. Start the stack'),
     cmdBlock(runRows),
-    theme.muted(`Or separately: mdk run kernel · mdk run gateway · ${perComponentHint}`),
+    theme.muted(`Or separately: mdk run kernel · ${perComponentHint} · mdk run app <name> · mdk run gateway`),
     '',
     theme.label('3. Manage it'),
     cmdBlock([
       ['mdk status', 'check the stack'],
       ['mdk create worker', 'scaffold a new worker plugin'],
+      ['mdk create app', 'scaffold a new app (HTTP routes over your devices)'],
     ]),
   ];
   if (dashboardPath) {

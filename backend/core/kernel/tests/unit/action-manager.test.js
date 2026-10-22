@@ -720,3 +720,24 @@ test('action manager - getAction propagates approver lookup failures', async (t)
     /ERR_ACTION_ID_NOT_FOUND/
   )
 })
+
+test('action manager - get, get-batch and query redact secret params but keep the stored copy', async (t) => {
+  const stored = [{ address: '10.0.0.1', password: 'admin', pools: [{ url: 'u', worker_password: 'x' }] }]
+  const record = () => ({ id: 1, batchActionUID: '1000-b', payload: [stored, { 'worker-1': { calls: [{ id: 'dev-1', tags: [] }] } }, ['miner']] })
+  const { manager } = createManager({
+    actionApprover: {
+      getAction: async () => ({ data: record() }),
+      query: async function * () { yield record() }
+    }
+  })
+  const expected = [{ address: '10.0.0.1', password: '[REDACTED]', pools: [{ url: 'u', worker_password: '[REDACTED]' }] }]
+
+  t.alike((await manager.getAction({ id: 1, type: 'voting' })).params, expected, 'action.get')
+  t.alike((await manager.getActionsBatch({ ids: [1] }))[0].action.params, expected, 'action.get-batch')
+  const res = await manager.queryActions({ queries: [{ type: 'voting' }] })
+  t.alike(res.voting[0].params, expected, 'action.query')
+  t.is(stored[0].password, 'admin', 'stored params untouched')
+
+  const probe = await manager.queryActions({ queries: [{ type: 'voting', query: { 'params.password': 'admin' } }] })
+  t.is(probe.voting.length, 0, 'query filters cannot probe secret values')
+})

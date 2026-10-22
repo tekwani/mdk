@@ -1,5 +1,6 @@
 import { Component, type ComponentType, type ErrorInfo, type FC, type ReactNode } from 'react'
 import { cn } from '../../utils'
+import { ErrorCard } from '../error-card'
 
 // --- ErrorBoundary (class component) ---
 
@@ -73,17 +74,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
       return (
         <div className={cn('mdk-error-boundary', className)}>
-          <div className="mdk-error-boundary__title">
-            {componentName && (
-              <>
-                Error in <span className="mdk-error-boundary__component-name">{componentName}</span>
-              </>
-            )}
-            {!componentName && 'Something went wrong'}
-          </div>
-          <div className="mdk-error-boundary__message">
-            {error?.message ?? 'An unexpected error occurred'}
-          </div>
+          <ErrorCard
+            variant="inline"
+            title={componentName ? `Error in ${componentName}` : 'Something went wrong'}
+            error={error?.message ?? 'An unexpected error occurred'}
+          />
           {errorInfo?.componentStack && (
             <details className="mdk-error-boundary__details">
               <summary className="mdk-error-boundary__summary">Stack trace</summary>

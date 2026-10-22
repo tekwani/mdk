@@ -5,12 +5,13 @@ import {
   formatMacAddress,
   formatNumber,
   formatValueUnit,
+  mhsToThs,
   PowerIcon,
   SimpleTooltip,
   UNITS,
   type UnknownRecord,
 } from '@primitives'
-import type { Alert, DeviceExplorerDeviceData, GetColumnConfigParams } from '../types'
+import type { AlertRecord, DeviceExplorerDeviceData } from '../types'
 import { DeviceCardColText } from '../components/device-card-col-text/device-card-col-text'
 import type { PowerModeColors } from '../../../utils/device-utils'
 import {
@@ -20,7 +21,6 @@ import {
   getOnOffText,
   getPowerModeColor,
   isMinerOffline,
-  megaToTera,
 } from '../../../utils/device-utils'
 import { MAINTENANCE_CONTAINER } from '../../../constants/container-constants'
 import { MinerStatusIndicator } from '../components/mining-status-indicator/mining-status-indicator'
@@ -29,11 +29,15 @@ import _isUndefined from 'lodash/isUndefined'
 import { CELL_MIN_WIDTH, ERROR_MESSAGES } from './column-constants'
 import type { MinerRecord } from '../../../types/device'
 
-export type GetMinerColumnsParams = GetColumnConfigParams
+/** What the default miner columns need from the host. */
+export type MinerColumnsParams = {
+  /** Date formatter from the host's timezone setup (e.g. `useTimezoneFormatter().getFormattedDate`) */
+  getFormattedDate: (date: Date) => string
+}
 
 export const getMinerColumns = ({
   getFormattedDate,
-}: GetMinerColumnsParams): DataTableColumnDef<DeviceExplorerDeviceData>[] => [
+}: MinerColumnsParams): DataTableColumnDef<DeviceExplorerDeviceData>[] => [
   {
     header: 'Code',
     accessorKey: 'shortCode',
@@ -154,7 +158,7 @@ export const getMinerColumns = ({
     minSize: CELL_MIN_WIDTH,
     cell: (info) => {
       const { stats, alerts } = info.row.original as MinerRecord
-      const alertsArray: Alert[] = Array.isArray(alerts) ? (alerts as Alert[]) : []
+      const alertsArray: AlertRecord[] = Array.isArray(alerts) ? (alerts as AlertRecord[]) : []
       const statsForIndicator = stats as UnknownRecord | undefined
 
       return (
@@ -309,7 +313,7 @@ export const getMinerColumns = ({
         <div className="mdk-device-explorer__table__cell--type-efficiency">
           {!stats?.power_w || !hashRate || hashRate <= 0
             ? '-'
-            : formatValueUnit(stats?.power_w / megaToTera(hashRate), UNITS.EFFICIENCY_W_PER_TH_S)}
+            : formatValueUnit(stats?.power_w / mhsToThs(hashRate), UNITS.EFFICIENCY_W_PER_TH_S)}
         </div>
       )
     },
@@ -318,9 +322,9 @@ export const getMinerColumns = ({
       const b = rowB.original as MinerRecord
 
       const aPower = a?.stats?.power_w ?? 0
-      const aHash = megaToTera(a?.stats?.hashrate_mhs?.t_5m ?? 0)
+      const aHash = mhsToThs(a?.stats?.hashrate_mhs?.t_5m ?? 0)
       const bPower = b?.stats?.power_w ?? 0
-      const bHash = megaToTera(b?.stats?.hashrate_mhs?.t_5m ?? 0)
+      const bHash = mhsToThs(b?.stats?.hashrate_mhs?.t_5m ?? 0)
       const aEfficiency = aHash > 0 ? aPower / aHash : 0
       const bEfficiency = bHash > 0 ? bPower / bHash : 0
       return `${aEfficiency}`.localeCompare(`${bEfficiency}`)

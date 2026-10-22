@@ -1,5 +1,50 @@
 [
   {
+    "name": "antminer-mdk-worker",
+    "brand": "Antminer",
+    "provider": "bitmain",
+    "family": "miner",
+    "repoUrl": "https://github.com/bitmain-official/antminer-mdk-worker",
+    "ref": "4fd776b4a048a1bc8284ec2eceed82b4631f960c",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "emcd-mdk-worker",
+    "brand": "EMCD",
+    "provider": "emcd",
+    "family": "minerpool",
+    "repoUrl": "https://github.com/emcdio/emcd-mdk-worker",
+    "ref": "3ad188e1fef8fa080ce5096d7421e9b3a7052515",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "foundry-mdk-worker",
+    "brand": "Foundry USA Pool",
+    "provider": "foundry",
+    "family": "minerpool",
+    "repoUrl": "https://github.com/foundryservices/foundry-mdk-worker",
+    "ref": "310172ebe1cb4ef60cd14f39d9467f2c8e2bc534",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "sealminer-mdk-worker",
+    "brand": "SealMiner",
+    "provider": "bitdeer",
+    "family": "miner",
+    "repoUrl": "https://github.com/sealminer/sealminer-mdk-worker",
+    "ref": "63211a12245482cffb2d09f8cbeaa4c6411e51a3",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "spiderpool-mdk-worker",
+    "brand": "SpiderPool",
+    "provider": "spiderpool",
+    "family": "minerpool",
+    "repoUrl": "https://github.com/SpiderPool-New/spiderpool-mdk-worker",
+    "ref": "345f4a2b46ff59135eb4dad1803f0653c3d88911",
+    "contractPath": "mdk-contract.json"
+  },
+  {
     "name": "whatsminer-mdk-worker",
     "brand": "Whatsminer",
     "provider": "microbt",

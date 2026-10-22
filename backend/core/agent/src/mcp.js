@@ -1,6 +1,16 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
+// @tetherto/mdk-mcp frames every text result as untrusted data:
+// `<untrusted-tool-output tool="id">\n…\n</untrusted-tool-output>\n<notice>`. The model reads the
+// framed text; code that parses the payload unwraps it first. Text without the frame passes through.
+const FRAME = /^<untrusted-tool-output[^>]*>\n([\s\S]*?)\n<\/untrusted-tool-output>(?:\n[^\n]*)?$/
+
+export function unwrapToolText (text) {
+  const m = typeof text === 'string' ? FRAME.exec(text.trim()) : null
+  return m ? m[1].replaceAll('<\\/untrusted-tool-output', '</untrusted-tool-output') : text
+}
+
 /**
  * Connect to an MCP tool server over Streamable HTTP.
  *

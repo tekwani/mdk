@@ -158,6 +158,17 @@ test('kernel-manager - with HRPC config starts listener', async (t) => {
   t.ok(pk, 'public key available')
   t.is(pk.length, 32, 'public key is 32 bytes')
 
+  const clientKey = kernel.getClientPublicKey()
+  t.is(clientKey.length, 32, 'client (worker-dialing) key available')
+  t.not(clientKey.toString('hex'), pk.toString('hex'), 'client key differs from the listener key')
+
+  const callerHex = 'cd'.repeat(32)
+  t.is(kernel.hrpcListener.getCallerRoles(callerHex), null, 'empty allowlist admits nobody')
+  t.is(kernel.allowKey(callerHex, ['read']), callerHex)
+  t.alike([...kernel.hrpcListener.getCallerRoles(callerHex)], ['read'])
+  t.ok(kernel.revokeKey(callerHex))
+  t.exception(() => kernel.allowKey('nothex'), /ERR_KERNEL_CALLER_KEY_INVALID/)
+
   await kernel.stop()
 })
 
@@ -210,6 +221,8 @@ test('createKernel - auth.whitelist populates hrpc whitelist', (t) => {
   })
 
   t.is(kernel.conf.kernel.hrpc.whitelist[0], 'aabbcc', 'whitelist forwarded to hrpc config')
+  t.absent(kernel.conf.kernel.hrpc.allowAll, 'allowAll is off by default')
+  t.is(createKernel({ auth: { allowAll: true } }).conf.kernel.hrpc.allowAll, true, 'auth.allowAll forwarded')
 })
 
 test('createKernel - cadences forwarded to conf', (t) => {
@@ -225,6 +238,35 @@ test('createKernel - discovery topic forwarded to conf', (t) => {
   const topic = 'aabbccdd'
   const kernel = createKernel({ discovery: { topic } })
   t.is(kernel.conf.kernel.discovery.topic, topic)
+})
+
+test('kernel-manager - topic discovery is fail-closed unless allowAnyWorker', async (t) => {
+  const tmpDir = createTmpDir(t)
+  const boot = async (discovery) => {
+    const kernel = new KernelManager({ kernel: { hrpc: false, discovery } }, {
+      storeDir: path.join(tmpDir, 'store-' + Math.random().toString(36).slice(2, 8)),
+      root: tmpDir,
+      loadConf: () => {}
+    })
+    await kernel.init()
+    t.teardown(() => kernel.stop())
+    return kernel
+  }
+
+  const closed = await boot({ topic: 'aa'.repeat(32) })
+  t.absent(closed.dhtListener.allowAnyWorker, 'allowAnyWorker off by default')
+  t.absent(closed.dhtListener.isWorkerKeyAllowed('bb'.repeat(32)), 'unknown key rejected')
+  t.is(closed.allowWorkerKey(Buffer.alloc(32, 0xbb)), 'bb'.repeat(32))
+  t.ok(closed.dhtListener.isWorkerKeyAllowed('bb'.repeat(32)), 'allowWorkerKey admits at runtime')
+
+  const listed = await boot({ topic: 'aa'.repeat(32), workerKeys: ['CC'.repeat(32)] })
+  t.ok(listed.dhtListener.isWorkerKeyAllowed('cc'.repeat(32)), 'workerKeys admits (case-insensitive)')
+
+  const open = await boot({ topic: 'aa'.repeat(32), allowAnyWorker: true })
+  t.ok(open.dhtListener.isWorkerKeyAllowed('dd'.repeat(32)), 'allowAnyWorker admits any key')
+
+  const noDiscovery = await boot(undefined)
+  t.exception(() => noDiscovery.allowWorkerKey('aa'.repeat(32)), /ERR_KERNEL_NO_DISCOVERY/)
 })
 
 test('kernel-manager - drain marks executing commands TIMEOUT and sets _draining', async (t) => {

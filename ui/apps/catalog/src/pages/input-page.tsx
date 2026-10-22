@@ -2,6 +2,8 @@ import { Input, TagInput } from '@tetherto/mdk-react-devkit/primitives'
 import { useState } from 'react'
 import type { JSX } from 'react'
 
+import { InputFieldStates } from './input-field-states'
+
 type InputRowProps = {
   state: string
   idSuffix: string
@@ -77,6 +79,7 @@ export const InputPage = (): JSX.Element => {
       <div style={{ marginTop: 24 }}>
         <InputRow state="Input - Disabled" idSuffix="disabled" disabled />
       </div>
+      <InputFieldStates />
     </section>
   )
 }

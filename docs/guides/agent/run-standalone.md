@@ -6,7 +6,7 @@ docs@tether_slug: guides/agent/run-standalone
 
 ## Overview
 
-[`@tetherto/mdk-agent`][agent-core-readme] runs as a small library and CLI for local development or evaluation,
+[`@tetherto/mdk-agent`][agent-core-readme] runs as a small library and CLI for local development,
 talking to a served model and an MCP tool server directly, with no Gateway in front of it.
 
 This is one of [two ways to run the agent][agent-guides-index].
@@ -75,14 +75,15 @@ If this doesn't work first try, see [troubleshooting](#troubleshooting).
 
 If you already have an MCP tool server, skip this and point the agent at its URL in the [next step](#start-the-agent-and-ask).
 
-To try it end-to-end, boot the full-site example. It brings up a simulated fleet (miners,
-containers, powermeters, sensors, pools) and exposes the MDK tools over MCP on port `3008`:
+To try it end-to-end, boot the [MVP site example][mvp-site-example]. It brings up a simulated fleet (miners, a
+powermeter, a pool) under PM2 and exposes the MDK tools over MCP on port `3101`:
 
 ```bash
-cd ../../../examples/full-site
-npm run setup  # first time only. NOT npm install: examples/full-site is a root workspace member,
-               # and this also builds the UI toolkit and installs its own nested ui/ app
-npm start      # kernel + workers + gateway + MCP server on :3008
+cd ../../../examples/mvp-site
+npm run setup         # first time only. NOT npm install: examples/mvp-site is a root workspace member,
+                      # and this also builds the UI toolkit and installs its own nested ui/ app
+npm run setup:config  # first time only: writes config/devices.json and config/site.deploy.json
+npm start             # kernel + workers + gateway + MCP server on :3101, under PM2
 ```
 
 Leave it running.
@@ -97,7 +98,7 @@ In a third terminal, start the CLI — pointing it at the model (per the previou
 server:
 
 ```bash
-node bin/mdk-agent.js --model qwen3-4b --mcp-url http://127.0.0.1:3008/mcp
+node bin/mdk-agent.js --model qwen3-4b --mcp-url http://127.0.0.1:3101/mcp
 ```
 
 You may now query the site in plain language, for example:
@@ -162,14 +163,13 @@ verified by cold restart, but `npm i` restores them, so it's disk relief rather 
 ### The fleet has fewer devices than expected
 
 Each Worker seeds its device list once, into a persistent on-disk store, and only when that store
-is empty. A later `npm start` reuses whatever's already there rather than reseeding to the current
-`--miners` count, so a fleet from an earlier run (a different `--miners` value, or an interrupted
-seed) sticks around. Clear `examples/full-site/.mdk-data/workers/*/store` for a fresh fleet on the next start.
+is empty. A later `npm start` reuses whatever's already there rather than reseeding from the current
+`config/devices.json`, so a fleet from an earlier run (a different device list, or an interrupted
+seed) sticks around. Run `npm run stop:pm2`, then clear `examples/mvp-site/.site-data` for a fresh fleet on the next start.
 
 ## Next steps
 
 - [Look up a flag, the capability table, or a hosted-model setup][agent-core-readme]: the CLI's full reference
-- [Score a battery run against a fleet and compare models][measuring]
 - [Deploy the agent behind the Gateway instead][gateway-deployment], for a chat API an operator UI can call
 
 ## Links
@@ -186,8 +186,8 @@ seed) sticks around. Clear `examples/full-site/.mdk-data/workers/*/store` for a 
 [agent-guides-index]: index.md
 <!-- docs@tether.io: agent-guides-index → guides/agent -->
 
-[measuring]: ../../../backend/core/agent/docs/EVALUATION.md
-<!-- docs@tether.io: measuring → https://github.com/tetherto/mdk/blob/main/backend/core/agent/docs/EVALUATION.md -->
-
 [gateway-deployment]: gateway-deployment.md
 <!-- docs@tether.io: gateway-deployment → guides/agent/gateway-deployment -->
+
+[mvp-site-example]: ../../../examples/mvp-site/README.md
+<!-- docs@tether.io: mvp-site-example → https://github.com/tetherto/mdk/blob/main/examples/mvp-site/README.md -->

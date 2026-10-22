@@ -5,11 +5,13 @@ import type { DataTableSortingState, DateRange } from '@primitives'
 import { cn, DataTable, DateRangePicker } from '@primitives'
 
 import { useTimezoneFormatter } from '@tetherto/mdk-react-adapter'
-import type { Alert } from '../../../types/alerts'
+import type { AlertRecord } from '../../../types/alerts'
 import { getAlertsTableColumns } from '../alerts-table-columns'
 import type { AlertLocalFilters, AlertTableRecord } from '../alerts-types'
 import { getHistoricalAlertsData } from '../alerts-utils'
 import { AlertsTableTitle } from '../alerts-table-title/alerts-table-title'
+
+import '../alerts-panel.scss'
 
 const DEFAULT_SORTING: DataTableSortingState = [
   { id: 'severity', desc: true },
@@ -28,7 +30,7 @@ export type HistoricalAlertsProps = {
    * Pre-fetched historical alerts log entries (each with a `thing` device payload).
    * @default []
    */
-  alerts?: Alert[]
+  alerts?: AlertRecord[]
   /**
    * Show DataTable loading overlay
    * @default false

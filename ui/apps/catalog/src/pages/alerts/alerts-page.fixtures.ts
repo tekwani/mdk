@@ -1,27 +1,24 @@
 /**
  * Synthetic fixture builders for the Alerts demo page.
  *
- * IMPORTANT — this file is the "mock factory" the page demo consumes
- * in lieu of a real adapter hook. In a production app the page would
- * replace these arrays with the output of:
- *
- *   - `useActiveIncidents()` from `@tetherto/mdk-react-adapter`
- *     (live alerts feed, polls the list-things endpoint)
- *   - your own ext-data hook for historical alerts
+ * IMPORTANT — this file is the "mock factory" the page demo consumes in
+ * lieu of real data. In an app the page would replace these arrays with the
+ * responses of its own Gateway plugin routes (current alerts per device, and
+ * an alerts history), read with `useQuery`.
  *
  * Tag strings such as `t-miner` and `code-…` live here intentionally —
  * they're fixture data, not production guidance. Real callers should
  * never hand-build a `Device` payload.
  */
 
-import type { Alert, Device } from '@tetherto/mdk-react-devkit/domain'
+import type { AlertRecord, Device } from '@tetherto/mdk-react-devkit/domain'
 import { SEVERITY } from '@tetherto/mdk-react-devkit/domain'
 
 const SEVERITIES = [SEVERITY.CRITICAL, SEVERITY.HIGH, SEVERITY.MEDIUM] as const
 
-const CONTAINERS = ['as-hk3-0001', 'as-hk3-0002', 'as-hk3-0003']
+const CONTAINERS = ['container-a1', 'container-a2', 'container-a3']
 
-const buildAlert = (i: number): Alert => ({
+const buildAlert = (i: number): AlertRecord => ({
   uuid: `alert-uuid-${i + 1}`,
   id: `device-${(i % 6) + 1}`,
   name: ['Overheating', 'Hashrate drop', 'Network outage', 'Pool disconnect'][i % 4] ?? 'Unknown',
@@ -32,13 +29,13 @@ const buildAlert = (i: number): Alert => ({
   code: `code-${i}`,
 })
 
-const buildDevice = (i: number, alerts: Alert[]): Device =>
+const buildDevice = (i: number, alerts: AlertRecord[]): Device =>
   ({
     id: `device-${i + 1}`,
     code: `M-${String(i + 1).padStart(3, '0')}`,
     type: 'miner-bitmain-s19j-pro',
     address: `10.0.0.${i + 10}`,
-    tags: [`code-M-${String(i + 1).padStart(3, '0')}`, 't-miner'],
+    tags: [`id-device-${i + 1}`, `code-M-${String(i + 1).padStart(3, '0')}`, 't-miner'],
     info: {
       container: CONTAINERS[i % CONTAINERS.length],
       pos: `${(i % 4) + 1}-${(i % 8) + 1}`,
@@ -57,7 +54,7 @@ const buildDevice = (i: number, alerts: Alert[]): Device =>
     },
   }) as unknown as Device
 
-const buildHistoricalAlert = (i: number, devices: Device[]): Alert => {
+const buildHistoricalAlert = (i: number, devices: Device[]): AlertRecord => {
   const device = devices[i % devices.length]
   return {
     ...buildAlert(i + 100),
@@ -66,10 +63,10 @@ const buildHistoricalAlert = (i: number, devices: Device[]): Alert => {
   }
 }
 
-export const DEMO_ALERTS: Alert[] = Array.from({ length: 18 }, (_, i) => buildAlert(i))
+export const DEMO_ALERTS: AlertRecord[] = Array.from({ length: 18 }, (_, i) => buildAlert(i))
 export const DEMO_DEVICES: Device[] = Array.from({ length: 12 }, (_, i) =>
   buildDevice(i, DEMO_ALERTS),
 )
-export const DEMO_HISTORICAL_ALERTS: Alert[] = Array.from({ length: 24 }, (_, i) =>
+export const DEMO_HISTORICAL_ALERTS: AlertRecord[] = Array.from({ length: 24 }, (_, i) =>
   buildHistoricalAlert(i, DEMO_DEVICES),
 )

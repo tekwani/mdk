@@ -4,12 +4,6 @@
   "violations": [
     "src/domain/components/alarm/USAGE.md",
     "src/domain/components/auth/sign-in-google-button/USAGE.md",
-    "src/domain/components/container-charts-builder/USAGE.md",
-    "src/domain/components/explorer/containers/bitdeer/charts/USAGE.md",
-    "src/domain/components/explorer/containers/bitmain-immersion/unit-control-box/USAGE.md",
-    "src/domain/components/explorer/containers/bitmain/USAGE.md",
-    "src/domain/components/explorer/containers/bitmain/charts/USAGE.md",
-    "src/domain/components/explorer/containers/bitmain/status-item/settings/USAGE.md",
     "src/domain/components/info-container/USAGE.md",
     "src/primitives/components/data-table/USAGE.md",
     "src/primitives/components/dropdown-menu/USAGE.md",

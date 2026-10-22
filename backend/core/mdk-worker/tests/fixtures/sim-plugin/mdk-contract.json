@@ -13,7 +13,7 @@
       { "name": "power_limit", "unit": "W", "type": "number", "handler": "src/telemetry/power-limit.js", "description": "Configured power limit." }
     ],
     "commands": [
-      { "name": "setPowerLimit", "handler": "src/commands/set-power-limit.js", "params": [{ "name": "limit_watts", "type": "number", "min": 100, "max": 5000 }] },
+      { "name": "setPowerLimit", "handler": "src/commands/set-power-limit.js", "params": [{ "name": "limit_watts", "type": "number", "min": 100, "max": 5000 }], "verify": { "telemetry": "power_limit", "param": "limit_watts", "withinMs": 5000 } },
       { "name": "reboot", "handler": "src/commands/reboot.js", "params": [] },
       { "name": "explode", "handler": "src/commands/explode.js", "params": [] }
     ],

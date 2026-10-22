@@ -10,6 +10,9 @@ const gLibUtilBase = require('@bitfinex/lib-js-util-base')
 const mingo = require('mingo')
 const { SCHEDULER_TIMES, BTC_SATS, MINUTE_MS, HOUR_MS, HOURS_24_MS } = require('./pool-utils/constants')
 const { getTimeRanges } = require('./pool-utils/time')
+
+// Rows one getDbData call may return (conf.maxDbReadLimit overrides).
+const MAX_DB_READ_LIMIT = 10000
 const utilsStore = require('@tetherto/hp-svc-facs-store/utils')
 
 /**
@@ -55,7 +58,9 @@ class PoolService extends EventEmitter {
     const ctx = this.ctx
     await this._createFacilities(ctx)
 
-    if (this._ownsFacilities) {
+    // Library default: never take over the process's signals. Standalone
+    // processes opt in with ctx.handleSignals.
+    if (this._ownsFacilities && this.ctx.handleSignals === true) {
       this._bindProcessExit()
     }
 
@@ -141,7 +146,7 @@ class PoolService extends EventEmitter {
       })
       return total
     }, 0)
-    const tsRange = getTimeRanges(start, end)
+    const tsRange = getTimeRanges(Number(start), Number(end))
     const hourlyRevenues = []
     if (!tsRange.length) return { ts: Date.now(), hourlyRevenues }
     const hourlyAvgRevenue = (totalRevenue / tsRange.length) / BTC_SATS
@@ -194,13 +199,21 @@ class PoolService extends EventEmitter {
     })
   }
 
-  async getDbData (db, { start, end }) {
-    if (!start) throw new Error('ERR_START_INVALID')
-    if (!end) throw new Error('ERR_END_INVALID')
+  async getDbData (db, { start, end, limit }) {
+    if (!start || !Number.isFinite(Number(start)) || Number(start) < 0) throw new Error('ERR_START_INVALID')
+    if (!end || !Number.isFinite(Number(end)) || Number(end) < 0) throw new Error('ERR_END_INVALID')
+    start = Number(start)
+    end = Number(end)
 
+    const maxLimit = Number.isInteger(this.conf.maxDbReadLimit) && this.conf.maxDbReadLimit > 0
+      ? this.conf.maxDbReadLimit
+      : MAX_DB_READ_LIMIT
+    const n = limit === undefined || limit === null ? maxLimit : Number(limit)
+    if (!Number.isInteger(n) || n < 0) throw new Error('ERR_LIMIT_INVALID')
     const query = {
       gte: utilsStore.convIntToBin(start),
-      lte: utilsStore.convIntToBin(end)
+      lte: utilsStore.convIntToBin(end),
+      limit: Math.min(n, maxLimit)
     }
 
     const stream = db.createReadStream(query)
@@ -220,6 +233,10 @@ class PoolService extends EventEmitter {
   }
 
   filterWorkers (workers, offset, limit) {
+    offset = Number(offset)
+    limit = Number(limit)
+    if (!Number.isInteger(offset) || offset < 0) throw new Error('ERR_OFFSET_INVALID')
+    if (!Number.isInteger(limit) || limit < 0) throw new Error('ERR_LIMIT_INVALID')
     return workers.slice(offset, offset + (Math.min(limit, 100)))
   }
 
@@ -285,7 +302,8 @@ class PoolService extends EventEmitter {
         data.forEach(d => { if (d.stats) d.stats = this.appendPoolType(d.stats) })
         break
       default:
-        data = this.data[key]
+        // Own keys only — never hand back inherited members (constructor, ...).
+        data = Object.prototype.hasOwnProperty.call(this.data, key) ? this.data[key] : undefined
         break
     }
 
@@ -359,6 +377,8 @@ class PoolService extends EventEmitter {
     next()
   }
 
+  // Opt-in only (ctx.handleSignals: true): stop the facilities on
+  // SIGINT/SIGTERM. Embedders own their process's signals by default.
   _bindProcessExit () {
     const stop = () => {
       this.stop(() => {})

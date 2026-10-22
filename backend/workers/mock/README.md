@@ -24,7 +24,7 @@ backend/workers/mock/
 ├── transports/
 │   ├── base.transport.js   # Contract: listen(host, port) / close() / get listening()
 │   ├── tcp.transport.js    # raw net.Server (avalon plain; whatsminer external)
-│   ├── http.transport.js   # fastify + auth (antminer, antspace, ocean, f2pool)
+│   ├── http.transport.js   # fastify + auth (antspace, ocean, f2pool)
 │   ├── modbus.transport.js # modbus-stream (abb, satec, schneider, seneca)
 │   └── mqtt.transport.js   # mqtt client (bitdeer)
 ├── miner.mock.js           # Miner category mock
@@ -47,7 +47,7 @@ pins its transport; one whose vendors disagree (miners, containers) composes per
 
 | Category (`*.mock.js`) | Transport | Devices                                                      |
 | ---------------------- | --------- | ------------------------------------------------------------ |
-| `miner`                | per-leaf  | Whatsminer (external; TCP, AES-encrypted + token), Avalon (TCP, plain cgminer), Antminer (HTTP, Digest auth) |
+| `miner`                | per-leaf  | Whatsminer (external; TCP, AES-encrypted + token), Avalon (TCP, plain cgminer), Antminer (external; HTTP, Digest auth) |
 | `container`            | per-leaf  | Antspace (HTTP), Bitdeer (MQTT client)                       |
 | `powermeter`           | Modbus    | ABB, Satec, Schneider                                        |
 | `sensor` (extends `powermeter`) | Modbus | Seneca                                                 |
@@ -58,7 +58,7 @@ pins its transport; one whose vendors disagree (miners, containers) composes per
 From the repo root, via the shared runner (comma-separated `type|device [port] [k=v]…`):
 
 ```text
-npm run mock m56s 14028, s19xp 14029, b23 5071, ocean 8061
+npm run mock a1346 14030, b23 5071, ocean 8061
 ```
 
 bitdeer is an MQTT **client**, so it needs a broker reachable at its `--port` before it serves.
@@ -80,7 +80,7 @@ module.exports = SiemensMock.expose(module) // -> { createServer }, and runs the
 
 plus `initial_states/default.js` (its register map). For a `miner`/`container` whose transport
 isn't fixed by the category, also implement `createTransport()` to return the adapter it speaks
-(see [`miners/antminer`](../miners/antminer/README.md) for HTTP, [`miners/avalon`](../miners/avalon/README.md) for TCP, [`containers/bitdeer`](../containers/bitdeer/README.md) for MQTT). A
+(see [`containers/antspace`](../containers/antspace/README.md) for HTTP, [`miners/avalon`](../miners/avalon/README.md) for TCP, [`containers/bitdeer`](../containers/bitdeer/README.md) for MQTT). A
 brand-new wire protocol only needs one new `transports/<x>.transport.js` adapter.
 
 ## Errors

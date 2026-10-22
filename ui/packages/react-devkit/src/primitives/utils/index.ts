@@ -1,7 +1,7 @@
 /**
  * Core utility functions
  *
- * Pure, side-effect-free utilities extracted from the reference app.
+ * Pure, side-effect-free utilities.
  * Organized by domain: number, conversion, date, time, format,
  * array, string, async, validation, and class names.
  */

@@ -369,3 +369,55 @@ test('write.calls.request answers from the actions service', async (t) => {
   t.is(res.payload.reqVotes, 1)
   t.alike(services.calls[0], ['getWriteCalls', { query: {}, action: 'reboot', params: [] }])
 })
+
+test('the envelope deviceId wins over a same-named key in params', async (t) => {
+  const services = createServicesStub()
+  const runtime = await createRuntime(services)
+
+  await runtime.handleRequest(telemetry({ type: 'logs', key: 'thing-5m', thingId: 'SIM-002' }, 'SIM-001'))
+  t.is(services.calls[0][1].thingId, 'SIM-001', 'logs: addressed device wins')
+
+  await runtime.handleRequest(telemetry({ type: 'thing_config', thingId: 'SIM-002' }, 'SIM-001'))
+  t.is(services.calls[1][1].thingId, 'SIM-001', 'thing_config: addressed device wins')
+
+  await runtime.handleRequest(command('saveComment', { comment: 'x', user: 'op', thingId: 'SIM-002' }, 'SIM-001'))
+  t.is(services.calls[2][1].thingId, 'SIM-001', 'saveComment: addressed device wins')
+
+  await runtime.handleRequest(command('updateThing', { id: 'SIM-002', info: {} }, 'SIM-001'))
+  t.is(services.calls[3][1].id, 'SIM-001', 'updateThing: addressed device wins')
+
+  await runtime.handleRequest(telemetry({ type: 'logs_multi', key: 'thing-5m', deviceIds: ['SIM-002'], thingId: 'SIM-001' }))
+  t.is(services.calls[4][1].thingId, 'SIM-002', 'logs_multi: the per-device id wins over params.thingId')
+})
+
+test('device id lists are type-checked and capped', async (t) => {
+  const { MAX_DEVICE_IDS } = require('../../lib/service-builtins')
+  const services = createServicesStub()
+  const runtime = await createRuntime(services)
+  const tooMany = Array.from({ length: MAX_DEVICE_IDS + 1 }, (_, i) => `d${i}`)
+
+  const multi = await runtime.handleRequest(telemetry({ type: 'logs_multi', key: 'k', deviceIds: tooMany }))
+  t.is(multi.payload.error, `ERR_PARAM_RANGE: deviceIds above max ${MAX_DEVICE_IDS}`)
+
+  const badType = await runtime.handleRequest(telemetry({ type: 'logs_multi', key: 'k', deviceIds: 'SIM-001' }))
+  t.is(badType.payload.error, 'ERR_PARAM_TYPE: deviceIds must be an array of strings')
+
+  const stats = await runtime.handleRequest(telemetry({ type: 'stats', deviceIds: tooMany }))
+  t.is(stats.payload.error, `ERR_PARAM_RANGE: deviceIds above max ${MAX_DEVICE_IDS}`)
+
+  t.is(services.calls.length, 0, 'no service call for a rejected list')
+})
+
+test('built-in command params are validated against their published contract entry', async (t) => {
+  const services = createServicesStub()
+  const runtime = await createRuntime(services)
+
+  const res = await runtime.handleRequest(command('saveComment', { comment: { $gt: '' }, user: 'op' }, 'SIM-001'))
+  t.is(res.payload.status, 'FAILED')
+  t.is(res.payload.error, 'ERR_PARAM_TYPE: comment must be string')
+
+  const reg = await runtime.handleRequest(command('registerThing', { id: 'SIM-003', opts: 'not-an-object' }))
+  t.is(reg.payload.error, 'ERR_PARAM_TYPE: opts must be object')
+
+  t.is(services.calls.length, 0, 'invalid params never reach the service')
+})

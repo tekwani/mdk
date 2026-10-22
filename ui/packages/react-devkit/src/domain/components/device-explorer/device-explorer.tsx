@@ -4,8 +4,6 @@ import { DeviceExplorerTable } from './device-explorer-table'
 import type { DeviceExplorerTableProps } from './device-explorer-table'
 import { DeviceExplorerToolbar } from './device-explorer-toolbar'
 import type { DeviceExplorerToolbarProps } from './device-explorer-toolbar'
-import { DEVICE_EXPLORER_DEVICE_TYPE } from './types'
-import type { DeviceExplorerDeviceType } from './types'
 import { useControllableState } from '@radix-ui/react-use-controllable-state'
 import { useFilterState } from './hooks/use-filter-state'
 import { useState } from 'react'
@@ -25,8 +23,6 @@ type ForwardedTableProps = Partial<Pick<DeviceExplorerTableProps, OptionalTableP
   Omit<DeviceExplorerTableProps, OmittedTableProps>
 
 export type DeviceExplorerProps = {
-  /** Active device-type tab */
-  deviceType: DeviceExplorerDeviceType
   /** Additional class names */
   className?: string
   /** Controlled row-selection state */
@@ -37,8 +33,10 @@ export type DeviceExplorerProps = {
   ForwardedTableProps
 
 /**
- * Top-level device explorer: filter toolbar + searchable, sortable table of
- * miners, containers, or cabinets. Designed to be controlled by URL state in the host app.
+ * Device explorer: filter + search toolbar over a sortable, selectable device
+ * table. Shows the miner columns by default; pass `columns` to change them
+ * (spread `getMinerColumns(...)` to extend the default set). Designed to be
+ * controlled by URL state in the host app.
  *
  * @category tables
  * @kernelCapability device-management
@@ -47,8 +45,6 @@ export type DeviceExplorerProps = {
  * @example
  * ```tsx
  * <DeviceExplorer
- *   deviceType={deviceType}
- *   onDeviceTypeChange={setDeviceType}
  *   data={devices}
  *   filterOptions={filterOptions}
  *   searchOptions={searchOptions}
@@ -56,7 +52,6 @@ export type DeviceExplorerProps = {
  *   onSearchTagsChange={setSearchTags}
  *   onFiltersChange={setFilters}
  *   getFormattedDate={(date) => formatDate(date)}
- *   renderAction={(device) => <RowActionMenu device={device} />}
  * />
  * ```
  * @tier agent-ready
@@ -67,14 +62,12 @@ export const DeviceExplorer = ({
   filterOptions,
   searchOptions,
   data,
-  deviceType,
-  onDeviceTypeChange,
+  columns,
   selectedDevices,
   onSelectedDevicesChange,
   searchTags,
   onSearchTagsChange,
   className,
-  renderAction,
   getFormattedDate,
   onRowClick,
 }: DeviceExplorerProps): JSX.Element => {
@@ -91,15 +84,6 @@ export const DeviceExplorer = ({
 
   const [sorting, setSorting] = useState<DataTableSortingState>([])
 
-  const handleDeviceTypeChange = (deviceType: DeviceExplorerDeviceType): void => {
-    if (deviceType === DEVICE_EXPLORER_DEVICE_TYPE.CABINET) {
-      setSorting([{ id: 'id', desc: true }])
-    } else {
-      setSorting([])
-    }
-
-    onDeviceTypeChange(deviceType)
-  }
 
   return (
     <div className={cn('mdk-device-explorer', className)}>
@@ -110,15 +94,12 @@ export const DeviceExplorer = ({
         searchOptions={searchOptions}
         searchTags={searchTags}
         onSearchTagsChange={onSearchTagsChange}
-        deviceType={deviceType}
-        onDeviceTypeChange={handleDeviceTypeChange}
       />
       <DeviceExplorerTable
         data={data}
-        deviceType={deviceType}
+        columns={columns}
         selections={selections}
         onSelectionsChange={setSelections}
-        renderAction={renderAction}
         getFormattedDate={getFormattedDate}
         sorting={sorting}
         onSortingChange={setSorting}

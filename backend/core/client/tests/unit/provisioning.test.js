@@ -9,7 +9,7 @@
 
 const test = require('brittle')
 const { createRawMdkClient, createWorkerClient } = require('../../index')
-const { serialize, deserialize } = require('../../../kernel/lib/protocol/envelope')
+const { serialize, deserialize, buildResponse } = require('../../../kernel/lib/protocol/envelope')
 const { ACTIONS } = require('../../../kernel/lib/protocol/actions')
 
 const WORKER_KEY = 'ab'.repeat(32) // 32-byte hex, valid for HRPCClient
@@ -23,13 +23,16 @@ function orkTransport (workers) {
 }
 
 // A fake @hyperswarm/rpc: records every request and replies like a worker
-// adapter (envelope with a .payload). destroy() is here for completeness but is
-// never called — an injected rpc is not owned, so HRPCClient.close() is a no-op.
-function fakeWorkerRpc (reply = { payload: { status: 'QUEUED', commandId: 'cmd-1' } }) {
+// runtime (a response envelope carrying `payload`). destroy() is here for
+// completeness but is never called — an injected rpc is not owned, so
+// HRPCClient.close() is a no-op.
+function fakeWorkerRpc (payload = { status: 'QUEUED', commandId: 'cmd-1' }) {
   const rpc = { requests: [] }
-  rpc.request = async (key, method, buf) => {
-    rpc.requests.push({ key: key.toString('hex'), method, envelope: deserialize(buf) })
-    return serialize(reply)
+  rpc.request = async (key, method, buf, opts) => {
+    const envelope = deserialize(buf)
+    rpc.requests.push({ key: key.toString('hex'), method, envelope, opts })
+    const action = envelope.action === ACTIONS.COMMAND_REQUEST ? ACTIONS.COMMAND_RESULT : ACTIONS.TELEMETRY_RESPONSE
+    return serialize(buildResponse(envelope, action, payload, 'miner-worker'))
   }
   rpc.destroy = async () => {}
   return rpc
@@ -89,7 +92,7 @@ test('pullWorkerTelemetry - resolves the key, sends TELEMETRY_PULL worker-direct
   const kernel = createRawMdkClient({ transport: orkTransport([{ workerId: 'miner-worker', state: 'READY', deviceIds: [], rpcKey: WORKER_KEY }]) })
   await kernel.connect()
   const rows = [{ ts: 1700000000000, hashrate_sum: 42 }]
-  const rpc = fakeWorkerRpc({ payload: { logs: rows, timestamp: 1700000000001 } })
+  const rpc = fakeWorkerRpc({ logs: rows, timestamp: 1700000000001 })
 
   const query = { type: 'logs', key: 'stat-1D', tag: 't-miner', start: 1, end: 2, fields: { hashrate_sum: 1 } }
   const res = await kernel.pullWorkerTelemetry('miner-worker', query, { hrpc: { rpc } })
@@ -110,4 +113,61 @@ test('pullWorkerTelemetry - throws ERR_MDK_WORKER_KEY_UNKNOWN for an unregistere
 
   await t.exception(() => kernel.pullWorkerTelemetry('ghost', { type: 'logs' }, { hrpc: { rpc } }), /ERR_MDK_WORKER_KEY_UNKNOWN/)
   t.is(rpc.requests.length, 0, 'no worker request attempted when the key is unknown')
+})
+
+test('worker clients inherit the Kernel client identity and transport', async (t) => {
+  // One fake rpc serves both the Kernel (WORKER_LIST) and the worker: the
+  // worker request must go out over the Kernel client's own rpc, i.e. dial
+  // with the same DHT keypair a Worker allowlist was told to admit.
+  const rpc = fakeWorkerRpc()
+  const kernelReply = rpc.request
+  const KERNEL_KEY = 'cd'.repeat(32)
+  rpc.request = async (key, method, buf, opts) => {
+    if (key.toString('hex') === KERNEL_KEY) {
+      return serialize({ workers: [{ workerId: 'miner-worker', state: 'READY', deviceIds: [], rpcKey: WORKER_KEY }] })
+    }
+    return kernelReply(key, method, buf, opts)
+  }
+  const kernel = createRawMdkClient({ hrpc: { key: KERNEL_KEY, rpc, timeout: 1234 } })
+  await kernel.connect()
+
+  await kernel.sendWorkerCommand('miner-worker', 'miner-0', 'registerThing', {})
+  t.is(rpc.requests.length, 1, 'the worker request used the parent rpc')
+  t.is(rpc.requests[0].key, WORKER_KEY)
+  t.is(rpc.requests[0].opts.timeout, 1234, 'and the parent default timeout')
+
+  await kernel.pullWorkerTelemetry('miner-worker', { type: 'logs' }, { timeout: 99 })
+  t.is(rpc.requests[1].opts.timeout, 99, 'per-call timeout overrides the inherited default')
+})
+
+test('worker clients inherit the parent keyPair before the parent transport exists', (t) => {
+  const { HRPCClient } = require('../../lib/hrpc-client')
+  const keyPair = { publicKey: Buffer.alloc(32, 1), secretKey: Buffer.alloc(64, 2) }
+  const parent = new HRPCClient({ key: WORKER_KEY, keyPair, bootstrap: [{ host: '127.0.0.1', port: 1 }] })
+  const child = parent.childOpts()
+  t.is(child.keyPair, keyPair)
+  t.alike(child.bootstrap, [{ host: '127.0.0.1', port: 1 }])
+  t.is(child.rpc, undefined, 'no live rpc to share yet')
+})
+
+test('worker replies that are not valid response envelopes are rejected', async (t) => {
+  const reply = (body) => ({ request: async () => serialize(body), destroy: async () => {} })
+  const call = async (body) => {
+    const wc = createWorkerClient(WORKER_KEY, { rpc: reply(body) })
+    await wc.connect()
+    return wc.sendCommand('m0', 'reboot', {})
+  }
+
+  await t.exception(() => call({ payload: { status: 'SUCCESS' } }), /ERR_MDK_RESPONSE_INVALID: ERR_ENVELOPE_ID_MISSING/)
+  await t.exception(() => call([1, 2]), /ERR_MDK_RESPONSE_INVALID: ERR_ENVELOPE_NOT_OBJECT/)
+  await t.exception(() => call({ error: 'ERR_REQUEST_FAILED' }), /^Error: ERR_REQUEST_FAILED$/, 'a bare worker error code is surfaced')
+  await t.exception(() => call({ error: 'TypeError: secret at 10.0.0.1' }), /ERR_MDK_RESPONSE_INVALID: ERR_RESPONSE_ERROR/, 'a bare non-code error is not')
+
+  const request = { id: 'x', version: '1.0', type: 'request', action: ACTIONS.COMMAND_REQUEST, sender: 's', timestamp: 1, payload: {} }
+  await t.exception(() => call(request), /ERR_MDK_RESPONSE_INVALID: ERR_ENVELOPE_TYPE_INVALID/)
+
+  const badJson = { request: async () => Buffer.from('{nope'), destroy: async () => {} }
+  const wc = createWorkerClient(WORKER_KEY, { rpc: badJson })
+  await wc.connect()
+  await t.exception(() => wc.listWorkers(), /ERR_MDK_RESPONSE_INVALID: ERR_RESPONSE_NOT_JSON/)
 })

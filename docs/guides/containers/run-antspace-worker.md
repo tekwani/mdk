@@ -26,13 +26,65 @@ Deployment-specific requirements:
 <details>
 <summary>Run against a mock</summary>
 
-To support development, this repo ships a runnable example that starts the bundled mock, boots the Worker against it, starts a Kernel, and registers the container:
+The Antspace Worker ships a mock container that answers its HTTP API with canned data. Run the mock in one terminal and
+the Worker in a second, both from the repository root.
 
-```bash
-node examples/backend/containers/antspace/index.js
+1. Start a mock HK3 container:
+
+   ```bash
+   npm run mock hk3 18001
+   ```
+
+2. Save this script as `antspace-dev.js` in the repository root. It is the boot call from Connect a container, pointed
+   at `127.0.0.1`:
+
+   ```js
+   'use strict'
+
+   const os = require('os')
+   const path = require('path')
+   const { getKernel } = require('@tetherto/mdk-core')
+   const { startAntspaceWorker } = require('@tetherto/mdk-worker-antspace')
+
+   const main = async () => {
+     const kernel = await getKernel()
+
+     const worker = await startAntspaceWorker({
+       workerId: 'antspace-dev',
+       model: 'hk3',
+       storeDir: path.join(os.tmpdir(), 'mdk-dev', 'antspace'),
+       allowedKeys: [kernel.getClientPublicKey()],
+       seedDevices: [{
+         info: { serialNum: 'HK3-DEV', container: 'dev' },
+         opts: { address: '127.0.0.1', port: 18001 }
+       }]
+     })
+     await kernel.registerWorker(worker.runtime.getPublicKey())
+
+     console.log('Kernel HRPC key:', kernel.getPublicKey().toString('hex'))
+     console.log('Device:', worker.services.provisioning.listDeviceIds()[0])
+     console.log('Ctrl+C to stop.')
+   }
+
+   main().catch((err) => { console.error(err); process.exit(1) })
+   ```
+
+3. Run the script in a second terminal:
+
+   ```bash
+   node antspace-dev.js
+   ```
+
+Expected output, with your own key and device ID:
+
+```text
+Kernel HRPC key: de61f30cd7bd65923d9c8089e4fa684335a37371600e1610823a4fc20aba0247
+Device: 183ded12-bf17-4b40-9970-5c535fd79916
+Ctrl+C to stop.
 ```
 
-It prints the Kernel HRPC key and the registered device ID, then stays running until Ctrl+C. For the mock's model and port options, see [the Antspace README][antspace-readme].
+The Kernel then pulls live telemetry (temperatures, cooling status, power) from the mock through the Worker. The mock's
+model and port options are in [the Antspace README][antspace-readme].
 
 </details>
 
@@ -60,6 +112,7 @@ const worker = await startAntspaceWorker({
   workerId: 'antspace-rack-1',
   model: 'hk3',
   storeDir: './store/antspace-rack-1',
+  allowedKeys: [kernel.getClientPublicKey()],
   seedDevices: [{
     info: { serialNum: 'HK3-A', container: 'container-A', location: 'site-a-01.container' },
     opts: { address: '192.168.1.100', port: 18001 }
@@ -67,6 +120,9 @@ const worker = await startAntspaceWorker({
 })
 await kernel.registerWorker(worker.runtime.getPublicKey())
 ```
+
+`allowedKeys` lists the RPC callers the Worker accepts. The Worker refuses to start without it
+(`ERR_WORKER_ALLOWED_KEYS_REQUIRED`), so pass the Kernel's client key.
 
 > [!WARNING]
 > Make sure each container's address is reachable from the machine or container running the Worker before registering. Commands affect live cooling for racks of miners, prioritize thermal safety.
@@ -96,9 +152,10 @@ For the full `seedDevices` and `registerThing` option reference, the telemetry a
 
 ## Troubleshooting
 
-The development example on this page is [`examples/backend/containers/antspace/index.js`](../../../examples/backend/containers/antspace/index.js). A working run prints the Kernel HRPC key and the registered device ID, then stays running until Ctrl+C.
+A working development run of `antspace-dev.js` prints the Kernel HRPC key and the registered device ID, then stays
+running until Ctrl+C.
 
-If it does not print those values, or if the mock port is already in use, the network and port checks in [miner troubleshooting][miner-troubleshooting] apply here too, the underlying HRPC and DHT requirements are the same across every Worker.
+If it does not print those values, or if `npm run mock` reports port `18001` already in use, the network and port checks in [miner troubleshooting][miner-troubleshooting] apply here too, the underlying HRPC and DHT requirements are the same across every Worker.
 
 ## Next steps
 

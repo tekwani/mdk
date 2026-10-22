@@ -25,7 +25,7 @@ Both render a `DataTable` with shared columns from [`alerts-table-columns.tsx`](
 
 ## Data contracts
 
-- `Alert` — `@tetherto/mdk-react-devkit` / [`foundation/types/alerts`](../../types/alerts.ts)
+- `AlertRecord` — `@tetherto/mdk-react-devkit` / [`domain/types/alerts`](../../types/alerts.ts)
 - `AlertLocalFilters` — same package, [`domain/alerts/alerts-types`](./alerts-types.ts)
 - `Device` — [`foundation/types/device`](../../types/device.ts)
 

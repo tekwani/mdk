@@ -19,6 +19,8 @@ const plugin = require('.')
  *   root      optional config root for the legacy config/f2pool.json overlay
  *   kernelTopic  Kernel discovery topic (hex); omit to register by key
  *   bootstrap DHT bootstrap override for hermetic tests
+ *   handleSignals  let the pool stop its facilities on SIGINT/SIGTERM
+ *                  (default false — bind your own handler to stop())
  */
 async function startF2poolWorker (opts) {
   if (!opts || !opts.workerId) throw new Error('ERR_WORKER_ID_REQUIRED')
@@ -28,7 +30,9 @@ async function startF2poolWorker (opts) {
   const pool = new F2MinerpoolManager(opts.conf || {}, {
     rack: opts.rack,
     storeDir: opts.storeDir,
-    root: opts.root
+    root: opts.root,
+    // Off by default: the caller owns process signals (stop() below).
+    handleSignals: opts.handleSignals === true
   })
   await pool.init()
 
@@ -37,6 +41,8 @@ async function startF2poolWorker (opts) {
     workerId: opts.workerId,
     kernelTopic: opts.kernelTopic || null,
     bootstrap: opts.bootstrap || null,
+    allowedKeys: opts.allowedKeys || [],
+    allowAll: opts.allowAll === true,
     store: pool.store_s1,
     services,
     devices: [{ deviceId: opts.workerId, config: { pool } }]

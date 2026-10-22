@@ -10,14 +10,24 @@ const { opts, env, config, logger } = require('@tetherto/mdk-worker/device')
 // binding directly to the ambient device module here — rather than exporting
 // a `createClient(opts)` factory for a caller to invoke — already yields one
 // client per device with no extra plumbing.
-logger('config received: opts=%o env=%o config=%o', opts, env, config)
+// Log only non-secret fields and key names: `env` carries credentials such as
+// DEVICE_TOKEN, and `opts`/`config` may too — never log their values.
+logger('config received: host=%s port=%s env keys=%o config keys=%o',
+  opts.host, opts.port, Object.keys(env || {}), Object.keys(config || {}))
 
 const base = `http://${opts.host || '127.0.0.1'}:${opts.port}`
 const auth = env.DEVICE_TOKEN ? { authorization: `Bearer ${env.DEVICE_TOKEN}` } : {}
 
 const call = async (path, callOpts) => {
-  const res = await fetch(base + path, { ...callOpts, headers: { ...auth, ...(callOpts && callOpts.headers) } })
-  const body = await res.json()
+  let res, body
+  try {
+    res = await fetch(base + path, { ...callOpts, headers: { ...auth, ...(callOpts && callOpts.headers) } })
+    body = await res.json()
+  } catch (err) {
+    // An unreachable device or a non-JSON reply: surface it as this plugin's
+    // own error code, not fetch's bare "fetch failed".
+    throw new Error(`ERR_DEVICE_CALL_FAILED: ${(err.cause && err.cause.code) || err.message}`)
+  }
   if (!res.ok || body.ok === false) {
     throw new Error(body.error || `ERR_DEVICE_CALL_FAILED: ${res.status}`)
   }

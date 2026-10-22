@@ -1,7 +1,4 @@
 export { WEBAPP_DISPLAY_NAME, WEBAPP_NAME, WEBAPP_SHORT_NAME } from '@tetherto/mdk-ui-foundation'
-
-export const POOL_NAME = 'Pool'
-
 export const DATE_RANGE = {
   M1: '1m',
   M5: '5m',
@@ -19,46 +16,6 @@ export const REVENUE_MULTIPLIER = {
   [DATE_RANGE.W1]: 24 * 7,
   [DATE_RANGE.MONTH1]: 24 * 30,
 } as const
-
-export const DATE_RANGE_DURATIONS = {
-  [DATE_RANGE.M1]: {
-    minutes: 1,
-  },
-  [DATE_RANGE.M5]: {
-    minutes: 5,
-  },
-  [DATE_RANGE.M15]: {
-    minutes: 15,
-  },
-  [DATE_RANGE.M30]: {
-    minutes: 30,
-  },
-  [DATE_RANGE.H1]: {
-    hours: 1,
-  },
-  [DATE_RANGE.H3]: {
-    hours: 3,
-  },
-  [DATE_RANGE.D1]: {
-    days: 1,
-  },
-  [DATE_RANGE.MONTH1]: {
-    months: 1,
-  },
-} as const
-
-export const DATE_RANGE_PER_HOUR = {
-  [DATE_RANGE.M1]: 60,
-  [DATE_RANGE.M5]: 12,
-  [DATE_RANGE.M15]: 4,
-  [DATE_RANGE.M30]: 2,
-  [DATE_RANGE.H1]: 1,
-  [DATE_RANGE.H3]: 1 / 3,
-  [DATE_RANGE.D1]: 1 / 24,
-  [DATE_RANGE.W1]: 1 / 24 / 7,
-  [DATE_RANGE.MONTH1]: 1 / 24 / 30,
-} as const
-
 export const TIME = {
   ONE_MIN: 60000,
   TEN_MINS: 600000,

@@ -1,9 +1,10 @@
-export type MinerFamily = "whatsminer" | "antminer" | "avalon";
+export type MinerFamily = "whatsminer" | "antminer" | "sealminer" | "avalon";
 
 // Per-family setPowerMode support in this demo (sleep omitted — it powers the miner down).
 export const MINER_POWER_MODES: Record<MinerFamily, readonly string[]> = {
   whatsminer: ["low", "normal", "high"],
   antminer: ["normal"],
+  sealminer: ["normal", "high_performance"],
   avalon: ["normal", "high"],
 };
 

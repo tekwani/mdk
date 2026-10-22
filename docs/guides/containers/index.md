@@ -27,7 +27,7 @@ Every guide assumes:
 - npm 11 [(< 12)][npm-version]
 - Dependencies installed (`npm run setup` from the repo root)
 - Commands are run from the repo root
-- Outbound network access for Kernel discovery
+- Outbound UDP access to the HyperDHT bootstrap nodes
 
 For the mock or development path:
 

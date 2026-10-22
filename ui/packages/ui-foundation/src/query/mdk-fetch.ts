@@ -1,12 +1,8 @@
 /**
- * Bearer-token aware `fetch` wrapper used by every authenticated mining
- * endpoint. Reads the current token from `authStore` at call time (never
- * captured at construction) so a fresh token issued by `useTokenPolling` is
- * applied to the next request automatically.
- *
- * Returns a `Fetcher` shape compatible with the existing query factories
- * (`./factories`). Tests can substitute their own fetcher by passing it
- * explicitly to a factory.
+ * Bearer-token aware `fetch` wrapper for Gateway routes. Reads the current
+ * token from `authStore` at call time (never captured at construction) so a
+ * fresh token issued by `useTokenPolling` is applied to the next request
+ * automatically.
  */
 
 import { authStore } from '../store/auth-store'

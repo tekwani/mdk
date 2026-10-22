@@ -33,7 +33,7 @@ export const ActiveIncidentsCardExample = () => {
       label="Active Alerts"
       items={mockItems}
       onItemClick={(id) => {
-        // eslint-disable-next-line no-console
+        // oxlint-disable-next-line no-console
         console.log(`open alert ${id}`)
       }}
     />

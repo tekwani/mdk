@@ -2,7 +2,7 @@
 // Parse a plain site description into sizing facts JSON (stdout).
 //
 //   node parse-site.mjs "ten Whatsminer M56S on an edge box, 4 cores, 8 GiB, SATA"
-//   echo "..." | node parse-site.mjs
+//   node parse-site.mjs < site.txt      (preferred for operator-written text)
 
 import { parseSiteDescription } from './lib.mjs'
 

@@ -5,34 +5,12 @@ import { createBrowserRouter } from 'react-router'
 import App from './App'
 import { AlertExample } from './examples/alert-example'
 import { ListViewFilterExample } from './examples/list-view-filter-example/list-view-filter-example'
-import { ChartWrapperPage } from './pages'
 import { AlertsPageDemo } from './pages/alerts/alerts-page'
 import { PowerModeTimelineChartDemo } from './pages/dashboard/power-mode-timeline-chart-page/power-mode-timeline-chart-page'
 import { TimelineChartDemo } from './pages/domain/timeline-chart-page/timeline-chart-page'
-import { BitdeerPage } from './pages/explorer-containers/bitdeer/bitdeer-page'
-import { BitmainImmersionPage } from './pages/explorer-containers/bitmain-immersion/bitmain-immersion-page'
-import BitmainPage from './pages/explorer-containers/bitmain/bitmain-page'
-import { BitmainStatusItemDemo } from './pages/explorer-containers/bitmain/status/bitmain-status-item-demo'
-import { MicroBTPage } from './pages/explorer-containers/micro-bt/micro-bt-page'
-import { SocketDemo } from './pages/explorer-containers/socket/socket-demo'
-import { BatchContainerControlsCardDemo } from './pages/explorer-details-view/container-controls-box/batch-container-controls-card-demo'
-import { FleetManagementDemo } from './pages/explorer-details-view/fleet-management/fleet-management-demo'
-import { MinerChipsCardDemo } from './pages/explorer-details-view/miner-chips-card/miner-chips-card-demo'
-import { MinerControlsCardDemo } from './pages/explorer-details-view/miner-controls-card/miner-controls-card-demo'
-import { MinerInfoCardDemo } from './pages/explorer-details-view/miner-info-card/miner-info-card.demo'
-import { MinerPowerModeDemo } from './pages/explorer-details-view/miner-power-mode/miner-power-mode-demo'
-import { MinersActivityChartDemo } from './pages/explorer-details-view/miners-activity-chart/miners-activity-chart-demo'
-import { SecondaryStatCardDemo } from './pages/explorer-details-view/secondary-stat-card/secondary-stat-card-demo'
-import { SingleStatCardDemo } from './pages/explorer-details-view/single-stat-card/single-stat-card-demo'
-import { StatsGroupCardDemo } from './pages/explorer-details-view/stats-group-card/stats-group-card-demo'
+import { MinersActivityChartDemo } from './pages/miners-activity-chart/miners-activity-chart-demo'
+import { SingleStatCardDemo } from './pages/stat-cards/single-stat-card/single-stat-card-demo'
 import { MosaicPageDemo } from './pages/mosaic-page/mosaic.page'
-import { PoolManagerAssignPoolModalPage } from './pages/pool-manager/assign-pool-modal/pool-manager-assign-pool-modal-page'
-import { PoolManagerDashboardPage } from './pages/pool-manager/dashboard/pool-manager-dashboard-page'
-import { PoolManagerMinerExplorerPageDemo } from './pages/pool-manager/miner-explorer/pool-manager-miner-explorer-page'
-import { PoolManagerPoolsPageDemo } from './pages/pool-manager/pools/pool-manager-pools-page'
-import { PoolManagerSiteOverviewDetailsPage } from './pages/pool-manager/site-overview-details/pool-manager-site-overview-details-page'
-import { PoolManagerSitesOverviewPage } from './pages/pool-manager/sites-overview/pool-manager-sites-overview-page'
-import { StateExportsPage } from './pages/stats-export-page'
 import { WidgetTopRowPage } from './pages/widget-top-row-page'
 
 // Lazy load ALL pages to eliminate unused JavaScript and CSS
@@ -50,11 +28,6 @@ const HooksDemoPage = lazy(() =>
 const ThemingDemoPage = lazy(() =>
   import('./pages/guides/theming-demo-page').then((module) => ({
     default: module.ThemingDemoPage,
-  })),
-)
-const BringYourOwnBackendPage = lazy(() =>
-  import('./pages/bring-your-own-backend/bring-your-own-backend-page').then((module) => ({
-    default: module.BringYourOwnBackendPage,
   })),
 )
 const AgentCoPilotPage = lazy(() =>
@@ -108,9 +81,6 @@ const ErrorBoundaryPage = lazy(() =>
 const ErrorCardPage = lazy(() =>
   import('./pages/error-card-page').then((module) => ({ default: module.ErrorCardPage })),
 )
-const FormElementsPage = lazy(() =>
-  import('./pages/form-elements-page').then((module) => ({ default: module.FormElementsPage })),
-)
 const GaugeChartPage = lazy(() =>
   import('./pages/gauge-chart-page').then((module) => ({ default: module.GaugeChartPage })),
 )
@@ -148,24 +118,11 @@ const NotFoundPage = lazy(() =>
 const PopoverPage = lazy(() =>
   import('./pages/popover-page').then((module) => ({ default: module.PopoverPage })),
 )
-const RepairLogChangesPage = lazy(() =>
-  import('./pages/repair-log-changes-page').then((module) => ({
-    default: module.RepairLogChangesPage,
-  })),
-)
-const RevenueChartDemo = lazy(() =>
-  import('./pages/reporting-tool/financial/revenue-chart/revenue-chart-demo').then((module) => ({
-    default: module.RevenueChartDemo,
-  })),
-)
 const SelectPage = lazy(() =>
   import('./pages/select-page').then((module) => ({ default: module.SelectPage })),
 )
 const MultiSelectPage = lazy(() =>
   import('./pages/multi-select-page').then((module) => ({ default: module.MultiSelectPage })),
-)
-const SelectorPage = lazy(() =>
-  import('./pages/selector-page').then((module) => ({ default: module.SelectorPage })),
 )
 const SidebarPage = lazy(() =>
   import('./pages/sidebar-page').then((module) => ({ default: module.SidebarPage })),
@@ -175,6 +132,51 @@ const SpinnerPage = lazy(() =>
 )
 const TabsPage = lazy(() =>
   import('./pages/tabs-page').then((module) => ({ default: module.TabsPage })),
+)
+const MultiLevelSelectPage = lazy(() =>
+  import('./pages/multi-level-select-page').then((module) => ({ default: module.MultiLevelSelectPage })),
+)
+const BadgeExample = lazy(() =>
+  import('./examples/badge-example').then((module) => ({ default: module.BadgeExample })),
+)
+const DividerPage = lazy(() =>
+  import('./pages/divider-page').then((module) => ({ default: module.DividerPage })),
+)
+const LabeledCardPage = lazy(() =>
+  import('./pages/labeled-card-page').then((module) => ({ default: module.LabeledCardPage })),
+)
+const DetailLegendPage = lazy(() =>
+  import('./pages/detail-legend-page').then((module) => ({ default: module.DetailLegendPage })),
+)
+const MinMaxAvgPage = lazy(() =>
+  import('./pages/min-max-avg-page').then((module) => ({ default: module.MinMaxAvgPage })),
+)
+const SkeletonPage = lazy(() =>
+  import('./pages/skeleton-page').then((module) => ({ default: module.SkeletonPage })),
+)
+const MiningPoolsPanelPage = lazy(() =>
+  import('./pages/mining-pools-panel-page').then((module) => ({ default: module.MiningPoolsPanelPage })),
+)
+const ReportTimeFrameSelectorPage = lazy(() =>
+  import('./pages/report-time-frame-selector-page').then((module) => ({ default: module.ReportTimeFrameSelectorPage })),
+)
+const SiteStatsBarPage = lazy(() =>
+  import('./pages/site-stats-bar-page').then((module) => ({ default: module.SiteStatsBarPage })),
+)
+const TimeframeControlsPage = lazy(() =>
+  import('./pages/timeframe-controls-page').then((module) => ({ default: module.TimeframeControlsPage })),
+)
+const TimelineSelectorPage = lazy(() =>
+  import('./pages/timeline-selector-page').then((module) => ({ default: module.TimelineSelectorPage })),
+)
+const MinerMetricCardPage = lazy(() =>
+  import('./pages/miner-metric-card-page').then((module) => ({ default: module.MinerMetricCardPage })),
+)
+const GenericDataBoxPage = lazy(() =>
+  import('./pages/generic-data-box-page').then((module) => ({ default: module.GenericDataBoxPage })),
+)
+const EnabledDisableTogglePage = lazy(() =>
+  import('./pages/enabled-disable-toggle-page').then((module) => ({ default: module.EnabledDisableTogglePage })),
 )
 const TagsPage = lazy(() =>
   import('./pages/tags-page').then((module) => ({ default: module.TagsPage })),
@@ -272,130 +274,9 @@ const DeviceExplorerPage = lazy(() =>
   })),
 )
 
-const ExplorerPage = lazy(() =>
-  import('./pages/explorer-page').then((module) => ({ default: module.ExplorerPage })),
-)
-
-const ContainerDetailPage = lazy(() =>
-  import('./pages/container-detail-page').then((module) => ({
-    default: module.ContainerDetailPage,
-  })),
-)
 
 const SettingsDemoPage = lazy(() =>
   import('./pages/settings/settings-demo').then((module) => ({ default: module.SettingsDemoPage })),
-)
-
-const TanksBoxPage = lazy(() =>
-  import('./pages/tanks-box-page').then((module) => ({ default: module.TanksBoxPage })),
-)
-
-const BitMainImmersionSummaryBoxPage = lazy(() =>
-  import('./pages/bitmain-immersion-summary-box-page').then((module) => ({
-    default: module.BitMainImmersionSummaryBoxPage,
-  })),
-)
-
-const ContainerChartsPage = lazy(() =>
-  import('./pages/container-charts-page').then((module) => ({
-    default: module.ContainerChartsPage,
-  })),
-)
-
-const MicroBTWidgetBoxPage = lazy(() =>
-  import('./pages/micro-bt-widget-box-page').then((module) => ({
-    default: module.MicroBTWidgetBoxPage,
-  })),
-)
-
-const SupplyLiquidBoxPage = lazy(() =>
-  import('./pages/supply-liquid-box-page').then((module) => ({
-    default: module.SupplyLiquidBoxPage,
-  })),
-)
-
-const OperationalEfficiencyDemo = lazy(() =>
-  import('./pages/reporting-tool/operational-efficiency/operational-efficiency-demo').then(
-    (module) => ({
-      default: module.OperationalEfficiencyDemo,
-    }),
-  ),
-)
-const OperationalHashrateDemo = lazy(() =>
-  import('./pages/reporting-tool/operational-hashrate/operational-hashrate-demo').then(
-    (module) => ({
-      default: module.OperationalHashrateDemo,
-    }),
-  ),
-)
-const OperationalDashboardDemo = lazy(() =>
-  import('./pages/reporting-tool/operational-dashboard/operational-dashboard-demo').then(
-    (module) => ({
-      default: module.OperationalDashboardDemo,
-    }),
-  ),
-)
-
-const EnergyReportDemo = lazy(() =>
-  import('./pages/reporting-tool/operational/energy-report/energy-report-demo').then(
-    (module) => ({
-      default: module.EnergyReportDemo,
-    }),
-  ),
-)
-
-const SubsidyFeeDemo = lazy(() =>
-  import('./pages/reporting-tool/financial/subsidy-fee/subsidy-fee-demo').then((module) => ({
-    default: module.SubsidyFeeDemo,
-  })),
-)
-
-const HashBalanceDemo = lazy(() =>
-  import('./pages/reporting-tool/financial/hash-balance/hash-balance-demo').then((module) => ({
-    default: module.HashBalanceDemo,
-  })),
-)
-
-const EbitdaDemo = lazy(() =>
-  import('./pages/reporting-tool/financial/ebitda/ebitda-demo').then((module) => ({
-    default: module.EbitdaDemo,
-  })),
-)
-
-const CostDemo = lazy(() =>
-  import('./pages/reporting-tool/financial/cost/cost-demo').then((module) => ({
-    default: module.CostDemo,
-  })),
-)
-
-const MinersSummaryBoxPage = lazy(() =>
-  import('./pages/miners-summary-box-page').then((module) => ({
-    default: module.MinersSummaryBoxPage,
-  })),
-)
-
-const ContainerWidgetsPage = lazy(() =>
-  import('./pages/container-widgets-page').then((module) => ({
-    default: module.ContainerWidgetsPage,
-  })),
-)
-
-const EnergyBalanceDemo = lazy(() =>
-  import('./pages/reporting-tool/financial/energy-balance/energy-balance-demo').then((module) => ({
-    default: module.EnergyBalanceDemo,
-  })),
-)
-
-const MovementDetailsModalDemo = lazy(() =>
-  import('./pages/inventory/movement-details-modal/movement-details-modal-demo').then((module) => ({
-    default: module.MovementDetailsModalDemo,
-  })),
-)
-
-const SparePartsModalsDemo = lazy(() =>
-  import('./pages/inventory/spare-parts-modals/spare-parts-modals-demo').then((module) => ({
-    default: module.SparePartsModalsDemo,
-  })),
 )
 
 const AppHeaderPage = lazy(() =>
@@ -446,16 +327,13 @@ export const router = createBrowserRouter(
         { path: 'getting-started', element: withSuspense(GettingStartedPage) },
         { path: 'hooks', element: withSuspense(HooksDemoPage) },
         { path: 'theming', element: withSuspense(ThemingDemoPage) },
-        { path: 'bring-your-own-backend', element: withSuspense(BringYourOwnBackendPage) },
         { path: 'agent-co-pilot', element: withSuspense(AgentCoPilotPage) },
         { path: 'alerts', element: withSuspense(AlertExample) },
         { path: 'action-button', element: withSuspense(ActionButtonPage) },
         { path: 'buttons', element: withSuspense(ButtonsPage) },
-        { path: 'form-elements', element: withSuspense(FormElementsPage) },
         { path: 'input', element: withSuspense(InputPage) },
         { path: 'select', element: withSuspense(SelectPage) },
         { path: 'multi-select', element: withSuspense(MultiSelectPage) },
-        { path: 'selector', element: withSuspense(SelectorPage) },
         { path: 'checkbox-switch', element: withSuspense(CheckboxExample) },
         { path: 'radio', element: withSuspense(RadioExample) },
         { path: 'date-pickers', element: withSuspense(DatePickersPage) },
@@ -477,6 +355,21 @@ export const router = createBrowserRouter(
         { path: 'currency-toggler', element: withSuspense(CurrencyTogglerPage) },
         { path: 'typography', element: withSuspense(TypographyExample) },
         { path: 'tags', element: withSuspense(TagsPage) },
+        { path: 'multi-level-select', element: withSuspense(MultiLevelSelectPage) },
+        { path: 'badge', element: withSuspense(BadgeExample) },
+        { path: 'divider', element: withSuspense(DividerPage) },
+        { path: 'labeled-card', element: withSuspense(LabeledCardPage) },
+        { path: 'detail-legend', element: withSuspense(DetailLegendPage) },
+        { path: 'min-max-avg', element: withSuspense(MinMaxAvgPage) },
+        { path: 'skeleton', element: withSuspense(SkeletonPage) },
+        { path: 'mining-pools-panel', element: withSuspense(MiningPoolsPanelPage) },
+        { path: 'report-time-frame-selector', element: withSuspense(ReportTimeFrameSelectorPage) },
+        { path: 'site-stats-bar', element: withSuspense(SiteStatsBarPage) },
+        { path: 'timeframe-controls', element: withSuspense(TimeframeControlsPage) },
+        { path: 'timeline-selector', element: withSuspense(TimelineSelectorPage) },
+        { path: 'miner-metric-card', element: withSuspense(MinerMetricCardPage) },
+        { path: 'generic-data-box', element: withSuspense(GenericDataBoxPage) },
+        { path: 'enabled-disable-toggle', element: withSuspense(EnabledDisableTogglePage) },
         { path: 'indicators', element: withSuspense(IndicatorsExample) },
         { path: 'list-view-filter', element: withSuspense(ListViewFilterExample) },
         { path: 'mosaic', element: withSuspense(MosaicPageDemo) },
@@ -492,7 +385,6 @@ export const router = createBrowserRouter(
         { path: 'operations-energy-cost-chart', element: withSuspense(OperationsEnergyCostChartPage) },
         { path: 'average-downtime-chart', element: withSuspense(AverageDowntimeChartPage) },
         { path: 'chart-container', element: withSuspense(ChartContainerPage) },
-        { path: 'chart-wrapper', element: withSuspense(ChartWrapperPage) },
         { path: 'line-chart-card', element: withSuspense(LineChartCardPage) },
         { path: 'tabs', element: withSuspense(TabsPage) },
         { path: 'btc-average-price', element: withSuspense(BtcAveragePricePage) },
@@ -502,31 +394,7 @@ export const router = createBrowserRouter(
         { path: 'spinner', element: withSuspense(SpinnerPage) },
         { path: 'loader', element: withSuspense(LoaderPage) },
         { path: 'logs-card', element: withSuspense(LogsCardPage) },
-        { path: 'repair-log-changes', element: withSuspense(RepairLogChangesPage) },
-        { path: 'stats-export', element: withSuspense(StateExportsPage) },
         { path: 'widget-top-row', element: withSuspense(WidgetTopRowPage) },
-        { path: 'tanks-box', element: withSuspense(TanksBoxPage) },
-        {
-          path: 'bitmain-immersion-summary-box',
-          element: withSuspense(BitMainImmersionSummaryBoxPage),
-        },
-        {
-          path: 'container-charts',
-          element: withSuspense(ContainerChartsPage),
-        },
-        {
-          path: 'micro-bt-widget-box',
-          element: withSuspense(MicroBTWidgetBoxPage),
-        },
-        { path: 'supply-liquid-box', element: withSuspense(SupplyLiquidBoxPage) },
-        {
-          path: 'miners-summary-box',
-          element: withSuspense(MinersSummaryBoxPage),
-        },
-        {
-          path: 'container-widgets',
-          element: withSuspense(ContainerWidgetsPage),
-        },
         { path: 'app-header', element: withSuspense(AppHeaderPage) },
         { path: 'header-stats-bar', element: withSuspense(HeaderStatsBarPage) },
         { path: 'alarms-bell-button', element: withSuspense(AlarmsBellButtonPage) },
@@ -543,64 +411,12 @@ export const router = createBrowserRouter(
         { path: 'pool-details-card', element: withSuspense(PoolDetailsCardPage) },
         { path: 'pool-details-popover', element: withSuspense(PoolDetailsPopoverPage) },
         { path: 'device-explorer', element: withSuspense(DeviceExplorerPage) },
-        { path: 'explorer-list-detail', element: withSuspense(ExplorerPage) },
-        { path: 'container-detail', element: withSuspense(ContainerDetailPage) },
-        { path: 'bitdeer-container', element: withSuspense(BitdeerPage) },
-        { path: 'bitmain-container', element: withSuspense(BitmainPage) },
-        {
-          path: 'bitmain-immersion-container',
-          element: withSuspense(BitmainImmersionPage),
-        },
-        { path: 'micro-bt-container', element: withSuspense(MicroBTPage) },
-        { path: 'bitmain-status-item', element: withSuspense(BitmainStatusItemDemo) },
-        { path: 'secondary-stat-card', element: withSuspense(SecondaryStatCardDemo) },
         { path: 'single-stat-card', element: withSuspense(SingleStatCardDemo) },
-        { path: 'stats-group-card', element: withSuspense(StatsGroupCardDemo) },
-        { path: 'miner-info-card', element: withSuspense(MinerInfoCardDemo) },
-        { path: 'miner-chips-card', element: withSuspense(MinerChipsCardDemo) },
         { path: 'miners-activity-chart', element: withSuspense(MinersActivityChartDemo) },
-        { path: 'miner-power-mode', element: withSuspense(MinerPowerModeDemo) },
-        { path: 'miner-controls-card', element: withSuspense(MinerControlsCardDemo) },
-        { path: 'container-controls-card', element: withSuspense(BatchContainerControlsCardDemo) },
-        { path: 'fleet-management', element: withSuspense(FleetManagementDemo) },
         { path: 'power-mode-timeline-chart', element: withSuspense(PowerModeTimelineChartDemo) },
         { path: 'timeline-chart', element: withSuspense(TimelineChartDemo) },
-        { path: 'miner-socket', element: withSuspense(SocketDemo) },
         { path: 'settings', element: withSuspense(SettingsDemoPage) },
-        { path: 'movement-details-modal', element: withSuspense(MovementDetailsModalDemo) },
-        { path: 'spare-parts-modals', element: withSuspense(SparePartsModalsDemo) },
-        { path: 'pool-manager-assign-pool-modal', element: withSuspense(PoolManagerAssignPoolModalPage) },
-        { path: 'pool-manager-dashboard', element: withSuspense(PoolManagerDashboardPage) },
-        {
-          path: 'pool-manager-miner-explorer',
-          element: withSuspense(PoolManagerMinerExplorerPageDemo),
-        },
-        {
-          path: 'pool-manager-pools',
-          element: withSuspense(PoolManagerPoolsPageDemo),
-        },
-        {
-          path: 'pool-manager-sites-overview',
-          element: withSuspense(PoolManagerSitesOverviewPage),
-        },
-        {
-          path: 'pool-manager-sites-overview/:unitId',
-          element: withSuspense(PoolManagerSiteOverviewDetailsPage),
-        },
-        { path: 'operational-efficiency', element: withSuspense(OperationalEfficiencyDemo) },
-        { path: 'operational-hashrate', element: withSuspense(OperationalHashrateDemo) },
-        { path: 'operational-dashboard', element: withSuspense(OperationalDashboardDemo) },
-        { path: 'operational-energy', element: withSuspense(EnergyReportDemo) },
-        { path: 'subsidy-fee', element: withSuspense(SubsidyFeeDemo) },
-        { path: 'hash-balance', element: withSuspense(HashBalanceDemo) },
-        { path: 'ebitda', element: withSuspense(EbitdaDemo) },
-        { path: 'revenue-chart', element: withSuspense(RevenueChartDemo) },
-        { path: 'cost', element: withSuspense(CostDemo) },
         { path: 'alerts-view', element: withSuspense(AlertsPageDemo) },
-        {
-          path: 'energy-balance',
-          element: withSuspense(EnergyBalanceDemo),
-        },
         { path: '*', element: withSuspense(NotFoundPage) },
       ],
     },

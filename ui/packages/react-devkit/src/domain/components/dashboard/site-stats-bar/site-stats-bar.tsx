@@ -1,13 +1,16 @@
 import { cn, SkeletonBlock } from '@primitives'
 import type { JSX } from 'react'
-import { GenericDataBox } from '../../container/generic-data-box/generic-data-box'
+import { GenericDataBox } from '../../data-box/generic-data-box/generic-data-box'
 import { WidgetTopRow } from '../../widget-top-row'
 import './site-stats-bar.scss'
 
 export type SiteStatsBarProps = {
   /** Site label rendered in the header row. */
   title: string
-  /** Current site-level power consumption, in watts (or whatever `powerUnit` says). */
+  /**
+   * Current site-level power consumption, in watts. It is displayed divided by 1000, so
+   * `powerUnit` names the kilo unit (`kW` by default).
+   */
   power?: number
   /**
    * Display unit for `power` — defaults to `kW`.

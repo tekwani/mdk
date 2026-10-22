@@ -7,83 +7,22 @@
 #
 # Coverage grows with docs coverage. Phase 1 shipped antminer; Phase 2 adds
 # whatsminer and avalon (USAGE + per-model examples + the entries below).
-# Phase 3+ adds containers, pools, etc.
+# Phase 3+ adds containers, pools, etc. Antminer and whatsminer have since moved
+# out of this repo to the manufacturer-maintained antminer-mdk-worker and
+# whatsminer-mdk-worker contract plugins (listed in ../external-workers.json),
+# so they have no entry here.
 #
 # Schema is hand-rolled here. If this earns its keep, a JSON Schema can land
 # alongside in a follow-up.
 
 workers:
-  - id: antminer
-    family: miner
-    provider: bitmain
-    package: "@tetherto/mdk-worker-antminer"
-    path: backend/workers/miners/antminer
-    usage: backend/workers/miners/antminer/USAGE.md
-    contract: backend/workers/miners/antminer/mdk-contract.json
-    examples:
-      - backend/workers/miners/antminer/examples/run-s19xp.js
-    variants:
-      - manager: AM_S19XP
-        rack-type: miner-am-s19xp
-        mock-type: s19xp
-        mock-default-port: 14021
-      - manager: AM_S19XPH
-        rack-type: miner-am-s19xp_h
-        mock-type: s19xp_h
-        mock-default-port: 14022
-      - manager: AM_S21
-        rack-type: miner-am-s21
-        mock-type: s21
-        mock-default-port: 14023
-      - manager: AM_S21PRO
-        rack-type: miner-am-s21pro
-        mock-type: s21pro
-        mock-default-port: 14024
-
-  - id: whatsminer
-    family: miner
-    provider: microbt
-    package: "@tetherto/mdk-worker-whatsminer"
-    path: packages/workers/miners/whatsminer
-    usage: packages/workers/miners/whatsminer/USAGE.md
-    contract: packages/workers/miners/whatsminer/mdk-contract.json
-    examples:
-      - packages/workers/miners/whatsminer/examples/run-m30sp.js
-      - packages/workers/miners/whatsminer/examples/run-m30spp.js
-      - packages/workers/miners/whatsminer/examples/run-m53s.js
-      - packages/workers/miners/whatsminer/examples/run-m56s.js
-      - packages/workers/miners/whatsminer/examples/run-m63.js
-    variants:
-      - manager: WM_M30SP
-        rack-type: miner-wm-m30sp
-        mock-type: m30sp
-        mock-default-port: 14025
-      - manager: WM_M30SPP
-        rack-type: miner-wm-m30spp
-        mock-type: m30spp
-        mock-default-port: 14026
-      - manager: WM_M53S
-        rack-type: miner-wm-m53s
-        mock-type: m53s
-        mock-default-port: 14027
-      - manager: WM_M56S
-        rack-type: miner-wm-m56s
-        mock-type: m56s
-        mock-default-port: 14028
-      - manager: WM_M63
-        rack-type: miner-wm-m63
-        mock-type: m63
-        mock-default-port: 14029
-
   - id: avalon
     family: miner
     provider: canaan
     package: "@tetherto/mdk-worker-avalon"
-    path: packages/workers/miners/avalon
-    usage: packages/workers/miners/avalon/USAGE.md
-    contract: packages/workers/miners/avalon/mdk-contract.json
-    examples:
-      - packages/workers/miners/avalon/examples/run-a1346.js
+    path: backend/workers/miners/avalon
+    usage: backend/workers/miners/avalon/USAGE.md
+    contract: backend/workers/miners/avalon/plugin/mdk-contract.json
     variants:
       - manager: AV_A1346
         rack-type: miner-av-a1346

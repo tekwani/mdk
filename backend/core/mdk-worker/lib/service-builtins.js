@@ -25,27 +25,33 @@
  * that adapter-era gateways read.
  */
 
+// Upper bound on caller-supplied device id lists (logs_multi, stats): each
+// id costs a store walk, so an unbounded list is a cheap way to pin the worker.
+const MAX_DEVICE_IDS = 1000
+
 const TELEMETRY_BUILTINS = {
   logs: {
     service: 'logHistory',
     handle: async (services, deviceId, params) => ({
-      logs: await services.logHistory.tailLog({ thingId: deviceId, ...params })
+      logs: await services.logHistory.tailLog(_addressed(params, 'thingId', deviceId))
     })
   },
   historical_logs: {
     service: 'logHistory',
     handle: async (services, deviceId, params) => ({
-      logs: await services.logHistory.getHistoricalLogs({ thingId: deviceId, ...params })
+      logs: await services.logHistory.getHistoricalLogs(_addressed(params, 'thingId', deviceId))
     })
   },
   logs_multi: {
     service: 'logHistory',
     handle: async (services, deviceId, params, rt) => {
-      const deviceIds = params.deviceIds || (deviceId ? [deviceId] : rt.deviceIds)
+      const deviceIds = params.deviceIds !== undefined
+        ? _deviceIdList(params.deviceIds)
+        : (deviceId ? [deviceId] : rt.deviceIds)
       const allLogs = []
       for (const id of deviceIds) {
         try {
-          const logs = await services.logHistory.tailLog({ thingId: id, ...params })
+          const logs = await services.logHistory.tailLog({ ...params, thingId: id })
           allLogs.push(...(Array.isArray(logs) ? logs : []))
         } catch (e) {
           // one unreadable device log must not fail the multi-pull
@@ -63,7 +69,7 @@ const TELEMETRY_BUILTINS = {
   thing_config: {
     service: 'provisioning',
     handle: async (services, deviceId, params) => ({
-      config: await services.provisioning.getThingConf({ thingId: deviceId, ...params })
+      config: await services.provisioning.getThingConf(_addressed(params, 'thingId', deviceId))
     })
   },
   list: {
@@ -104,7 +110,10 @@ const TELEMETRY_BUILTINS = {
   stats: {
     service: 'stats',
     handle: async (services, deviceId, params) => ({
-      stats: await services.stats.aggrStats(params.deviceIds, params.opts || {})
+      stats: await services.stats.aggrStats(
+        params.deviceIds === undefined ? undefined : _deviceIdList(params.deviceIds),
+        params.opts || {}
+      )
     })
   },
   ext_data: {
@@ -122,7 +131,7 @@ const COMMAND_BUILTINS = {
   },
   updateThing: {
     service: 'provisioning',
-    handle: (services, deviceId, params) => services.provisioning.updateThing({ id: deviceId, ...params })
+    handle: (services, deviceId, params) => services.provisioning.updateThing(_addressed(params, 'id', deviceId))
   },
   forgetThings: {
     service: 'provisioning',
@@ -134,15 +143,15 @@ const COMMAND_BUILTINS = {
   },
   saveComment: {
     service: 'comments',
-    handle: (services, deviceId, params) => services.comments.saveThingComment({ thingId: deviceId, ...params })
+    handle: (services, deviceId, params) => services.comments.saveThingComment(_addressed(params, 'thingId', deviceId))
   },
   editComment: {
     service: 'comments',
-    handle: (services, deviceId, params) => services.comments.editThingComment({ thingId: deviceId, ...params })
+    handle: (services, deviceId, params) => services.comments.editThingComment(_addressed(params, 'thingId', deviceId))
   },
   deleteComment: {
     service: 'comments',
-    handle: (services, deviceId, params) => services.comments.deleteThingComment({ thingId: deviceId, ...params })
+    handle: (services, deviceId, params) => services.comments.deleteThingComment(_addressed(params, 'thingId', deviceId))
   }
 }
 
@@ -205,15 +214,30 @@ const COMMAND_CONTRACT_ENTRIES = {
   }
 }
 
+// The envelope's deviceId addresses the request, so it wins over a same-named
+// key smuggled into params. Worker-scoped requests (deviceId null) keep the
+// caller's key, which is how provisioning names the device it updates.
+function _addressed (params, key, deviceId) {
+  return deviceId ? { ...params, [key]: deviceId } : { ...params }
+}
+
+function _deviceIdList (ids) {
+  if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string')) {
+    throw new Error('ERR_PARAM_TYPE: deviceIds must be an array of strings')
+  }
+  if (ids.length > MAX_DEVICE_IDS) throw new Error(`ERR_PARAM_RANGE: deviceIds above max ${MAX_DEVICE_IDS}`)
+  return ids
+}
+
 function telemetryBuiltin (services, type) {
   if (!services) return null
-  const entry = TELEMETRY_BUILTINS[type]
+  const entry = Object.hasOwn(TELEMETRY_BUILTINS, type) ? TELEMETRY_BUILTINS[type] : null
   return entry && services[entry.service] ? entry : null
 }
 
 function commandBuiltin (services, command) {
   if (!services) return null
-  const entry = COMMAND_BUILTINS[command]
+  const entry = Object.hasOwn(COMMAND_BUILTINS, command) ? COMMAND_BUILTINS[command] : null
   return entry && services[entry.service] ? entry : null
 }
 
@@ -235,4 +259,10 @@ function mergeBuiltinCommands (contract, services) {
   return copy
 }
 
-module.exports = { telemetryBuiltin, commandBuiltin, mergeBuiltinCommands }
+// Declared params of an active built-in command, for the runtime's param
+// validation (the same list the capability payload publishes).
+function builtinCommandParams (command) {
+  return Object.hasOwn(COMMAND_CONTRACT_ENTRIES, command) ? COMMAND_CONTRACT_ENTRIES[command].params : null
+}
+
+module.exports = { telemetryBuiltin, commandBuiltin, mergeBuiltinCommands, builtinCommandParams, MAX_DEVICE_IDS }

@@ -1,7 +1,14 @@
 export * from './alerts-table-columns'
 export * from './alerts-table-title/alerts-table-title'
 export * from './alerts-types'
-export * from './alerts-utils'
+export {
+  applyAlertsLocalFilters,
+  getAlertMatchHints,
+  getAlertsForDevices,
+  getCurrentAlerts,
+  getHistoricalAlertsData,
+  onLogClicked,
+} from './alerts-utils'
 export * from './current-alerts/alert-confirmation-modal/alert-confirmation-modal'
 export * from './current-alerts/current-alerts'
 export * from './historical-alerts/historical-alerts'

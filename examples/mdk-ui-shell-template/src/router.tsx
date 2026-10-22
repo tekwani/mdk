@@ -3,12 +3,18 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router'
 
 import { App } from './App'
+import { APP_PAGES_ROUTE } from './apps/paths'
 import { AUTH_BYPASS } from './constants/env'
 import { ROUTE_PATHS } from './constants/routes'
 import Home from './pages/Home'
 import NotFound from './pages/NotFound'
 import SignIn from './pages/SignIn'
 import { ROUTES } from './routes'
+
+// Installed apps' pages: one route for all of them, resolved at runtime from
+// the app list this dashboard serves (/app-ui.json) — so installing an app
+// needs no change here.
+const InstalledAppPage = lazy(() => import('./apps/InstalledAppPage'))
 
 export const router = createBrowserRouter([
   {
@@ -44,6 +50,14 @@ export const router = createBrowserRouter([
           ),
         }
       }),
+      {
+        path: APP_PAGES_ROUTE,
+        element: (
+          <Suspense fallback={<div className="mdk-ui-shell-loader">Loading…</div>}>
+            <InstalledAppPage />
+          </Suspense>
+        ),
+      },
       { path: '*', element: <NotFound /> },
     ],
   },

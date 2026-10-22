@@ -105,6 +105,7 @@ test('discovery - DHTListener discovers worker and registers it', async (t) => {
     topic: topic.toString('hex'),
     registry,
     workerChannel,
+    workerKeys: [workerRpcKey],
     swarmOpts: { bootstrap }
   })
 
@@ -150,7 +151,9 @@ test('discovery - real runtime announces and listener registers (kernel joins fi
   const orkRpc = new HyperswarmRPC({ bootstrap })
   const workerChannel = new WorkerChannel({ timeout: 10000, rpc: orkRpc })
   const registry = new WorkerRegistry({ store: createMockStore(), capabilityStore: createMockStore() })
-  const listener = new DHTListener({ topic: topic.toString('hex'), registry, workerChannel, swarmOpts: { bootstrap } })
+  // The worker's key is unknown until it boots, after the listener: this test
+  // is about join timing, so admit any topic peer.
+  const listener = new DHTListener({ topic: topic.toString('hex'), registry, workerChannel, allowAnyWorker: true, swarmOpts: { bootstrap } })
   await listener.start()
 
   // Real WorkerRuntime — exercises _joinDiscoveryTopic (handler-before-join,
@@ -159,6 +162,7 @@ test('discovery - real runtime announces and listener registers (kernel joins fi
     workerId: 'wm-rack-1',
     kernelTopic: topic.toString('hex'),
     bootstrap,
+    allowedKeys: [orkRpc.defaultKeyPair.publicKey],
     devices: [
       { deviceId: 'd1', config: { hashrate: 100, power: 3000 } },
       { deviceId: 'd2', config: { hashrate: 140, power: 3200 } }
@@ -212,16 +216,15 @@ test('discovery - duplicate peer prevention', async (t) => {
     },
     workerChannel: {
       connect: () => ({ _hrpcKey: Buffer.alloc(32) }),
-      send: async () => ({
-        payload: {
-          workerId: 'dup-worker',
-          devices: [{ deviceId: 'd1' }],
-          contract: {
-            metadata: { provider: 'x' },
-            capabilities: {}
-          }
+      // replies are schema-checked, so they must be real response envelopes
+      send: async (_ch, env) => buildResponse(env, env.action === ACTIONS.IDENTITY_REQUEST ? ACTIONS.IDENTITY_RESPONSE : ACTIONS.CAPABILITY_RESPONSE, {
+        workerId: 'dup-worker',
+        devices: [{ deviceId: 'd1' }],
+        contract: {
+          metadata: { provider: 'x' },
+          capabilities: {}
         }
-      }),
+      }, 'dup-worker'),
       disconnect: async () => {}
     }
   })
@@ -232,4 +235,93 @@ test('discovery - duplicate peer prevention', async (t) => {
 
   await listener._onWorkerKeyReceived(key)
   t.is(registerCount, 1, 'duplicate prevented')
+})
+
+function fakeChannelListener ({ identity, contract, workerKeys, allowAnyWorker }) {
+  const registry = new WorkerRegistry({ store: createMockStore(), capabilityStore: createMockStore() })
+  const workerChannel = {
+    connect: () => ({}),
+    disconnect: async () => {},
+    send: async (_ch, env) => env.action === ACTIONS.IDENTITY_REQUEST
+      ? buildResponse(env, ACTIONS.IDENTITY_RESPONSE, identity, 'w')
+      : buildResponse(env, ACTIONS.CAPABILITY_RESPONSE, { contract }, 'w')
+  }
+  return { registry, listener: new DHTListener({ topic: null, registry, workerChannel, workerKeys, allowAnyWorker }) }
+}
+
+const GOOD_CONTRACT = { metadata: { provider: 't' }, capabilities: { commands: [] } }
+
+test('discovery - malformed identity reply is not registered', async (t) => {
+  const { registry, listener } = fakeChannelListener({ identity: { workerId: 'w', devices: [{ id: 'no-deviceId' }] }, contract: GOOD_CONTRACT })
+  await listener._onWorkerKeyReceived('aa'.repeat(32))
+  t.is(registry.listWorkers().length, 0)
+})
+
+test('discovery - malformed capability reply terminates the half-registered worker', async (t) => {
+  const { registry, listener } = fakeChannelListener({ identity: { workerId: 'w', devices: [{ deviceId: 'd' }] }, contract: { capabilities: {} } })
+  await listener._onWorkerKeyReceived('aa'.repeat(32))
+  t.is(registry.listWorkers().length, 0)
+  t.is(registry.resolveWorkerForDevice('d'), null)
+})
+
+test('discovery - a second key cannot take over a registered workerId', async (t) => {
+  const { registry, listener } = fakeChannelListener({ identity: { workerId: 'w', devices: [{ deviceId: 'd' }] }, contract: GOOD_CONTRACT })
+  await listener._onWorkerKeyReceived('aa'.repeat(32))
+  await listener._onWorkerKeyReceived('bb'.repeat(32))
+  const workers = registry.listWorkers()
+  t.is(workers.length, 1)
+  t.is(workers[0].rpcKey, 'aa'.repeat(32), 'still bound to the first key')
+})
+
+test('discovery - workerKeys allowlist drops unknown topic peers', async (t) => {
+  const { listener } = fakeChannelListener({ identity: {}, contract: {}, workerKeys: ['aa'.repeat(32)] })
+  const seen = []
+  listener._onWorkerKeyReceived = (k) => { seen.push(k) }
+  const EventEmitter = require('events')
+  for (const key of ['bb'.repeat(32), 'aa'.repeat(32)]) {
+    const stream = new EventEmitter()
+    stream.destroy = () => stream.emit('close')
+    listener._handleSwarmConnection(stream)
+    stream.emit('data', Buffer.from(key, 'hex'))
+  }
+  t.alike(seen, ['aa'.repeat(32)])
+})
+
+// Feed each key through the swarm key-exchange path; returns the keys that
+// reached registration.
+function announce (listener, keys) {
+  const seen = []
+  listener._onWorkerKeyReceived = (k) => { seen.push(k) }
+  const EventEmitter = require('events')
+  for (const key of keys) {
+    const stream = new EventEmitter()
+    stream.destroy = () => stream.emit('close')
+    listener._handleSwarmConnection(stream)
+    stream.emit('data', Buffer.from(key, 'hex'))
+  }
+  return seen
+}
+
+test('discovery - empty workerKeys admits no topic peer (fail closed)', async (t) => {
+  const { listener } = fakeChannelListener({ identity: {}, contract: {} })
+  t.absent(listener.allowAnyWorker)
+  t.alike(announce(listener, ['aa'.repeat(32), 'bb'.repeat(32)]), [])
+})
+
+test('discovery - allowWorkerKey admits a topic peer at runtime', async (t) => {
+  const { listener } = fakeChannelListener({ identity: {}, contract: {} })
+  t.is(listener.allowWorkerKey(Buffer.alloc(32, 0xcc)), 'cc'.repeat(32))
+  listener.allowWorkerKey('DD'.repeat(32))
+  t.alike(announce(listener, ['aa'.repeat(32), 'cc'.repeat(32), 'dd'.repeat(32)]), ['cc'.repeat(32), 'dd'.repeat(32)])
+})
+
+test('discovery - allowAnyWorker admits every topic peer', async (t) => {
+  const { listener } = fakeChannelListener({ identity: {}, contract: {}, allowAnyWorker: true })
+  t.alike(announce(listener, ['aa'.repeat(32), 'bb'.repeat(32)]), ['aa'.repeat(32), 'bb'.repeat(32)])
+})
+
+test('discovery - directly handed keys (registerWorker / local discovery) skip the topic allowlist', async (t) => {
+  const { registry, listener } = fakeChannelListener({ identity: { workerId: 'w', devices: [{ deviceId: 'd' }] }, contract: GOOD_CONTRACT })
+  await listener.discoverWorker('aa'.repeat(32))
+  t.is(registry.listWorkers().length, 1, 'registered without being on workerKeys')
 })

@@ -5,7 +5,7 @@ const StatsService = require('../../lib/services/stats.service')
 const LogsService = require('../../lib/services/logs.service')
 const { createTestStore, createTestBee } = require('../helpers/store')
 
-// Real lib-stats spec: sum hashrate over last.snap, count online devices.
+// Real libStats spec: sum hashrate over last.snap, count online devices.
 const LIB = {
   conf: { skipTagPrefixes: ['id-', 'code-'] },
   specs: {
@@ -48,8 +48,8 @@ function createService (opts = {}) {
     lib: opts.lib === undefined ? LIB : opts.lib,
     specTags: ['miner'],
     baseType: 'miner',
-    listDeviceIds: () => Object.keys(META),
-    getDeviceMeta: (id) => META[id],
+    listDeviceIds: () => Object.keys(opts.meta || META),
+    getDeviceMeta: (id) => (opts.meta || META)[id],
     getLast: (id) => LAST[id],
     getRealtimeData: opts.getRealtimeData,
     processAlerts: () => null,
@@ -129,4 +129,20 @@ test('constructor applies defaults for optional collaborators', (t) => {
   t.alike(svc.specTags, [])
   t.is(svc.baseType, 'thing')
   t.alike(svc.conf, {})
+})
+
+test('buildStats survives stored tags that name Object.prototype members or are not strings', async (t) => {
+  const meta = {
+    'dev-1': { ...META['dev-1'], tags: ['t-miner', '__proto__', 'constructor', 42, null] },
+    'dev-2': META['dev-2']
+  }
+  const logs = makeLogsStub()
+  const svc = createService({ logs, meta })
+
+  await svc.buildStats('stat-5m', new Date())
+
+  const keys = logs.writes.map(([key]) => key)
+  t.ok(keys.includes('stat-5m-t-miner'), 'the other tags are still built')
+  t.ok(keys.includes('stat-5m-container-c1'))
+  t.absent(Object.prototype.thgIds, 'Object.prototype is untouched')
 })

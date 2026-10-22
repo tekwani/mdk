@@ -11,6 +11,8 @@ import {
 
 import type { JSX } from 'react'
 
+import { SelectVariants } from './select-variants'
+
 export const SelectPage = (): JSX.Element => {
   return (
     <section className="demo-section">
@@ -116,6 +118,7 @@ export const SelectPage = (): JSX.Element => {
           </Select>
         </section>
       </div>
+      <SelectVariants />
     </section>
   )
 }

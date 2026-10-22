@@ -83,6 +83,8 @@ async function mapInBatches (items, fn) {
 const POWER_MODES_BY_BRAND = {
   Whatsminer: ['low', 'normal', 'high', 'sleep'],
   Antminer: ['sleep', 'normal'],
+  // The modes all three series accept; A2 also takes low_power.
+  SealMiner: ['normal', 'high_performance', 'sleep'],
   Avalon: ['normal', 'high', 'sleep']
 }
 async function powerModesFor (deviceId) {

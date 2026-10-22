@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SimpleTooltip } from '@primitives/index'
-import type { Alert } from '@domain/types/alerts'
-import { getAlertsDescription } from '@domain/utils/alerts-utils'
+import type { AlertRecord } from '@domain/types/alerts'
+import { getAlertsDescription } from '@domain/components/alerts/alerts-utils'
 import { AlarmInfo } from '../alarm-info'
 
 vi.mock('@primitives/index', () => ({
@@ -28,18 +28,18 @@ vi.mock('@tetherto/mdk-react-adapter', async () => {
   }
 })
 
-vi.mock('@domain/utils/alerts-utils', () => ({
+vi.mock('@domain/components/alerts/alerts-utils', () => ({
   getAlertsDescription: vi.fn((alerts) => {
     if (alerts.length === 0) return ''
     if (alerts.length === 1) return `Alert: ${alerts[0].message}`
-    return alerts.map((a: Alert) => `Alert: ${a.message}`).join('\n\n')
+    return alerts.map((a: AlertRecord) => `Alert: ${a.message}`).join('\n\n')
   }),
 }))
 
 describe('AlarmInfo', () => {
   const mockIcon = <svg data-testid="alarm-icon">Icon</svg>
 
-  const mockAlerts: Alert[] = [
+  const mockAlerts: AlertRecord[] = [
     {
       id: '1',
       type: 'temperature',
@@ -54,7 +54,7 @@ describe('AlarmInfo', () => {
       severity: 'warning',
       timestamp: '2024-01-15T10:30:00Z',
     },
-  ] as unknown as Alert[]
+  ] as unknown as AlertRecord[]
 
   beforeEach(() => {
     vi.clearAllMocks()

@@ -19,8 +19,8 @@ const { spawn } = require('child_process')
 
 const FIXTURES = path.join(__dirname, '..', 'fixtures')
 
-function spawnFixture (name, topic, storeDir) {
-  const child = spawn('node', [path.join(FIXTURES, name), '--topic', topic, '--store', storeDir], {
+function spawnFixture (name, topic, storeDir, extraArgs = []) {
+  const child = spawn('node', [path.join(FIXTURES, name), '--topic', topic, '--store', storeDir, ...extraArgs], {
     stdio: ['ignore', 'pipe', 'pipe']
   })
   child._out = ''
@@ -67,7 +67,9 @@ test('dht topic discovery - separately-spawned kernel + worker register over sha
   const started = await waitFor(kernel, 'REPRO_KERNEL_STARTED', 15000)
   t.ok(started, 'Kernel process started')
 
-  const worker = spawnFixture('repro-worker.js', topic, workerStore)
+  const clientKey = (kernel._out.match(/REPRO_KERNEL_STARTED client=([0-9a-f]{64})/) || [])[1]
+  t.ok(clientKey, 'Kernel published its client key')
+  const worker = spawnFixture('repro-worker.js', topic, workerStore, ['--allow', clientKey])
   const workerReady = await waitFor(worker, 'REPRO_WORKER_READY', 15000)
   t.ok(workerReady, 'worker process announced on the topic')
 

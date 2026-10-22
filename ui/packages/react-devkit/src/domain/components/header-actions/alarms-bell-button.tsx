@@ -46,7 +46,7 @@ const SEVERITY_ORDER: AlarmSeverity[] = ['critical', 'high', 'medium']
 /**
  * Top-bar bell button with a three-line severity badge (critical / high /
  * medium). Counts are caller-provided so the button stays domain-agnostic;
- * pair with `useActiveIncidents` or `useSiteMinerCounts` to wire them.
+ * derive them from whatever alerts route your app serves.
  *
  * `onClick` fires for the bell itself; pass `onSeverityClick` to make each
  * count its own button (severity-filtered deep-link). The two are independent

@@ -155,7 +155,7 @@ The devkit ships its CSS as two files so apps pay only for what they use:
 | Import | Contains | Compressed size |
 | --- | --- | --- |
 | `@tetherto/mdk-react-devkit/styles.css` | Design tokens + core primitives (Button, Card, Input, charts, …) | ~18 KB |
-| `@tetherto/mdk-react-devkit/styles-domain.css` | Mining-domain components (explorer, containers, pool-manager, reporting-tool, settings, …) | ~70 KB |
+| `@tetherto/mdk-react-devkit/styles-domain.css` | Mining-domain components (dashboard, alerts, device explorer, settings, …) | ~70 KB |
 
 Import `styles.css` **first** (it defines the tokens the foundation styles
 reference). Add `styles-domain.css` only if you use foundation components —

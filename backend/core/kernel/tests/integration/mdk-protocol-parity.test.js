@@ -9,6 +9,7 @@ const Corestore = require('corestore')
 const Hyperbee = require('hyperbee')
 const createTestnet = require('hyperdht/testnet')
 const HyperswarmRPC = require('@hyperswarm/rpc')
+const DHT = require('hyperdht')
 const WorkerRuntime = require('../../../mdk-worker/lib/worker-runtime')
 const { mergeBuiltinCommands } = require('../../../mdk-worker/lib/service-builtins')
 const parityPlugin = require('../fixtures/parity-plugin')
@@ -117,10 +118,13 @@ test('parity - discover → identity → capability → READY via testnet DHT', 
   const topic = crypto.randomBytes(32)
 
   // ─── Worker side: runtime announces on the testnet topic ────────────
+  // The Kernel-side identity is fixed up front so the worker can allow it.
+  const orkKeyPair = DHT.keyPair()
   const runtime = new WorkerRuntime(parityPlugin, {
     workerId: 'wm-rack-1',
     kernelTopic: topic.toString('hex'),
     bootstrap,
+    allowedKeys: [orkKeyPair.publicKey],
     devices: DEVICES,
     services: createStubServices()
   })
@@ -131,7 +135,7 @@ test('parity - discover → identity → capability → READY via testnet DHT', 
   })
 
   // ─── Kernel side ───────────────────────────────────────────────────────
-  const orkRpc = new HyperswarmRPC({ bootstrap })
+  const orkRpc = new HyperswarmRPC({ keyPair: orkKeyPair, bootstrap })
   const workerChannel = new WorkerChannel({ timeout: 15000, rpc: orkRpc })
   const registry = new WorkerRegistry({
     store: createMockStore(),
@@ -142,6 +146,7 @@ test('parity - discover → identity → capability → READY via testnet DHT', 
     topic: topic.toString('hex'),
     registry,
     workerChannel,
+    workerKeys: [runtime.getPublicKey()],
     swarmOpts: { bootstrap }
   })
 
@@ -260,7 +265,6 @@ test('parity - command dispatch: reboot → QUEUED → SUCCESS', async (t) => {
     wal: walStore,
     workerChannel: new WorkerChannel({ timeout: 10000 }),
     registry,
-    maxRetries: 2,
     timeoutMs: 10000
   })
 
@@ -297,7 +301,6 @@ test('parity - command dispatch: registerThing creates new device', async (t) =>
     wal: bee.sub('kernel-wal-register'),
     workerChannel: new WorkerChannel({ timeout: 10000 }),
     registry,
-    maxRetries: 0,
     timeoutMs: 10000
   })
 
@@ -336,7 +339,6 @@ test('parity - command rejected for device not in capabilities', async (t) => {
     wal: bee.sub('kernel-wal-reject'),
     workerChannel: new WorkerChannel({ timeout: 10000 }),
     registry,
-    maxRetries: 0,
     timeoutMs: 10000
   })
 
@@ -356,7 +358,7 @@ test('parity - command rejected for device not in capabilities', async (t) => {
 
 // ─── Test 4: State transitions visible ────────────────────────────────
 
-test('parity - state transitions: QUEUED confirmed, SUCCESS compacted from WAL', async (t) => {
+test('parity - state transitions: QUEUED confirmed, SUCCESS kept readable in WAL', async (t) => {
   const bee = await createTestBee(t)
   const walStore = bee.sub('kernel-wal-states')
 
@@ -368,7 +370,6 @@ test('parity - state transitions: QUEUED confirmed, SUCCESS compacted from WAL',
     wal: walStore,
     workerChannel: new WorkerChannel({ timeout: 10000 }),
     registry,
-    maxRetries: 0,
     timeoutMs: 10000
   })
   const dispatcher = new CommandDispatcher({ registry, stateMachine: csm })
@@ -389,9 +390,8 @@ test('parity - state transitions: QUEUED confirmed, SUCCESS compacted from WAL',
   const done = await doneP
   t.is(done.state, 'SUCCESS', 'command:done emitted with SUCCESS')
 
-  // Terminal states are compacted from WAL immediately after emission
   const walEntry = await walStore.get(result.commandId)
-  t.absent(walEntry, 'command removed from WAL after SUCCESS (compacted)')
+  t.is(JSON.parse(walEntry.value.toString()).state, 'SUCCESS', 'SUCCESS kept in WAL for command.status')
 
   // Command also removed from in-memory map
   t.absent(csm._commands.has(result.commandId), 'command removed from _commands map')
@@ -420,7 +420,6 @@ test('parity - restart recovery: QUEUED commands survive drain, re-queued on rec
     wal: walStore,
     workerChannel: { async send () {} },
     registry: registry1,
-    maxRetries: 2,
     timeoutMs: 5000
   })
 
@@ -465,7 +464,6 @@ test('parity - restart recovery: QUEUED commands survive drain, re-queued on rec
     wal: walStore,
     workerChannel: { async send () {} },
     registry: registry2,
-    maxRetries: 2,
     timeoutMs: 5000
   })
   await csm2.recover()
@@ -474,10 +472,9 @@ test('parity - restart recovery: QUEUED commands survive drain, re-queued on rec
   const recoveredEntry = csm2._commands.get(cmdId)
   t.is(recoveredEntry.state, 'QUEUED', 'recovered entry is QUEUED')
   t.is(recoveredEntry.command, 'reboot', 'command name preserved')
-  t.is(recoveredEntry.retries, 2, 'retry budget preserved')
 })
 
-test('parity - restart recovery: EXECUTING marked TIMEOUT on drain, re-queued on recover', async (t) => {
+test('parity - restart recovery: EXECUTING marked TIMEOUT on drain, not re-queued on recover', async (t) => {
   const bee = await createTestBee(t)
   const walStore = bee.sub('kernel-wal-exec-recovery')
 
@@ -485,7 +482,6 @@ test('parity - restart recovery: EXECUTING marked TIMEOUT on drain, re-queued on
     wal: walStore,
     workerChannel: { async send () {} },
     registry: { resolveWorkerForDevice: () => null, isRoutable: () => false },
-    maxRetries: 1,
     timeoutMs: 5000
   })
 
@@ -511,18 +507,15 @@ test('parity - restart recovery: EXECUTING marked TIMEOUT on drain, re-queued on
   t.ok(walAfterDrain, 'TIMEOUT entry in WAL after drain')
   t.is(JSON.parse(walAfterDrain.value.toString()).state, 'TIMEOUT', 'EXECUTING → TIMEOUT on drain')
 
-  // Restart: recover() sweeps WAL, TIMEOUT with retries > 0 → QUEUED
+  // Restart: recover() sweeps WAL, TIMEOUT is terminal (outcome unconfirmed) → kept readable, never re-queued
   const csm2 = new CommandStateMachine({
     wal: walStore,
     workerChannel: { async send () {} },
     registry: { resolveWorkerForDevice: () => null, isRoutable: () => false },
-    maxRetries: 1,
     timeoutMs: 5000
   })
   await csm2.recover()
 
-  t.ok(csm2._commands.has(cmdId), 'previously EXECUTING command re-queued after recover()')
-  const recovered = csm2._commands.get(cmdId)
-  t.is(recovered.state, 'QUEUED', 'TIMEOUT → QUEUED after recover()')
-  t.is(recovered.retries, 0, 'retry budget decremented')
+  t.absent(csm2._commands.has(cmdId), 'previously EXECUTING command not re-queued after recover()')
+  t.is(JSON.parse((await walStore.get(cmdId)).value.toString()).state, 'TIMEOUT', 'TIMEOUT entry kept readable')
 })

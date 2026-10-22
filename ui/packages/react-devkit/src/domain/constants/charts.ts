@@ -19,19 +19,6 @@ export {
 }
 
 // Foundation-specific chart constants
-export const CHART_LABELS = {
-  HASHRATE: 'Hashrate',
-  EFFICIENCY: 'Efficiency',
-} as const
-
-export const CHART_TYPES = {
-  MINER: 'miner',
-  MINERPOOL: 'minerpool',
-  POWERMETER: 'powermeter',
-  CONTAINER: 'container',
-  ELECTRICITY: 'electricity',
-} as const
-
 export const CHART_TITLES = {
   HASH_RATE: 'Hash Rate',
   POWER_CONSUMPTION: 'Power Consumption',
@@ -50,10 +37,6 @@ export const CHART_TITLES = {
 export const CHART_EMPTY_DESCRIPTION = 'No data available at the moment'
 
 // Type exports (foundation-specific)
-export type ChartLabelKey = keyof typeof CHART_LABELS
-export type ChartLabelValue = (typeof CHART_LABELS)[ChartLabelKey]
-export type ChartTypeKey = keyof typeof CHART_TYPES
-export type ChartTypeValue = (typeof CHART_TYPES)[ChartTypeKey]
 export type ChartTitleKey = keyof typeof CHART_TITLES
 export type ChartTitleValue = (typeof CHART_TITLES)[ChartTitleKey]
 

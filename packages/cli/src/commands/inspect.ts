@@ -1,35 +1,11 @@
 import type { Command } from 'commander';
+import { examples } from '../lib/help.js';
 import { stringify as toYaml } from 'yaml';
-import { stub } from '../lib/stub.js';
-import { collectStatus, type StatusReport, type WorkerReport } from '../lib/status.js';
+import { collectStatus, type AppReport, type StatusReport, type WorkerReport } from '../lib/status.js';
 import { STACK_FILE } from '../lib/spec.js';
 import { theme, tick } from '../lib/theme.js';
 
 // Group C — Run & manage (read-only inspection commands)
-export function registerGet(program: Command): void {
-  program
-    .command('get <resource>')
-    .description('List live resources: workers | devices | plugins (stub)')
-    .action((resource: string) => stub(`get ${resource}`));
-}
-
-export function registerDescribe(program: Command): void {
-  program
-    .command('describe <resource> <name>')
-    .description('Detailed view of a single resource (stub)')
-    .action((resource: string, name: string) => stub(`describe ${resource} ${name}`));
-}
-
-export function registerLogs(program: Command): void {
-  program
-    .command('logs <target>')
-    .description('Stream logs for a service or worker (stub)')
-    .option('-f, --follow', 'Follow log output', false)
-    .option('--since <time>', 'Show logs since a timestamp or duration')
-    .option('--tail <n>', 'Number of lines to show from the end')
-    .action((target: string) => stub(`logs ${target}`));
-}
-
 const OUTPUT_FORMATS = ['table', 'json', 'yaml'];
 
 /** Green when healthy, yellow otherwise — the same convention across sections. */
@@ -77,6 +53,17 @@ function workerRows(items: WorkerReport[]): string[][] {
     w.health ?? '-',
     String(w.devices),
     w.declared ? '' : 'not in spec',
+  ]);
+}
+
+function appRows(items: AppReport[]): string[][] {
+  return items.map((a) => [
+    a.name,
+    a.running ? 'yes' : 'no',
+    a.pid === null ? '-' : String(a.pid),
+    a.version ?? '-',
+    a.mount,
+    a.package,
   ]);
 }
 
@@ -144,6 +131,7 @@ function renderTable(report: StatusReport): string {
             `${stack.workers.totalDevices} device${stack.workers.totalDevices === 1 ? '' : 's'}`,
           ),
       ],
+      ['Apps', `${stack.apps.running}/${stack.apps.declared} running`],
     ]),
   );
 
@@ -155,6 +143,9 @@ function renderTable(report: StatusReport): string {
         workerRows(stack.workers.items),
       ),
     );
+  }
+  if (stack.apps.items.length) {
+    out.push('', columns(['APP', 'RUNNING', 'PID', 'VERSION', 'MOUNT', 'PACKAGE'], appRows(stack.apps.items)));
   }
 
   const health =
@@ -171,8 +162,8 @@ function renderTable(report: StatusReport): string {
 /**
  * Exit codes are part of the CLI contract (see the HLD §3.3):
  *   4 — precondition not met (old Node, missing/invalid spec, packages not installed)
- *   5 — stack not fully up (Kernel/Gateway unreachable, or a declared worker is
- *       not registered/serving)
+ *   5 — stack not fully up (Kernel/Gateway unreachable, a declared worker is
+ *       not registered/serving, or a declared app is not running)
  */
 function exitCodeFor(report: StatusReport): number {
   const env = report.environment;
@@ -183,10 +174,13 @@ function exitCodeFor(report: StatusReport): number {
 export function registerStatus(program: Command): void {
   program
     .command('status')
+    .summary('Check the environment and every component')
     .description(
-      'One-shot, read-only check of the environment and every component ' +
-        '(Kernel, Gateway, workers + device counts). Never repairs',
+      'One-shot check of the environment and every component (Kernel, Gateway, workers and their device ' +
+        'counts, apps). Starts, stops and repairs nothing; its only write is the CLI key it publishes to ' +
+        '.mdk/trusted-keys so the Kernel answers it. Use the global -o json | yaml for machine-readable output.',
     )
+    .addHelpText('after', examples('mdk status', 'mdk status -o json'))
     .option('-d, --dir <path>', 'Project directory containing mdk.yaml', '.')
     .action(async (options: { dir: string }, cmd: Command) => {
       const output = String(cmd.optsWithGlobals().output ?? 'table');

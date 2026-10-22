@@ -1,0 +1,13 @@
+/* Built to ui/style.css; the dashboard adds it to the page with the app. */
+.__APP_CSS__-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.__APP_CSS__-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}

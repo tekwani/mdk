@@ -6,14 +6,32 @@
 const path = require('path')
 const fs = require('fs')
 const { execFileSync } = require('child_process')
-const { deploy, exampleDir } = require('./backend/site')
+const exampleDir = __dirname
+// Loaded on use: requiring this file (tests) must not need a config/site.deploy.json.
+const loadDeploy = () => require('./backend/site').deploy
 
 const ecosystemPath = path.join(exampleDir, 'deploy', 'ecosystem.config.js')
 
-const buildApps = () => {
+// Each gateway plugin dir runs as an app in its own `app-<basename>` role, so
+// those roles follow gateway.pluginDirs: one missing from pm2.roles (a config
+// written before apps existed) is added ahead of the gateway, and one naming
+// no plugin dir is dropped instead of crash-looping under PM2.
+const withAppRoles = (roles, pluginDirs, warn = console.warn) => {
+  const appRoles = pluginDirs.map((dir) => `app-${path.basename(dir)}`)
+  const kept = roles.filter((role) => {
+    if (!role.startsWith('app-') || appRoles.includes(role)) return true
+    warn(`skipping pm2 role "${role}": no gateway.pluginDirs entry named ${role.slice(4)}`)
+    return false
+  })
+  const missing = appRoles.filter((role) => !kept.includes(role))
+  const at = kept.includes('gateway') ? kept.indexOf('gateway') : kept.length
+  return [...kept.slice(0, at), ...missing, ...kept.slice(at)]
+}
+
+const buildApps = (deploy) => {
   const { script, roles, ...pm2Defaults } = deploy.pm2
   const env = { MDK_DISCOVERY: deploy.discovery }
-  return roles.map((role) => ({
+  return withAppRoles(roles, deploy.gateway.pluginDirs || []).map((role) => ({
     ...pm2Defaults,
     name: role,
     script: path.join(exampleDir, script),
@@ -32,7 +50,8 @@ const writeEcosystemConfig = (apps) => {
 }
 
 const main = () => {
-  const apps = buildApps()
+  const deploy = loadDeploy()
+  const apps = buildApps(deploy)
   writeEcosystemConfig(apps)
   console.log(`wrote ${path.relative(exampleDir, ecosystemPath)}`)
 
@@ -40,4 +59,6 @@ const main = () => {
   console.log(`PM2 processes started — open http://localhost:${deploy.gateway.port}/ once \`pm2 list\` shows all apps online`)
 }
 
-main()
+if (require.main === module) main()
+
+module.exports = { withAppRoles }

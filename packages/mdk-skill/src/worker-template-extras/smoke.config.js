@@ -1,9 +1,13 @@
 'use strict'
 
-// Smoke-harness glue for scripts/worker-smoke.mjs: setup() boots this
-// worker's device mock and returns { config, commands, teardown }. Adapt all
-// three when copying the template. `config` becomes device opts for
-// WorkerRuntimeV2 (host/port for src/client.js).
+// Smoke-harness glue for scripts/worker-smoke.mjs and `mdk validate worker
+// --smoke`: setup() boots this worker's device mock and returns { config,
+// commands, teardown }. Adapt all three when copying the template. `config`
+// becomes device opts for WorkerRuntimeV2 (host/port for src/client.js).
+//
+// After teardown() every telemetry channel must fail with an ERR_*. A channel
+// the worker serves from its own store (a `history` log, say) keeps answering
+// instead: list it as `offlineTelemetry: ['history']` next to `teardown`.
 
 const net = require('net')
 

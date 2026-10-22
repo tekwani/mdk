@@ -18,7 +18,8 @@ Worker/device registry, published capabilities, and the write-command log.
 
 ## What's authoritative, and what's cached
 
-The physical device is the one source of truth. Everything above it is a view:
+The physical device is the one source of truth, and no Kernel state stands in for it ([Worker health is not device liveness][worker-health]).
+Everything above it is a view:
 
 - A **Worker** is the authoritative record of its own device's state
 - **Kernel's registry** is authoritative for *routing* (which Worker owns which device), not for device state itself
@@ -39,9 +40,23 @@ the platform gives you for free.
 
 ## Retention
 
-Kernel's command log and registry retain what they need for correctness (routing state, in-flight command
-lifecycle) with no separate pruning policy documented today. Telemetry retention is entirely up to whatever a
-Worker plugin's author implemented: MDK does not impose or enforce a retention window.
+Each store grows for a different reason. Expiring a readable result and reclaiming disk space are separate operations:
+a deleted key can disappear from the current database view while its backing log retains historical blocks.
+The settings column names runtime defaults; the last column identifies what an operator should configure or measure.
+
+| Store | Holds | Grows with | Bounded by | Setting and default | Start with |
+| --- | --- | --- | --- | --- | --- |
+| Kernel `kernel-registry`, `ork-capabilities` | Worker identities, device to contract mappings | Number of Workers and devices | Rewritten only when a device list changes; `terminate()` deletes the entry | None | Nothing to tune |
+| Kernel `kernel-command-wal` | Every command's lifecycle and terminal result | Command volume | TTL pruning removes terminal keys from the current view on recovery and at most hourly while new commands arrive; it does not establish a disk bound | Manager configuration `kernel.commandResultTtlMs`, 24 h; not forwarded by the factories | Measure physical disk growth separately from the number of readable results |
+| Worker time logs, legacy surface (`thing-5m-<deviceId>`, `stat-<tf>`, `thing-alerts`, `thing-history-log`) | One snapshot per device per interval, per-timeframe stats, alerts, provisioning history | Devices multiplied by snapshot rate | Rotation requires an explicit length threshold; retention cleanup unlinks older segments | `logRotateMaxLength` unset (rotation off); `logKeepCount`, 3; `storeSnapItvMs`, 5 min | Explicitly configure rotation through the [Worker boot options][worker-retention] and measure retained disk usage |
+| Worker storage, `WorkerRuntimeV2` | Whatever the plugin persists | Plugin-defined | Plugin-defined | Plugin-defined | Read the Worker's own README |
+| Worker seeds (`storeDir`) | The DHT and RPC seeds that fix the Worker's identity | Constant | Constant | None | Back up with the same care as a private key |
+| Gateway store (`<root>/http`) | Identity seeds | Constant | Constant; response caches are in memory | None | Nothing to tune |
+| App runtime `storeDir/data/` | Whatever the app persists | App-defined | App-defined | App-defined | Read the app's README |
+
+The legacy rows describe the thing and adapter surface (`createWorkerInfra`), which every in-repo Worker still uses and which 0.12
+deprecates; a `WorkerRuntimeV2` Worker, such as the external Antminer Worker and every new Worker, owns its own storage and its own
+retention. The [capacity template][capacity-template] is where measured growth per store goes.
 
 ## Can you swap the backend?
 
@@ -84,3 +99,12 @@ with no cross-site consistency to reason about.
 
 [scalability]: scalability.md
 <!-- docs@tether.io: scalability → concepts/scalability -->
+
+[worker-health]: control-plane.md#worker-health-is-not-device-liveness
+<!-- docs@tether.io: worker-health → concepts/control-plane#worker-health-is-not-device-liveness -->
+
+[capacity-template]: ../guides/deployment/capacity-metrics-template.md#storage-breakdown
+<!-- docs@tether.io: capacity-template → guides/deployment/capacity-metrics-template#storage-breakdown -->
+
+[worker-retention]: ../../backend/core/mdk/README.md#start-a-worker
+<!-- docs@tether.io: worker-retention → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/README.md#start-a-worker -->

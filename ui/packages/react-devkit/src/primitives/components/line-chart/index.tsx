@@ -88,6 +88,9 @@ const LightWeightLineChart = ({
 
   // lightweight-charts is loaded lazily so it lands in its own async chunk and
   // is kept out of a consumer's initial bundle until a line chart renders.
+  // Until it resolves there is no chart and no series, so every effect below
+  // that talks to the chart lists `createChart` as a dependency: it has to run
+  // again once the chart exists, or static data is never drawn.
   const [createChart, setCreateChart] = useState<
     typeof import('lightweight-charts').createChart | null
   >(null)
@@ -468,7 +471,7 @@ const LightWeightLineChart = ({
     return () => {
       timeScale.unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange)
     }
-  }, [chartRef])
+  }, [chartRef, createChart])
 
   const updateVisibleRange = useCallback(() => {
     if (!chartRef?.current) return
@@ -532,7 +535,7 @@ const LightWeightLineChart = ({
         updateVisibleRange()
       })
     }
-  }, [data.datasets, fixedTimezone, skipRound, roundPrecision, shouldResetZoom, updateVisibleRange])
+  }, [createChart, data.datasets, fixedTimezone, skipRound, roundPrecision, shouldResetZoom, updateVisibleRange])
 
   useEffect(() => {
     updateVisibleRange()
@@ -554,7 +557,7 @@ const LightWeightLineChart = ({
         updateVisibleRange()
       })
     }
-  }, [chartRef, updateVisibleRange])
+  }, [chartRef, createChart, updateVisibleRange])
 
   return (
     <div

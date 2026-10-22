@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeviceExplorerToolbar } from '../device-explorer-toolbar'
-import type { DeviceExplorerDeviceType } from '../types'
 
 vi.mock('@primitives/index', async () => {
   const actual = await vi.importActual('@primitives/index')
@@ -24,26 +23,6 @@ vi.mock('@primitives/index', async () => {
         <span data-testid="tag-input-custom">{String(allowCustomTags)}</span>
       </div>
     )),
-    Tabs: vi.fn(({ value, onValueChange, className, children }) => (
-      <div data-testid="tabs" className={className} data-value={value}>
-        <div onClick={() => onValueChange('miner')}>{children}</div>
-      </div>
-    )),
-    TabsList: vi.fn(({ variant, className, children }) => (
-      <div data-testid="tabs-list" className={className} data-variant={variant}>
-        {children}
-      </div>
-    )),
-    TabsTrigger: vi.fn(({ value, variant, className, children }) => (
-      <button
-        data-testid={`tab-trigger-${value}`}
-        className={className}
-        data-variant={variant}
-        data-value={value}
-      >
-        {children}
-      </button>
-    )),
   }
 })
 
@@ -55,8 +34,6 @@ describe('DeviceExplorerToolbar', () => {
     searchOptions: [],
     searchTags: [],
     onSearchTagsChange: vi.fn(),
-    deviceType: 'container' as DeviceExplorerDeviceType,
-    onDeviceTypeChange: vi.fn(),
   }
 
   beforeEach(() => {
@@ -69,34 +46,11 @@ describe('DeviceExplorerToolbar', () => {
       expect(container.querySelector('.mdk-device-explorer__toolbar')).toBeInTheDocument()
     })
 
-    it('renders all device type tabs', () => {
-      render(<DeviceExplorerToolbar {...mockProps} />)
-      expect(screen.getByText('Containers')).toBeInTheDocument()
-      expect(screen.getByText('Miners')).toBeInTheDocument()
-      expect(screen.getByText('Cabinets')).toBeInTheDocument()
-    })
-
-    it('renders three tab triggers', () => {
-      render(<DeviceExplorerToolbar {...mockProps} />)
-      expect(screen.getByTestId('tab-trigger-container')).toBeInTheDocument()
-      expect(screen.getByTestId('tab-trigger-miner')).toBeInTheDocument()
-      expect(screen.getByTestId('tab-trigger-cabinet')).toBeInTheDocument()
-    })
-
     it('renders search input', () => {
       render(<DeviceExplorerToolbar {...mockProps} />)
       expect(screen.getByTestId('tag-input')).toBeInTheDocument()
     })
 
-    it('renders tabs container', () => {
-      render(<DeviceExplorerToolbar {...mockProps} />)
-      expect(screen.getByTestId('tabs')).toBeInTheDocument()
-    })
-
-    it('renders tabs list', () => {
-      render(<DeviceExplorerToolbar {...mockProps} />)
-      expect(screen.getByTestId('tabs-list')).toBeInTheDocument()
-    })
   })
 
   describe('filter rendering', () => {
@@ -183,53 +137,6 @@ describe('DeviceExplorerToolbar', () => {
     })
   })
 
-  describe('device type tabs', () => {
-    it('renders with container device type', () => {
-      render(<DeviceExplorerToolbar {...mockProps} deviceType="container" />)
-      expect(screen.getByTestId('tabs')).toHaveAttribute('data-value', 'container')
-    })
-
-    it('renders with miner device type', () => {
-      render(<DeviceExplorerToolbar {...mockProps} deviceType="miner" />)
-      expect(screen.getByTestId('tabs')).toHaveAttribute('data-value', 'miner')
-    })
-
-    it('renders with cabinet device type', () => {
-      render(<DeviceExplorerToolbar {...mockProps} deviceType="cabinet" />)
-      expect(screen.getByTestId('tabs')).toHaveAttribute('data-value', 'cabinet')
-    })
-
-    it('tabs list has side variant', () => {
-      render(<DeviceExplorerToolbar {...mockProps} />)
-      expect(screen.getByTestId('tabs-list')).toHaveAttribute('data-variant', 'side')
-    })
-
-    it('tab triggers have side variant', () => {
-      render(<DeviceExplorerToolbar {...mockProps} />)
-      expect(screen.getByTestId('tab-trigger-container')).toHaveAttribute('data-variant', 'side')
-      expect(screen.getByTestId('tab-trigger-miner')).toHaveAttribute('data-variant', 'side')
-      expect(screen.getByTestId('tab-trigger-cabinet')).toHaveAttribute('data-variant', 'side')
-    })
-
-    it('tab triggers have correct values', () => {
-      render(<DeviceExplorerToolbar {...mockProps} />)
-      expect(screen.getByTestId('tab-trigger-container')).toHaveAttribute('data-value', 'container')
-      expect(screen.getByTestId('tab-trigger-miner')).toHaveAttribute('data-value', 'miner')
-      expect(screen.getByTestId('tab-trigger-cabinet')).toHaveAttribute('data-value', 'cabinet')
-    })
-
-    it('has correct CSS classes', () => {
-      const { container } = render(<DeviceExplorerToolbar {...mockProps} />)
-      expect(container.querySelector('.mdk-device-explorer__toolbar__tabs')).toBeInTheDocument()
-      expect(
-        container.querySelector('.mdk-device-explorer__toolbar__tabs-list'),
-      ).toBeInTheDocument()
-      expect(
-        container.querySelector('.mdk-device-explorer__toolbar__tab-trigger'),
-      ).toBeInTheDocument()
-    })
-  })
-
   describe('callbacks', () => {
     it('calls onFiltersChange when filter changes', () => {
       const onFiltersChange = vi.fn()
@@ -296,10 +203,6 @@ describe('DeviceExplorerToolbar', () => {
       expect(screen.getByTestId('tag-input')).toBeInTheDocument()
     })
 
-    it('passes value to Tabs', () => {
-      render(<DeviceExplorerToolbar {...mockProps} deviceType="miner" />)
-      expect(screen.getByTestId('tabs')).toHaveAttribute('data-value', 'miner')
-    })
   })
 
   describe('edge cases', () => {
@@ -353,17 +256,14 @@ describe('DeviceExplorerToolbar', () => {
         searchOptions: [{ label: 'Search 1', value: 'search1' }],
         searchTags: ['tag1'],
         onSearchTagsChange: vi.fn(),
-        deviceType: 'container' as DeviceExplorerDeviceType,
-        onDeviceTypeChange: vi.fn(),
       }
 
       render(<DeviceExplorerToolbar {...props} />)
 
       expect(screen.getByTestId('list-view-filter')).toBeInTheDocument()
       expect(screen.getByTestId('tag-input')).toBeInTheDocument()
-      expect(screen.getByTestId('tabs')).toBeInTheDocument()
-      expect(screen.getByTestId('tabs-list')).toBeInTheDocument()
-      expect(screen.getAllByRole('button')).toHaveLength(4) // 3 tabs + 1 filter button
+      expect(screen.queryByTestId('tabs')).not.toBeInTheDocument()
+      expect(screen.getAllByRole('button')).toHaveLength(1) // the filter button
     })
 
     it('all callbacks can be triggered', () => {

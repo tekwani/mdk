@@ -1,8 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
-import { USER_ROLE } from '@/constants/permissions.constants'
+import { describe, expect, it } from 'vitest'
 import type { AuthConfig } from '../auth-utils'
-import { checkPermission, getSignInRedirectUrl } from '../auth-utils'
-import * as tokenUtils from '../token-utils'
+import { checkPermission } from '../auth-utils'
 
 describe('checkPermission', () => {
   describe('config validation', () => {
@@ -204,97 +202,6 @@ describe('checkPermission', () => {
       const config: AuthConfig = { permissions: ['malformed'] }
       const result = checkPermission(config, { perm: 'malformed:r' })
       expect(result).toBe(false)
-    })
-  })
-})
-
-describe('getSignInRedirectUrl', () => {
-  describe('default redirect behavior', () => {
-    it('should return "/" when authToken is null', () => {
-      const result = getSignInRedirectUrl(null)
-      expect(result).toBe('/')
-    })
-
-    it('should return "/" when authToken is undefined', () => {
-      const result = getSignInRedirectUrl(undefined)
-      expect(result).toBe('/')
-    })
-
-    it('should return "/" when authToken is empty string', () => {
-      const result = getSignInRedirectUrl('')
-      expect(result).toBe('/')
-    })
-  })
-
-  describe('role-based redirects', () => {
-    it('should redirect to /reporting-tool for REPORTING_TOOL_MANAGER role', () => {
-      vi.spyOn(tokenUtils, 'getRolesFromAuthToken').mockReturnValue([
-        USER_ROLE.REPORTING_TOOL_MANAGER,
-      ])
-
-      const result = getSignInRedirectUrl('valid-token')
-      expect(result).toBe('/reporting-tool')
-    })
-
-    it('should return "/" for unknown roles', () => {
-      vi.spyOn(tokenUtils, 'getRolesFromAuthToken').mockReturnValue(['unknown_role'])
-
-      const result = getSignInRedirectUrl('valid-token')
-      expect(result).toBe('/')
-    })
-
-    it('should return "/" when getRolesFromAuthToken returns empty array', () => {
-      vi.spyOn(tokenUtils, 'getRolesFromAuthToken').mockReturnValue([])
-
-      const result = getSignInRedirectUrl('valid-token')
-      expect(result).toBe('/')
-    })
-
-    it('should return "/" when getRolesFromAuthToken returns null', () => {
-      vi.spyOn(tokenUtils, 'getRolesFromAuthToken').mockReturnValue(null as unknown as string[])
-
-      const result = getSignInRedirectUrl('valid-token')
-      expect(result).toBe('/')
-    })
-
-    it('should only use the first role from multiple roles', () => {
-      vi.spyOn(tokenUtils, 'getRolesFromAuthToken').mockReturnValue([
-        USER_ROLE.REPORTING_TOOL_MANAGER,
-        'admin',
-        'viewer',
-      ])
-
-      const result = getSignInRedirectUrl('valid-token')
-      expect(result).toBe('/reporting-tool')
-    })
-
-    it('should ignore roles after the first one', () => {
-      vi.spyOn(tokenUtils, 'getRolesFromAuthToken').mockReturnValue([
-        'viewer',
-        USER_ROLE.REPORTING_TOOL_MANAGER,
-      ])
-
-      const result = getSignInRedirectUrl('valid-token')
-      expect(result).toBe('/')
-    })
-  })
-
-  describe('integration with getRolesFromAuthToken', () => {
-    it('should call getRolesFromAuthToken with the provided token', () => {
-      const spy = vi.spyOn(tokenUtils, 'getRolesFromAuthToken').mockReturnValue(['admin'])
-
-      getSignInRedirectUrl('test-token')
-
-      expect(spy).toHaveBeenCalledWith('test-token')
-    })
-
-    it('should handle undefined from getRolesFromAuthToken', () => {
-      vi.spyOn(tokenUtils, 'getRolesFromAuthToken').mockReturnValue(
-        undefined as unknown as string[],
-      )
-
-      const result = getSignInRedirectUrl('valid-token')
-      expect(result).toBe('/')
     })
   })
 })

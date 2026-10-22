@@ -4,24 +4,6 @@
   margin: 5px;
   padding: 12px;
 
-  &__title {
-    font-size: 14px;
-    color: var(--mdk-color-white);
-    user-select: none;
-    margin-bottom: 8px;
-  }
-
-  &__component-name {
-    font-weight: 700;
-    text-decoration: underline;
-  }
-
-  &__message {
-    font-size: 13px;
-    color: var(--mdk-color-brick-red);
-    margin-bottom: 8px;
-  }
-
   &__details {
     margin-top: 8px;
   }

@@ -2,16 +2,28 @@
 
 const { z } = require('zod')
 
+// Cap on free-text arguments when the route's schema states no maxLength, so an
+// LLM can't push an unbounded string into a route handler.
+const DEFAULT_MAX_STRING_LENGTH = 16384
+
+function _zodString (schema) {
+  if (Array.isArray(schema.enum)) return z.enum(schema.enum)
+  let str = z.string().max(schema.maxLength !== undefined ? schema.maxLength : DEFAULT_MAX_STRING_LENGTH)
+  if (schema.minLength !== undefined) str = str.min(schema.minLength)
+  if (typeof schema.pattern === 'string') str = str.regex(new RegExp(schema.pattern))
+  return str
+}
+
 function _zodFromJsonSchema (schema = {}) {
   let zodType
 
   switch (schema.type) {
     case 'string':
-      zodType = Array.isArray(schema.enum) ? z.enum(schema.enum) : z.string()
+      zodType = _zodString(schema)
       break
     case 'integer':
     case 'number': {
-      let num = z.number()
+      let num = schema.type === 'integer' ? z.number().int() : z.number()
       if (schema.minimum !== undefined) num = num.min(schema.minimum)
       if (schema.maximum !== undefined) num = num.max(schema.maximum)
       zodType = num
@@ -80,6 +92,17 @@ function _sanitizeId (id) {
   return id.replace(/[^a-zA-Z0-9]+/g, '_')
 }
 
+// The manifest `permissions` a route needs that `identity.perms` does not hold.
+// On the Gateway the authVerifier enforces these; an MCP call reaches the app
+// runtime as a trusted key with no verifier in between, so the check is made
+// here, with the same rule the documented verifier uses (every listed
+// permission must be in `perms`).
+function missingPermissions (permissions, identity) {
+  if (!Array.isArray(permissions) || permissions.length === 0) return []
+  const held = Array.isArray(identity?.perms) ? identity.perms : []
+  return permissions.filter((perm) => !held.includes(perm))
+}
+
 // A write states both hints. Unstated safety defaults to readOnlyHint: false (fail-safe as write)
 // so the tool carries a declared boolean mutability hint required by validateTool.
 function _annotationsFromSafety (safety) {
@@ -88,16 +111,33 @@ function _annotationsFromSafety (safety) {
   return { readOnlyHint: false }
 }
 
-// Converts a loaded gateway plugin's HTTP routes (backend/core/gateway/workers/lib/plugin-loader.js
-// output: { manifest, routes }, each route already bound to its handler + services
-// via registerPlugin) into MCP-tool definitions shaped like backend/core/mcp/lib/plugin-loader.js's
-// output, so they can be fed straight into startMcpHttpServer.
-function generateToolsFromGatewayPlugin (plugin) {
-  return plugin.routes.map((route) => {
+// Converts an app's route table (backend/core/gateway/workers/lib/plugin-loader.js
+// output: { manifest, routes }) into MCP-tool definitions shaped like
+// backend/core/mcp/lib/plugin-loader.js's output, so they can be fed straight
+// into startMcpHttpServer. A tool runs no app code: it hands the route id and
+// the reassembled { params, query, headers, body } to `opts.call`, which
+// forwards them to the app's runtime.
+//
+// `opts.identity` travels with every call as the caller's identity (what a
+// controller reads as `req._info`, e.g. `{ user: { userId } }`). Without one, an
+// `auth: true` route refuses to run (ERR_MCP_AUTH_REQUIRED) instead of reaching
+// the app with an empty identity that apps read as the privileged local caller;
+// the server withholds such tools up front, so this is the backstop. The same
+// holds for an `auth: true` route whose `permissions` the identity's `perms`
+// do not cover (ERR_MCP_PERM_DENIED). Stream routes (`stream: true`) write to a
+// raw response an MCP call does not have, so they produce no tool.
+function generateToolsFromGatewayPlugin (plugin, opts = {}) {
+  const identity = opts.identity || null
+
+  return plugin.routes.filter((route) => route.stream !== true).map((route) => {
     const { shape, path, query, header } = _toolShapeFromRoute(route)
+    const auth = route.auth === true
+    const permissions = Array.isArray(route.permissions) ? Object.freeze([...route.permissions]) : undefined
 
     const _handler = async (args) => {
-      const pluginReq = { params: {}, query: {}, headers: {}, body: {}, _info: {} }
+      if (auth && !identity) throw new Error('ERR_MCP_AUTH_REQUIRED')
+      if (auth && missingPermissions(permissions, identity).length > 0) throw new Error('ERR_MCP_PERM_DENIED')
+      const pluginReq = { params: {}, query: {}, headers: {}, body: {} }
       for (const [key, value] of Object.entries(args || {})) {
         if (path.has(key)) pluginReq.params[key] = value
         else if (query.has(key)) pluginReq.query[key] = value
@@ -105,7 +145,7 @@ function generateToolsFromGatewayPlugin (plugin) {
         else pluginReq.body[key] = value
       }
 
-      const result = await route._handler(pluginReq)
+      const result = await opts.call(route.id, pluginReq, identity || {})
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
     }
 
@@ -114,9 +154,11 @@ function generateToolsFromGatewayPlugin (plugin) {
       description: route.description || plugin.manifest.description,
       schema: shape,
       annotations: _annotationsFromSafety(route.safety),
+      auth,
+      ...(permissions ? { permissions } : {}),
       _handler
     }
   })
 }
 
-module.exports = { generateToolsFromGatewayPlugin }
+module.exports = { generateToolsFromGatewayPlugin, missingPermissions, DEFAULT_MAX_STRING_LENGTH }

@@ -12,13 +12,13 @@ Sortable, searchable data table of currently active alerts derived from a raw
 
 | Prop | Status | Type / Options | Default | Description |
 |------|--------|----------------|---------|-------------|
-| `filterTags` | Required | `string[]` | - | Search tags (controlled). Mirrors the redux `selectFilterTags` slice in the source app |
+| `filterTags` | Required | `string[]` | - | Search tags (controlled) |
 | `localFilters` | Required | `AlertLocalFilters` | - | Filters controlled outside (typically by URL severity param) |
 | `onFilterTagsChange` | Required | `(tags: string[]) => void` | - | Setter for the tags above |
 | `onLocalFiltersChange` | Required | `(filters: AlertLocalFilters) => void` | - | Setter for the filters above |
 | `className` | Optional | `string` | - | Additional class names |
-| `devices` | Optional | `Device[]` | - | Devices carrying alerts (`last.alerts`), as a flat list. Unwrapping any backend envelope is the data layer's job, not this component's. Shape mirrors the API response from the source app |
-| `isDemoMode` | Optional | `boolean` | `false` | Skip sound entirely (e.g. in demo/preview environments) |
+| `devices` | Optional | `Device[]` | - | Devices carrying alerts (`last.alerts`), as a flat list. Unwrapping any backend envelope is the data layer's job, not this component's |
+| `isDemoMode` | Optional | `boolean` | `false` | Skip sound entirely (e.g. in demo/preview environments), including the one-time "sound notifications" confirmation modal |
 | `isLoading` | Optional | `boolean` | `false` | Show DataTable loading overlay |
 | `isSoundEnabled` | Optional | `boolean` | `false` | Whether sound notifications are enabled in user preferences (e.g. theme slice) |
 | `onAlertClick` | Optional | `((id?: string \| undefined, uuid?: string \| undefined) => void)` | - | Click handler when the user opens an alert (right arrow icon in the row) |
@@ -41,7 +41,7 @@ Sortable, searchable data table of currently active alerts derived from a raw
 
 ## Data contracts
 
-- `Alert` — `@tetherto/mdk-react-devkit` / [`foundation/types/alerts`](../../../types/alerts.ts)
+- `AlertRecord` — `@tetherto/mdk-react-devkit` / [`domain/types/alerts`](../../../types/alerts.ts)
 - `AlertLocalFilters` — same package, [`foundation/components/alerts/alerts-types`](../alerts-types.ts)
 - `Device` — [`foundation/types/device`](../../../types/device.ts)
 

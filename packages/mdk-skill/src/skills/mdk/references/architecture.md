@@ -65,8 +65,8 @@ ambient `@tetherto/mdk-worker/device` module instead of a `ctx` argument.
 There is no boot-time probe and no offline state: every device reports
 `online` immediately, and an unreachable one surfaces as an error inside the
 telemetry payload instead. This is the shape `mdk create worker` scaffolds
-today; [`backend/workers/samples/demo-worker`](../../../../../../backend/workers/samples/demo-worker/README.md) is the only real reference
-implementation on it so far.
+today; the scaffold itself, [`packages/cli/templates/worker/`](../../../../../cli/templates/worker/README.md), is the reference
+implementation in this repo.
 
 ## Discovery and request flow
 
@@ -83,7 +83,7 @@ implementation on it so far.
 
 ## Where things run
 
-[`examples/full-site/start.js`](../../../../../../examples/full-site/start.js) boots the whole picture in one process tree:
-mock devices, Kernel, 11 real Workers, Gateway and UI. Worker-hosting caller
-for a single Worker, in-process and no Kernel:
-[`examples/backend/demo-worker-caller/index.js`](../../../../../../examples/backend/demo-worker-caller/index.js).
+[`examples/mvp-site/start.js`](../../../../../../examples/mvp-site/start.js) boots the whole picture as PM2-supervised processes:
+mock devices, Kernel, real Workers, Gateway, MCP server and UI. To host a single Worker
+in-process with no Kernel, `mdk validate worker --path . --smoke` runs it against the
+simulator its `smoke.config.js` starts; [`local-testing.md`](../../mdk-worker-plugin/references/local-testing.md) shows a minimal caller.

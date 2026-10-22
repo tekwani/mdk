@@ -181,7 +181,6 @@ async function commandDispatch (command, params, deviceId) {
     wal: createMockStore(),
     workerChannel: new WorkerChannel({ timeout: 10000 }),
     registry,
-    maxRetries: 0,
     timeoutMs: 10000
   })
   const dispatcher = new CommandDispatcher({ registry, stateMachine: csm })
@@ -590,7 +589,6 @@ test('parity[health] consecutive ping failures → DEAD blocks dispatch → old 
     wal: createMockStore(),
     workerChannel: new WorkerChannel({ timeout: 5000 }),
     registry,
-    maxRetries: 0,
     timeoutMs: 5000
   })
   const dispatcher = new CommandDispatcher({ registry, stateMachine: csm })

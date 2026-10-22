@@ -3,7 +3,7 @@
 const test = require('brittle')
 const CommentsService = require('../../lib/services/comments.service')
 
-function createService (records = {}) {
+function createService (records = {}, opts = {}) {
   let seq = 0
   const svc = new CommentsService({
     loadThing: async (req) => records[req.thingId],
@@ -11,7 +11,8 @@ function createService (records = {}) {
     checkThingExists: (req) => {
       if (!records[req.thingId]) throw new Error('ERR_THING_NOTFOUND')
     },
-    generateId: () => `c-${++seq}`
+    generateId: () => `c-${++seq}`,
+    ...opts
   })
   return { svc, records }
 }
@@ -55,4 +56,30 @@ test('deleteThingComment removes the comment', async (t) => {
   t.is(records.d1.comments.length, 0)
 
   await t.exception(svc.deleteThingComment({ thingId: 'd1', id: commentId, user: 'op' }), /ERR_THING_COMMENT_NOTFOUND/)
+})
+
+test('comments require a user and refuse author-less comments', async (t) => {
+  const { svc, records } = createService({ d1: { id: 'd1', comments: [{ id: 'old', comment: 'x', ts: 1 }] } })
+  await t.exception(svc.saveThingComment({ thingId: 'd1', comment: 'hi' }), /ERR_COMMENT_USER_REQUIRED/)
+  await t.exception(svc.editThingComment({ thingId: 'd1', id: 'old', comment: 'y' }), /ERR_COMMENT_USER_REQUIRED/)
+  await t.exception(svc.editThingComment({ thingId: 'd1', id: 'old', comment: 'y', user: 'anyone' }), /ERR_COMMENT_ACCESS_DENIED/)
+  t.is(records.d1.comments[0].comment, 'x')
+})
+
+test('authenticated ctx.user wins over a caller-supplied user', async (t) => {
+  const { svc, records } = createService({ d1: { id: 'd1' } })
+  await svc.saveThingComment({ thingId: 'd1', comment: 'v1' }, { user: 'alice' })
+  t.is(records.d1.comments[0].user, 'alice')
+  const id = records.d1.comments[0].id
+
+  await t.exception(svc.editThingComment({ thingId: 'd1', id, comment: 'x', user: 'alice' }, { user: 'mallory' }), /ERR_COMMENT_USER_MISMATCH/)
+  await t.exception(svc.deleteThingComment({ thingId: 'd1', id }, { user: 'mallory' }), /ERR_COMMENT_ACCESS_DENIED/)
+  await svc.editThingComment({ thingId: 'd1', id, comment: 'v2' }, { user: 'alice' })
+  t.is(records.d1.comments[0].comment, 'v2')
+})
+
+test('requireAuthenticatedUser refuses calls without ctx.user', async (t) => {
+  const { svc } = createService({ d1: { id: 'd1' } }, { requireAuthenticatedUser: true })
+  await t.exception(svc.saveThingComment({ thingId: 'd1', comment: 'hi', user: 'op' }), /ERR_COMMENT_USER_UNAUTHENTICATED/)
+  t.is(await svc.saveThingComment({ thingId: 'd1', comment: 'hi' }, { user: 'op' }), 1)
 })

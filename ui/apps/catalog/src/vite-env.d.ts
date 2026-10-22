@@ -14,7 +14,7 @@ declare global {
   // `interface` is required here: augmenting the DOM lib's global `Window`
   // relies on TypeScript's declaration merging, which only works with
   // interfaces. A `type` alias would shadow the built-in Window and break it.
-  // eslint-disable-next-line ts/consistent-type-definitions
+  // oxlint-disable-next-line typescript/consistent-type-definitions
   interface Window {
     /**
      * Build metadata (version, branch, commit, build date) exposed on the

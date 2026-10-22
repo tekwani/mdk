@@ -12,8 +12,24 @@ describe('installSkill', () => {
       installed: [{ client: 'cursor' }, { client: 'claude' }],
     });
     const result = installSkill('all', '/tmp/project');
-    expect(installSkillsMock).toHaveBeenCalledWith({ client: 'all', target: '/tmp/project' });
+    expect(installSkillsMock).toHaveBeenCalledWith({
+      client: 'all',
+      target: '/tmp/project',
+      onWarn: expect.any(Function),
+    });
     expect(result).toEqual({ ok: true, message: 'Installed 2 skill(s) for cursor, claude.' });
+  });
+
+  it('names skipped skill dirs in the warning', () => {
+    installSkillsMock.mockReturnValue({
+      skills: ['a'],
+      installed: [{ client: 'claude' }],
+      skipped: [{ client: 'claude', skill: 'a', dir: '/p/.claude/skills/a', reason: 'symlink' }],
+    });
+    const result = installSkill('claude', '/p');
+    expect(result.ok).toBe(true);
+    expect(result.warning).toBe('Skipped 1 existing skill dir(s): /p/.claude/skills/a (symlink)');
+    expect(result.detail).toBeUndefined();
   });
 
   it('surfaces swept stale skills as detail', () => {

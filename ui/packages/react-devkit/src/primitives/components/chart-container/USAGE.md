@@ -10,13 +10,14 @@ A layout wrapper for charts that provides a title/header row, interactive legend
 | `children` | Required | `React.ReactNode` | - | The chart element to render |
 | `className` | Optional | `string` | - | Additional class for the root element |
 | `empty` | Optional | `boolean` | - | Hides the chart and shows `emptyMessage` |
-| `emptyMessage` | Optional | `string` | `"No data available"` | Message shown when `empty` is true |
+| `emptyMessage` | Optional | `React.ReactNode` | `"No data available"` | Message shown when `empty` is true: a string, or any element (an `EmptyState`, say) |
 | `footer` | Optional | `React.ReactNode` | - | Custom footer content rendered below the chart |
 | `footerClassName` | Optional | `string` | - | Additional class for the footer area |
 | `header` | Optional | `React.ReactNode` | - | Replaces the default `title` heading with a custom element |
 | `headerAction` | Optional | `React.ReactNode` | - | Optional action rendered on the right side of the header row (e.g. an expand/fullscreen toggle). Sits alongside the range selector when both are present. Purely additive - omit it and the header renders exactly as before |
 | `highlightedValue` | Optional | `HighlightedValueProps` | - | Large value/unit displayed alongside the legend |
 | `legendData` | Optional | `LegendItem[]` | - | Color-keyed legend items; each item can be toggled |
+| `loader` | Optional | `React.ReactNode` | - | Replaces the default `<Loader>` in the loading overlay |
 | `loading` | Optional | `boolean` | - | Shows a centered `<Loader>` overlay |
 | `minMaxAvg` | Optional | `Partial<{ min: string; max: string; avg: string }>` | - | Built-in footer showing Min / Avg / Max values |
 | `onToggleDataset` | Optional | `((index: number) => void)` | - | Fired when a legend item is clicked |

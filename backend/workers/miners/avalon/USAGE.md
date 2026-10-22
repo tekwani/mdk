@@ -33,7 +33,7 @@ Standalone:
 node backend/workers/miners/avalon/mock/server.js --port 14030 --type a1346
 ```
 
-Programmatic — this is what the example uses:
+Programmatic:
 
 ```js
 const avMock = require('@tetherto/mdk-worker-avalon/mock/server')
@@ -68,6 +68,7 @@ const worker = await startAvalonWorker({
   workerId: 'avalon-rack-1',
   model: 'a1346',
   storeDir: './store/avalon-rack-1',
+  allowedKeys: [kernel.getClientPublicKey()],
   seedDevices: [{
     info: { container: 'site-1', serialNum: 'AV-001' },
     opts: { address: '127.0.0.1', port: 14030, password: 'admin' }
@@ -81,6 +82,7 @@ await kernel.registerWorker(worker.runtime.getPublicKey())
 | `workerId` | string | Required | One runtime process = one `workerId`. |
 | `model` | string | Required | Only `a1346` today. |
 | `storeDir` | string | Required | Persistent store directory; also holds the provisioned device set. |
+| `allowedKeys` | array | Required | RPC caller keys the Worker accepts; pass `kernel.getClientPublicKey()`. Without it (or `allowAll: true` for local development) the Worker throws `ERR_WORKER_ALLOWED_KEYS_REQUIRED`. |
 | `kernelTopic` | string | Optional | DHT discovery topic (hex); omit to register directly with `kernel.registerWorker()`. |
 | `seedDevices` | array | Optional | `{ id?, info, opts }` entries applied once, only when the store is empty. |
 
@@ -111,16 +113,17 @@ there is no hot-add. See
 [Worker Runtime store services](../../../core/mdk-worker/README.md#store-services) for how
 `registerThing` is served (the `provisioning` service built-in).
 
-## Runnable example
+## Run against a mock
 
-This package has no in-package `examples/` directory. The repo-root example boots a mock A1346, starts a Kernel and
-Gateway, and starts the Worker, then stays running until Ctrl+C:
+Start the mock from the repo root, then boot the Worker against it with the `startAvalonWorker` call in
+[Registering devices](#registering-devices):
 
 ```bash
-node examples/backend/miners/avalon/index.js
+npm run mock a1346 14030
 ```
 
-This is the Avalon mirror of [`examples/backend/miners/antminer/index.js`](../../../../examples/backend/miners/antminer/index.js), which uses Antminer.
+The [Avalon Worker guide](../../../../docs/guides/miners/run-avalon-worker.md) has a complete, runnable `avalon-dev.js`
+for the second terminal.
 
 ## Capabilities
 

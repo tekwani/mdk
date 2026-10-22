@@ -6,7 +6,7 @@ import _reduce from 'lodash/reduce'
 import _values from 'lodash/values'
 
 import { PowerModeColors } from '../../../utils/device-utils'
-import { MinerStatusColors } from '../../explorer/details-view/miners-activity-chart/miners-activity-chart.const'
+import { MinerStatusColors } from '../../miners-activity-chart/miners-activity-chart.const'
 import type { TimelineChartData } from '../../timeline-chart'
 
 export type PowerModeTimelineEntry = {

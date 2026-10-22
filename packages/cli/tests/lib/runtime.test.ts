@@ -1,9 +1,9 @@
 import { createServer } from 'node:net';
-import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { StackSpec, WorkerInstance } from '../../src/lib/spec.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AppInstance, StackSpec, WorkerInstance } from '../../src/lib/spec.js';
 import { cleanupTmpDirs, makeTmpDir } from '../helpers.js';
 
 const require = createRequire(import.meta.url);
@@ -18,9 +18,9 @@ function linkRealPackage(projectDir: string, name: string): void {
 }
 
 // runtime.ts loads `@tetherto/mdk-core` / `@tetherto/mdk-worker` / the local-
-// discovery helper lazily via `createRequire(import.meta.url)` — a *native*
+// discovery helper / mdk-mcp / mdk-app-runtime lazily via `createRequire(import.meta.url)` — a *native*
 // Node require, bypassing the ESM module graph vi.mock normally patches. This
-// intercepts `node:module`'s `createRequire` itself so those three specifiers
+// intercepts `node:module`'s `createRequire` itself so those specifiers
 // resolve to controllable fakes, while everything else (local worker plugin
 // dirs, real npm packages) still goes through the real resolver.
 const mockCore = vi.hoisted(() => ({
@@ -31,8 +31,18 @@ const mockWorkerRuntimeV2Ctor = vi.hoisted(() => vi.fn());
 const mockWorkerModule = vi.hoisted(() => ({
   WorkerRuntimeV2: mockWorkerRuntimeV2Ctor,
 }));
-const mockLocalDiscovery = vi.hoisted(() => ({ publishWorkerKey: vi.fn() }));
+const TEST_KERNEL_CLIENT_KEY = 'ee'.repeat(32);
+const TEST_CALLER_KEYPAIR = { publicKey: Buffer.alloc(32, 1), secretKey: Buffer.alloc(64, 2) };
+const mockLocalDiscovery = vi.hoisted(() => ({
+  publishWorkerKey: vi.fn(),
+  publishTrustedKey: vi.fn(),
+  readTrustedKeys: vi.fn(() => [{ name: 'kernel', key: 'ee'.repeat(32) }]),
+  trustKernel: vi.fn(() => ({ stop: vi.fn() })),
+  trustKeysFromDir: vi.fn(() => ({ stop: vi.fn() })),
+  callerKeyPair: vi.fn(() => ({ publicKey: Buffer.alloc(32, 1), secretKey: Buffer.alloc(64, 2) })),
+}));
 const mockMcp = vi.hoisted(() => ({ createMcpServer: vi.fn() }));
+const mockAppRuntime = vi.hoisted(() => ({ createAppRuntime: vi.fn() }));
 
 vi.mock('node:module', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:module')>();
@@ -45,6 +55,7 @@ vi.mock('node:module', async (importOriginal) => {
         if (id === '@tetherto/mdk-core/lib/local-discovery') return mockLocalDiscovery;
         if (id === '@tetherto/mdk-worker') return mockWorkerModule;
         if (id === '@tetherto/mdk-mcp') return mockMcp;
+        if (id === '@tetherto/mdk-app-runtime') return mockAppRuntime;
         return real(id);
       }) as NodeJS.Require;
       fake.resolve = real.resolve.bind(real);
@@ -77,14 +88,25 @@ describe('resolveProjectPackageDir', () => {
 
   it('throws an actionable error for a package that is not installed', () => {
     expect(() => runtime.resolveProjectPackageDir(process.cwd(), 'not-a-real-package-xyz')).toThrow(
-      /is not installed/,
+      /is not installed[\s\S]*npm install not-a-real-package-xyz/,
     );
   });
 
-  // How a stack declares one of the plugins MDK ships now that no Gateway
-  // registers them unasked: they are subdirectories of one `@tetherto/mdk-plugins`
-  // package, with no package.json of their own, so the package resolves and the
-  // subpath is appended to it.
+  it('says `npm install` for a package package.json declares but node_modules lacks', () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ dependencies: { 'ops-center': 'file:./apps/ops-center' } }));
+    let error: Error | undefined;
+    try {
+      runtime.resolveProjectPackageDir(dir, 'ops-center');
+    } catch (e) {
+      error = e as Error;
+    }
+    expect(error?.message).toMatch(/package\.json declares it \("file:\.\/apps\/ops-center"\), so run: npm install$/);
+    expect(error?.message).not.toMatch(/npm install ops-center/);
+  });
+
+  // How a stack declares a plugin that is a subdirectory of a package with no
+  // package.json of its own: the package resolves and the subpath is appended.
   it('resolves a subpath inside an installed package', () => {
     const dir = makeTmpDir();
     linkRealPackage(dir, 'yaml');
@@ -116,8 +138,8 @@ describe('resolveProjectPackageDir', () => {
 
   it('names the package, not the subpath, in the install hint', () => {
     expect(() =>
-      runtime.resolveProjectPackageDir(makeTmpDir(), '@tetherto/mdk-plugins/telemetry'),
-    ).toThrow(/npm install @tetherto\/mdk-plugins$/m);
+      runtime.resolveProjectPackageDir(makeTmpDir(), '@scope/pkg/telemetry'),
+    ).toThrow(/npm install @scope\/pkg$/m);
   });
 });
 
@@ -176,6 +198,7 @@ describe('runKernel', () => {
       expect.objectContaining({
         keyFile: runtime.kernelKeyFile(dir),
         discovery: { mode: 'local', dir: runtime.workerKeysDir(dir) },
+        trustedKeysDir: runtime.trustedKeysDir(dir),
       }),
     );
     expect(write.mock.calls.some((c) => String(c[0]).includes('ready ab'))).toBe(true);
@@ -189,6 +212,16 @@ describe('runKernel', () => {
   });
 });
 
+/** A project with an app at `./apps/demo` and a Kernel key file. */
+function makeAppProject(): string {
+  const dir = makeTmpDir();
+  mkdirSync(join(dir, 'apps', 'demo'), { recursive: true });
+  writeFileSync(join(dir, 'apps', 'demo', 'mdk-app.yaml'), 'id: com.example.demo\n');
+  mkdirSync(runtime.mdkDir(dir), { recursive: true });
+  writeFileSync(runtime.kernelKeyFile(dir), 'cafebabe\n');
+  return dir;
+}
+
 function baseSpec(overrides: Partial<StackSpec['spec']> = {}): StackSpec {
   return {
     apiVersion: 'mdk/v1',
@@ -196,18 +229,19 @@ function baseSpec(overrides: Partial<StackSpec['spec']> = {}): StackSpec {
     metadata: { name: 'test-stack' },
     spec: {
       kernel: { port: 0 },
-      gateway: { port: 21500, plugins: [] },
+      gateway: { port: 21500 },
       mcp: {},
       workers: [],
+      apps: [],
       ...overrides,
     },
   };
 }
 
 describe('runGateway', () => {
-  it('boots in-process when a kernel handle is given, and reports "kernel connected"', async () => {
-    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    mockCore.startGateway.mockResolvedValue({ mdkClient: {}, stop: vi.fn() });
+  it('boots in-process when a kernel handle is given, and reports where it listens', async () => {
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    mockCore.startGateway.mockResolvedValue({ stop: vi.fn() });
     const dir = makeTmpDir();
     const cwdBefore = process.cwd();
     try {
@@ -215,10 +249,32 @@ describe('runGateway', () => {
         _cleanup: [],
         stop: vi.fn(),
       });
-      expect(gateway.mdkClient).toBeDefined();
+      expect(gateway.stop).toBeDefined();
+      const out = stderr.mock.calls.join('');
+      expect(out).toContain('listening on http://localhost:21500');
+      expect(out).not.toMatch(/kernel (pending|connected)/);
       expect(mockCore.startGateway).toHaveBeenCalledWith(
-        expect.objectContaining({ port: 21500, kernel: expect.anything() }),
+        expect.objectContaining({ port: 21500, kernel: expect.anything(), authVerifier: 'loopback' }),
       );
+    } finally {
+      process.chdir(cwdBefore);
+    }
+  });
+
+  it('leaves the verifier to gateway.config when mdk.yaml names one', async () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    mockCore.startGateway.mockResolvedValue({ mdkClient: {}, stop: vi.fn() });
+    const dir = makeTmpDir();
+    const cwdBefore = process.cwd();
+    try {
+      await runtime.runGateway(
+        dir,
+        baseSpec({ gateway: { port: 21502, plugins: [], config: { authVerifier: 'loopback' } } }),
+        { _cleanup: [], stop: vi.fn() },
+      );
+      const opts = mockCore.startGateway.mock.calls.at(-1)?.[0];
+      expect(opts.authVerifier).toBeUndefined();
+      expect(opts.common).toEqual({ authVerifier: 'loopback' });
     } finally {
       process.chdir(cwdBefore);
     }
@@ -229,7 +285,7 @@ describe('runGateway', () => {
     await expect(runtime.runGateway(dir, baseSpec())).rejects.toThrow(/Kernel is not running/);
   });
 
-  it('boots out-of-process using the key file, reporting "kernel pending"', async () => {
+  it('boots out-of-process using the key file', async () => {
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     mockCore.startGateway.mockResolvedValue({ stop: vi.fn() });
     const dir = makeTmpDir();
@@ -237,8 +293,8 @@ describe('runGateway', () => {
     writeFileSync(runtime.kernelKeyFile(dir), 'deadbeef', 'utf8');
     const cwdBefore = process.cwd();
     try {
-      const gateway = await runtime.runGateway(dir, baseSpec({ gateway: { port: 21501, plugins: [] } }));
-      expect(gateway.mdkClient).toBeUndefined();
+      const gateway = await runtime.runGateway(dir, baseSpec({ gateway: { port: 21501 } }));
+      expect(gateway.stop).toBeDefined();
       expect(mockCore.startGateway).toHaveBeenCalledWith(
         expect.objectContaining({ keyFile: runtime.kernelKeyFile(dir) }),
       );
@@ -247,32 +303,32 @@ describe('runGateway', () => {
     }
   });
 
-  it('resolves extraPluginDirs for declared gateway plugins, carrying per-plugin config', async () => {
+  it('passes each declared app (dir, runtime key file, mount) and the gateway key file, resolved before the chdir', async () => {
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     mockCore.startGateway.mockResolvedValue({ stop: vi.fn() });
-    const dir = makeTmpDir();
-    linkRealPackage(dir, 'yaml');
     const cwdBefore = process.cwd();
+    process.chdir(makeAppProject());
+    const dir = process.cwd();
     try {
       await runtime.runGateway(
-        dir,
+        '.',
         baseSpec({
-          gateway: {
-            port: 21502,
-            plugins: [
-              { package: 'yaml', config: { auth: { superAdmin: 'root@example.com' } } },
-              { package: 'yaml', config: {} },
-            ],
-          },
+          gateway: { port: 21502 },
+          apps: [
+            { name: 'demo', package: './apps/demo', config: { secret: 1 } },
+            { name: 'root', package: './apps/demo', config: {}, mount: '/' },
+          ],
         }),
         { _cleanup: [], stop: vi.fn() },
       );
-      const call = mockCore.startGateway.mock.calls.at(-1)?.[0] as {
-        extraPluginDirs?: Array<{ dir: string; config?: Record<string, unknown> }>;
-      };
-      expect(call.extraPluginDirs?.[0]?.dir).toMatch(/yaml$/);
-      expect(call.extraPluginDirs?.[0]?.config).toEqual({ auth: { superAdmin: 'root@example.com' } });
-      expect(call.extraPluginDirs?.[1]).toEqual({ dir: call.extraPluginDirs?.[0]?.dir });
+      const call = mockCore.startGateway.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+      expect(call.apps).toEqual([
+        { name: 'demo', appDir: join(dir, 'apps', 'demo'), keyFile: join(dir, '.mdk', 'apps', 'demo', 'runtime.key') },
+        { name: 'root', appDir: join(dir, 'apps', 'demo'), keyFile: join(dir, '.mdk', 'apps', 'root', 'runtime.key'), mount: '/' },
+      ]);
+      expect(call.gatewayKeyFile).toBe(join(dir, '.mdk', 'gateway.key'));
+      // Not `.mdk/gateway/.mdk/trusted-keys`, where other processes never look.
+      expect(call.trustedKeysDir).toBe(join(dir, '.mdk', 'trusted-keys'));
     } finally {
       process.chdir(cwdBefore);
     }
@@ -285,7 +341,7 @@ describe('runGateway', () => {
     });
     try {
       await expect(
-        runtime.runGateway(makeTmpDir(), baseSpec({ gateway: { port, plugins: [] } }), {
+        runtime.runGateway(makeTmpDir(), baseSpec({ gateway: { port } }), {
           _cleanup: [],
           stop: vi.fn(),
         }),
@@ -315,6 +371,17 @@ describe('assertMcpPortFree', () => {
 });
 
 describe('runMcp', () => {
+  it('refuses a token that still holds an unresolved ${VAR}', async () => {
+    const dir = makeTmpDir();
+    await expect(runtime.runMcp(dir, baseSpec({ mcp: { token: '${MDK_MCP_TOKEN}' } }))).rejects.toThrow(
+      /spec\.mcp\.token.*MDK_MCP_TOKEN is not set/,
+    );
+    await expect(runtime.runMcp(dir, baseSpec({ mcp: { token: 'prefix-${MDK_MCP_TOKEN}' } }))).rejects.toThrow(
+      /MDK_MCP_TOKEN is not set/,
+    );
+    expect(mockMcp.createMcpServer).not.toHaveBeenCalled();
+  });
+
   it('throws when no kernel is given and no key file exists', async () => {
     const dir = makeTmpDir();
     await expect(runtime.runMcp(dir, baseSpec())).rejects.toThrow(/Kernel is not running/);
@@ -333,9 +400,10 @@ describe('runMcp', () => {
     expect(mockMcp.createMcpServer).toHaveBeenCalledWith(
       expect.stringContaining('mcp'),
       21600,
-      { kernelKey: 'deadbeef' },
+      { kernelKey: 'deadbeef', kernelKeyPair: TEST_CALLER_KEYPAIR },
       [],
       [],
+      { allowWrite: false, handleSignals: false, keyFile: runtime.mcpKeyFile(dir) },
     );
   });
 
@@ -344,16 +412,24 @@ describe('runMcp', () => {
     const closeFn = vi.fn((cb?: () => void) => cb?.());
     mockMcp.createMcpServer.mockResolvedValue({ close: closeFn });
     const dir = makeTmpDir();
-    const kernel = { getPublicKey: () => Buffer.from('ab', 'hex'), _cleanup: [], stop: vi.fn() };
+    const kernel = { getPublicKey: () => Buffer.from('ab', 'hex'), allowKey: vi.fn(), _cleanup: [], stop: vi.fn() };
 
     await runtime.runMcp(dir, baseSpec(), kernel);
+
+    expect(kernel.allowKey).toHaveBeenCalledWith(TEST_CALLER_KEYPAIR.publicKey);
+    expect(mockLocalDiscovery.publishTrustedKey).toHaveBeenCalledWith(
+      runtime.trustedKeysDir(dir),
+      'mcp',
+      TEST_CALLER_KEYPAIR.publicKey,
+    );
 
     expect(mockMcp.createMcpServer).toHaveBeenCalledWith(
       expect.any(String),
       21600,
-      { kernelKey: 'ab' },
+      { kernelKey: 'ab', kernelKeyPair: TEST_CALLER_KEYPAIR },
       [],
       [],
+      { allowWrite: false, handleSignals: false, keyFile: runtime.mcpKeyFile(dir) },
     );
   });
 
@@ -368,47 +444,38 @@ describe('runMcp', () => {
     await runtime.runMcp(
       dir,
       baseSpec({
-        gateway: { port: 21501, plugins: [], config: { auth: { superAdmin: 'root@example.com' } } },
+        gateway: { port: 21501, config: { auth: { superAdmin: 'root@example.com' } } },
       }),
     );
 
     expect(mockMcp.createMcpServer).toHaveBeenCalledWith(
       expect.any(String),
       21501 + runtime.DEFAULT_MCP_PORT_OFFSET,
-      { auth: { superAdmin: 'root@example.com' }, kernelKey: 'deadbeef' },
+      { auth: { superAdmin: 'root@example.com' }, kernelKey: 'deadbeef', kernelKeyPair: TEST_CALLER_KEYPAIR },
       [],
       [],
+      { allowWrite: false, handleSignals: false, keyFile: runtime.mcpKeyFile(dir) },
     );
   });
 
-  it('builds gatewayPluginDirs from spec.spec.gateway.plugins, carrying per-plugin config', async () => {
+  it('passes spec.apps as the Gateway takes them: route table dir and runtime key file, no config', async () => {
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const closeFn = vi.fn((cb?: () => void) => cb?.());
     mockMcp.createMcpServer.mockResolvedValue({ close: closeFn });
-    const dir = makeTmpDir();
-    linkRealPackage(dir, 'yaml');
+    const dir = makeAppProject();
     const kernel = { getPublicKey: () => Buffer.from('ab', 'hex'), _cleanup: [], stop: vi.fn() };
 
     await runtime.runMcp(
       dir,
       baseSpec({
-        gateway: {
-          port: 21500,
-          plugins: [{ package: 'yaml', config: { auth: { superAdmin: 'root@example.com' } } }],
-        },
+        apps: [{ name: 'demo', package: './apps/demo', config: { auth: { superAdmin: 'root@example.com' } } }],
       }),
       kernel,
     );
 
-    const call = mockMcp.createMcpServer.mock.calls.at(-1) as [
-      string,
-      number,
-      Record<string, unknown>,
-      string[],
-      Array<{ dir: string; config?: Record<string, unknown> }>,
-    ];
-    expect(call[4][0].dir).toMatch(/yaml$/);
-    expect(call[4][0].config).toEqual({ auth: { superAdmin: 'root@example.com' } });
+    expect(mockMcp.createMcpServer.mock.calls.at(-1)?.[4]).toEqual([
+      { name: 'demo', appDir: join(dir, 'apps', 'demo'), keyFile: runtime.appKeyFile(dir, 'demo') },
+    ]);
   });
 
   it('defaults the port to gateway.port + DEFAULT_MCP_PORT_OFFSET when spec.mcp.port is unset', async () => {
@@ -418,7 +485,7 @@ describe('runMcp', () => {
     const dir = makeTmpDir();
     const kernel = { getPublicKey: () => Buffer.from('ab', 'hex'), _cleanup: [], stop: vi.fn() };
 
-    await runtime.runMcp(dir, baseSpec({ gateway: { port: 21503, plugins: [] } }), kernel);
+    await runtime.runMcp(dir, baseSpec({ gateway: { port: 21503 } }), kernel);
 
     expect(mockMcp.createMcpServer).toHaveBeenCalledWith(
       expect.any(String),
@@ -426,6 +493,7 @@ describe('runMcp', () => {
       expect.anything(),
       [],
       [],
+      { allowWrite: false, handleSignals: false, keyFile: runtime.mcpKeyFile(dir) },
     );
   });
 
@@ -436,7 +504,7 @@ describe('runMcp', () => {
     const dir = makeTmpDir();
     const kernel = { getPublicKey: () => Buffer.from('ab', 'hex'), _cleanup: [], stop: vi.fn() };
 
-    await runtime.runMcp(dir, baseSpec({ gateway: { port: 21504, plugins: [] }, mcp: { port: 21999 } }), kernel);
+    await runtime.runMcp(dir, baseSpec({ gateway: { port: 21504 }, mcp: { port: 21999 } }), kernel);
 
     expect(mockMcp.createMcpServer).toHaveBeenCalledWith(
       expect.any(String),
@@ -444,7 +512,29 @@ describe('runMcp', () => {
       expect.anything(),
       [],
       [],
+      { allowWrite: false, handleSignals: false, keyFile: runtime.mcpKeyFile(dir) },
     );
+  });
+
+  it('passes --allow-write and spec.mcp security options, never handleSignals', async () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    mockMcp.createMcpServer.mockResolvedValue({ close: vi.fn((cb?: () => void) => cb?.()) });
+    const kernel = { getPublicKey: () => Buffer.from('ab', 'hex'), _cleanup: [], stop: vi.fn() };
+    const mcp = { allowTools: ['demo.summary'], token: 't0k', identity: { user: 'agent' } };
+
+    const dir = makeTmpDir();
+    await runtime.runMcp(dir, baseSpec({ gateway: { port: 21505, plugins: [] }, mcp }), kernel, {
+      allowWrite: true,
+    });
+
+    expect(mockMcp.createMcpServer.mock.calls.at(-1)?.[5]).toEqual({
+      allowWrite: true,
+      allowTools: ['demo.summary'],
+      token: 't0k',
+      identity: { user: 'agent' },
+      handleSignals: false,
+      keyFile: runtime.mcpKeyFile(dir),
+    });
   });
 
   it('rejects up front when the mcp port is already taken', async () => {
@@ -576,6 +666,37 @@ describe('runWorker', () => {
     await handle.stop();
   });
 
+  it('resolves a worker installed as an npm package, not only a local path', async () => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    mockWorkerRuntimeV2Ctor.mockImplementation(function () {
+      return {
+        start: vi.fn().mockResolvedValue(undefined),
+        stop: vi.fn().mockResolvedValue(undefined),
+        getPublicKey: () => Buffer.from('ab', 'hex'),
+      };
+    });
+    const dir = makeTmpDir();
+    const installed = writeContractWorkerFixture(dir, 'rig');
+    const pkgRoot = join(dir, 'node_modules', '@your-org', 'mdk-worker-rig');
+    mkdirSync(dirname(pkgRoot), { recursive: true });
+    symlinkSync(installed, pkgRoot);
+    writeFileSync(join(installed, 'package.json'), JSON.stringify({ name: '@your-org/mdk-worker-rig' }));
+    const worker: WorkerInstance = {
+      name: 'rig',
+      package: '@your-org/mdk-worker-rig',
+      port: 0,
+      config: { devices: [{ id: 'rig-0', opts: { host: '10.0.0.1', port: 502 } }] },
+    };
+
+    const handle = await runtime.runWorker(dir, worker);
+    expect(mockWorkerRuntimeV2Ctor.mock.calls[0]![0]).toBe(realpathSync(installed));
+    await handle.stop();
+
+    await expect(
+      runtime.runWorker(dir, { ...worker, package: '@your-org/not-installed' }),
+    ).rejects.toThrow(/Package "@your-org\/not-installed" is not installed/);
+  });
+
   it('throws when the local package path does not exist', async () => {
     const dir = makeTmpDir();
     const worker: WorkerInstance = {
@@ -637,11 +758,27 @@ describe('runWorker', () => {
       port: 0,
       config: { mock: true, devices: [{ id: 'a-0', opts: { host: '127.0.0.1', port: 22001 } }] },
     };
-    const kernel = { registerWorker: vi.fn().mockResolvedValue(undefined), _cleanup: [] as Array<() => unknown> };
+    const workerStop = vi.fn().mockResolvedValue(undefined);
+    mockWorkerRuntimeV2Ctor.mockImplementation(function () {
+      return { start: vi.fn().mockResolvedValue(undefined), stop: workerStop, getPublicKey: () => Buffer.from('abcd', 'hex') };
+    });
+    const kernel = {
+      registerWorker: vi.fn().mockResolvedValue(undefined),
+      getClientPublicKey: () => Buffer.from('ff'.repeat(32), 'hex'),
+      listAllowedKeys: vi.fn(() => ['aa'.repeat(32)]),
+      _cleanup: [] as Array<() => unknown>,
+    };
 
     const handle = await runtime.runWorker(dir, worker, kernel as never);
     expect(kernel.registerWorker).toHaveBeenCalledWith(Buffer.from('abcd', 'hex'));
     expect(kernel._cleanup).toHaveLength(1);
+    const ctorOpts = mockWorkerRuntimeV2Ctor.mock.calls.at(-1)?.[1] as Record<string, unknown>;
+    expect(ctorOpts.allowedKeys).toEqual([Buffer.from('ff'.repeat(32), 'hex'), 'aa'.repeat(32)]);
+    expect(kernel.listAllowedKeys).toHaveBeenCalledWith('write');
+    expect(mockLocalDiscovery.trustKernel).toHaveBeenCalled();
+    // The Kernel's own shutdown takes the worker down with it.
+    await kernel._cleanup[0]!();
+    expect(workerStop).toHaveBeenCalledTimes(1);
     await handle.stop();
   });
 
@@ -668,7 +805,24 @@ describe('runWorker', () => {
       'a',
       'ab',
     );
+    const ctorOpts = mockWorkerRuntimeV2Ctor.mock.calls.at(-1)?.[1] as Record<string, unknown>;
+    expect(ctorOpts.allowedKeys).toEqual([TEST_KERNEL_CLIENT_KEY]);
+    expect(mockLocalDiscovery.trustKeysFromDir).toHaveBeenCalledWith(expect.anything(), runtime.trustedKeysDir(dir));
     await handle.stop();
+  });
+
+  it('refuses to boot a standalone worker before the Kernel published its key (fail closed)', async () => {
+    mockLocalDiscovery.readTrustedKeys.mockReturnValueOnce([]);
+    const dir = makeTmpDir();
+    writeContractWorkerFixture(dir, 'a');
+    const worker: WorkerInstance = {
+      name: 'a',
+      package: './workers/a',
+      port: 0,
+      config: { devices: [{ id: 'a-0', opts: {} }] },
+    };
+    await expect(runtime.runWorker(dir, worker)).rejects.toThrow(/Kernel is not running/);
+    expect(mockWorkerRuntimeV2Ctor).not.toHaveBeenCalled();
   });
 
   it('relocates a mock device off an already-bound port', async () => {
@@ -718,5 +872,221 @@ describe('runWorker', () => {
     };
     const handle = await runtime.runWorker(dir, worker);
     await handle.stop();
+  });
+});
+
+describe('app runtimes', () => {
+  const demoApp: AppInstance = { name: 'demo', package: './apps/demo', config: { greeting: 'hi' } };
+  beforeEach(() => {
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+  });
+
+  it('resolves an app from a local path or an installed package subpath, requiring mdk-app.yaml', () => {
+    const dir = makeAppProject();
+    expect(runtime.resolveAppPackageDir(dir, './apps/demo')).toBe(join(dir, 'apps', 'demo'));
+    expect(() => runtime.resolveAppPackageDir(dir, './apps')).toThrow(/has no mdk-app\.yaml/);
+
+    const pkgRoot = join(dir, 'node_modules', '@your-org', 'apps');
+    mkdirSync(join(pkgRoot, 'billing'), { recursive: true });
+    writeFileSync(join(pkgRoot, 'package.json'), JSON.stringify({ name: '@your-org/apps' }));
+    writeFileSync(join(pkgRoot, 'billing', 'mdk-app.yaml'), 'id: com.example.billing\n');
+    expect(runtime.resolveAppPackageDir(dir, '@your-org/apps/billing')).toBe(realpathSync(join(pkgRoot, 'billing')));
+  });
+
+  it('runApp creates the runtime in-process with the app key files and stops it', async () => {
+    const fake = { start: vi.fn().mockResolvedValue(undefined), stop: vi.fn().mockResolvedValue(undefined) };
+    mockAppRuntime.createAppRuntime.mockReturnValue(fake);
+    const dir = makeAppProject();
+
+    const handle = await runtime.runApp(dir, demoApp);
+    const state = join(dir, '.mdk', 'apps', 'demo');
+    expect(mockAppRuntime.createAppRuntime).toHaveBeenCalledWith({
+      name: 'demo',
+      appDir: join(dir, 'apps', 'demo'),
+      config: { greeting: 'hi' },
+      kernelKey: 'cafebabe',
+      storeDir: join(state, 'store'),
+      allowedKeyFiles: [join(dir, '.mdk', 'gateway.key'), join(dir, '.mdk', 'mcp.key')],
+      keyFile: join(state, 'runtime.key'),
+      kernelKeyFile: join(runtime.trustedKeysDir(dir), 'app-demo.pub'),
+    });
+    await handle.stop();
+    expect(fake.stop).toHaveBeenCalled();
+  });
+
+  // Child entry driven by its `config.mode`: `exit` dies and `error` reports a
+  // failure before ready; otherwise it logs each launch's cwd, reports ready,
+  // crashes once after the first launch and records the SIGTERM that stops it.
+  const CHILD = [
+    "const fs = require('fs')",
+    'const { config, storeDir } = JSON.parse(process.env.MDK_APP_RUNTIME_OPTIONS)',
+    "if (config.mode === 'exit') process.exit(3)",
+    "else if (config.mode === 'error') process.send({ type: 'error', message: 'ERR_BOOM' })",
+    'else {',
+    "  const first = !fs.existsSync(storeDir + '/launches')",
+    "  fs.appendFileSync(storeDir + '/launches', process.cwd() + '\\n')",
+    "  process.on('SIGTERM', () => { fs.writeFileSync(storeDir + '/stopped', ''); process.exit(0) })",
+    "  process.send({ type: 'ready' })",
+    '  if (first) setTimeout(() => process.exit(1), 50)',
+    '}',
+    'setInterval(() => {}, 1000)',
+  ].join('\n');
+  function superviseChild(dir: string, mode?: string) {
+    writeFileSync(join(dir, 'child.cjs'), CHILD);
+    return runtime.superviseApp(dir, { ...demoApp, config: { mode } }, undefined, join(dir, 'child.cjs'));
+  }
+
+  it('superviseApp spawns the child in the project dir, restarts it after a crash and stops it with SIGTERM', async () => {
+    const dir = makeAppProject();
+    const app = await superviseChild(dir);
+    await vi.waitFor(() => expect(vi.mocked(process.stderr.write).mock.calls.join('')).toContain('demo restarted'), {
+      timeout: 5000,
+    });
+    await app.stop();
+    const store = join(dir, '.mdk', 'apps', 'demo', 'store');
+    const cwds = readFileSync(join(store, 'launches'), 'utf8').trim().split('\n').map((c) => realpathSync(c));
+    expect(cwds).toEqual([realpathSync(dir), realpathSync(dir)]);
+    expect(existsSync(join(store, 'stopped'))).toBe(true);
+  });
+
+  it('superviseApp restarts the child in the project dir even after the CLI has chdir\'d into the Gateway root', async () => {
+    const dir = makeAppProject();
+    writeFileSync(join(dir, 'child.cjs'), CHILD);
+    const cwdBefore = process.cwd();
+    process.chdir(dir);
+    try {
+      const app = await runtime.superviseApp('.', { ...demoApp, config: {} }, undefined, join(dir, 'child.cjs'));
+      process.chdir(makeTmpDir());
+      await vi.waitFor(() => expect(vi.mocked(process.stderr.write).mock.calls.join('')).toContain('demo restarted'), {
+        timeout: 5000,
+      });
+      await app.stop();
+    } finally {
+      process.chdir(cwdBefore);
+    }
+    const launches = readFileSync(join(dir, '.mdk', 'apps', 'demo', 'store', 'launches'), 'utf8');
+    expect(launches.trim().split('\n').map((c) => realpathSync(c))).toEqual([realpathSync(dir), realpathSync(dir)]);
+  });
+
+  it.each([
+    ['reports an error', 'error', 'ERR_BOOM'],
+    ['exits', 'exit', 'exited before it was ready (code 3)'],
+  ])('superviseApp rejects when the child %s before it is ready', async (_, mode, message) => {
+    await expect(superviseChild(makeAppProject(), mode)).rejects.toThrow(message);
+  });
+
+  // A second child, driven by `config.mode`, for the supervisor's less common paths.
+  // `n` counts launches so a mode can behave differently on each restart.
+  const CHILD_MODES = [
+    "const fs = require('fs')",
+    'const { config, storeDir } = JSON.parse(process.env.MDK_APP_RUNTIME_OPTIONS)',
+    "const n = fs.existsSync(storeDir + '/n') ? Number(fs.readFileSync(storeDir + '/n', 'utf8')) + 1 : 1",
+    "fs.writeFileSync(storeDir + '/n', String(n))",
+    "const mode = config.mode",
+    "if (mode === 'silent') {}",
+    "else if (mode === 'error-bare') process.send({ type: 'error' })",
+    "else if (mode === 'restart-fails' && n === 2) setTimeout(() => process.exit(4), 300)",
+    'else {',
+    "  if (mode === 'ignore-term') process.on('SIGTERM', () => {})",
+    "  process.send({ type: 'ready' })",
+    "  if (mode === 'chatty') { process.send({ type: 'ready' }); process.send({ type: 'error', message: 'late' }); process.send({ type: 'other' }) }",
+    "  if (mode === 'restart-fails' && n === 1) setTimeout(() => process.exit(1), 50)",
+    "  if (mode === 'crash-loop') setTimeout(() => process.exit(1), 20)",
+    '}',
+    'setInterval(() => {}, 1000)',
+  ].join('\n');
+  function superviseMode(dir: string, mode: string) {
+    writeFileSync(join(dir, 'modes.cjs'), CHILD_MODES);
+    return runtime.superviseApp(dir, { ...demoApp, config: { mode } }, undefined, join(dir, 'modes.cjs'));
+  }
+  const logged = (): string => vi.mocked(process.stderr.write).mock.calls.join('');
+
+  it('superviseApp backs off while an app keeps crashing', async () => {
+    const app = await superviseMode(makeAppProject(), 'crash-loop');
+    await vi.waitFor(() => expect(logged()).toContain('restarting in 2s'), { timeout: 6000 });
+    await app.stop();
+    const delays = [...logged().matchAll(/restarting in (\d+)s/g)].map((m) => Number(m[1]));
+    expect(delays.slice(0, 2)).toEqual([1, 2]);
+  });
+
+  it('superviseApp ignores messages after ready and unknown message types', async () => {
+    const app = await superviseMode(makeAppProject(), 'chatty');
+    await new Promise((resolveWait) => setTimeout(resolveWait, 300));
+    expect(logged()).not.toContain('exited unexpectedly');
+    await app.stop();
+  });
+
+  it('superviseApp reports an unnamed child error as "unknown error"', async () => {
+    await expect(superviseMode(makeAppProject(), 'error-bare')).rejects.toThrow('unknown error');
+  });
+
+  it('superviseApp gives up waiting for a child that never reports ready', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const pending = superviseMode(makeAppProject(), 'silent');
+      const outcome = expect(pending).rejects.toThrow(/did not report ready within 30000ms/);
+      await vi.advanceTimersByTimeAsync(30_000);
+      await outcome;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('superviseApp keeps retrying a restart that fails, until the app comes back', async () => {
+    const app = await superviseMode(makeAppProject(), 'restart-fails');
+    await vi.waitFor(() => expect(logged()).toContain('failed to restart'), { timeout: 5000 });
+    await vi.waitFor(() => expect(logged()).toContain('restarted'), { timeout: 5000 });
+    await app.stop();
+  });
+
+  it('superviseApp stays quiet about a restart that fails because it was stopped', async () => {
+    const dir = makeAppProject();
+    const app = await superviseMode(dir, 'restart-fails');
+    const launches = join(dir, '.mdk', 'apps', 'demo', 'store', 'n');
+    await vi.waitFor(() => expect(readFileSync(launches, 'utf8')).toBe('2'), { timeout: 5000 });
+    await app.stop();
+    await new Promise((resolveWait) => setTimeout(resolveWait, 500));
+    expect(logged()).not.toContain('failed to restart');
+  });
+
+  it('superviseApp stop() is safe to repeat, and kills a child that ignores SIGTERM', async () => {
+    const dir = makeAppProject();
+    const app = await superviseMode(dir, 'ignore-term');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const stopping = app.stop();
+      await vi.advanceTimersByTimeAsync(3000);
+      await stopping;
+    } finally {
+      vi.useRealTimers();
+    }
+    await expect(app.stop()).resolves.toBeUndefined();
+  });
+
+  it('wires the Gateway and every app runtime to the same key files', async () => {
+    const dir = makeAppProject();
+    const second: AppInstance = { name: 'second', package: './apps/demo', config: {} };
+    const spec = baseSpec({ gateway: { port: 21503 }, apps: [demoApp, second] });
+    mockCore.startGateway.mockResolvedValue({ stop: vi.fn() });
+    const cwdBefore = process.cwd();
+    try {
+      await runtime.runGateway(dir, spec, { _cleanup: [], stop: vi.fn() });
+    } finally {
+      process.chdir(cwdBefore);
+    }
+    const gateway = mockCore.startGateway.mock.calls.at(-1)?.[0] as {
+      apps: Array<{ name: string; keyFile: string }>;
+      gatewayKeyFile: string;
+    };
+
+    const options = spec.spec.apps.map((app) => runtime.resolveAppOptions(dir, app));
+    for (const [i, app] of spec.spec.apps.entries()) {
+      // The Gateway looks for the key the runtime publishes ...
+      expect(gateway.apps.find((a) => a.name === app.name)?.keyFile).toBe(options[i]!.keyFile);
+      // ... and the runtime accepts only the keys the Gateway and the MCP server publish.
+      expect(options[i]!.allowedKeyFiles).toEqual([gateway.gatewayKeyFile, runtime.mcpKeyFile(dir)]);
+    }
+    expect(new Set(options.map((o) => o.keyFile)).size).toBe(options.length);
+    expect(new Set(options.map((o) => o.storeDir)).size).toBe(options.length);
   });
 });

@@ -46,9 +46,9 @@ test('unlistable packages are reported, and samples and demos are skipped', () =
     'backend/workers/miners/c/package.json': { name: '@t/c', description: 'c' },
     'backend/workers/miners/c/mdk-contract.json': '{ not json',
     'backend/workers/samples/s/package.json': { name: '@t/s' },
-    'backend/plugins/demo/package.json': { name: '@t/demo' }
+    'backend/apps/demo/package.json': { name: '@t/demo' }
   })
-  const manifests = ['backend/core/a', 'backend/core/b', 'backend/workers/miners/c', 'backend/workers/samples/s', 'backend/plugins/demo']
+  const manifests = ['backend/core/a', 'backend/core/b', 'backend/workers/miners/c', 'backend/workers/samples/s', 'backend/apps/demo']
     .map((dir) => `${dir}/package.json`)
 
   const { entries, errors } = buildCatalog(root, manifests)

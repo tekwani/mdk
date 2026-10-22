@@ -165,6 +165,11 @@ describe('CurrentAlerts', () => {
       expect(window.sessionStorage.getItem('alertsPageAlertConfirmed')).toBe('true')
     })
 
+    it('does not show the modal in demo mode', () => {
+      renderComponent({ isDemoMode: true })
+      expect(screen.queryByTestId('confirmation-modal')).not.toBeInTheDocument()
+    })
+
     it('does not show the modal when sessionStorage already has confirmation', () => {
       window.sessionStorage.setItem('alertsPageAlertConfirmed', 'true')
       renderComponent()

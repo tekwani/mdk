@@ -1,4 +1,4 @@
-/* eslint-disable vars-on-top */
+/* oxlint-disable vars-on-top */
 import type React from 'react'
 import type { ReactNode } from 'react'
 import { vi } from 'vitest'

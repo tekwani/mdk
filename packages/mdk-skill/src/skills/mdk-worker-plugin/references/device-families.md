@@ -8,23 +8,21 @@ mining use cases they were built for; a third party integrating their own
 device should NOT start from them — the default starting point is
 `../assets/worker-template/` (step 1 of the skill workflow).
 
-All paths under [`backend/workers/`](../../../../../../backend/workers/README.md). Every family below except
-`demo-worker` is a Worker Plugin on the older module-exporting shape (`plugin/index.js` →
+All paths under [`backend/workers/`](../../../../../../backend/workers/README.md). Every family below is a
+Worker Plugin on the older module-exporting shape (`plugin/index.js` →
 `{ contract, dir, connect, disconnect? }`); production families additionally
 ship `plugin/boot.js`, which wires Worker-infra services and exposes a
 `start<Family>Worker()` helper. This reflects what's actually shipped today,
 not a recommendation — a **new** Worker should follow the directory-loaded
 `WorkerRuntimeV2` model instead (`mdk-contract.json` + `src/` handlers, no
-`plugin/index.js`, no `connect()`), the same shape `demo-worker` and `mdk
-create worker`'s scaffold use. See this skill's main authoring flow
+`plugin/index.js`, no `connect()`), the shape `mdk create worker`'s scaffold
+uses. See this skill's main authoring flow
 ([`SKILL.md`](../SKILL.md) steps 5-6) and
 [`worker-base-api.md`](./worker-base-api.md#directory-loaded-plugins-workerruntimev2)
 for that model; the rest of this page describes the older shape's conventions.
 
 | Family          | Path | Protocol | Telemetry / commands | Copy it when… |
 | --------------- | ---- | -------- | -------------------- | ------------- |
-| **demo-worker** | [`samples/demo-worker`](../../../../../../backend/workers/samples/demo-worker/README.md) | HTTP JSON (hypothetical firmware) | 5 / 2 | Lean V2 sample (contract at package root + SQLite history). The skill/CLI scaffold is [`packages/cli/templates/worker/`](../../../../../../packages/cli/templates/worker/README.md) → `../assets/worker-template/` |
-| **Antminer**    | [`miners/antminer`](../../../../../../backend/workers/miners/antminer/README.md) | HTTP JSON with Digest auth | 10 / 4 | HTTP devices behind auth; digest client setup in `connect` |
 | **Avalon**      | [`miners/avalon`](../../../../../../backend/workers/miners/avalon/README.md) | CGMiner ASCII over TCP | 9 / 4 | Plain-text TCP command APIs |
 | **ABB**         | [`power-meter/abb`](../../../../../../backend/workers/power-meter/abb/README.md) | Modbus TCP | 9 / 0 | Modbus register maps; **multi-model**: `MODEL_CLASSES` lookup keyed off `config.model` (B23/B24/M1M20/M4M20/REU615) |
 | **Satec / Schneider** | [`power-meter/satec`](../../../../../../backend/workers/power-meter/satec/README.md), [`power-meter/schneider`](../../../../../../backend/workers/power-meter/schneider/README.md) | Modbus TCP | read-only | Same shape as ABB, single/dual model |
@@ -35,7 +33,9 @@ for that model; the rest of this page describes the older shape's conventions.
 
 Whatsminer (CGMiner JSON over TCP, AES-encrypted, token auth) is no longer an in-repo family to copy from — it's the
 external [`whatsminer-mdk-worker`](https://github.com/whatsminer/whatsminer-mdk-worker) contract plugin, hosted on
-`WorkerRuntimeV2` via a thin per-deployment adapter (see `examples/full-site/backend/whatsminer-adapter.js`).
+`WorkerRuntimeV2` via a thin per-deployment adapter (see `examples/mvp-site/backend/whatsminer-adapter.js`). Antminer
+(HTTP CGI, Digest auth) is likewise the external [`antminer-mdk-worker`](https://github.com/bitmain-official/antminer-mdk-worker)
+contract plugin, hosted the same way (see `examples/mvp-site/backend/antminer-adapter.js`).
 
 Do **not** copy from `miners/wm-v3` (empty stub) or model anything on the
 `ThingManager`/`MinerManager` class architecture in [`backend/workers/README.md`](../../../../../../backend/workers/README.md)
@@ -43,7 +43,7 @@ Do **not** copy from `miners/wm-v3` (empty stub) or model anything on the
 
 ## Anatomy shared by the module-exporting families
 
-Doesn't apply to `demo-worker`, whose flat directory-loaded layout is
+Doesn't apply to the `mdk create worker` scaffold, whose flat directory-loaded layout is
 described in [`worker-base-api.md`](./worker-base-api.md#directory-loaded-plugins-workerruntimev2)
 instead.
 

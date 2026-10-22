@@ -1,3 +1,6 @@
+import { MDK_APP_PANEL_SLOT } from '@tetherto/mdk-react-adapter'
+
+import { AppPanels } from '../apps/AppPanels'
 import { PageLayout } from '../components/PageLayout'
 import { APP_NAME } from '../constants/env'
 
@@ -23,18 +26,9 @@ const Home = () => (
           3. add its icon to src/constants/navigation.tsx
         </code>
       </pre>
-      <p className="mdk-ui-shell-home__hint">
-        The reference pages ship under
-        {' '}
-        <code>_managed/pages/</code>
-        {' '}
-        — copy one into
-        {' '}
-        <code>src/pages/</code>
-        {' '}
-        to start from a working example.
-      </p>
     </section>
+    {/* Panels the installed apps put on Home (empty until one is installed). */}
+    <AppPanels slot={MDK_APP_PANEL_SLOT.HOME} />
   </PageLayout>
 )
 

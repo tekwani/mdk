@@ -93,9 +93,9 @@ test('toDocsLink passes an absolute URL through unchanged', (t) => {
 })
 
 test('toDocsLink converts a repo-relative path to a page-relative one', (t) => {
-  const link = toDocsLink('backend/workers/miners/antminer/README.md')
+  const link = toDocsLink('backend/workers/miners/avalon/README.md')
   t.ok(link.startsWith('..'), 'should be relative, walking up from backend/workers/docs/')
-  t.ok(link.endsWith('miners/antminer/README.md'))
+  t.ok(link.endsWith('miners/avalon/README.md'))
 })
 
 test('toDocsLink passes through a falsy value unchanged', (t) => {

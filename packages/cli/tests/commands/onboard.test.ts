@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProcessExitSignal, cleanupTmpDirs, makeTmpDir, mockProcessExit } from '../helpers.js';
 
 const detectEnvironmentMock = vi.hoisted(() => vi.fn());
-vi.mock('../../src/lib/detect.js', () => ({ detectEnvironment: detectEnvironmentMock }));
+vi.mock('../../src/lib/detect.js', () => ({ detectEnvironment: detectEnvironmentMock, NODE_MIN_MAJOR: 24 }));
 
 const CANCEL = Symbol('cancel');
 const clack = vi.hoisted(() => ({
@@ -47,13 +47,14 @@ vi.mock('../../src/lib/runtime.js', () => ({
 }));
 
 const findCatalogWorkerMock = vi.hoisted(() => vi.fn());
-const findCatalogGatewayPluginMock = vi.hoisted(() => vi.fn());
+const findCatalogAppMock = vi.hoisted(() => vi.fn());
 const resolveCatalogPackageMock = vi.hoisted(() => vi.fn());
+const workerCatalog = vi.hoisted(() => [{ value: 'pkg-worker-a', label: 'pkg-worker-a', hint: 'h' }]);
 vi.mock('../../src/lib/catalog.js', () => ({
-  WORKER_CATALOG: [{ value: 'pkg-worker-a', label: 'pkg-worker-a', hint: 'h' }],
-  GATEWAY_CATALOG: [{ value: 'pkg-gateway-a', label: 'pkg-gateway-a', hint: 'h' }],
+  WORKER_CATALOG: workerCatalog,
+  APP_CATALOG: [{ value: 'pkg-gateway-a', label: 'pkg-gateway-a', hint: 'h' }],
   findCatalogWorker: findCatalogWorkerMock,
-  findCatalogGatewayPlugin: findCatalogGatewayPluginMock,
+  findCatalogApp: findCatalogAppMock,
   resolveCatalogPackage: resolveCatalogPackageMock,
 }));
 
@@ -114,7 +115,7 @@ beforeEach(() => {
   // configured implementation — reset the ones tests give one-off throwing/custom
   // implementations to, so failures from one test cannot leak into the next.
   findCatalogWorkerMock.mockReset();
-  findCatalogGatewayPluginMock.mockReset();
+  findCatalogAppMock.mockReset();
   resolveCatalogPackageMock.mockReset();
   addFileDependencyMock.mockReset();
   installSkillMock.mockReset();
@@ -185,7 +186,27 @@ describe('mdk onboard', () => {
     expect(clack.outro).toHaveBeenCalled();
   });
 
-  it('walks the full path: a bundled + an unavailable worker, a gateway plugin, dashboard and skill', async () => {
+  it('skips the worker prompt when the worker catalog is empty', async () => {
+    const saved = workerCatalog.splice(0);
+    try {
+      const dir = makeTmpDir();
+      clack.text.mockResolvedValueOnce(dir).mockResolvedValueOnce('no-workers');
+      clack.confirm
+        .mockResolvedValueOnce(false) // add UI dashboard
+        .mockResolvedValueOnce(false) // install skill
+        .mockResolvedValueOnce(true); // write mdk.yaml
+      clack.multiselect.mockResolvedValueOnce([]); // apps only
+
+      await buildProgram().parseAsync(['node', 'mdk', 'onboard']);
+
+      expect(clack.multiselect).toHaveBeenCalledTimes(1);
+      expect(existsSync(join(dir, 'mdk.yaml'))).toBe(true);
+    } finally {
+      workerCatalog.push(...saved);
+    }
+  });
+
+  it('walks the full path: a bundled + an unavailable worker, an app, dashboard and skill', async () => {
     const dir = makeTmpDir();
     clack.text.mockResolvedValueOnce(dir).mockResolvedValueOnce('full-stack');
     clack.select.mockResolvedValueOnce('cursor');
@@ -276,7 +297,7 @@ describe('mdk onboard', () => {
     }> = [
       { name: 'stack name', text: ['d', CANCEL] },
       { name: 'worker plugins', text: ['d', 's'], multiselect: [CANCEL] },
-      { name: 'gateway plugins', text: ['d', 's'], multiselect: [[], CANCEL] },
+      { name: 'apps', text: ['d', 's'], multiselect: [[], CANCEL] },
       { name: 'add UI dashboard', text: ['d', 's'], confirm: [CANCEL], multiselect: [[], []] },
       {
         name: 'install skill',
@@ -428,7 +449,7 @@ describe('mdk onboard', () => {
 
     await buildProgram().parseAsync(['node', 'mdk', 'onboard']);
 
-    expect(clack.log.step).toHaveBeenCalledWith(expect.stringContaining('Installing 1 plugin package'));
+    expect(clack.log.step).toHaveBeenCalledWith(expect.stringContaining('Installing 1 package'));
     expect(installDepsMock).toHaveBeenCalledWith(join(dir));
     expect(installPackagesMock).not.toHaveBeenCalled();
     expect(clack.log.warn).toHaveBeenCalledWith(expect.stringContaining('no net'));
@@ -516,9 +537,9 @@ describe('mdk onboard', () => {
     it('links the bundled auth plugin and asks its setup questions after install', async () => {
       const dir = makeTmpDir();
       const pluginDir = writeAuthFixture();
-      findCatalogGatewayPluginMock.mockImplementation((pkg: string) =>
+      findCatalogAppMock.mockImplementation((pkg: string) =>
         pkg === '@tetherto/mdk-plugin-auth'
-          ? { value: pkg, label: 'mdk-plugin-auth', hint: 'h', repoPath: 'backend/plugins/auth' }
+          ? { value: pkg, label: 'mdk-plugin-auth', hint: 'h', repoPath: 'backend/apps/auth' }
           : undefined,
       );
       resolveCatalogPackageMock.mockReturnValue({
@@ -550,30 +571,34 @@ describe('mdk onboard', () => {
       // The answers belong to the plugin's own entry, not the gateway config.
       const spec = parseYaml(readFileSync(join(dir, 'mdk.yaml'), 'utf8')) as {
         spec: {
-          gateway: {
-            config: Record<string, unknown>;
-            plugins: Array<{ package: string; config: Record<string, unknown> }>;
-          };
+          gateway: { config: Record<string, unknown> };
+          apps: Array<{ name: string; package: string; config: Record<string, unknown> }>;
         };
       };
-      expect(spec.spec.gateway.plugins[0]).toEqual({
+      expect(spec.spec.apps[0]).toEqual({
+        name: 'auth',
         package: '@tetherto/mdk-plugin-auth',
         config: {
-          google: { clientId: 'client-id-123', clientSecret: 'shhh' },
+          // The secret stays out of the committed spec: a placeholder here,
+          // the value in the gitignored, owner-only .env.
+          google: { clientId: 'client-id-123', clientSecret: '${MDK_AUTH_GOOGLE_CLIENTSECRET}' },
           auth: { superAdmin: 'root@example.com' },
         },
       });
       expect(spec.spec.gateway.config).toEqual({});
+      expect(readFileSync(join(dir, '.env'), 'utf8')).toBe("MDK_AUTH_GOOGLE_CLIENTSECRET='shhh'\n");
+      expect(readFileSync(join(dir, '.gitignore'), 'utf8')).toMatch(/^\.env$/m);
+      expect(readFileSync(join(dir, 'mdk.yaml'), 'utf8')).not.toContain('shhh');
     });
 
     it('bails on a cancelled bundled setup question before mdk.yaml exists', async () => {
       const dir = makeTmpDir();
       const pluginDir = writeAuthFixture();
-      findCatalogGatewayPluginMock.mockReturnValue({
+      findCatalogAppMock.mockReturnValue({
         value: '@tetherto/mdk-plugin-auth',
         label: 'mdk-plugin-auth',
         hint: 'h',
-        repoPath: 'backend/plugins/auth',
+        repoPath: 'backend/apps/auth',
       });
       resolveCatalogPackageMock.mockReturnValue({
         packageName: '@tetherto/mdk-plugin-auth',
@@ -599,11 +624,11 @@ describe('mdk onboard', () => {
       const dir = makeTmpDir();
       const pluginDir = makeTmpDir();
       writeFileSync(join(pluginDir, 'mdk-plugin.json'), JSON.stringify({ name: 'pkg-gateway-a' }), 'utf8');
-      findCatalogGatewayPluginMock.mockReturnValue({
+      findCatalogAppMock.mockReturnValue({
         value: 'pkg-gateway-a',
         label: 'pkg-gateway-a',
         hint: 'h',
-        repoPath: 'backend/plugins/plain',
+        repoPath: 'backend/apps/plain',
       });
       resolveCatalogPackageMock.mockReturnValue({
         packageName: 'pkg-gateway-a',
@@ -628,11 +653,11 @@ describe('mdk onboard', () => {
       const dir = makeTmpDir();
       const pluginDir = makeTmpDir();
       writeFileSync(join(pluginDir, 'mdk-plugin.json'), 'not json', 'utf8');
-      findCatalogGatewayPluginMock.mockReturnValue({
+      findCatalogAppMock.mockReturnValue({
         value: 'pkg-gateway-a',
         label: 'pkg-gateway-a',
         hint: 'h',
-        repoPath: 'backend/plugins/broken',
+        repoPath: 'backend/apps/broken',
       });
       resolveCatalogPackageMock.mockReturnValue({
         packageName: 'pkg-gateway-a',
@@ -653,13 +678,13 @@ describe('mdk onboard', () => {
       expect(clack.password).not.toHaveBeenCalled();
     });
 
-    it('warns when a bundled gateway plugin is unavailable outside the checkout', async () => {
+    it('warns when a bundled app is unavailable outside the checkout', async () => {
       const dir = makeTmpDir();
-      findCatalogGatewayPluginMock.mockReturnValue({
+      findCatalogAppMock.mockReturnValue({
         value: 'pkg-gateway-a',
         label: 'pkg-gateway-a',
         hint: 'h',
-        repoPath: 'backend/plugins/gone',
+        repoPath: 'backend/apps/gone',
       });
       resolveCatalogPackageMock.mockReturnValue({
         packageName: 'pkg-gateway-a',
@@ -732,6 +757,38 @@ describe('mdk onboard', () => {
       expect(yaml).toContain('webhook: https://hooks.example.com/x');
     });
 
+    it('writes an installed plugin\'s secret answer to .env, not mdk.yaml', async () => {
+      const dir = makeTmpDir();
+      const pluginDir = makeTmpDir();
+      writeFileSync(
+        join(pluginDir, 'mdk-plugin.json'),
+        JSON.stringify({
+          name: 'pkg-gateway-a',
+          setup: [{ key: 'alerts.apiKey', prompt: 'API key', type: 'secret', required: true }],
+        }),
+        'utf8',
+      );
+      resolveProjectPackageDirMock.mockReturnValue(pluginDir);
+
+      clack.text.mockResolvedValueOnce(dir).mockResolvedValueOnce('ext-stack');
+      clack.password.mockResolvedValueOnce('k3y');
+      clack.confirm
+        .mockResolvedValueOnce(false) // add UI dashboard
+        .mockResolvedValueOnce(false) // install skill
+        .mockResolvedValueOnce(true); // write mdk.yaml
+      clack.multiselect.mockResolvedValueOnce([]).mockResolvedValueOnce(['pkg-gateway-a']);
+
+      await buildProgram().parseAsync(['node', 'mdk', 'onboard']);
+
+      const yaml = readFileSync(join(dir, 'mdk.yaml'), 'utf8');
+      const parsed = parseYaml(yaml) as { spec: { apps: Array<{ config: unknown }> } };
+      expect(parsed.spec.apps[0].config).toEqual({
+        alerts: { apiKey: '${MDK_PKG_GATEWAY_A_ALERTS_APIKEY}' },
+      });
+      expect(yaml).not.toContain('k3y');
+      expect(readFileSync(join(dir, '.env'), 'utf8')).toContain("MDK_PKG_GATEWAY_A_ALERTS_APIKEY='k3y'");
+    });
+
     it('warns when the setup answers cannot be written back to mdk.yaml', async () => {
       const dir = makeTmpDir();
       const pluginDir = makeTmpDir();
@@ -759,7 +816,7 @@ describe('mdk onboard', () => {
       await buildProgram().parseAsync(['node', 'mdk', 'onboard']);
 
       expect(clack.log.warn).toHaveBeenCalledWith(
-        expect.stringContaining('add them manually under its config in spec.gateway.plugins'),
+        expect.stringContaining('add them manually under its config in spec.apps'),
       );
     });
 

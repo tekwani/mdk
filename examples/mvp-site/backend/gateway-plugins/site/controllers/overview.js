@@ -119,6 +119,7 @@ module.exports = async (req, ctx) => {
       deviceId: thg.id,
       code: thg.code,
       type: thg.type || '',
+      workerId: thg.workerId || '',
       container: containerId(thg),
       pos: thg.info && thg.info.pos,
       status: s.status || 'unknown',

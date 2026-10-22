@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Consumer-cost + tree-shaking regression gate for @tetherto/mdk-react-devkit.
  *

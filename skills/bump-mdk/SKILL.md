@@ -51,25 +51,36 @@ embedded `file:`-dependency entries.
     because nothing local satisfies the range). `cli` similarly pins
     `@tetherto/mdk-react-devkit: ^X`.
   - Regenerate the whole workspace with **one** command: `cd ui && npm install --package-lock-only …`.
-- **`backend/core/*`** — `agent, client, plugins, gateway, mdk, kernel, mcp,
+- **`backend/core/*`** — `agent, app-runtime, client, gateway, mdk, kernel, mcp,
   mdk-worker` are all root npm workspace members, sharing the single root
   `package-lock.json`. Regenerate the **root** lock (`npm install
   --package-lock-only …` at the repo root) when any of these change, not a
   per-package one.
-  `gateway` `file:`-links `client` and `plugins`, so bumping client/plugins
-  forces a root lock regen (that's where `gateway`'s dependency entries now
-  live).
-- **`backend/plugins/*`** — gateway plugins, also root workspace members
-  sharing the root lock, and bumped with the release line like everything
-  else. Their `@tetherto/*` deps are linked, never fetched, so pin them
-  at `*`: a version range there resolves against nothing and rots unnoticed —
-  the agent plugin sat at `^0.0.0` across several releases with nothing to
-  catch it.
+  They pin each other with `^X` ranges (`gateway` → `app-runtime`, `mdk-worker`;
+  `app-runtime` → `gateway`; `mdk`, `mcp` → `gateway`; `client`, `mdk-worker` → `kernel`).
+  Bump those ranges with the versions, or npm stops resolving the workspace
+  member and falls through to the registry.
+- **`backend/apps/*`** — the apps MDK ships (`agent`, `demo`), also root workspace
+  members sharing the root lock, and **on the release line**: a release bump
+  moves their `package.json` version with everything else. Each also carries a
+  `version` in its `mdk-app.yaml` that must equal its `package.json` version
+  (`mdk validate app` and `mdk add app` reject a mismatch), so bump
+  `backend/apps/*/mdk-app.yaml` in the same change. Their `@tetherto/*` deps are
+  linked, never fetched, so pin them at `*` (or a `file:` path): a version range
+  there resolves against nothing and rots unnoticed — the agent app sat at
+  `^0.0.0` across several releases with nothing to catch it.
+- **Other `mdk-app.yaml` files on the release line** — no `package.json` beside
+  them, so no validator catches drift; bump their `version` by hand:
+  `examples/mvp-site/backend/gateway-plugins/site/mdk-app.yaml` and
+  `backend/tests/benchmark/plugin/fleet-summary/mdk-app.yaml`. Leave
+  `packages/cli/templates/app/mdk-app.yaml` at `0.1.0`: `mdk create app` resets a
+  scaffold's `package.json` to `0.1.0` to match it, even though the template's
+  `package.json` tracks the release.
 - **`backend/workers/*`** — independent worker packages, also root workspace
   members sharing the root lock.
-- **`examples/*`** — `examples/full-site` and `examples/mvp-site` (the backend
-  halves) are root workspace members sharing the root lock. The UI shells
-  (`examples/full-site/ui`, `examples/mvp-site/ui`,
+- **`examples/*`** — `examples/mvp-site` (the backend half) is a root workspace member sharing the
+  root lock. The UI shells
+  (`examples/mvp-site/ui`,
   `examples/mdk-ui-shell-template`) are the ones left with their own
   independent locks; they `file:`-link the `ui/packages/*` packages, so a ui
   bump cascades into their locks. Because the CI gate skips `examples/`, these
@@ -78,8 +89,8 @@ embedded `file:`-dependency entries.
 As of the 0.6.0 cycle versioning is **uniform across the release line**: every
 tracked package sits at the same version, `mdk-worker` no longer lags, and
 `mdk-ui-shell-template` has moved off its scaffold default onto the shared
-version — treat it as a normal package in future bumps. The one exception is the
-vendored `backend/lib/mdk-crypto-lib`, which keeps its upstream version.
+version — treat it as a normal package in future bumps. `backend/apps/*` are on
+the release line too, together with the `mdk-app.yaml` versions listed in the topology.
 
 Still **never blanket-set versions by find-and-replace.** Confirm the current spread
 first by *parsing* each manifest, not grepping it (a bare `grep -m1 '"version"'` can
@@ -89,6 +100,7 @@ latch onto a nested field):
 for f in $(git ls-files '*package.json'); do
   node -e 'const j=require("fs").readFileSync(process.argv[1],"utf8");const o=JSON.parse(j);console.log(`${o.version??"<none>"}\t${process.argv[1]}`)' "$f"
 done | sort | grep -v '^<target>'   # lists everything not already at the target
+git ls-files '*mdk-app.yaml' | xargs grep -H '^version:'   # app manifests (YAML, top-level key only)
 ```
 
 ## Procedure
@@ -99,7 +111,11 @@ done | sort | grep -v '^<target>'   # lists everything not already at the target
 
 2. **Edit `package.json` version fields** for the in-scope packages (use `Edit`
    on the exact `"version": "…"` line). If bumping a ui package that others pin
-   by range, also bump those `^` ranges (react-devkit, cli — see topology).
+   by range, also bump those `^` ranges (react-devkit, cli — see topology), and
+   likewise the core packages' `^` pins on each other. For every app on the
+   release line, set `version:` in its `mdk-app.yaml` to the same value, then
+   confirm with `mdk validate app backend/apps/<name>` (or
+   `node packages/cli/dist/index.js validate app …` from a built CLI).
 
 3. **Regenerate locks** where things changed. Fast path — regenerate the ui
    workspace once and every backend/examples package dir:
@@ -138,6 +154,9 @@ done | sort | grep -v '^<target>'   # lists everything not already at the target
   release), fix `package.json` to it, then regen.
 - Bumping a ui package but forgetting react-devkit's `^` pins → `npm install`
   404s. Always bump the range pins in lockstep.
+- Bumping an app's `package.json` but not its `mdk-app.yaml` → `mdk validate app`
+  and `mdk add app` fail, while `mdk run` still boots it. The lockfile gate does not
+  notice either, so check every `mdk-app.yaml` on the release line by hand.
 - Checking only a lock's root `version` misses embedded `file:`-dep drift
   (gateway, example UIs). Always run the full per-lock regen in step 4.
 - Node/npm version differences can reshuffle lock formatting. Use the repo's

@@ -1,24 +1,29 @@
-import { useTokenPolling } from '@tetherto/mdk-react-adapter'
-import { AppHeader, MdkWordmark, Sidebar } from '@tetherto/mdk-react-devkit'
-import { CoPilot } from '@tetherto/mdk-ui-agent'
-import { useMemo } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router'
+import {
+  useInstalledAppUis,
+  useTokenPolling,
+} from "@tetherto/mdk-react-adapter";
+import { AppHeader, MdkWordmark, Sidebar } from "@tetherto/mdk-react-devkit";
+import { CoPilot } from "@tetherto/mdk-ui-agent";
+import { useMemo } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router";
 
-import { UserMenu } from './components/UserMenu'
-import { AUTH_BYPASS } from './constants/env'
-import { getNavIcon } from './constants/navigation'
-import { ROUTE_PATHS } from './constants/routes'
-import { ROUTES } from './routes'
+import { appPageSidebarItems } from "./apps/paths";
+import { UserMenu } from "./components/UserMenu";
+import { AUTH_BYPASS } from "./constants/env";
+import { getNavIcon } from "./constants/navigation";
+import { ROUTE_PATHS } from "./constants/routes";
+import { ROUTES } from "./routes";
 
-import './App.scss'
+import "./App.scss";
 
 // The sidebar is derived from the ROUTES registry — the single source of truth
-// for feature pages. A bare shell only shows Home; each added page appears here
-// automatically (hidden deep-link routes are skipped).
+// for feature pages — followed by the installed apps' pages, read at runtime
+// from the app list this dashboard serves (/app-ui.json). A bare shell only shows Home; each added page or installed
+// app appears here automatically (hidden deep-link routes are skipped).
 
 export const App = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Keeps the session token fresh; clears it on a 401 / 500 and bounces back
   // to /signin via `onSessionEnded`. Disabled under AUTH_BYPASS so the stub
@@ -26,21 +31,28 @@ export const App = () => {
   useTokenPolling({
     enabled: AUTH_BYPASS ? false : undefined,
     onSessionEnded: () => {
-      void navigate(ROUTE_PATHS.SIGN_IN, { replace: true })
+      void navigate(ROUTE_PATHS.SIGN_IN, { replace: true });
     },
-  })
+  });
+
+  const { apps } = useInstalledAppUis();
 
   const sidebarItems = useMemo(
     () => [
-      { id: ROUTE_PATHS.HOME, label: 'Home', icon: getNavIcon(ROUTE_PATHS.HOME) },
+      {
+        id: ROUTE_PATHS.HOME,
+        label: "Home",
+        icon: getNavIcon(ROUTE_PATHS.HOME),
+      },
       ...ROUTES.filter((route) => !route.hidden).map((route) => ({
         id: route.path,
         label: route.label,
         icon: getNavIcon(route.path),
       })),
+      ...appPageSidebarItems(apps, getNavIcon),
     ],
-    [],
-  )
+    [apps],
+  );
 
   return (
     <div className="mdk-ui-shell-root">
@@ -49,7 +61,7 @@ export const App = () => {
         actions={
           <UserMenu
             onSignOut={() => {
-              void navigate(ROUTE_PATHS.SIGN_IN, { replace: true })
+              void navigate(ROUTE_PATHS.SIGN_IN, { replace: true });
             }}
           />
         }
@@ -60,7 +72,7 @@ export const App = () => {
           items={sidebarItems}
           activeId={location.pathname + location.search}
           onItemClick={(item) => {
-            void navigate(item.id)
+            void navigate(item.id);
           }}
           defaultExpanded
         />
@@ -78,12 +90,12 @@ export const App = () => {
         not about the page. Delete this line to remove it.
 
         It needs the Gateway's `/agent/*` routes, which the agent plugin serves:
-        add `@tetherto/mdk-plugin-agent` to your stack's `mdk.yaml`. Without it
+        add `@tetherto/mdk-app-agent` to your stack's `mdk.yaml`. Without it
         the panel opens and reports that the agent is not configured.
       */}
       <CoPilot />
     </div>
-  )
-}
+  );
+};
 
-export default App
+export default App;

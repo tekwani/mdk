@@ -11,7 +11,7 @@ const StatsService = require('./services/stats.service')
 const SnapsService = require('./services/snaps.service')
 const ActionsService = require('./services/actions.service')
 const DeviceProvisioningService = require('./services/provisioning.service')
-const gLibStats = require('../../lib-stats')
+const gLibStats = require('./stats')
 
 const THING_CONF_DEFAULTS = {
   collectSnapsItvMs: 60000,
@@ -54,7 +54,11 @@ function _timeframeIntervals () {
  *   baseType     stats base type, e.g. 'miner'
  *   alertsLib    worker alerts template ({ specs })
  *   statsLib     worker stats template ({ conf, specs })
- *   thingConf    cadence/behavior overrides merged over THING_CONF_DEFAULTS
+ *   thingConf    cadence/behavior overrides merged over THING_CONF_DEFAULTS;
+ *                `allowedAddressCidrs` (e.g. ['10.0.0.0/8']) is the operator
+ *                allowlist for device addresses set by remote registerThing/
+ *                updateThing (default: any address except loopback,
+ *                link-local/metadata, unspecified, multicast)
  *   provisioningConf  extra provisioning conf (pools, ...)
  *   seedDevices  registerThing payloads applied once when the store is empty
  *   writeActions whitelist entries [[action, votes], ...]
@@ -92,14 +96,19 @@ async function createWorkerInfra (opts) {
     logs,
     deviceType: opts.deviceType,
     deviceTags: opts.deviceTags || [],
-    conf: { allowDuplicateIPs: thingConf.allowDuplicateIPs, ...opts.provisioningConf }
+    conf: {
+      allowDuplicateIPs: thingConf.allowDuplicateIPs,
+      allowedAddressCidrs: thingConf.allowedAddressCidrs,
+      ...opts.provisioningConf
+    }
   })
   await provisioning.init()
 
   let seeded = 0
   if (!provisioning.listDeviceIds().length && Array.isArray(opts.seedDevices)) {
     for (const seed of opts.seedDevices) {
-      await provisioning.registerThing(seed)
+      // Seeds are operator config, not remote input: no address policy.
+      await provisioning.registerThing(seed, { trusted: true })
       seeded++
     }
   }
@@ -110,7 +119,9 @@ async function createWorkerInfra (opts) {
     loadThing: (req) => provisioning.loadThing(req),
     saveThing: (dev) => provisioning.saveThing(dev),
     checkThingExists: (req) => provisioning.checkThingExists(req),
-    generateId: () => provisioning.generateId()
+    generateId: () => provisioning.generateId(),
+    // Set once the transport forwards an authenticated identity as ctx.user.
+    requireAuthenticatedUser: thingConf.requireAuthenticatedCommentUser === true
   })
 
   const specTags = opts.specTags || []

@@ -12,7 +12,7 @@
 //
 // Usage:
 //   node processes/run-process.js
-//   node processes/run-process.js --devices 250 --workers 1 --type mdk-worker-antminer --model s21 --id cap-250devices-1workers --sweep ceiling
+//   node processes/run-process.js --devices 250 --workers 1 --type mdk-worker-avalon --model a1346 --id cap-250devices-1workers --sweep ceiling
 //   node processes/run-process.js --role kernel --id cap-10devices-1workers --root <path>   (debugging one role)
 
 const path = require('path')
@@ -22,7 +22,7 @@ const { spawn } = require('child_process')
 const { createMdkClient } = require('@tetherto/mdk-client')
 const {
   config, loadConfig, profileRoot, makeDevicePlan, saveDevicePlan, loadDevicePlan,
-  startMocks, bootKernel, bootWorker, bootGateway, workerStoreDir
+  startMocks, bootKernel, bootWorker, bootGateway, workerStoreDir, harnessClientConfig
 } = require('../lib/site')
 const { DEFAULT_WORKER_TYPE, DEFAULT_MODEL, ALERT_INDUCTION, WORKER_CONF_DEFAULTS, WORKER_LOG_CACHE_WARMUP_MS, MINER_DEVICE_TIMEOUT_MS, DEFAULT_THING_RTD_CONCURRENCY, KERNEL_DEFAULTS, GATEWAY_DEFAULTS, RUN_REPRODUCIBILITY, THRESHOLDS } = require('../lib/constants')
 const { ResourceSampler, dirSizeBytes } = require('../lib/metrics')
@@ -539,8 +539,10 @@ async function runMainProfile ({ profileId, sweep, workers, root, usedPorts }) {
     children.push(gatewayProc)
 
     const kernelKey = fs.readFileSync(path.join(root, '.kernel-key'), 'utf8').trim()
-    client = createMdkClient({ kernelKey })
-    await client.connect({ warmup: true })
+    // The Kernel is fail-closed: dial with a published (admitted) identity,
+    // and give its trusted-keys watcher a few warmup rounds to pick it up.
+    client = createMdkClient({ kernelKey, ...harnessClientConfig(root) })
+    await client.connect({ warmup: true, warmupRetries: 10 })
     await client.waitForWorkers({ count: workerCount, timeoutMs: 30000 })
 
     const status = await client.getStatus()

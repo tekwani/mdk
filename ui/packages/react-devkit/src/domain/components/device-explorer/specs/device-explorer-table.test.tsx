@@ -1,19 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import type { DataTableColumnDef } from '@primitives'
 import { DeviceExplorerTable } from '../device-explorer-table'
 import type { DeviceExplorerDeviceData } from '../types'
 
 describe('deviceExplorerTable', () => {
   const mockGetFormattedDate = vi.fn((date: Date) => date.toISOString())
-  const mockRenderAction = vi.fn(() => <button type="button">Action</button>)
 
   const defaultProps = {
     data: [] as DeviceExplorerDeviceData[],
-    deviceType: 'container' as const,
     selections: {},
     onSelectionsChange: vi.fn(),
     getFormattedDate: mockGetFormattedDate,
-    renderAction: mockRenderAction,
     sorting: [],
     onSortingChange: vi.fn(),
   }
@@ -23,18 +21,26 @@ describe('deviceExplorerTable', () => {
     expect(container.querySelector('.mdk-device-explorer__table')).toBeInTheDocument()
   })
 
-  it('should render with miner device type', () => {
-    const { container } = render(<DeviceExplorerTable {...defaultProps} deviceType="miner" />)
-    expect(container.querySelector('.mdk-device-explorer__table')).toBeInTheDocument()
+  // Headers only render once there is a row; an empty table shows its empty state.
+  const oneMiner: DeviceExplorerDeviceData[] = [{ id: 'dev-1', type: 'miner-demo-m1', last: {} }]
+
+  it('should render the miner columns by default', () => {
+    render(<DeviceExplorerTable {...defaultProps} data={oneMiner} />)
+    expect(screen.getByText('Code')).toBeInTheDocument()
   })
 
-  it('should render with cabinet device type', () => {
-    const { container } = render(<DeviceExplorerTable {...defaultProps} deviceType="cabinet" />)
-    expect(container.querySelector('.mdk-device-explorer__table')).toBeInTheDocument()
+  it('should render the columns it is given instead of the defaults', () => {
+    const columns: DataTableColumnDef<DeviceExplorerDeviceData>[] = [
+      { id: 'custom', header: 'Custom Column', cell: () => 'value' },
+    ]
+    render(<DeviceExplorerTable {...defaultProps} data={oneMiner} columns={columns} />)
+
+    expect(screen.getByText('Custom Column')).toBeInTheDocument()
+    expect(screen.queryByText('Code')).not.toBeInTheDocument()
   })
 
   it('should pass data to table', () => {
-    const data: DeviceExplorerDeviceData[] = [{ id: 'dev-1', type: 'container', last: {} }]
+    const data: DeviceExplorerDeviceData[] = [{ id: 'dev-1', type: 'miner-demo', last: {} }]
     const { container } = render(<DeviceExplorerTable {...defaultProps} data={data} />)
     expect(container.querySelector('.mdk-device-explorer__table')).toBeInTheDocument()
   })

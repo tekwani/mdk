@@ -7,7 +7,9 @@
 // listed in backend/workers/external-workers.json, fetched live from each manufacturer's
 // own repo at generation time (see fetchExternalEntries). Each contract is validated
 // against the schema vendored with the runtime (backend/core/mdk-worker/mdk-contract.schema.json)
-// with ajv. Validation is WARN-ONLY: gaps are reported (stderr + both outputs) for
+// by the runtime's own validator (backend/core/mdk-worker/lib/contract-validator.js) in
+// schema-only mode — the same validator `mdk validate worker` runs, so a contract that
+// passes the partner-facing check is conformant here too. Validation is WARN-ONLY: gaps are reported (stderr + both outputs) for
 // confirmation on the PR, but generation never fails and contracts are never edited.
 // A contract that cannot be read or parsed (an external fetch failing on network/404/bad JSON,
 // or an in-repo mdk-contract.json with a JSON syntax error) is reported the same way in both
@@ -34,7 +36,6 @@
 
 const fs = require('fs')
 const path = require('path')
-const Ajv = require('ajv/dist/2020')
 
 const WORKERS_ROOT = path.resolve(__dirname, '..')
 const REPO_ROOT = path.resolve(WORKERS_ROOT, '../..')
@@ -122,10 +123,17 @@ function toDocsLink (value) {
 // consumer of catalogue.json treating `contract` as "a path in this repo" would mishandle every
 // manufacturer-maintained row.
 
+// Same calling convention ajv.compile() had — validate(contract) returns a boolean and
+// leaves the problems on validate.errors — so buildEntries/fetchExternalEntries read it
+// unchanged. errors is a fresh array per call (ERR_CONTRACT_* strings, already rendered).
 function compileValidator () {
-  const schema = JSON.parse(fs.readFileSync(SCHEMA_PATH, 'utf8'))
-  const ajv = new Ajv({ allErrors: true, strict: false })
-  return ajv.compile(schema)
+  const { validateContract } = require(path.join(REPO_ROOT, 'backend', 'core', 'mdk-worker', 'lib', 'contract-validator.js'))
+  const validate = (contract) => {
+    const { ok, errors } = validateContract(contract, { semantic: false })
+    validate.errors = errors
+    return ok
+  }
+  return validate
 }
 
 function buildEntries (validate, root = WORKERS_ROOT) {
@@ -204,7 +212,7 @@ function buildEntries (validate, root = WORKERS_ROOT) {
       gaps.push({
         source: 'in-repo',
         contract: rel(file),
-        errors: (validate.errors || []).map((e) => `${e.instancePath || '/'} ${e.message}`)
+        errors: validate.errors
       })
     }
   }
@@ -387,7 +395,7 @@ async function fetchExternalEntries (validate, manifestPath = EXTERNAL_MANIFEST_
       gaps.push({
         source: 'external',
         contract: label,
-        errors: (validate.errors || []).map((e) => `${e.instancePath || '/'} ${e.message}`)
+        errors: validate.errors
       })
     }
   }

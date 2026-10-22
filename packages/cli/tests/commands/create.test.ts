@@ -7,13 +7,14 @@ import { cleanupTmpDirs, makeTmpDir } from '../helpers.js';
 const createWorkerMock = vi.hoisted(() => vi.fn());
 vi.mock('../../src/lib/worker-scaffold.js', () => ({ createWorker: createWorkerMock }));
 
-const createPluginMock = vi.hoisted(() => vi.fn());
-vi.mock('../../src/lib/plugin-scaffold.js', () => ({ createPlugin: createPluginMock }));
+const createAppMock = vi.hoisted(() => vi.fn());
+vi.mock('../../src/lib/app-scaffold.js', () => ({ createApp: createAppMock }));
 
 const createDashboardMock = vi.hoisted(() => vi.fn());
 vi.mock('../../src/lib/dashboard.js', () => ({
   createDashboard: createDashboardMock,
   dashboardNameFromStack: (name: string) => `${name}-dashboard`,
+  defaultTemplateRef: () => 'v9.9.9',
 }));
 
 const { registerCreate } = await import('../../src/commands/create.js');
@@ -95,42 +96,56 @@ describe('mdk create worker', () => {
   });
 });
 
-describe('mdk create plugin', () => {
+describe('mdk create app', () => {
   it('prints the scaffolded path and reports each stack-file outcome', async () => {
     const program = buildProgram();
-    for (const stackFile of ['added', 'exists', 'no-file', 'error', undefined] as const) {
-      createPluginMock.mockReturnValue({
+    for (const stackFile of ['added', 'exists', 'name-taken', 'no-file', 'error', undefined] as const) {
+      createAppMock.mockReturnValue({
         ok: true,
-        pluginPath: '/proj/plugins/a',
+        appPath: '/proj/apps/a',
         packageName: 'a',
+        appName: 'a',
         stackFile,
       });
       const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-      await program.parseAsync(['node', 'mdk', 'create', 'plugin', 'a']);
+      await program.parseAsync(['node', 'mdk', 'create', 'app', 'a']);
+      expect(stdout.mock.calls.join('')).toContain('spec.apps');
+      expect(process.exitCode ?? 0).toBe(stackFile === 'name-taken' ? 1 : 0);
+      process.exitCode = 0;
       stdout.mockRestore();
     }
   });
 
   it('surfaces an install warning and a failure', async () => {
     const program = buildProgram();
-    createPluginMock.mockReturnValue({
+    createAppMock.mockReturnValue({
       ok: true,
-      pluginPath: '/proj/plugins/a',
+      appPath: '/proj/apps/a',
       packageName: 'a',
       stackFile: 'added',
       installWarning: 'boom',
       installDir: '/proj',
     });
     let stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    await program.parseAsync(['node', 'mdk', 'create', 'plugin', 'a']);
+    await program.parseAsync(['node', 'mdk', 'create', 'app', 'a']);
     expect(stderr.mock.calls.join('')).toContain('boom');
     stderr.mockRestore();
 
-    createPluginMock.mockReturnValue({ ok: false, message: 'bad', detail: 'd' });
+    createAppMock.mockReturnValue({ ok: false, message: 'bad', detail: 'd' });
     stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    await program.parseAsync(['node', 'mdk', 'create', 'plugin', 'a']);
+    await program.parseAsync(['node', 'mdk', 'create', 'app', 'a']);
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;
+  });
+});
+
+describe('mdk create app next steps', () => {
+  it('points at `mdk validate app`', async () => {
+    createAppMock.mockReturnValue({ ok: true, appPath: '/proj/apps/demo', packageName: '@your-org/demo', appName: 'demo', stackFile: 'added' });
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    await buildProgram().parseAsync(['node', 'mdk', 'create', 'app', 'demo', '--org', 'your-org']);
+    expect(stdout.mock.calls.join('')).toContain('mdk validate app demo');
+    stdout.mockRestore();
   });
 });
 
@@ -185,6 +200,23 @@ describe('mdk create dashboard', () => {
     stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     await program.parseAsync(['node', 'mdk', 'create', 'dashboard', 'custom']);
     expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+
+  it('rejects an unsafe explicit name or mdk.yaml stack name without scaffolding', async () => {
+    const program = buildProgram();
+    let stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    await program.parseAsync(['node', 'mdk', 'create', 'dashboard', '../../x']);
+    expect(stderr.mock.calls.join('')).toContain('invalid dashboard name');
+    expect(process.exitCode).toBe(1);
+    stderr.mockRestore();
+
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, 'mdk.yaml'), 'metadata:\n  name: "x\'; evil"\n', 'utf8');
+    stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    await program.parseAsync(['node', 'mdk', 'create', 'dashboard', '--dir', dir]);
+    expect(stderr.mock.calls.join('')).toContain('metadata.name');
+    expect(createDashboardMock).not.toHaveBeenCalled();
     process.exitCode = 0;
   });
 

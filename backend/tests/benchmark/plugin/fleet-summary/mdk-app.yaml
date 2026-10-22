@@ -1,0 +1,13 @@
+id: io.tether.benchmark-fleet
+version: 0.12.0
+displayName: Benchmark Fleet Summary
+description: "Benchmark harness app: aggregates hashrate and power across every registered device."
+permissions:
+  - resources: [workers, devices]
+    verbs: [list, read]
+  - resources: [telemetry]
+    verbs: [read]
+  # controllers/device-action.js sends device commands.
+  - resources: [devices]
+    verbs: [execute]
+config: {}

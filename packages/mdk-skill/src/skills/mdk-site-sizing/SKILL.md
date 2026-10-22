@@ -72,10 +72,13 @@ If a count or family is missing, leave it null. Do not fill gaps with a guess.
 
 ### 2. Size (mandatory)
 
-From this skill directory:
+From this skill directory. Never paste the operator's text into a shell
+command (not even inside double quotes: `$( )`, backticks and `"` still
+expand). Write it verbatim to a file with your file-writing tool, then pass the
+file:
 
 ```bash
-node scripts/size-site.mjs --description "eighty Whatsminer M56S on a 16-core NVMe site-server"
+node scripts/size-site.mjs --description-file site.txt --md
 # or, if you already wrote facts.json:
 node scripts/size-site.mjs facts.json --md
 ```
@@ -149,8 +152,8 @@ pass; fix parse/size or add a measured profile.
 
 | Script                 | Run                                                     |
 | ---------------------- | ------------------------------------------------------- |
-| `parse-site.mjs`       | `node scripts/parse-site.mjs "<description>"`           |
-| `size-site.mjs`        | `node scripts/size-site.mjs --description "..." [--md]` |
+| `parse-site.mjs`       | `node scripts/parse-site.mjs < site.txt`                |
+| `size-site.mjs`        | `node scripts/size-site.mjs --description-file site.txt [--md]` |
 | `compile-envelope.mjs` | `node scripts/compile-envelope.mjs [--from <dir>]`      |
 | `eval-held-out.mjs`    | `node scripts/eval-held-out.mjs`                        |
 

@@ -6,6 +6,14 @@ const HyperswarmRPC = require('@hyperswarm/rpc')
 const DHT = require('hyperdht')
 const { serialize, deserialize } = require('../protocol/envelope')
 const { routeEnvelope } = require('./envelope-router')
+const { parseAllowlist, normalizeKey, normalizeRoles, hasRole, FULL_ACCESS } = require('./caller-auth')
+
+/**
+ * Kernel HRPC listener. Admission is fail-closed: only public keys on the
+ * allowlist (`whitelist`, or added at runtime with allowKey()) may connect,
+ * and an empty allowlist admits nobody. `allowAll: true` is the one explicit
+ * way to admit every DHT peer (development only; logged loudly).
+ */
 
 class HRPCListener {
   constructor (opts) {
@@ -13,7 +21,8 @@ class HRPCListener {
     this.telemetryCollector = opts.telemetryCollector
     this.registry = opts.registry
     this.actionManager = opts.actionManager
-    this.whitelist = new Set(opts.whitelist || [])
+    this._allowed = parseAllowlist(opts.whitelist)
+    this.allowAll = opts.allowAll === true
     this.store = opts.store || null
     this.bootstrap = opts.bootstrap || null
 
@@ -24,6 +33,12 @@ class HRPCListener {
   }
 
   async start () {
+    if (this.allowAll) {
+      console.warn('[mdk-kernel] WARNING: HRPC allowAll is enabled — every DHT peer that knows the Kernel key can command devices. Never use this outside local development.')
+    } else if (this._allowed.size === 0) {
+      debug('HRPC allowlist is empty: every caller is rejected until allowKey() admits one')
+    }
+
     const seedDht = await this._getOrCreateSeed('seedDht')
     const seedRpc = await this._getOrCreateSeed('seedRpc')
 
@@ -33,10 +48,14 @@ class HRPCListener {
     const firewall = this._buildFirewall()
     this._server = this._rpc.createServer({ firewall })
 
-    this._server.respond('mdk', async (reqBuf) => {
+    this._server.respond('mdk', async (reqBuf, rpc) => {
       try {
+        // Re-checked per request: a key revoked after its connection opened
+        // must stop working without waiting for the connection to drop.
+        const caller = this._callerFor(rpc)
+        if (!caller) return serialize({ error: 'ERR_KERNEL_CALLER_NOT_ALLOWED' })
         const envelope = deserialize(reqBuf)
-        const result = await this.handleEnvelope(envelope)
+        const result = await this.handleEnvelope(envelope, caller)
         return serialize(result || {})
       } catch (err) {
         debug('request error: %s', err.message)
@@ -66,6 +85,49 @@ class HRPCListener {
     return this._server ? this._server.publicKey : null
   }
 
+  // The key this Kernel dials workers with (the DHT default keypair that
+  // @hyperswarm/rpc clients connect from) — what a Worker allowlist names.
+  getClientPublicKey () {
+    return this._dht ? this._dht.defaultKeyPair.publicKey : null
+  }
+
+  /**
+   * Admit a caller at runtime.
+   * @param {string|Buffer} key - caller public key
+   * @param {string[]} [roles] - default full access (['admin'])
+   */
+  allowKey (key, roles) {
+    const hex = normalizeKey(key)
+    this._allowed.set(hex, normalizeRoles(roles))
+    debug('caller allowed: %s...', hex.slice(0, 16))
+    return hex
+  }
+
+  revokeKey (key) {
+    const hex = normalizeKey(key)
+    const had = this._allowed.delete(hex)
+    if (had) debug('caller revoked: %s...', hex.slice(0, 16))
+    return had
+  }
+
+  listAllowedKeys (minRole = 'read') {
+    return [...this._allowed].filter(([, roles]) => hasRole(roles, minRole)).map(([hex]) => hex)
+  }
+
+  getCallerRoles (key) {
+    let hex
+    try { hex = normalizeKey(key) } catch { return null }
+    if (this._allowed.has(hex)) return this._allowed.get(hex)
+    return this.allowAll ? FULL_ACCESS : null
+  }
+
+  _callerFor (rpc) {
+    const remote = rpc && rpc.stream && rpc.stream.remotePublicKey
+    if (!remote) return null
+    const roles = this.getCallerRoles(remote)
+    return roles ? { publicKey: remote.toString('hex'), roles } : null
+  }
+
   async _getOrCreateSeed (name) {
     if (!this.store) return crypto.randomBytes(32)
 
@@ -87,21 +149,21 @@ class HRPCListener {
     return seed
   }
 
-  async handleEnvelope (envelope) {
+  async handleEnvelope (envelope, caller) {
     return routeEnvelope(envelope, {
       dispatcher: this.dispatcher,
       telemetryCollector: this.telemetryCollector,
       registry: this.registry,
       actionManager: this.actionManager
-    })
+    }, caller)
   }
 
+  // Returns true to reject. Fail closed: an unknown key is rejected even when
+  // the allowlist is empty.
   _buildFirewall () {
     return (remotePublicKey) => {
-      if (this.whitelist.size === 0) return false
-      const hex = remotePublicKey.toString('hex')
-      if (this.whitelist.has(hex)) return false
-      debug('blocked: %s...', hex.slice(0, 16))
+      if (this.getCallerRoles(remotePublicKey)) return false
+      debug('blocked: %s...', remotePublicKey.toString('hex').slice(0, 16))
       return true
     }
   }

@@ -31,22 +31,6 @@
       min-width: 0;
     }
 
-    &__tabs {
-      flex-shrink: 0;
-    }
-
-    &__tabs-list {
-      width: auto;
-
-      &::after {
-        display: none;
-      }
-    }
-
-    &__tab-trigger {
-      margin: 0;
-    }
-
     @media screen and (max-width: 800px) {
       @include flex_column;
 
@@ -57,16 +41,6 @@
         .mdk-badge-wrapper,
         .mdk-button {
           width: 100%;
-        }
-      }
-
-      &__tabs-list {
-        @include flex_justify_center;
-        gap: 8px;
-        flex-wrap: wrap;
-
-        button.mdk_tabs__trigger--side {
-          margin-left: 0;
         }
       }
     }

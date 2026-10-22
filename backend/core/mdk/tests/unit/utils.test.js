@@ -171,7 +171,7 @@ test('getLogMaxHeight defaults to logKeepCount 3 when not provided', (t) => {
 // getLogsCountForTimeRange
 // ---------------------------------------------------------------------------
 
-const gLibStats = require('../../../lib-stats')
+const gLibStats = require('../../lib/stats')
 const realTimeframes = gLibStats.defaults.timeframes
 
 test('getLogsCountForTimeRange returns 0 when no timeframes', (t) => {
@@ -388,4 +388,75 @@ test('projection returns all fields for empty projection', (t) => {
   const result = projection(data, {})
   t.ok(result[0].a !== undefined)
   t.ok(result[0].b !== undefined)
+})
+
+// ---------------------------------------------------------------------------
+// sanitizeQuery — $regex is a literal search
+// ---------------------------------------------------------------------------
+
+const { sanitizeQuery, escapeRegex } = require('../../lib/utils')
+
+const regexThings = [
+  { id: '1', type: 'miner-am-s19', info: { pos: 'a.b', mac: 'AA:BB:CC' } },
+  { id: '2', type: 'xminer-am', info: { pos: 'axb', mac: 'aa:bb:cc' } },
+  { id: '3', type: 'container-bd', info: { pos: 'rack(1)+', mac: 'DD:EE' } }
+]
+
+test('sanitizeQuery - $regex keeps prefix, exact and substring searches', (t) => {
+  t.alike(applyFilters(regexThings, { query: { type: { $regex: '^miner-' } } }), ['1'])
+  t.alike(applyFilters(regexThings, { query: { type: { $regex: 'miner' } } }), ['1', '2'])
+  t.alike(applyFilters(regexThings, { query: { type: { $regex: '-am$' } } }), ['2'])
+  t.alike(applyFilters(regexThings, { query: { 'info.mac': { $regex: '^aa:bb:cc$', $options: 'i' } } }), ['1', '2'])
+  t.alike(applyFilters(regexThings, { query: { 'info.mac': { $regex: '^aa:bb:cc$' } } }), ['2'], 'case-sensitive without i')
+})
+
+test('sanitizeQuery - $regex metacharacters are literal', (t) => {
+  t.alike(applyFilters(regexThings, { query: { 'info.pos': { $regex: 'a.b' } } }), ['1'], '. is not a wildcard')
+  t.alike(applyFilters(regexThings, { query: { 'info.pos': { $regex: 'rack(1)+' } } }), ['3'])
+  t.alike(applyFilters(regexThings, { query: { 'info.pos': { $regex: '.*' } } }), [])
+  t.alike(applyFilters(regexThings, { query: { $or: [{ 'info.pos': { $regex: 'x|y' } }] } }), [])
+})
+
+test('sanitizeQuery - catastrophic patterns run as literals, fast', (t) => {
+  const victim = [{ id: 'v', type: 'a'.repeat(29) + '!' }]
+  for (const re of ['((a+))+$', '^(a+)+$', '(a|aa)+$', '(?:a*)*b', '(a+)+\\1']) {
+    const start = Date.now()
+    t.alike(applyFilters(victim, { query: { type: { $regex: re } } }), [], re)
+    t.ok(Date.now() - start < 200, `${re} matched quickly`)
+  }
+})
+
+test('sanitizeQuery - $regex length and options are bounded', (t) => {
+  t.exception(() => sanitizeQuery({ a: { $regex: 'x'.repeat(257) } }), /ERR_QUERY_REGEX_INVALID/)
+  t.ok(sanitizeQuery({ a: { $regex: 'x'.repeat(256) } }))
+  t.exception(() => sanitizeQuery({ a: { $regex: 5 } }), /ERR_QUERY_REGEX_INVALID/)
+  t.exception(() => sanitizeQuery({ a: { $regex: { $gt: 1 } } }), /ERR_QUERY_REGEX_INVALID/)
+  for (const o of ['m', 's', 'x', 'g', 'y', 'u', 'ii', 'im']) {
+    t.exception(() => sanitizeQuery({ a: { $regex: 'x', $options: o } }), /ERR_QUERY_REGEX_INVALID/, `option ${o}`)
+  }
+  t.alike(sanitizeQuery({ a: { $regex: 'x', $options: 'i' } }), { a: { $regex: 'x', $options: 'i' } })
+  t.alike(sanitizeQuery({ a: { $regex: 'x', $options: '' } }), { a: { $regex: 'x' } })
+})
+
+test('sanitizeQuery - rewrites a copy and leaves the caller query untouched', (t) => {
+  const q = { $and: [{ a: { $regex: '^a.b$' } }] }
+  const out = sanitizeQuery(q)
+  t.is(q.$and[0].a.$regex, '^a.b$')
+  t.is(out.$and[0].a.$regex, '^a\\.b$')
+})
+
+test('sanitizeQuery - RegExp values are reduced to literal searches', (t) => {
+  const out = sanitizeQuery({ a: /(a+)+$/i, b: { $not: /x.y/ }, c: { $in: [/q*/, 'z'] }, d: { $regex: /^p.q/ } })
+  t.is(out.a.source, '\\(a\\+\\)\\+$')
+  t.is(out.a.flags, 'i')
+  t.is(out.b.$not.source, 'x\\.y')
+  t.is(out.c.$in[0].source, 'q\\*')
+  t.is(out.c.$in[1], 'z')
+  t.is(out.d.$regex, '^p\\.q')
+  t.exception(() => sanitizeQuery({ a: /x/m }), /ERR_QUERY_REGEX_INVALID/)
+})
+
+test('escapeRegex - escapes every metacharacter', (t) => {
+  const s = '\\^$.*+?()[]{}|/-'
+  t.ok(new RegExp('^' + escapeRegex(s) + '$').test(s))
 })

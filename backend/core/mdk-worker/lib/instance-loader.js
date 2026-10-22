@@ -14,13 +14,14 @@ const SECTIONS = ['telemetry', 'commands']
 // per-device dispatch (`entry.instance.telemetry.get('health')(...)`), not a
 // runtime-level shortcut: it proves the addressed device's own instance
 // answered, the same way any real handler would.
+//
+// The reply is deliberately limited to identifiers: `env` (secrets resolved
+// from mdk.yaml), `opts` (device credentials) and `config` must never leave
+// the process through a telemetry channel any caller can pull.
 const BUILTIN_TELEMETRY = {
   health: (device) => () => ({
     status: 'OK',
     id: device.id,
-    opts: device.opts,
-    env: device.env,
-    config: device.config,
     workerId: device.workerId
   })
 }

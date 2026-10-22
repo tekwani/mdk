@@ -23,12 +23,15 @@ async function main () {
     db: storeDir,
     root: storeDir,
     listeners: { hrpc: {} },
-    discovery: { topic }
+    // The worker process boots after this one, so its key is unknown here.
+    // This repro covers discovery timing, not admission: admit any topic peer.
+    discovery: { topic, allowAnyWorker: true }
   })
   await kernel.init()
   await kernel.start()
 
-  console.log('REPRO_KERNEL_STARTED')
+  // The worker process must allow this key (its firewall is fail-closed).
+  console.log('REPRO_KERNEL_STARTED client=%s', kernel.getClientPublicKey().toString('hex'))
 
   const timer = setInterval(() => {
     const ready = kernel.registry.listWorkers().filter((w) => w.state === 'READY' && (w.deviceIds || []).length > 0)

@@ -1,85 +1,87 @@
 import { Button } from '@tetherto/mdk-react-devkit/primitives'
-import type { DataTableRowSelectionState, LocalFilters } from '@tetherto/mdk-react-devkit/primitives'
-import { DeviceExplorer } from '@tetherto/mdk-react-devkit/domain'
 import type {
-  DeviceExplorerDeviceData,
-  DeviceExplorerDeviceType,
-} from '@tetherto/mdk-react-devkit/domain'
-import { useState } from 'react'
+  DataTableColumnDef,
+  DataTableRowSelectionState,
+  LocalFilters,
+} from '@tetherto/mdk-react-devkit/primitives'
+import { DeviceExplorer, getMinerColumns } from '@tetherto/mdk-react-devkit/domain'
+import type { DeviceExplorerDeviceData } from '@tetherto/mdk-react-devkit/domain'
+import { useMemo, useState } from 'react'
 import type { JSX } from 'react'
-import { cabinetData, containerData, minersData } from './mock-data'
+
+import { DemoBlock } from '../../components/demo-block'
+import { DemoPageHeader } from '../../components/demo-page-header'
+import { useDemoToast } from '../../utils/use-demo-toast'
+
+import { minersData } from './mock-data'
+
+const FILTER_OPTIONS = [
+  {
+    value: 'status',
+    label: 'Status',
+    children: [
+      { value: 'online', label: 'Online' },
+      { value: 'offline', label: 'Offline' },
+      { value: 'maintenance', label: 'Maintenance' },
+      { value: 'error', label: 'Error' },
+    ],
+  },
+]
+
+const SEARCH_OPTIONS = [
+  { value: 'search-option-1', label: 'Search Option 1' },
+  { value: 'search-option-2', label: 'Search Option 2' },
+]
+
+const formatDate = (date: Date): string => date.toISOString()
 
 export const DeviceExplorerPage = (): JSX.Element => {
-  const filterOptions = [
-    {
-      value: 'type',
-      label: 'Device Type',
-      children: [
-        { value: 'Model X-100', label: 'Model X-100' },
-        { value: 'Model X-200', label: 'Model X-200' },
-        { value: 'Model Y-300', label: 'Model Y-300' },
-        { value: 'Model Z-150', label: 'Model Z-150' },
-        { value: 'Model Z-250', label: 'Model Z-250' },
-        { value: 'Model Z-350', label: 'Model Z-350' },
-      ],
-    },
-    {
-      value: 'status',
-      label: 'Status',
-      children: [
-        { value: 'online', label: 'Online' },
-        { value: 'offline', label: 'Offline' },
-        { value: 'maintenance', label: 'Maintenance' },
-        { value: 'error', label: 'Error' },
-      ],
-    },
-  ]
-
-  const searchOptions = [
-    {
-      value: 'search-option-1',
-      label: 'Search Option 1',
-    },
-    {
-      value: 'search-option-2',
-      label: 'Search Option 2',
-    },
-  ]
-
   const [searchTags, setSearchTags] = useState<string[]>([])
-  const [deviceType, setDeviceType] = useState<DeviceExplorerDeviceType>('container')
+  const { showToast, ToasterSlot } = useDemoToast()
 
-  const data =
-    deviceType === 'cabinet' ? cabinetData : deviceType === 'container' ? containerData : minersData
+  /* The default miner columns plus one of our own: an action cell per row. */
+  const columnsWithAction = useMemo<DataTableColumnDef<DeviceExplorerDeviceData>[]>(
+    () => [
+      ...getMinerColumns({ getFormattedDate: formatDate }),
+      {
+        id: 'action',
+        header: 'Actions',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Button size="sm" onClick={() => showToast(`Action on ${row.original.id}`)}>
+            Action
+          </Button>
+        ),
+      },
+    ],
+    [showToast],
+  )
+
+  const sharedProps = {
+    data: minersData,
+    searchOptions: SEARCH_OPTIONS,
+    searchTags,
+    onSearchTagsChange: setSearchTags,
+    filterOptions: FILTER_OPTIONS,
+    onFiltersChange: (value: LocalFilters) => console.warn('new filters: ', value),
+    onSelectedDevicesChange: (selections: DataTableRowSelectionState) =>
+      console.warn('new selections: ', selections),
+    getFormattedDate: formatDate,
+  }
 
   return (
-    <section className="demo-section">
-      <h2 className="demo-section__title">Device Explorer</h2>
-      <DeviceExplorer
-        data={data}
-        deviceType={deviceType}
-        onDeviceTypeChange={(type: DeviceExplorerDeviceType) => {
-          setDeviceType(type)
-        }}
-        searchOptions={searchOptions}
-        searchTags={searchTags}
-        onSearchTagsChange={(tags: string[]) => {
-          setSearchTags(tags)
-        }}
-        filterOptions={filterOptions}
-        onFiltersChange={(value: LocalFilters) => {
-          console.warn('new filters: ', value)
-        }}
-        onSelectedDevicesChange={(selections: DataTableRowSelectionState) => {
-          console.warn('new selections: ', selections)
-        }}
-        getFormattedDate={(date: Date) => {
-          return date.toISOString()
-        }}
-        renderAction={(_device: DeviceExplorerDeviceData): React.ReactNode => {
-          return <Button>Action</Button>
-        }}
+    <div>
+      <DemoPageHeader
+        title="Device Explorer"
+        description="Filter + search toolbar over a sortable, selectable device table. Shows the miner columns by default; pass `columns` to change them."
       />
-    </section>
+      <DemoBlock title="Default miner columns">
+        <DeviceExplorer {...sharedProps} />
+      </DemoBlock>
+      <DemoBlock title="Extended columns — getMinerColumns() plus an action column">
+        <DeviceExplorer {...sharedProps} columns={columnsWithAction} />
+      </DemoBlock>
+      <ToasterSlot />
+    </div>
   )
 }

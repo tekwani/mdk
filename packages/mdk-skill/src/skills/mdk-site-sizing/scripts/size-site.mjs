@@ -3,7 +3,11 @@
 // or Markdown (--md). Never invents numbers: lookup is envelope-only.
 //
 //   node size-site.mjs facts.json
+//   node size-site.mjs --description-file site.txt
 //   node size-site.mjs --description "eighty Whatsminer M56S on a site-server"
+//
+// Prefer --description-file for operator-written text: it never passes through
+// a shell, so quotes, `$( )` or backticks in the description are inert.
 //   node size-site.mjs --envelope ../references/envelope.json facts.json --md
 
 import fs from 'node:fs'
@@ -25,6 +29,7 @@ for (let i = 0; i < args.length; i++) {
   if (a === '--md') asMd = true
   else if (a === '--envelope') envelopePath = args[++i]
   else if (a === '--description') description = args[++i]
+  else if (a === '--description-file') description = fs.readFileSync(args[++i], 'utf8').trim()
   else if (a.startsWith('-')) {
     console.error(`unknown flag ${a}`)
     process.exit(2)
@@ -32,7 +37,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (!description && !factsPath) {
-  console.error('usage: node size-site.mjs [--envelope <path>] [--md] <facts.json | --description "...">')
+  console.error('usage: node size-site.mjs [--envelope <path>] [--md] <facts.json | --description-file <file> | --description "...">')
   process.exit(2)
 }
 

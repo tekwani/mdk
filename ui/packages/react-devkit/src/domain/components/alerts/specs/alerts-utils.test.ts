@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { Alert } from '../../../types/alerts'
+import type { AlertRecord } from '../../../types/alerts'
 import type { Device, DeviceLast } from '../../../types/device'
 import { DEVICE_NOT_FOUND_MESSAGE } from '@domain/utils/device-utils'
 import type { ParsedAlertEntry } from '../alerts-types'
 import {
   applyAlertsLocalFilters,
   getAlertMatchHints,
+  getAlertsDescription,
   getAlertsForDevices,
-  getAlertsThingsQuery,
+  getAlertsString,
   getCurrentAlerts,
   getHistoricalAlertsData,
   onLogClicked,
@@ -34,15 +35,7 @@ vi.mock('@domain/utils/container-utils', () => ({
   getContainerName: vi.fn((container?: string) => container ?? ''),
 }))
 
-vi.mock('@domain/utils/query-utils', () => ({
-  getByTagsWithAlertsQuery: vi.fn(
-    (tags: string[], allowEmptyArray?: boolean) =>
-      `byTags:${tags.join(',')}|empty:${String(allowEmptyArray ?? false)}`,
-  ),
-  getDeviceByAlertId: vi.fn((uuid: string) => `byAlertId:${uuid}`),
-}))
-
-const makeAlert = (overrides: Partial<Alert> = {}): Alert => ({
+const makeAlert = (overrides: Partial<AlertRecord> = {}): AlertRecord => ({
   uuid: 'alert-uuid-1',
   name: 'Overheating',
   code: 'OVERHEAT',
@@ -189,7 +182,7 @@ describe('getAlertsForDevices', () => {
 describe('getHistoricalAlertsData', () => {
   it('parses historical alerts using the embedded `thing` device', () => {
     const device = makeDevice()
-    const alert: Alert = { ...makeAlert({ uuid: 'h-1' }), thing: device } as Alert
+    const alert: AlertRecord = { ...makeAlert({ uuid: 'h-1' }), thing: device } as AlertRecord
     const result = getHistoricalAlertsData([alert], { localFilters: {} })
     expect(result).toHaveLength(1)
     expect(result[0]?.uuid).toBe('h-1')
@@ -202,7 +195,7 @@ describe('getHistoricalAlertsData', () => {
 
   it('composes filterTags into the type filter', () => {
     const device = makeDevice()
-    const alert: Alert = { ...makeAlert(), thing: device } as Alert
+    const alert: AlertRecord = { ...makeAlert(), thing: device } as AlertRecord
     const result = getHistoricalAlertsData([alert], {
       localFilters: {},
       filterTags: ['no-match-tag'],
@@ -212,7 +205,7 @@ describe('getHistoricalAlertsData', () => {
 
   it('keeps results when filterTags match alert text', () => {
     const device = makeDevice()
-    const alert: Alert = { ...makeAlert(), thing: device } as Alert
+    const alert: AlertRecord = { ...makeAlert(), thing: device } as AlertRecord
     const result = getHistoricalAlertsData([alert], {
       localFilters: {},
       filterTags: ['M-001'],
@@ -236,20 +229,6 @@ describe('onLogClicked', () => {
     const navigate = vi.fn()
     onLogClicked(navigate, undefined)
     expect(navigate).not.toHaveBeenCalled()
-  })
-})
-
-describe('getAlertsThingsQuery', () => {
-  it('returns a single-alert query when id is provided', () => {
-    expect(getAlertsThingsQuery('uuid-1')).toBe('byAlertId:uuid-1')
-  })
-
-  it('returns a tag-based query when no id is provided', () => {
-    expect(getAlertsThingsQuery(undefined, ['t1', 't2'])).toBe('byTags:t1,t2|empty:false')
-  })
-
-  it('forwards allowEmptyArray to the tag-based query helper', () => {
-    expect(getAlertsThingsQuery(undefined, [], true)).toBe('byTags:|empty:true')
   })
 })
 
@@ -362,5 +341,85 @@ describe('getAlertMatchHints', () => {
 
   it('dedupes hints across chips', () => {
     expect(getAlertMatchHints(baseAlert, ['SN333', 'sn-sn333'])).toEqual(['sn-SN333'])
+  })
+})
+
+describe('alert text formatters', () => {
+  const getFormattedDate = (date: Date) => date.toISOString()
+  describe('getAlertsString', () => {
+    it('should format alarms properly', () => {
+      const alerts = [
+        {
+          name: 'alert-1',
+          description: 'alert 1',
+          severity: 'high',
+          createdAt: new Date('2024-01-01').toISOString(),
+          message: 'message 1',
+        },
+        {
+          name: 'alert-2',
+          description: 'alert 2',
+          severity: 'low',
+          createdAt: new Date('2024-01-02').toISOString(),
+          message: 'message 2',
+        },
+      ]
+
+      const result = getAlertsString(alerts, getFormattedDate)
+
+      expect(typeof result).toBe('string')
+      if (typeof result === 'string') {
+        expect(result.split(',\n\n')).toEqual([
+          '(high) 2024-01-01T00:00:00.000Z : alert-1 Description: alert 1 message 1',
+          '(low) 2024-01-02T00:00:00.000Z : alert-2 Description: alert 2 message 2',
+        ])
+      }
+    })
+
+    it('should handle alerts without custom date formatter', () => {
+      const alerts = [
+        {
+          name: 'alert-1',
+          description: 'alert 1',
+          severity: 'high',
+          createdAt: new Date('2024-01-01').toISOString(),
+          message: 'message 1',
+        },
+      ]
+
+      const result = getAlertsString(alerts)
+      expect(typeof result).toBe('string')
+      expect(result).toContain('alert-1')
+      expect(result).toContain('alert 1')
+    })
+
+    it('should handle alerts without message', () => {
+      const alerts = [
+        {
+          name: 'alert-1',
+          description: 'alert 1',
+          severity: 'high',
+          createdAt: new Date('2024-01-01').toISOString(),
+        },
+      ]
+
+      const result = getAlertsString(alerts, getFormattedDate)
+      expect(typeof result).toBe('string')
+      expect(result).toContain('alert-1')
+    })
+  })
+
+  describe('getAlertsDescription', () => {
+    it('joins each alert as "<date> : <description>"', () => {
+      const alerts = [
+        { name: 'a', description: 'first', severity: 'high', createdAt: new Date('2024-01-01').toISOString() },
+        { name: 'b', description: 'second', severity: 'low', createdAt: new Date('2024-01-02').toISOString() },
+      ]
+
+      expect(getAlertsDescription(alerts as never, getFormattedDate).split(',\n\n')).toEqual([
+        '2024-01-01T00:00:00.000Z : first',
+        '2024-01-02T00:00:00.000Z : second',
+      ])
+    })
   })
 })

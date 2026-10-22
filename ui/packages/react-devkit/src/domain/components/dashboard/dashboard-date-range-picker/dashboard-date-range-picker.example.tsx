@@ -1,8 +1,8 @@
 /**
  * Runnable example for DashboardDateRangePicker.
  *
- * Demonstrates the `{ start, end }` timestamp shape — the same shape
- * `useDashboardDateRange` exposes from `@tetherto/mdk-react-adapter`.
+ * Demonstrates the `{ start, end }` epoch-millisecond shape the picker
+ * reads and emits. The page owns the range and passes it to its queries.
  */
 import { DashboardDateRangePicker } from '@tetherto/mdk-react-devkit'
 import { useState } from 'react'

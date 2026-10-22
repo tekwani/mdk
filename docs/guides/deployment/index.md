@@ -14,8 +14,9 @@ Use these guides to choose a site deployment shape.
 
 ## Choose a guide
 
-- Run Kernel, Gateway, and Workers in one Node.js process with the [single-process topology][single-process]
 - Run a multi-Worker site as separate, PM2-supervised processes, from one machine up to a cross-host deployment, using [supervised services][all-workers]
+- Configure MDK on managed infrastructure with the [hosted-site reference configuration][hosted-site]: networks, allowlists, a
+  monitoring-only and a delegated-writes profile, and MCP off or on loopback
 
 ## Next steps
 
@@ -32,11 +33,11 @@ Use these guides to choose a site deployment shape.
 [deployment-topologies]: ../../concepts/deployment-topologies.md
 <!-- docs@tether.io: deployment-topologies → https://github.com/tetherto/mdk/blob/main/backend/core/docs/README.md#connection-and-deployment-model -->
 
-[single-process]: run-single-process-site.md
-<!-- docs@tether.io: single-process → guides/deployment/run-single-process-site -->
-
 [all-workers]: run-all-workers-site.md
 <!-- docs@tether.io: all-workers → guides/deployment/run-all-workers-site -->
+
+[hosted-site]: hosted-site.md
+<!-- docs@tether.io: hosted-site → guides/deployment/hosted-site -->
 
 [benchmark-your-site]: benchmark-your-site.md
 <!-- docs@tether.io: benchmark-your-site → guides/deployment/benchmark-your-site -->

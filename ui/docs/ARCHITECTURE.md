@@ -25,13 +25,10 @@ top. `@tetherto/mdk-fonts` ships font assets independently.
 Pure TypeScript, no React:
 
 - Zustand vanilla stores: `authStore`, `devicesStore`, `notificationStore`,
-  `timezoneStore`, `actionsStore`. Each store ships a singleton **and** a
+  `timezoneStore`. Each store ships a singleton **and** a
   factory function for testing.
 - `createMdkQueryClient` factory that returns a configured
   `@tanstack/query-core` `QueryClient`.
-- Telemetry primitives (subscription manager, stale detection helpers,
-  ring buffer).
-- Command lifecycle state machine.
 - Shared types.
 
 ### `@tetherto/mdk-react-adapter` — React bindings
@@ -42,19 +39,20 @@ Pure TypeScript, no React:
   the `@tetherto/mdk-react-adapter` package entry in `## Packages`.
 - One React hook per core store (`useAuth`, `useDevices`, …) built on
   `useStore(<vanillaStore>)` from `zustand`.
-- Op Center read hooks (`useExplorerList`, `useContainerWidgets`,
-  `useSite`, `useFeatureFlags`, `usePduLayout`, and more) — fetch, poll,
-  and shape data for the Operational Center pages. See the [package README](../packages/react-adapter/README.md#op-center-read-hooks).
+- Utility hooks (permissions, token lifecycle, timezone formatting,
+  pagination, local storage, …) and the installed-app hooks. No data
+  hooks for specific endpoints: apps read their own Gateway routes with
+  `useQuery` — see [Reading your own data](../packages/react-adapter/README.md#reading-your-own-data).
 - Pass-through re-exports of `useQuery`, `useMutation`, `useQueryClient`.
 - Designed so adding a future React Native or Web Components adapter is a
   matter of writing a sibling package — no changes to the core.
 
 ### `@tetherto/mdk-react-devkit` — React UI library
 
-- [`src/primitives/`](../packages/react-devkit/src/primitives/) — ~60 generic UI primitives built on Radix UI: Button,
+- [`src/primitives/`](../packages/react-devkit/src/primitives/) — 69 generic UI primitives built on Radix UI: Button,
   Dialog, Switch, Select, Data Table, Charts, …
-- [`src/domain/`](../packages/react-devkit/src/domain/) — mining-domain components, custom hooks, a TanStack
-  Query API stub (real endpoints live in the consuming applications).
+- [`src/domain/`](../packages/react-devkit/src/domain/) — mining-domain components, all props-driven: the
+  consuming application fetches the data and passes it in.
 
 ## Dependency graph
 
@@ -81,7 +79,7 @@ The app runtime chain is **headless → React adapter → React devkit → catal
         ┌─────────────────▼───────────────────────────────┐
         │ @tetherto/mdk-react-devkit                      │
         │ • src/primitives + src/domain                     │
-        │ • dist/registry.json + blueprints.json          │
+        │ • dist/registry.json                            │
         └─────────────────┬───────────────────────────────┘
                           │
         ┌─────────────────▼────────────┐    ┌────────────────────────┐
@@ -113,7 +111,7 @@ mdk-ui/
 - **npm workspaces** with centralized root `overrides` for security and version governance
 - **Turborepo** for task orchestration and caching
 - **TypeScript** strict mode across all packages; shared [`tsconfig.base.json`](../tsconfig.base.json)
-- **ESLint** flat config via `@antfu/eslint-config`
+- **oxlint** for linting, configured in [`.oxlintrc.json`](../.oxlintrc.json)
 
 ## Packages
 
@@ -127,44 +125,14 @@ mdk-ui/
 
 - Zustand vanilla stores (`createStore` from `zustand/vanilla`):
   `authStore`, `devicesStore`, `notificationStore`, `timezoneStore`,
-  `actionsStore`, each exposing both the singleton and a `createXStore`
+  each exposing both the singleton and a `createXStore`
   factory for testing
 - TanStack `QueryClient` factory: `createMdkQueryClient`
-- `queryKeys`: centralized key factories for auth, devices, telemetry,
-  Op Center reads (`site`, `listRacks`, `pduLayout`, `globalData`,
-  `thingConfig`, `globalConfig`), Pool Manager reads/mutations, and
-  thing-comment mutations (`addThingComment`, `editThingComment`,
-  `deleteThingComment`)
-- Query factories ([`factories.ts`](../packages/ui-foundation/src/presets/mining/factories.ts)): `{ queryKey, queryFn }` objects for
-  mining read endpoints; **Thing-comment mutation factories**
-  (`addThingCommentMutation`, `editThingCommentMutation`,
-  `deleteThingCommentMutation`) sharing one `thingCommentMutationFn`
-  implementation; pool factories in [`pool-factories.ts`](../packages/ui-foundation/src/presets/mining/pool-factories.ts) (no GET factory for
-  comments — they are embedded in the Thing record and returned via `listThingsQuery`)
-- **Device-action submission builders** ([`device-actions.ts`](../packages/ui-foundation/src/utils/device-actions.ts)):
-  `DEVICE_ACTION`, `DEVICE_BATCH_ACTION`, and `POWER_MODE` constants;
-  `DeviceActionSubmission` / `DeviceActionCrossThing` types;
-  `buildDeviceActionSubmission` with the extras-spread-first override
-  guard; `buildContainerCrossThing` / `buildMinerCrossThing` cross-thing
-  helpers; per-action builders (`buildRebootAction`,
-  `buildSetPowerModeAction`, `buildSetPowerPctAction`, `buildSetLedAction`,
-  `buildSwitchContainerAction`, `buildSwitchCoolingSystemAction`,
-  `buildSetTankEnabledAction`, `buildSetAirExhaustEnabledAction`,
-  `buildResetAlarmAction`, `buildSwitchSocketAction`,
-  `buildSetPlcRegistersAction`, `buildUpdateThingBatchEntry`)
-- Query parameter builders: Op Center (`buildExplorerListThingsParams`,
-  `buildContainerDetailParams`, `buildContainerWidgetsListParams`, etc.),
-  alert, dashboard, and pool builders
-- Container tab utilities: `CONTAINER_TAB_MATRIX` keyed by model family,
-  `resolveContainerModelFamily`, `getSupportedContainerTabs`,
-  `isPduContainerTab`, and family predicates
-- `flattenKernelEnvelope`: null-safe helper that flattens per-Kernel
-  nested envelopes from `list-things` / `list-racks` into a flat row array
-- Command lifecycle state machine
-- Shared API types: tail-log, list-things, history-log, ext-data, auth,
-  and Op Center contracts (`ListRacksParams`, `PduLayoutParams`,
-  `PduLayoutResponse`, `GlobalDataParams`, `ThingConfigParams`,
-  `ThingCommentBody`, `ContainerSettingsEntry`)
+- The client's base URL and auth-aware fetcher (`getApiBaseUrl`, `getFetcher`)
+- Auth providers: `noAuth`, `bearerTokenAuth`, `gatewayRedirectAuth`
+- Device type / tag helpers ([`device-tags.ts`](../packages/ui-foundation/src/utils/device-tags.ts)):
+  `isMiner`, `isContainer`, brand predicates, `appendIdToTag(s)`
+- Shared API types: telemetry rows, layouts, auth, `MdkFetchError`
 
 **Agent manifest**: `dist/stores.json` (subpath `@tetherto/mdk-ui-foundation/stores.json`).
 Regenerated by `npm run build:stores` during `build`.
@@ -174,10 +142,10 @@ Regenerated by `npm run build:stores` during `build`.
 **Usage**:
 
 ```ts
-import { actionsStore, createMdkQueryClient } from "@tetherto/mdk-ui-foundation";
+import { createMdkQueryClient, devicesStore } from "@tetherto/mdk-ui-foundation";
 
 const client = createMdkQueryClient({ apiBaseUrl: "/api" });
-actionsStore.getState().setAddPendingSubmissionAction({ action: "noop" });
+devicesStore.getState().setSelectedDevices([]);
 ```
 
 ### `@tetherto/mdk-react-adapter`
@@ -193,33 +161,20 @@ actionsStore.getState().setAddPendingSubmissionAction({ action: "noop" });
   Its `auth` prop takes an `AuthProvider` (from `@tetherto/mdk-ui-foundation`)
   — `bearerTokenAuth()` (the default `createMdkQueryClient` applies when used
   without a provider) or `noAuth()` for an open API, and `gatewayRedirectAuth()`
-  from the mining preset for the bundled Gateway's OAuth-redirect flow, which
+  for the bundled Gateway's OAuth-redirect flow, which
   is `MdkProvider`'s own default. The seam itself is complete, but
   `gatewayRedirectAuth()`'s refresh needs the bundled Gateway `auth` plugin,
   which ships unwired, and its sign-in redirect needs an OAuth endpoint the
   Gateway does not ship — see
   [`@tetherto/mdk-react-adapter`'s Authentication section](../packages/react-adapter/README.md#authentication)
 - Store hooks (one per core store): `useAuth`, `useDevices`,
-  `useNotifications`, `useTimezone`, `useActions`. Implemented via
+  `useNotifications`, `useTimezone`. Implemented via
   `useStore(<store>)` from `zustand`
-- **`useDeviceAction`** — queues a `DeviceActionSubmission` (built with
-  the foundation's `buildXxx` helpers) into `actionsStore`; exposes
-  `canSubmit` (`actions:w`); device actions share the review tray with
-  pool actions
-- **`useThingComment`** (`COMMENTS_WRITE_PERM`) — `addComment` /
-  `editComment` / `deleteComment` against `/auth/thing/comment`;
-  invalidates `list-things` on every write
-- Write-action hooks: `useSubmitPendingActions`, `useSubmitSingleAction`,
-  `useVoteOnAction`, `useCancelAction`, `usePendingActions`,
-  `useLiveActions` — connect UI to the Gateway `/auth/actions*`
-  voting/approval pipeline; `toVotingPayload` (in [`action-write-utils.ts`](../packages/react-adapter/src/hooks/action-write-utils.ts))
-  derives targeting solely from `query` (built from `tags`), stripping
-  `tags` / `crossThing` and every other client-only field
-- Op Center read hooks (`@category op-center`): `useExplorerList`,
-  `useThingDetail`, `useRackLayout`, `useCabinetGroups`, `useSite`,
-  `useFeatureFlags`, `usePduLayout`, `useContainerSettings`,
-  `useContainerWidgets` — fetch/poll/shape data for the Operational
-  Center pages. Full list and polling behaviour in the [package README](../packages/react-adapter/README.md#op-center-read-hooks)
+- Utility hooks: permissions (`useHasPerms`, `useCheckPerm`,
+  `useIsFeatureEditingEnabled`), token lifecycle (`useAuthToken`,
+  `useTokenPolling`), `useTimezoneFormatter`, and UI helpers
+  (`usePagination`, `useLocalStorage`, `useKeyDown`, …)
+- Installed-app hooks: `useInstalledAppUis`, `useInstalledAppPanels`
 - Re-exports of `useQuery`, `useMutation`, `useQueryClient` from
   `@tanstack/react-query`
 - Subpath `./hooks` for hook modules; `./provider` for `MdkProvider`
@@ -252,12 +207,9 @@ import { MdkProvider, useAuth, useDevices } from "@tetherto/mdk-react-adapter";
   `*.example.tsx` for `agent-ready` exports
 - [`src/domain/`](../packages/react-devkit/src/domain/): mining-domain layer:
   - [`components/`](../packages/react-devkit/src/domain/components/index.ts): domain components
-  - [`features/`](../packages/react-devkit/src/domain/features/index.ts): full-page compositions
-  - `hooks/`, `api/` (placeholder), [`utils/`](../packages/react-devkit/src/domain/utils/), [`types/`](../packages/react-devkit/src/domain/types/index.ts), … — all reached via
+  - [`constants/`](../packages/react-devkit/src/domain/constants/index.ts), [`types/`](../packages/react-devkit/src/domain/types/index.ts), [`utils/`](../packages/react-devkit/src/domain/utils/), `styles/` — all reached via
     the `./domain` barrel or the top-level barrel (no separate `./components`
-    / `./features` / `./hooks` / `./api` export subpaths today)
-- [`blueprints/`](../packages/react-devkit/blueprints/README.md): curated intent → component recipes (source for
-  `dist/blueprints.json`)
+    export subpath)
 - [`scripts/`](../packages/react-devkit/scripts/): [`generate-registry.mts`](../packages/react-devkit/scripts/generate-registry.mts), [`check-agent-ready.mjs`](../packages/react-devkit/scripts/check-agent-ready.mjs),
   [`agent-ready-baseline.json`](../packages/react-devkit/scripts/agent-ready-baseline.json)
 - [`AGENT_READY.md`](../packages/react-devkit/AGENT_READY.md): strict
@@ -269,14 +221,13 @@ import { MdkProvider, useAuth, useDevices } from "@tetherto/mdk-react-adapter";
 | --- | --- |
 | `.` | Top-level barrel |
 | `./primitives` | Generic primitives |
-| `./domain` | Mining-domain barrel (components, features, hooks, api, …) |
+| `./domain` | Mining-domain barrel (components, constants, types, utils) |
 | `./registry.json` | Machine-readable component + hook registry |
-| `./blueprints.json` | Machine-readable blueprint index |
 | `./styles.css` | Compiled stylesheet (Vite) |
 | `./styles` | [`src/primitives/styles/_mixins.scss`](../packages/react-devkit/src/primitives/styles/_mixins.scss) |
 | [`./tokens.scss`](../packages/react-devkit/src/primitives/components/dropdown-menu/tokens.scss) | [`src/primitives/styles/_colors.scss`](../packages/react-devkit/src/primitives/styles/_colors.scss) |
 
-**Agent manifests**: `dist/registry.json`, `dist/blueprints.json`.
+**Agent manifest**: `dist/registry.json`.
 Built by `npm run build:registry` (part of `build`). Validated by
 `npm run check:agent-ready`.
 
@@ -348,7 +299,7 @@ import "@tetherto/mdk-fonts/jetbrains-mono.css";
 | --- | --- | --- |
 | `@tetherto/mdk-ui-foundation` | pre-built `dist/` ESM + `.d.ts` | `dist/stores.json` |
 | `@tetherto/mdk-react-adapter` | pre-built `dist/` ESM + `.d.ts` | `dist/hooks.json` |
-| `@tetherto/mdk-react-devkit` | pre-built `dist/` ESM + `.d.ts` | `dist/styles.css`, `dist/styles-domain.css`, `dist/registry.json`, `dist/blueprints.json` |
+| `@tetherto/mdk-react-devkit` | pre-built `dist/` ESM + `.d.ts` | `dist/styles.css`, `dist/styles-domain.css`, `dist/registry.json` |
 | `@tetherto/mdk-fonts` | n/a | `dist/jetbrains-mono.css` + woff2 |
 
 Every TypeScript library package is **pre-built** — consumers import `dist/`
@@ -361,14 +312,14 @@ and the Turborepo task DAG, see [`BUILD.md`](BUILD.md).
 
 State lives in `@tetherto/mdk-ui-foundation` as Zustand vanilla stores. React
 components consume them via `useAuth` / `useDevices` / `useNotifications` /
-`useTimezone` / `useActions` from `@tetherto/mdk-react-adapter`; non-React
+`useTimezone` from `@tetherto/mdk-react-adapter`; non-React
 code reads or writes the same singletons via `store.getState()` /
 `store.setState()`. Redux, react-redux, and any alternative state library are
 **not** used — see the no-Redux rule in [`CLAUDE.md`](../CLAUDE.md#state-management).
-The API layer is currently a placeholder in
-`packages/react-devkit/src/domain/api/`; future hooks use TanStack Query
-against `createMdkQueryClient()`, with `<MdkProvider>` supplying the client
-and base URL.
+MDK ships no data hooks for specific endpoints. An app wraps its own Gateway
+routes with `useQuery` (re-exported by `@tetherto/mdk-react-adapter`) against
+the client `<MdkProvider>` builds with `createMdkQueryClient()`, and passes the
+result to devkit components as props.
 
 ## Separation of concerns
 
@@ -431,4 +382,4 @@ Five GitHub Actions jobs: `security` → parallel (`quality`, `test`,
 - **build**: full `turbo build`, including the CSS layer-wrap plugin.
 
 Root `npm run fullcheck` runs build, lint, typecheck, format,
-`check:agent-ready` on the devkit, and coverage before push.
+`check:agent-ready` on the devkit, `check:api-surface`, and coverage before push.

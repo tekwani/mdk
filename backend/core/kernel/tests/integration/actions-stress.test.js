@@ -184,20 +184,23 @@ async function setupStressFixture (t) {
         workerId,
         kernelTopic: topic.toString('hex'),
         bootstrap,
+        // the worker boots before the Kernel exists, so its client key is unknown
+        allowAll: true,
         devices: fleet.devices,
         services: fleet.services
       })
       await runtime.start()
       t.teardown(async () => runtime.stop())
-      return { workerId, fleet }
+      return { workerId, fleet, rpcKey: runtime.getPublicKey().toString('hex') }
     })
   )
 
   const kernel = createKernel({
     db: path.join(tmpDir, 'store'),
     root: tmpDir,
-    listeners: { hrpc: { whitelist: [], bootstrap } },
-    discovery: { topic: topic.toString('hex') },
+    listeners: { hrpc: { bootstrap } },
+    // Topic admission is fail-closed: admit the workers booted above.
+    discovery: { topic: topic.toString('hex'), workerKeys: fleets.map((f) => f.rpcKey) },
     actions: { actionIntvlMs: ACTION_EXEC_INTERVAL_MS },
     cadences: { telemetryPullMs: 60000, healthPingMs: 60000, statePullMs: 60000 }
   })
@@ -210,6 +213,7 @@ async function setupStressFixture (t) {
 
   const orkPublicKey = kernel.getPublicKey()
   const clientRpc = new HyperswarmRPC({ bootstrap })
+  kernel.allowKey(clientRpc.defaultKeyPair.publicKey)
   t.teardown(async () => clientRpc.destroy())
 
   const allTargets = fleets.flatMap(({ workerId, fleet }) =>

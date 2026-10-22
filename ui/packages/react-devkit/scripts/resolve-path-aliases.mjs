@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Rewrite tsconfig `paths` aliases (`@primitives`, `@domain/*`) in compiled
  * `dist/` output to relative specifiers.
@@ -20,19 +20,38 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve, sep } from 'node:path'
 import process from 'node:process'
-import ts from 'typescript'
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx']
 
+// tsconfig files are JSONC. Keep string literals, drop comments and trailing
+// commas, in one pass so neither is ever matched inside a string.
+const JSONC_NOISE = /("(?:\\.|[^"\\])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\/|,(?=\s*[}\]])/g
+const parseJsonc = (text) => JSON.parse(text.replace(JSONC_NOISE, (match, string) => string ?? ''))
+
+// Follows the `extends` chain and keeps the three options this script needs,
+// resolved the way tsc does: `outDir` / `rootDir` against the config that sets
+// them, `paths` targets against the config that declares `paths` (no `baseUrl`).
+const readCompilerOptions = (configPath) => {
+  const config = parseJsonc(readFileSync(configPath, 'utf8'))
+  const dir = dirname(configPath)
+  let options = {}
+  if (config.extends) {
+    if (!config.extends.startsWith('.'))
+      throw new Error(`${configPath}: only relative \`extends\` is supported`)
+    const parent = resolve(dir, config.extends)
+    options = readCompilerOptions(parent.endsWith('.json') ? parent : `${parent}.json`)
+  }
+  const own = config.compilerOptions ?? {}
+  if (own.outDir) options.outDir = resolve(dir, own.outDir)
+  if (own.rootDir) options.rootDir = resolve(dir, own.rootDir)
+  if (own.paths) options = { ...options, paths: own.paths, pathsBase: dir }
+  return options
+}
+
 const loadConfig = (configPath) => {
-  const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile)
-  if (error) throw new Error(ts.flattenDiagnosticMessageText(error.messageText, '\n'))
-  const { options } = ts.parseJsonConfigFileContent(config, ts.sys, dirname(configPath))
-  const outDir = options.outDir
-  const rootDir = options.rootDir
+  const { outDir, rootDir, paths = {}, pathsBase } = readCompilerOptions(configPath)
   if (!outDir || !rootDir) throw new Error(`${configPath} must set outDir and rootDir`)
-  const pathsBase = options.pathsBasePath ?? dirname(configPath)
-  const aliases = Object.entries(options.paths ?? {}).map(([pattern, [target]]) => ({
+  const aliases = Object.entries(paths).map(([pattern, [target]]) => ({
     wildcard: pattern.endsWith('/*'),
     prefix: pattern.replace(/\*$/, ''),
     target: resolve(pathsBase, target.replace(/\*$/, '')),

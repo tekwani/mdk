@@ -10,7 +10,6 @@ const WRK_TYPES = {
 const LIB_TYPES = {
   Kernel: 'core/kernel',
   GATEWAY: 'core/gateway',
-  ANTMINER: 'workers/miners/antminer',
   AVALON: 'workers/miners/avalon',
   BITDEER: 'workers/containers/bitdeer',
   ANTSPACE: 'workers/containers/antspace',

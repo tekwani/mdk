@@ -20,6 +20,7 @@ Context: globs: docs/**/*.md, **/README.md, backend/**/docs/**/*.md, ui/**/docs/
 - No positional references ("Swap the filename for any other model from the table" NOT "Swap the filename for any other model from the table above,")
 - No --- divider, use headings H1, H2, H3 etc to impose structure
 - No em dash; people may use those, not llms
+- Prose says allowlist, never whitelist; a backticked code identifier (`auth.whitelist`, `hrpc.whitelist`) keeps the API's real name
 - Colons go **outside of bullets**: as this example is written, notice bullet NOT emdash
 
 ## Frontmatter and linking strategy

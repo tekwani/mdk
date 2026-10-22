@@ -3,10 +3,13 @@
 ## Package layout
 
 ```
-plugins/<name>/
+apps/<name>/
 ├── package.json
-├── mdk-plugin.json
-└── controllers/<route>.js
+├── mdk-app.yaml
+└── plugin/
+    ├── mdk-plugin.json
+    ├── lib/client.js
+    └── controllers/<route>.js
 ```
 
 ### package.json
@@ -20,9 +23,10 @@ plugins/<name>/
 }
 ```
 
-`mdk create plugin <name>` sets this for you (bare `<name>`, or `@org/<name>`
+`mdk create app <name>` sets this for you (bare `<name>`, or `@org/<name>`
 with `--org`) — `mdk.yaml` references whatever name lands here, the same way
-it would a published package.
+it would a published package. `mdk-app.yaml`'s `version` must equal this
+`version`; the [`mdk-create-app`](../../mdk-create-app/SKILL.md) skill owns the rest of that manifest.
 
 ### mdk-plugin.json — required route fields
 
@@ -31,15 +35,15 @@ it would a published package.
 | `name` / `version` / `description` | Package identity (often mirrors package.json) |
 | `routes[].id` | Stable id (`<domain>.<resource>`) |
 | `routes[].handler` | Relative path, e.g. `./controllers/power.js` |
-| `routes[].auth` | Documentation only — the Gateway reads neither `auth` nor `permissions`. Protect a route by checking the token in its controller |
+| `routes[].auth` | `true` makes the Gateway answer `401` unless its `authVerifier` returns an identity, which reaches the controller as `req._info`. The Gateway hands `permissions` to that verifier as `route.permissions` and does not interpret them itself |
 | `routes[].http.method` | `GET` / `POST` / … |
-| `routes[].http.path` | Public path the UI fetches (`/api/...`) |
+| `routes[].http.path` | Path the UI fetches (`/api/...`), served under `/apps/<app-name>` unless the app is mounted elsewhere |
 | `routes[].http.responses` | Document `200` schema + error statuses |
 | `routes[].description` | What the route does (operator + LLM context) |
 | `routes[].constraints` | Runtime preconditions (Kernel connected, channels present) |
 | `routes[].examples` | At least one request/response example with realistic values |
 | `routes[].errors` | `ERR_*` strings the controller may throw |
-| `routes[].safety` | `"read-only"` unless the route mutates devices |
+| `routes[].safety` | `"read-only"` unless the route mutates devices. `mdk run mcp` withholds every other route unless started with `--allow-write` |
 
 ## Response schema rules
 
@@ -110,7 +114,8 @@ Every field from the table above, together, on one route:
 
 ## Registering
 
-`mdk create plugin <name>` does all of this: links the package as an npm
-workspace member (root `npm install`) and appends it under `mdk.yaml` →
-`spec.gateway.plugins[]` → `{ package: <name>, config: {} }`. Scaffolding by
-hand instead, do the same two steps yourself, then restart the Gateway.
+`mdk create app <name>` does all of this: links the package into the project's
+root `package.json` (root `npm install`) and appends it under `mdk.yaml` →
+`spec.apps[]` → `{ name: <name>, package: <name>, config: {} }`. Scaffolding by
+hand instead, do the same two steps yourself, run `mdk validate app <name>`,
+then restart with `mdk run`.

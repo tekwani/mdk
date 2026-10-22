@@ -85,7 +85,7 @@ export type AuthProvider = {
    * informational (tests, logging); acting on it is not required.
    *
    * Receives the `QueryClient` so an implementation can reuse the runtime it
-   * carries (base URL, transport, endpoint map) instead of being handed a
+   * carries (base URL, transport) instead of being handed a
    * second, possibly divergent, transport config.
    */
   refresh?: (client: QueryClient) => Promise<string | null>
@@ -145,8 +145,8 @@ export const bearerTokenAuth = (options: BearerTokenAuthOptions = {}): AuthProvi
 /**
  * No authentication: no token, no sign-in, nothing to expire.
  *
- * For an open API, and for a fixture-backed demo where there is no server to
- * authenticate against. `RequireAuth` gates on token presence, so a demo using
+ * For a Gateway running without an auth plugin (local dev), and for a demo
+ * where there is no server to authenticate against. `RequireAuth` gates on token presence, so a demo using
  * this needs to render its content outside that guard (or seed a placeholder
  * token) — `noAuth` deliberately does not fake one, because a fake token would
  * be sent as a real `Authorization` header.

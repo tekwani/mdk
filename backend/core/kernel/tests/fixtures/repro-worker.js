@@ -29,6 +29,7 @@ async function main () {
     workerId: 'repro-worker-1',
     kernelTopic: topic,
     store,
+    allowedKeys: [arg('--allow', null)].filter(Boolean),
     devices: [{ deviceId: 'd1', config: { hashrate: 1, power: 100 } }]
   })
   await runtime.start()

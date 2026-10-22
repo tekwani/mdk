@@ -35,7 +35,7 @@ export type Tier = 'agent-ready' | 'advanced' | 'internal'
  * present on an entry. The generator itself no longer applies this default
  * — it emits `tier: undefined` so the `missing-tier` rule can fire.
  *
- * Consumers (CLI, blueprints validator, etc.) treat `undefined` as
+ * Consumers (CLI, agent-ready check, etc.) treat `undefined` as
  * `advanced` for display, while the contract gate treats it as a
  * violation. Two audiences, one schema.
  */
@@ -248,49 +248,6 @@ export type RegistryManifest = {
  * referenced by props, expanded one level. Additive change.
  */
 export const REGISTRY_SCHEMA_VERSION = '2.2.0'
-
-// ─── Blueprints ─────────────────────────────────────────────────────────────
-
-/**
- * A blueprint is a curated recipe that maps a free-form user intent to a
- * concrete set of agent-ready components + hooks + a demo route. Authored as
- * markdown with YAML frontmatter under `packages/react-devkit/blueprints/`
- * and indexed into `dist/blueprints.json` by the registry generator.
- */
-export type BlueprintMeta = {
-  id: string
-  title: string
-  intent: string
-  domain: DomainContext
-  kernelCapabilities: KernelCapability[]
-  components: string[]
-  hooks: string[]
-  demoRoute?: string
-  /** Path (relative to the package root) to the authoring `.md` file. */
-  path: string
-  /** Markdown body (everything after the YAML frontmatter). */
-  body: string
-}
-
-/** O(1) lookup indexes for blueprints. */
-export type BlueprintIndexes = {
-  byId: Record<string, number>
-  byDomain: Record<string, string[]>
-  byKernelCapability: Record<string, string[]>
-  byComponent: Record<string, string[]>
-}
-
-/** Top-level blueprints manifest, emitted as `dist/blueprints.json`. */
-export type BlueprintsManifest = {
-  version: string
-  package: string
-  generatedAt: string
-  blueprints: BlueprintMeta[]
-  indexes: BlueprintIndexes
-}
-
-/** Current blueprints schema version. */
-export const BLUEPRINTS_SCHEMA_VERSION = '1.0.0'
 
 /** Cap on description length emitted into the registry. */
 export const DESCRIPTION_MAX_CHARS = 200

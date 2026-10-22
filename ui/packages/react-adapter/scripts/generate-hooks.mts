@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Generate `dist/hooks.json` — the machine-readable manifest of public
  * React hooks exposed by `@tetherto/mdk-react-adapter`.
@@ -8,7 +8,7 @@
  * file) the manifest records:
  *   - `name`            — exported identifier
  *   - `description`     — first paragraph of the JSDoc, plain text
- *   - `category`        — value of the `@category` tag (store | utility | permission | ui)
+ *   - `category`        — value of the `@category` tag (store | utility | permission | ui | … | apps)
  *   - `signature`       — `(params) => return-type` text, sourced from the type annotation
  *   - `requiresProvider`— true when the hook reaches into `useMdkContext`
  *   - `file`            — repo-relative path of the source file
@@ -40,13 +40,10 @@ type HookCategory =
   | "store"
   | "utility"
   | "permission"
-  | "ui"
   | "external"
   | "auth"
   | "dashboard"
-  | "op-center"
-  | "alerts"
-  | "example";
+  | "apps";
 
 const TANSTACK_REEXPORTS: Record<string, string> = {
   useQuery: "Re-export of TanStack Query's `useQuery`. See @tanstack/react-query docs for full options.",
@@ -141,12 +138,9 @@ const extractCategory = (jsDocs: JsDocLike[]): HookEntry["category"] => {
           value === "store"
           || value === "utility"
           || value === "permission"
-          || value === "ui"
           || value === "auth"
           || value === "dashboard"
-          || value === "op-center"
-          || value === "alerts"
-          || value === "example"
+          || value === "apps"
         ) {
           return value;
         }

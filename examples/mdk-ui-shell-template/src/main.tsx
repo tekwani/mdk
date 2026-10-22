@@ -1,6 +1,5 @@
 import { MdkProvider } from '@tetherto/mdk-react-adapter'
-import { authStore } from '@tetherto/mdk-ui-foundation'
-import { gatewayRedirectAuth } from '@tetherto/mdk-ui-foundation/presets/mining'
+import { authStore, gatewayRedirectAuth } from '@tetherto/mdk-ui-foundation'
 import React from 'react'
 
 import ReactDOM from 'react-dom/client'

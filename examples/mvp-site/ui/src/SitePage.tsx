@@ -23,6 +23,7 @@ import { HS_PER_MHS, HS_PER_THS, NOMINAL_MHS_PER_MINER, W_PER_MW } from "./const
 import { ContainerDetailPage, ContainersListPage } from "./ContainersPage";
 import { ControlPage } from "./ControlPage";
 import { DashboardPage } from "./DashboardPage";
+import { MinersPage } from "./MinersPage";
 import { MonitoringPage } from "./MonitoringPage";
 import { PoolsPage } from "./PoolsPage";
 import type { Container, History, Overview, PoolInput } from "./types";
@@ -357,6 +358,7 @@ export function SitePage(): JSX.Element {
               path="/containers/:containerId"
               element={<ContainerDetailPage allContainers={allContainers} minersByContainer={minersByContainer} />}
             />
+            <Route path="/miners" element={<MinersPage miners={data.miners} />} />
             <Route
               path="/monitoring"
               element={<MonitoringPage base={base} powermeters={data.powermeters ?? []} sensors={data.sensors ?? []} />}

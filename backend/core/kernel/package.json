@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-kernel",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "MDK Kernel - Orchestration Kernel",
   "main": "index.js",
   "keywords": [
@@ -29,7 +29,7 @@
     "@tetherto/svc-facs-action-approver": "^1.0.0",
     "async": "^3.2.6",
     "debug": "^4.4.1",
-    "hyperdht": "^6.32.0",
+    "hyperdht": "6.34.1",
     "hyperswarm": "^4.17.0",
     "mingo": "^6.4.15"
   },
@@ -37,7 +37,25 @@
     "brittle": "3.18.0",
     "standard": "17.1.0"
   },
-  "overrides": {
-    "brace-expansion": "5.0.9"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tetherto/mdk.git",
+    "directory": "backend/core/kernel"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "index.js",
+    "lib/",
+    "config/*.example",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./protocol/actions": "./lib/protocol/actions.js",
+    "./protocol/envelope": "./lib/protocol/envelope.js",
+    "./protocol/schemas": "./lib/protocol/schemas.js",
+    "./package.json": "./package.json"
   }
 }

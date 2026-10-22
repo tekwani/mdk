@@ -133,6 +133,8 @@ async function setupActionsFixture (t, opts = {}) {
     workerId: 'wm-rack-1',
     kernelTopic: topic.toString('hex'),
     bootstrap,
+    // the worker boots before the Kernel exists, so its client key is unknown
+    allowAll: true,
     devices: fleet.devices,
     services: fleet.services
   })
@@ -146,8 +148,9 @@ async function setupActionsFixture (t, opts = {}) {
   const kernel = createKernel({
     db: path.join(tmpDir, 'store'),
     root: tmpDir,
-    listeners: { hrpc: { whitelist: [], bootstrap } },
-    discovery: { topic: topic.toString('hex') },
+    listeners: { hrpc: { bootstrap } },
+    // Topic admission is fail-closed: admit the worker booted above.
+    discovery: { topic: topic.toString('hex'), workerKeys: [runtime.getPublicKey().toString('hex')] },
     actions: { actionIntvlMs: opts.actionIntvlMs ?? ACTION_EXEC_INTERVAL_MS },
     cadences: { telemetryPullMs: 60000, healthPingMs: 60000, statePullMs: 60000 }
   })
@@ -160,6 +163,7 @@ async function setupActionsFixture (t, opts = {}) {
 
   const orkPublicKey = kernel.getPublicKey()
   const clientRpc = new HyperswarmRPC({ bootstrap })
+  kernel.allowKey(clientRpc.defaultKeyPair.publicKey)
   t.teardown(async () => {
     await clientRpc.destroy()
     await kernel.stop()
@@ -499,7 +503,7 @@ test('actions - pushAction rejects invalid query payload', async (t) => {
     authPerms: ['miner:w']
   })
 
-  assertKernelError(t, result, 'ERR_QUERY_INVALID')
+  assertKernelError(t, result, 'ERR_PAYLOAD_QUERY_REQUIRED')
 })
 
 test('actions - pushAction rejects non-array params', async (t) => {
@@ -513,7 +517,7 @@ test('actions - pushAction rejects non-array params', async (t) => {
     authPerms: ['miner:w']
   })
 
-  assertKernelError(t, result, 'ERR_PARAMS_INVALID')
+  assertKernelError(t, result, 'ERR_PAYLOAD_PARAMS_REQUIRED')
 })
 
 test('actions - pushAction rejects blank action name', async (t) => {
@@ -553,7 +557,7 @@ test('actions - pushActionsBatch rejects non-array payload', async (t) => {
     authPerms: ['miner:w']
   })
 
-  assertKernelError(t, result, 'ERR_PAYLOAD_INVALID')
+  assertKernelError(t, result, 'ERR_PAYLOAD_BATCH_ACTIONS_REQUIRED')
 })
 
 test('actions - getAction rejects unknown action id', async (t) => {
@@ -659,7 +663,7 @@ test('actions - queryActions rejects invalid queries payload', async (t) => {
   const invalidQueries = await requestKernel(clientRpc, orkPublicKey, ACTIONS.ACTION_QUERY, {
     queries: 'not-an-array'
   })
-  assertKernelError(t, invalidQueries, 'ERR_QUERIES_INVALID')
+  assertKernelError(t, invalidQueries, 'ERR_PAYLOAD_QUERIES_REQUIRED')
 
   const missingType = await requestKernel(clientRpc, orkPublicKey, ACTIONS.ACTION_QUERY, {
     queries: [{}]

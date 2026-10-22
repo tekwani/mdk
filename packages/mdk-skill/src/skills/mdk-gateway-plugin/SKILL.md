@@ -1,8 +1,9 @@
 ---
 name: mdk-gateway-plugin
 description: >
-  Build a Gateway / App Node plugin that exposes an HTTP API over one or more
-  MDK Workers. Use when the task mentions "aggregate", "combine Workers",
+  Build the HTTP routes of an MDK app (route table + controllers, served
+  through the Gateway) over one or more MDK Workers. Use when the task
+  mentions "aggregate", "combine Workers",
   "site summary / rollup", "plugin", "mdk-plugin.json", "Gateway endpoint",
   "cross-worker endpoint", or when a UI needs live Worker data and no matching
   `/api/...` route exists yet.
@@ -12,24 +13,26 @@ metadata:
 license: Apache-2.0
 ---
 
-# Build an MDK Gateway plugin
+# Build the routes of an MDK app
 
-A Gateway plugin is a small Node package the Gateway loads from `mdk.yaml`.
-It declares HTTP routes in `mdk-plugin.json` and implements each route as a
-controller that queries Workers through its own `@tetherto/mdk-client`, built once per plugin from
-`require('@tetherto/mdk-gateway/plugin')`.
+The Gateway serves HTTP routes from **apps**. An app is a small Node package with an `mdk-app.yaml` manifest
+and a route table (`mdk-plugin.json`, in `plugin/` or the package root); `mdk run` runs each app in its own
+process and the Gateway forwards each request to it. Each route is a controller that queries Workers through
+the app's own `@tetherto/mdk-client`, built once from `require('@tetherto/mdk-gateway/plugin')`.
 
-Plugins are the **server half** of any "show me X from my devices" request.
-If the UI needs data that no existing `/api/...` route returns, build the
-plugin first, then hand off to `mdk-ui-component`.
+Apps are the **server half** of any "show me X from my devices" request.
+If the UI needs data that no existing route returns, build the app's route
+first, then hand off to `mdk-ui-component`. Creating the package itself (manifest,
+permissions, layout) is the [`mdk-create-app`](../mdk-create-app/SKILL.md) skill; this
+skill owns the route table and controllers.
 
 ## When to use this skill
 
 | Situation                                             | Action                     |
 | ----------------------------------------------------- | -------------------------- |
-| UI / chart needs a metric and no Gateway route exists | Create a plugin here first |
-| Aggregate / rollup / site summary" across devices     | Create a plugin            |
-| Endpoint already exists (check `mdk.yaml` → `spec.gateway.plugins`, or `mdk status`) | Skip — go straight to `mdk-ui-component` |
+| UI / chart needs a metric and no Gateway route exists | Add a route here first     |
+| Aggregate / rollup / site summary" across devices     | Add a route                |
+| Endpoint already exists (check `mdk.yaml` → `spec.apps`, or `mdk status`) | Skip — go straight to `mdk-ui-component` |
 | Need a new device protocol                            | Wrong skill — use `mdk-worker-plugin` |
 
 ## Workflow
@@ -44,7 +47,7 @@ in an installed Worker contract.
 | `package` value                               | Contract path                                                                       |
 | --------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Local path (`./workers/<name>`, `../…`)       | `<package>/mdk-contract.json` (or legacy `<package>/plugin/mdk-contract.json`)      |
-| npm name (`@tetherto/mdk-worker-antminer`, …) | `node_modules/<package>/mdk-contract.json` (or legacy `…/plugin/mdk-contract.json`) |
+| npm name (`@tetherto/mdk-worker-avalon`, …)   | `node_modules/<package>/mdk-contract.json` (or legacy `…/plugin/mdk-contract.json`) |
 
 Also scan `workers/*/mdk-contract.json` and `workers/*/plugin/mdk-contract.json` for any local scaffolds not yet
 listed in `mdk.yaml`. If an npm package is listed but missing under
@@ -64,26 +67,29 @@ metadata (no `brand`/`provider`) — so the fingerprint you match against at
 runtime is the telemetry/command **name set**, derived from the contract you
 just read, not a hard-coded device list.
 
-### 2. Scaffold the package
+### 2. Scaffold the app
 
 ```bash
-mdk create plugin <plugin-name>
+mdk create app <app-name>
 ```
 
-Scaffolds and registers in one step:
+Scaffolds and registers in one step (manifest rules: [`mdk-create-app`](../mdk-create-app/SKILL.md)):
 
 ```
-plugins/<plugin-name>/
-├── package.json          # name: <plugin-name> (or @org/<plugin-name> with --org)
-├── mdk-plugin.json       # routes + OpenAPI-ish response schema
-└── controllers/
-    └── summary.js        # async (req) => payload
+apps/<app-name>/
+├── package.json          # name: <app-name> (or @org/<app-name> with --org)
+├── mdk-app.yaml          # id, version (= package.json), displayName, permissions, config defaults
+└── plugin/
+    ├── mdk-plugin.json   # routes + OpenAPI-ish response schema
+    ├── lib/client.js     # the app's MDK client
+    └── controllers/
+        └── summary.js    # async (req) => payload
 ```
 
-It also links the package as an npm workspace member (root `npm install`,
+It also links the package into the project's root `package.json` (root `npm install`,
 skip with `--no-install`) and appends it under `mdk.yaml` →
-`spec.gateway.plugins` (skip with `--no-stack-entry`) — no manual
-`package.json` linking step.
+`spec.apps` (skip with `--no-stack-entry`) — no manual
+`package.json` linking step. Check it with `mdk validate app <app-name>`.
 
 ### 3. Author `mdk-plugin.json`
 
@@ -95,15 +101,17 @@ Every route needs:
 - `http.responses.200.content.application/json.schema` — real response shape
 - `description`, `constraints`, `examples`, `errors`, `safety`
 
-Path convention: `/api/<domain>/<resource>` (e.g. `/api/fleet/summary`).
+Path convention: `/api/<domain>/<resource>` (e.g. `/api/fleet/summary`). The Gateway serves it under
+`/apps/<app-name>` (so `/apps/<app-name>/api/fleet/summary`) unless the app's `spec.apps` entry sets
+`mount`; never write the `/apps/<app-name>` prefix into the route table yourself.
 
 Full field notes: [`references/plugin-authoring.md`](./references/plugin-authoring.md).
 
 ### 4. Implement the controller
 
-Build the client once per plugin, in a `lib/client.js` every controller requires — copy
-[`backend/core/plugins/telemetry/lib/client.js`](../../../../../backend/core/plugins/telemetry/lib/client.js) verbatim, it's
-the shipping example of this exact pattern.
+Build the client once per app, in a `lib/client.js` every controller requires — the
+scaffold's `plugin/lib/client.js` is this exact pattern
+(`createMdkClient(config)` over `require('@tetherto/mdk-gateway/plugin')`).
 
 ```js
 'use strict'
@@ -128,26 +136,28 @@ Typical [fan-out pattern](./references/controller-patterns.md):
 
 ### 5. Register in `mdk.yaml`
 
-Already done if you scaffolded with `mdk create plugin` (step 2). Otherwise
-add it by hand:
+Already done if you scaffolded with `mdk create app` (step 2). Otherwise
+add it by hand (`name` matches `^[a-z][a-z0-9-]*$`):
 
 ```yaml
 spec:
-  gateway:
-    plugins:
-      - package: <plugin-name>
-        config: {}
+  apps:
+    - name: <app-name>
+      package: <app-name>
+      config: {}
+      # mount: /   # only when a client calls the routes at the Gateway root
 ```
 
-Then restart the Gateway (`mdk run gateway` or `mdk run`). Wiring and boot
-order details live in `mdk-deployment`.
+`spec.gateway.plugins` is rejected by the CLI; move any such entry to `spec.apps`.
+Then restart (`mdk run`, or `mdk run app <app-name>` beside `mdk run gateway`).
+Wiring and boot order details live in `mdk-deployment`.
 
 ### 6. Smoke-check the route
 
 With the stack up:
 
 ```bash
-curl -s http://127.0.0.1:<gateway-port>/api/<domain>/<resource> | jq .
+curl -s http://127.0.0.1:<gateway-port>/apps/<app-name>/api/<domain>/<resource> | jq .
 ```
 
 Confirm the JSON matches the schema and examples in `mdk-plugin.json`.
@@ -169,6 +179,7 @@ Only then build UI against it.
 
 | Next need                             | Skill                     |
 | ------------------------------------- | ------------------------- |
+| App manifest, permissions, packaging  | `mdk-create-app`          |
 | Render this route in the dashboard    | `mdk-ui-component`        |
 | Register / restart / verify the stack | `mdk-deployment`          |
 | Device does not exist yet             | `mdk-worker-plugin` first |
@@ -178,4 +189,4 @@ Only then build UI against it.
 - [`references/plugin-authoring.md`](./references/plugin-authoring.md): `mdk-plugin.json` fields + a fully populated route example
 - [`references/controller-patterns.md`](./references/controller-patterns.md): list / filter / `pullTelemetry` patterns
 - [`../mdk/references/protocol.md`](../mdk/references/protocol.md): envelope / action set
-- Shipped monorepo examples (when present): [`backend/core/plugins/`](../../../../../backend/core/plugins/README.md)
+- Shipped monorepo examples (when present): `backend/apps/demo/` (read-only fan-out), `backend/apps/agent/` (auth + stream routes)

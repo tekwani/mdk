@@ -1,8 +1,10 @@
 /**
- * Runnable example for DeviceExplorer.
+ * Runnable example for DeviceExplorer, with the default miner columns. Pass
+ * `columns` (e.g. `[...getMinerColumns({ getFormattedDate }), myColumn]`) to
+ * change them.
  */
 import { useState } from 'react'
-import { DeviceExplorer, type DeviceExplorerDeviceType } from '@tetherto/mdk-react-devkit'
+import { DeviceExplorer } from '@tetherto/mdk-react-devkit'
 
 const mockMiners = [
   {
@@ -40,14 +42,11 @@ const filterOptions = {
 const searchOptions = [{ label: 'Miner ID', value: 'id' }]
 
 export const DeviceExplorerExample = () => {
-  const [deviceType, setDeviceType] = useState<DeviceExplorerDeviceType>('miner')
   const [searchTags, setSearchTags] = useState<string[]>([])
   const [filters, setFilters] = useState({})
 
   return (
     <DeviceExplorer
-      deviceType={deviceType}
-      onDeviceTypeChange={(type) => setDeviceType(type)}
       data={mockMiners as never}
       filters={filters as never}
       filterOptions={filterOptions as never}
@@ -56,7 +55,6 @@ export const DeviceExplorerExample = () => {
       searchTags={searchTags}
       onSearchTagsChange={setSearchTags}
       getFormattedDate={(ts) => new Date(Number(ts)).toLocaleString()}
-      renderAction={() => null}
     />
   )
 }

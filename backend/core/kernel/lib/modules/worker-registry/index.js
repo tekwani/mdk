@@ -49,6 +49,16 @@ class WorkerRegistry {
   async register (opts) {
     const { workerId, deviceIds, rpcKey, channel } = opts
 
+    // A workerId is bound to the first RPC key it registered with (persisted,
+    // so the binding survives restarts). A different key claiming the same
+    // workerId is an impersonation attempt until an admin terminates the old
+    // registration (worker.terminate).
+    const existingWorker = this._workerIndex.get(workerId)
+    if (existingWorker && existingWorker.rpcKey && rpcKey && existingWorker.rpcKey !== rpcKey) {
+      debug(`workerId conflict: ${workerId} is bound to ${String(existingWorker.rpcKey).slice(0, 16)}..., rejecting ${String(rpcKey).slice(0, 16)}...`)
+      return false
+    }
+
     for (const deviceId of deviceIds) {
       const existing = this._deviceIndex.get(deviceId)
       if (existing && existing.workerId !== workerId) {
@@ -105,7 +115,7 @@ class WorkerRegistry {
     if (!worker) return
 
     for (const deviceId of worker.deviceIds) {
-      this._deviceIndex.delete(deviceId)
+      this._unmapDevice(deviceId, workerId)
     }
 
     await this.store.del(workerId)
@@ -118,17 +128,25 @@ class WorkerRegistry {
    * Update the device list for a registered worker.
    * Called by DHTListener.refreshAll() to keep the registry current
    * after devices are added/removed from workers post-discovery.
+   *
+   * An unchanged device list is a no-op: the store is append-only, so
+   * rewriting it on every refresh grows the kernel-db (and its block cache)
+   * without bound.
    */
   async syncDeviceIds (workerId, newDeviceIds, channel) {
     const worker = this._workerIndex.get(workerId)
     if (!worker) return
 
     const oldDeviceIds = worker.deviceIds || []
+    const oldSet = new Set(oldDeviceIds)
+    const newSet = new Set(newDeviceIds)
+
+    if (oldSet.size === newSet.size && newDeviceIds.every(id => oldSet.has(id))) return
 
     // Remove obsolete device mappings
     for (const id of oldDeviceIds) {
-      if (!newDeviceIds.includes(id)) {
-        this._deviceIndex.delete(id)
+      if (!newSet.has(id)) {
+        this._unmapDevice(id, workerId)
       }
     }
 
@@ -154,6 +172,13 @@ class WorkerRegistry {
     })))
 
     debug(`synced device IDs for ${workerId}: ${newDeviceIds.length} devices`)
+  }
+
+  // Only drop a device mapping this worker owns: a stale or hostile worker
+  // must not unmap a device another worker has since claimed.
+  _unmapDevice (deviceId, workerId) {
+    const entry = this._deviceIndex.get(deviceId)
+    if (entry && entry.workerId === workerId) this._deviceIndex.delete(deviceId)
   }
 
   resolveWorkerForDevice (deviceId) {

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { onLogClicked } from '../../../utils/alerts-utils'
+import { onLogClicked } from '../../alerts/alerts-utils'
 import { ALERT_COLOR_MAP, ALERT_ICON_MAP } from './alarm-row-constants'
 import './alarm-row.scss'
 
@@ -15,9 +15,9 @@ export type AlarmItemData = {
 export type TimelineItemData = {
   /** The alarm rendered by the row: `title`, `subtitle`, `body` (split on `|` into lines), `status` (`Critical`, `High` or `Medium` sets the color and icon) and `uuid` (click target `/alerts/<uuid>`) */
   item: AlarmItemData
-  /** Timeline marker (e.g. `LogDot`), set by `getAlertTimelineItems`; not rendered by `AlarmRow` */
+  /** Timeline marker (e.g. `LogDot`), built by the caller; not rendered by `AlarmRow` */
   dot: ReactNode
-  /** Prebuilt `LogItem` node, set by `getAlertTimelineItems`; not rendered by `AlarmRow` */
+  /** Prebuilt `LogItem` node, built by the caller; not rendered by `AlarmRow` */
   children: ReactNode
 }
 

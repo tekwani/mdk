@@ -26,6 +26,25 @@ write-action approval modules. Kernel trusts established callers; it does not va
 **Workers** own hardware integration. They declare capabilities, answer Kernel-initiated telemetry and state pulls, resolve candidate
 write calls for approval-gated actions, and execute final commands against devices.
 
+### Worker health is not device liveness
+
+Two Kernel-side states describe a Worker, and neither one says anything about the hardware behind it.
+
+| State | Set when | Means | Does not mean |
+| --- | --- | --- | --- |
+| `READY` | Kernel received the Worker's capability response | Kernel can route to this Worker's devices | Any device answered |
+| `HEALTHY` / `SICK` / `DEAD` | The Worker process answered, or failed to answer, `health.ping` over HRPC | The Worker process is reachable | Any device is powered, hashing or reachable |
+
+The health ping never contacts a device: the Worker answers it from memory with a constant `OK`. Kernel sends it every 5 seconds to
+every `READY` Worker with a 3 second timeout; one or two misses mark the Worker `SICK`, three mark it `DEAD`, and one reply restores
+`HEALTHY`. A `DEAD` Worker stays `READY` in the registry; Kernel stops routing commands to it and keeps pulling its telemetry.
+`waitForWorkers` and `waitForDiscovery` test `READY` only. A Worker with every miner behind it unplugged is `READY` and `HEALTHY`.
+
+Device-level truth lives in the telemetry channel, not in these states: each device's `status` and each channel's `{ error }` in a
+telemetry pull, and for a command, `verification.state` (`VERIFIED` is the only Kernel-side proof the device reached the requested
+state). Kernel keeps no per-device staleness or last-seen signal, `mdk status` reports component state only, and the built-in
+`health` telemetry channel on `WorkerRuntimeV2` is a per-device identifier query unrelated to `health.ping`.
+
 ## Connection direction
 
 The direction of each connection is intentional:
@@ -43,8 +62,8 @@ across single-process, local, and distributed deployments.
 HRPC uses encrypted Noise connections with public-key identities. Kernel's HRPC public key identifies and addresses the
 Kernel listener. Each caller has a separate public key that the listener receives during connection setup.
 
-Kernel compares the caller's key with the allowlist. An empty allowlist admits any HRPC caller; a configured allowlist
-admits the approved callers. This transport-level check works the same way whether the processes share a host or
+Kernel compares the caller's key with the allowlist and is fail-closed: an empty allowlist admits nobody, and each
+admitted key carries a role (`read`, `write` or `admin`) that gates which actions it may send. This transport-level check works the same way whether the processes share a host or
 when they communicate across a network.
 
 The Gateway dials with one persistent key, derived from a seed kept in its store and published as `status.rpcClientKey` in its
@@ -197,13 +216,14 @@ The write-action flow is reachable from two different layers depending on where 
 
 | Layer | Package | How you call it |
 |---|---|---|
-| React / UI | [`@tetherto/mdk-react-adapter`][react-adapter-readme] | `useSubmitSingleAction`, `useSubmitPendingActions`, `useVoteOnAction`, `useCancelAction`, `usePendingActions`, `useLiveActions`, `useDeviceAction`: call Gateway HTTP routes (plugin-provided) |
+| React / UI | [`@tetherto/mdk-react-adapter`][react-adapter-readme] | `useMutation` / `useQuery` against the HTTP routes your Gateway plugin exposes for actions; MDK ships no action hooks |
 | Backend / Node.js | [`@tetherto/mdk-client`][client-readme] | Methods: `pushAction`, `pushActionsBatch`, `voteAction`, `cancelActionsBatch`, `getAction`, `getActionsBatch`, `queryActions` — send MDK Protocol envelopes directly to Kernel |
 
 > [!IMPORTANT]
 > The React hooks go through the Gateway, so whatever validation your plugin controllers perform applies to them. The `mdk-client` methods connect
 > directly to Kernel and bypass that layer entirely. Neither path gets user-level control for free: the Gateway ships no authentication, and Kernel
-> admits backend processes by its [HRPC transport policy](#transport-identity-and-admission).
+> admits backend processes according to its HRPC transport policy: only allowlisted caller keys (an empty allowlist admits nobody), each limited
+> to its role.
 
 ## Next steps
 

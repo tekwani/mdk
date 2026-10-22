@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Fails the build when a component stylesheet is not reachable from
  * `src/styles.scss`.

@@ -39,6 +39,8 @@ async function startWhatsminerWorker (opts) {
     workerId: opts.workerId,
     kernelTopic: opts.kernelTopic || null,
     storeDir: opts.storeDir,
+    allowedKeys: opts.allowedKeys || [],
+    allowAll: opts.allowAll === true,
     devices
   })
 

@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-core",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "MDK bootstrap utilities and worker-infra services — kernel/gateway lifecycle plus injectable log/comment/alert/stats/settings/provisioning services for runtime-hosted workers",
   "main": "index.js",
   "keywords": [
@@ -21,6 +21,8 @@
     "test:coverage": "NODE_ENV=test brittle --coverage 'tests/**/*.test.js'"
   },
   "dependencies": {
+    "@tetherto/mdk-gateway": "^0.12.0",
+    "@tetherto/mdk-kernel": "^0.12.0",
     "@bitfinex/bfx-facs-http": "^1.1.3",
     "@bitfinex/bfx-facs-interval": "^1.0.0",
     "@bitfinex/bfx-facs-scheduler": "^1.0.0",
@@ -35,10 +37,28 @@
   },
   "devDependencies": {
     "brittle": "3.18.0",
-    "hyperdht": "^6.32.0",
+    "hyperdht": "6.34.1",
     "standard": "17.1.0"
   },
-  "overrides": {
-    "brace-expansion": "5.0.9"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tetherto/mdk.git",
+    "directory": "backend/core/mdk"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "index.js",
+    "services.js",
+    "worker.js",
+    "lib/",
+    "utils/",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./lib/local-discovery": "./lib/local-discovery.js",
+    "./package.json": "./package.json"
   }
 }

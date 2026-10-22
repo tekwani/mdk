@@ -7,7 +7,11 @@ const { createActionCallerProxy } = require('../../lib/modules/action-manager/ca
 function createCaller (opts = {}) {
   const workers = opts.workers || []
   const registry = {
-    getReadyWorkers: () => workers
+    getReadyWorkers: () => workers,
+    resolveWorkerForDevice: (id) => {
+      const w = workers.find((w) => (w.deviceIds || []).includes(id))
+      return w ? { workerId: w.workerId } : null
+    }
   }
   const workerChannel = {
     send: async () => ({
@@ -35,5 +39,21 @@ test('action caller proxy - exposes action names as callTargets methods', async 
 
   await proxy.reboot([{ mode: 'eco' }], targets)
   t.is(targets['miner-worker'].calls[0].commandId, 'cmd-99')
-  t.is(typeof proxy.getWriteCalls, 'function', 'preserves existing methods')
+})
+
+test('action caller proxy - never exposes real ActionCaller methods', async (t) => {
+  const seen = []
+  const caller = {
+    getWriteCalls: () => { throw new Error('must not be reached') },
+    _callTarget: () => { throw new Error('must not be reached') },
+    callTargets: async (action, params, targets) => { seen.push(action) }
+  }
+  const proxy = createActionCallerProxy(caller)
+
+  for (const name of ['getWriteCalls', '_callTarget', 'callTargets', 'constructor', '__proto__']) {
+    await proxy[name]([], {})
+  }
+  t.alike(seen, ['getWriteCalls', '_callTarget', 'callTargets', 'constructor', '__proto__'])
+  t.is(proxy.then, undefined, 'not a thenable')
+  t.absent(Array.isArray(proxy))
 })

@@ -28,8 +28,3 @@ export const HEADER_ITEMS = [
 ] as const
 
 export const HEADER_PREFERENCES_STORAGE_KEY = 'headerControlsPreferences'
-
-export const HEADER_PREFERENCES_EVENTS = {
-  STORAGE: 'storage',
-  PREFERENCES_CHANGED: 'headerPreferencesChanged',
-} as const

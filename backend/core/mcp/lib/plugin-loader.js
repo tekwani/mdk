@@ -100,7 +100,9 @@ function loadPlugin (pluginDir, context) {
       id: tool.id,
       description: tool.description,
       schema: resolved.schema || {},
-      annotations: tool.annotations,
+      // A tool that does not declare itself read-only is treated as a write:
+      // the server withholds it unless writes are opted into.
+      annotations: { readOnlyHint: false, ...tool.annotations },
       agent: tool.agent,
       _handler: handler
     }

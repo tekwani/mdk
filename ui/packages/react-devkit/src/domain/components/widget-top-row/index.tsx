@@ -6,12 +6,18 @@ import type { ErrorWithTimestamp } from '@primitives'
 import { useTimezoneFormatter } from '@tetherto/mdk-react-adapter'
 import { AlarmInfo } from './alarm-info'
 import type { AlarmInfoItem } from './alarm-info'
-import { WIDGET_ALARMS } from './constants'
-import type { AlarmPropKey, WidgetAlarmItem } from './constants'
 
-import type { JSX } from 'react'
+import type { JSX, ReactNode } from 'react'
 
-type AlarmsMap = Partial<Record<AlarmPropKey, AlarmInfoItem[]>>
+/** One alarm category badge: a title, an icon, and the alerts behind it. */
+export type WidgetAlarmGroup = {
+  /** Category label; the tooltip heading reads `<title> issues` */
+  title: string
+  /** Badge icon */
+  icon: ReactNode
+  /** Active alerts in this category; the badge is hidden when empty */
+  items?: AlarmInfoItem[]
+}
 
 export type WidgetTopRowProps = {
   /** Widget title */
@@ -22,16 +28,16 @@ export type WidgetTopRowProps = {
   unit?: string
   /** Error tooltip content; replaces power */
   statsErrorMessage?: string | ErrorWithTimestamp[] | null
-  /** Per-category alarm badges */
-  alarms?: AlarmsMap
+  /** Alarm category badges, in display order. Categories with no items render nothing. */
+  alarms?: WidgetAlarmGroup[]
   /** Additional class names */
   className?: string
 }
 
 /**
  * Compact header row used at the top of container / miner widgets — shows the
- * title, per-category alarm badges, and the current power reading (or an
- * error tooltip).
+ * title, one badge per alarm category you pass, and the current power reading
+ * (or an error tooltip).
  *
  * @category widgets
  * @kernelCapability device-telemetry
@@ -39,7 +45,12 @@ export type WidgetTopRowProps = {
  *
  * @example
  * ```tsx
- * <WidgetTopRow title="Container A" power={power} unit="kW" alarms={alarms} />
+ * <WidgetTopRow
+ *   title="Container A"
+ *   power={power}
+ *   unit="kW"
+ *   alarms={[{ title: 'Pressure', icon: <PressureAlarmIcon />, items: pressureAlerts }]}
+ * />
  * ```
  * @tier agent-ready
  */
@@ -65,13 +76,8 @@ export const WidgetTopRow = ({
     <div className={cn('mdk-widget-top-row', className)}>
       <div className="mdk-widget-top-row__inner">
         <div className="mdk-widget-top-row__title">{title}</div>
-        {_map(WIDGET_ALARMS, (alarm: WidgetAlarmItem) => (
-          <AlarmInfo
-            title={alarm.title}
-            icon={<alarm.Icon />}
-            items={alarms?.[alarm.propKey]}
-            key={alarm.title}
-          />
+        {_map(alarms, (group: WidgetAlarmGroup) => (
+          <AlarmInfo title={group.title} icon={group.icon} items={group.items} key={group.title} />
         ))}
         <div className="mdk-widget-top-row__power">
           {statsErrorMessage ? (

@@ -49,13 +49,13 @@ chore(deps): bump zustand to v5
 
 ## Code style
 
-- **Formatting**: ESLint via `@antfu/eslint-config`.
+- **Linting**: oxlint, configured in [`.oxlintrc.json`](../.oxlintrc.json).
 - **Quotes**: double.
 - **Semicolons**: required.
 - **Indentation**: 2 spaces.
 - **Line length**: 120 characters (soft).
 
-Pre-commit hooks (Husky + lint-staged) run `eslint --fix` and
+Pre-commit hooks (Husky + lint-staged) run `oxlint --fix` and
 `prettier --write` on staged files automatically.
 
 ## Daily commands
@@ -77,7 +77,7 @@ npm run test:watch                       # vitest watch
 npm run test:coverage                    # vitest run --coverage
 
 # Lint / typecheck
-npm run lint                             # eslint
+npm run lint                             # oxlint
 npm run lint:fix
 npm run typecheck                        # tsc --noEmit
 npm run check                            # lint + format + typecheck
@@ -121,7 +121,7 @@ The toolkit follows a **framework-first** naming convention:
        "build": "tsc -p tsconfig.build.json",
        "dev:ts": "tsc --watch",
        "typecheck": "tsc --noEmit",
-       "lint": "eslint .",
+       "lint": "oxlint",
        "test": "vitest run"
      },
      "peerDependencies": {
@@ -371,15 +371,6 @@ only your intro + `## Notes`. Put your effort into that prose; the props/example
 blocks above are optional (they are not rendered on the published page). See
 [`packages/react-devkit/AGENT_READY.md`](../packages/react-devkit/AGENT_READY.md#paste-ready-templates)
 for the full explanation.
-
-#### Blueprints — only when adding a new user intent
-
-Blueprints live in [`packages/react-devkit/blueprints/`](../packages/react-devkit/blueprints/README.md) and map a high-level
-goal ("build a mining dashboard") to a concrete set of components. You do
-**not** write a blueprint per component. Write one only when there is a new
-category of user intent that isn't covered by the existing four blueprints
-(`mining-operations-dashboard`, `reporting`, `device-management`,
-`custom-feature`).
 
 #### Validation
 

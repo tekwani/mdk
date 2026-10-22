@@ -62,3 +62,59 @@ test('key file - hrpc: false writes nothing and does not throw', async (t) => {
   await createKernel(t, { keyFile, hrpc: false })
   t.absent(fs.existsSync(keyFile), 'no key file when HRPC is disabled')
 })
+
+test('signals - getKernel installs SIGINT/SIGTERM handlers only with handleSignals', async (t) => {
+  const counts = () => [process.listenerCount('SIGINT'), process.listenerCount('SIGTERM')]
+  const before = counts()
+  await createKernel(t, { keyFile: false })
+  t.alike(counts(), before, 'library default leaves process signals alone')
+
+  await createKernel(t, { keyFile: false, handleSignals: true })
+  const after = counts()
+  t.is(after[0], before[0] + 1, 'opt-in adds a SIGINT handler')
+  t.is(after[1], before[1] + 1, 'opt-in adds a SIGTERM handler')
+  t.teardown(() => {
+    for (const sig of ['SIGINT', 'SIGTERM']) {
+      const ls = process.listeners(sig)
+      process.removeListener(sig, ls[ls.length - 1])
+    }
+  })
+})
+
+test('trust - getKernel is fail-closed and admits keys from its trusted-keys dir', async (t) => {
+  const { publishTrustedKey, readTrustedKeys } = require('../../lib/local-discovery')
+  const { kernel } = await createKernel(t, { keyFile: false })
+  const caller = 'ef'.repeat(32)
+
+  t.is(kernel.hrpcListener.getCallerRoles(caller), null, 'unknown caller rejected by default')
+  t.ok(kernel.trustedKeysDir, 'trusted-keys dir set')
+  const published = readTrustedKeys(kernel.trustedKeysDir).find((k) => k.name === 'kernel')
+  t.is(published.key, kernel.getClientPublicKey().toString('hex'), 'kernel.pub is the worker-dialing key')
+
+  publishTrustedKey(kernel.trustedKeysDir, 'cli', caller)
+  let roles = null
+  for (let i = 0; i < 40 && !roles; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    roles = kernel.hrpcListener.getCallerRoles(caller)
+  }
+  t.ok(roles, 'published caller admitted')
+})
+
+test('trust - hrpc.allowAll is passed through', async (t) => {
+  const { kernel } = await createKernel(t, { keyFile: false, trustedKeysDir: false, hrpc: { allowAll: true } })
+  t.ok(kernel.hrpcListener.getCallerRoles('ef'.repeat(32)))
+  t.is(kernel.trustedKeysDir, null)
+})
+
+test('trust - startGateway({ kernel }) admits the gateway client key and publishes it for workers', { timeout: 60000 }, async (t) => {
+  const { readTrustedKeys } = require('../../lib/local-discovery')
+  const { root, kernel } = await createKernel(t, { keyFile: false })
+  const hnd = await sdk.startGateway({ kernel, root: path.join(root, 'gateway'), port: 0, env: 'test', noAuth: true })
+  t.teardown(() => new Promise((resolve) => hnd.stop(resolve)), { order: -1 })
+
+  const key = hnd.status.rpcClientKey
+  t.is(key.length, 64)
+  t.ok(kernel.hrpcListener.getCallerRoles(key), 'gateway key admitted on the in-process kernel')
+  t.ok(kernel.listAllowedKeys('write').includes(key), 'and mirrored to in-process workers via trustKernel')
+  t.ok(readTrustedKeys(kernel.trustedKeysDir).some((k) => k.name === 'gateway' && k.key === key), 'published for other processes')
+})

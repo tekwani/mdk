@@ -2,7 +2,7 @@
 
 const test = require('brittle')
 const { z } = require('zod')
-const { generateToolsFromGatewayPlugin } = require('../../lib/from-http-plugin')
+const { generateToolsFromGatewayPlugin, missingPermissions } = require('../../lib/from-http-plugin')
 
 function makePlugin (routes, manifest) {
   return { manifest: manifest || { description: 'fallback plugin description' }, routes }
@@ -188,8 +188,9 @@ test('generateToolsFromGatewayPlugin - array items default to z.any() when unspe
   t.pass()
 })
 
-test('generateToolsFromGatewayPlugin - handler reassembles flat args into params/query/headers/body and JSON-stringifies the result', async (t) => {
+test('generateToolsFromGatewayPlugin - handler reassembles flat args into params/query/headers/body, forwards them by route id and JSON-stringifies the result', async (t) => {
   let received = null
+  let receivedId = null
   const plugin = makePlugin([{
     id: 'echo-route',
     description: 'x',
@@ -206,15 +207,18 @@ test('generateToolsFromGatewayPlugin - handler reassembles flat args into params
           }
         }
       }
-    },
-    _handler: async (pluginReq) => {
-      received = pluginReq
-      return { ok: true }
     }
   }])
 
-  const [tool] = generateToolsFromGatewayPlugin(plugin)
+  const call = async (routeId, req) => {
+    receivedId = routeId
+    received = req
+    return { ok: true }
+  }
+  const [tool] = generateToolsFromGatewayPlugin(plugin, { call })
   const result = await tool._handler({ id: 'abc', verbose: true, 'x-trace': 't1', note: 'hello' })
+
+  t.is(receivedId, 'echo-route', 'the call should carry the route id, not the sanitized tool id')
 
   t.alike(received.params, { id: 'abc' }, 'path params should land in params')
   t.alike(received.query, { verbose: true }, 'query params should land in query')
@@ -228,22 +232,117 @@ test('generateToolsFromGatewayPlugin - handler reassembles flat args into params
 
 test('generateToolsFromGatewayPlugin - handler defaults args to an empty object when called with none', async (t) => {
   let received = null
-  const plugin = makePlugin([{
-    id: 'no-args-route',
-    description: 'x',
-    http: {},
-    _handler: async (pluginReq) => {
-      received = pluginReq
-      return {}
-    }
-  }])
+  const plugin = makePlugin([{ id: 'no-args-route', description: 'x', http: {} }])
 
-  const [tool] = generateToolsFromGatewayPlugin(plugin)
+  const [tool] = generateToolsFromGatewayPlugin(plugin, { call: async (routeId, req) => { received = req; return {} } })
   await tool._handler()
 
   t.alike(received.params, {}, 'params should default to empty')
   t.alike(received.query, {}, 'query should default to empty')
   t.alike(received.headers, {}, 'headers should default to empty')
   t.alike(received.body, {}, 'body should default to empty')
+  t.pass()
+})
+
+test('generateToolsFromGatewayPlugin - integer becomes an int and strings get a default length cap', (t) => {
+  const { DEFAULT_MAX_STRING_LENGTH } = require('../../lib/from-http-plugin')
+  const plugin = makePlugin([{
+    id: 'limits',
+    description: 'x',
+    http: {
+      parameters: [
+        { name: 'count', in: 'query', required: true, schema: { type: 'integer' } },
+        { name: 'free', in: 'query', schema: { type: 'string' } },
+        { name: 'short', in: 'query', schema: { type: 'string', minLength: 2, maxLength: 4 } }
+      ]
+    },
+    _handler: async () => ({})
+  }])
+
+  const [tool] = generateToolsFromGatewayPlugin(plugin)
+  const schema = z.object(tool.schema)
+
+  t.ok(schema.safeParse({ count: 3 }).success, 'an integer should validate')
+  t.ok(!schema.safeParse({ count: 1.5 }).success, 'a fraction should fail an integer schema')
+  t.ok(!schema.safeParse({ count: 1, free: 'a'.repeat(DEFAULT_MAX_STRING_LENGTH + 1) }).success, 'an unbounded string should be capped')
+  t.ok(!schema.safeParse({ count: 1, short: 'a' }).success, 'minLength should apply')
+  t.ok(!schema.safeParse({ count: 1, short: 'abcde' }).success, 'maxLength should apply')
+  t.ok(schema.safeParse({ count: 1, short: 'abc' }).success, 'a string within bounds should validate')
+  t.pass()
+})
+
+test('generateToolsFromGatewayPlugin - skips stream routes', (t) => {
+  const plugin = makePlugin([
+    { id: 'plain', description: 'x', http: {}, _handler: async () => ({}) },
+    { id: 'sse', description: 'x', http: {}, stream: true, _handler: async () => ({}) }
+  ])
+
+  const tools = generateToolsFromGatewayPlugin(plugin)
+  t.alike(tools.map((tool) => tool.id), ['plain'], 'a stream route should produce no tool')
+  t.pass()
+})
+
+test('generateToolsFromGatewayPlugin - an auth route refuses to run without an identity', async (t) => {
+  let called = false
+  const plugin = makePlugin([{ id: 'secret', description: 'x', http: {}, auth: true }])
+
+  const [tool] = generateToolsFromGatewayPlugin(plugin, { call: async () => { called = true; return {} } })
+  t.is(tool.auth, true, 'the tool should carry the route auth flag')
+  await t.exception(() => tool._handler({}), /ERR_MCP_AUTH_REQUIRED/, 'should refuse with ERR_MCP_AUTH_REQUIRED')
+  t.is(called, false, 'the call should not be forwarded with an empty identity')
+  t.pass()
+})
+
+test('generateToolsFromGatewayPlugin - the configured identity is forwarded with the call', async (t) => {
+  let received = null
+  const identity = { user: { userId: 'mcp-agent' } }
+  const plugin = makePlugin([{ id: 'secret', description: 'x', http: {}, auth: true }])
+
+  const [tool] = generateToolsFromGatewayPlugin(plugin, { identity, call: async (routeId, req, id) => { received = id; return {} } })
+  await tool._handler({})
+  t.alike(received, identity, 'the call should carry the configured identity')
+  t.pass()
+})
+
+test('generateToolsFromGatewayPlugin - an open route is forwarded with an empty identity when none is configured', async (t) => {
+  let received = null
+  const plugin = makePlugin([{ id: 'open', description: 'x', http: {} }])
+
+  const [tool] = generateToolsFromGatewayPlugin(plugin, { call: async (routeId, req, id) => { received = id; return {} } })
+  await tool._handler({})
+  t.alike(received, {}, 'as the Gateway does for an unauthenticated route')
+  t.pass()
+})
+
+test('generateToolsFromGatewayPlugin - an auth route refuses an identity whose perms do not cover its permissions', async (t) => {
+  let called = false
+  const identity = { user: { userId: 'mcp-agent' }, perms: ['read'] }
+  const plugin = makePlugin([{ id: 'reboot', description: 'x', http: {}, auth: true, permissions: ['read', 'miner:w'] }])
+
+  const [tool] = generateToolsFromGatewayPlugin(plugin, { identity, call: async () => { called = true; return {} } })
+  t.alike(tool.permissions, ['read', 'miner:w'], 'the tool should carry the route permissions')
+  await t.exception(() => tool._handler({}), /ERR_MCP_PERM_DENIED/, 'should refuse with ERR_MCP_PERM_DENIED')
+  t.is(called, false, 'the call should not reach the app runtime')
+  t.pass()
+})
+
+test('generateToolsFromGatewayPlugin - an auth route runs when the identity holds every permission', async (t) => {
+  let called = false
+  const identity = { user: { userId: 'mcp-agent' }, perms: ['read', 'miner:w'] }
+  const plugin = makePlugin([{ id: 'reboot', description: 'x', http: {}, auth: true, permissions: ['miner:w'] }])
+
+  const [tool] = generateToolsFromGatewayPlugin(plugin, { identity, call: async () => { called = true; return {} } })
+  await tool._handler({})
+  t.is(called, true, 'the call should be forwarded')
+  t.pass()
+})
+
+test('missingPermissions - lists what the identity lacks, treating absent perms as none', (t) => {
+  t.alike(missingPermissions(undefined, {}), [], 'no permissions required')
+  t.alike(missingPermissions([], { perms: [] }), [], 'an empty list requires nothing')
+  t.alike(missingPermissions(['a', 'b'], { perms: ['a'] }), ['b'])
+  t.alike(missingPermissions(['a'], { user: { userId: 'x' } }), ['a'], 'an identity without perms holds none')
+  t.alike(missingPermissions(['a'], { perms: 'a' }), ['a'], 'a non-array perms holds none')
+  t.alike(missingPermissions(['a'], null), ['a'])
   t.pass()
 })

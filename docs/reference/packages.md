@@ -21,12 +21,12 @@ Availability says how you get a package:
 | Package | Purpose | Availability |
 | --- | --- | --- |
 | [`@tetherto/mdk-agent`][mdk-agent] | MDK operator agent — headless loop over a local (QVAC) model, consuming MDK tools via MCP | `workspace` |
+| [`@tetherto/mdk-app-runtime`][mdk-app-runtime] | MDK app runtime: runs one app's controllers in its own process and serves them over HRPC | `publishable` |
 | [`@tetherto/mdk-client`][mdk-client] | MDK protocol client — HRPC (RPC listener) transport for Kernel | `publishable` |
 | [`@tetherto/mdk-core`][mdk-core] | MDK bootstrap utilities and worker-infra services — kernel/gateway lifecycle plus injectable log/comment/alert/stats/settings/provisioning services for runtime-hosted workers | `publishable` |
 | [`@tetherto/mdk-gateway`][mdk-gateway] | MDK Gateway | `publishable` |
 | [`@tetherto/mdk-kernel`][mdk-kernel] | MDK Kernel - Orchestration Kernel | `publishable` |
 | [`@tetherto/mdk-mcp`][mdk-mcp] | MDK MCP Server | `publishable` |
-| [`@tetherto/mdk-plugins`][mdk-plugins] | MDK Gateway Plugins | `publishable` |
 | [`@tetherto/mdk-worker`][mdk-worker] | MDK Worker Runtime — hosts a Worker Plugin's devices behind one HRPC channel to the Kernel | `publishable` |
 
 ## Extensions
@@ -35,59 +35,58 @@ Availability says how you get a package:
 
 | Name | Package | Purpose | Models | Availability |
 | --- | --- | --- | --- | --- |
-| Antminer | [`@tetherto/mdk-worker-antminer`][mdk-worker-antminer] | Controls Bitmain Antminer Bitcoin miners over the HTTP digest API | S19XP, S19XPH, S21, S21PRO | `publishable` |
-| Avalon | [`@tetherto/mdk-worker-avalon`][mdk-worker-avalon] | Controls Canaan Avalon Bitcoin miners over the CGMiner ASCII API | A1346 | `publishable` |
+| Avalon | [`@tetherto/mdk-worker-avalon`][mdk-worker-avalon] | Controls Canaan Avalon Bitcoin miners over the CGMiner ASCII API | A1346 | `workspace` |
 
 ### Containers
 
 | Name | Package | Purpose | Models | Availability |
 | --- | --- | --- | --- | --- |
-| Antspace | [`@tetherto/mdk-worker-antspace`][mdk-worker-antspace] | Controls Antspace container cooling systems | HK3, IMM | `publishable` |
-| Bitdeer | [`@tetherto/mdk-worker-bitdeer`][mdk-worker-bitdeer] | Controls Bitdeer D40 immersion containers | D40-A1346, D40-M30, D40-M56, D40-S19XP | `publishable` |
+| Antspace | [`@tetherto/mdk-worker-antspace`][mdk-worker-antspace] | Controls Antspace container cooling systems | HK3, IMM | `workspace` |
+| Bitdeer | [`@tetherto/mdk-worker-bitdeer`][mdk-worker-bitdeer] | Controls Bitdeer D40 immersion containers | D40-A1346, D40-M30, D40-M56, D40-S19XP | `workspace` |
 
 ### Power meters
 
 | Name | Package | Purpose | Models | Availability |
 | --- | --- | --- | --- | --- |
-| ABB | [`@tetherto/mdk-worker-abb`][mdk-worker-abb] | Reads ABB power meters via Modbus TCP | B23, B24, M1M20, M4M20, REU615 | `publishable` |
-| SATEC | [`@tetherto/mdk-worker-satec`][mdk-worker-satec] | Reads SATEC PM180 power meters via Modbus TCP | PM180 | `publishable` |
-| Schneider Electric | [`@tetherto/mdk-worker-schneider`][mdk-worker-schneider] | Reads Schneider Electric power meters via Modbus TCP | P3U30, PM5340 | `publishable` |
+| ABB | [`@tetherto/mdk-worker-abb`][mdk-worker-abb] | Reads ABB power meters via Modbus TCP | B23, B24, M1M20, M4M20, REU615 | `workspace` |
+| SATEC | [`@tetherto/mdk-worker-satec`][mdk-worker-satec] | Reads SATEC PM180 power meters via Modbus TCP | PM180 | `workspace` |
+| Schneider Electric | [`@tetherto/mdk-worker-schneider`][mdk-worker-schneider] | Reads Schneider Electric power meters via Modbus TCP | P3U30, PM5340 | `workspace` |
 
 ### Sensors
 
 | Name | Package | Purpose | Models | Availability |
 | --- | --- | --- | --- | --- |
-| Seneca | [`@tetherto/mdk-worker-seneca`][mdk-worker-seneca] | Reads Seneca Z-4RTD-2 temperature sensors via Modbus TCP | Z-4RTD-2 | `publishable` |
+| Seneca | [`@tetherto/mdk-worker-seneca`][mdk-worker-seneca] | Reads Seneca Z-4RTD-2 temperature sensors via Modbus TCP | Z-4RTD-2 | `workspace` |
 
 ### Mining pools
 
 | Name | Package | Purpose | Models | Availability |
 | --- | --- | --- | --- | --- |
-| F2Pool | [`@tetherto/mdk-worker-f2pool`][mdk-worker-f2pool] | Reports F2Pool mining pool account data: hashrate, workers, balances and revenue | F2POOL-BTC | `publishable` |
-| Ocean | [`@tetherto/mdk-worker-ocean`][mdk-worker-ocean] | Reports Ocean.xyz mining pool account data: hashrate, workers, balances and revenue | OCEAN-BTC | `publishable` |
+| F2Pool | [`@tetherto/mdk-worker-f2pool`][mdk-worker-f2pool] | Reports F2Pool mining pool account data: hashrate, workers, balances and revenue | F2POOL-BTC | `workspace` |
+| Ocean | [`@tetherto/mdk-worker-ocean`][mdk-worker-ocean] | Reports Ocean.xyz mining pool account data: hashrate, workers, balances and revenue | OCEAN-BTC | `workspace` |
 
 ### Plugins and tooling
 
 | Package | Purpose | Availability |
 | --- | --- | --- |
-| [`@tetherto/mdk-plugin-agent`][mdk-plugin-agent] | MDK gateway agent plugin: auth-gated chat sessions, SSE streams and approval round-trips | `workspace` |
+| [`@tetherto/mdk-app-agent`][mdk-app-agent] | MDK agent app: auth-gated chat sessions, SSE streams and approval round-trips behind the Gateway | `workspace` |
 | [`@tetherto/mdk-worker-mock`][mdk-worker-mock] | Generic mock framework for MDK device workers (BaseMock + transport adapters) | `workspace` |
 
 ## UI
 
 | Package | Purpose | Availability |
 | --- | --- | --- |
-| [`@tetherto/mdk-fonts`][mdk-fonts] | Font assets for MDK | `workspace` |
-| [`@tetherto/mdk-react-adapter`][mdk-react-adapter] | React framework adapter for @tetherto/mdk-ui-foundation. Binds Zustand vanilla stores and TanStack QueryClient to React-native hooks. No Redux | `workspace` |
-| [`@tetherto/mdk-react-devkit`][mdk-react-devkit] | MDK Devkit (React) — generic UI primitives (src/primitives) plus mining-domain components, hooks, and state bindings (src/domain) | `workspace` |
-| [`@tetherto/mdk-ui-agent`][mdk-ui-agent] | Injectable operator Co-pilot chat UI for the MDK agent gateway plugin. Streams the six-event agent contract over SSE and renders it as a docked panel or a full-page route | `workspace` |
-| [`@tetherto/mdk-ui-foundation`][mdk-ui-foundation] | Framework-agnostic headless foundation for the MDK Devkit. Currently exposes Zustand vanilla stores and a TanStack QueryClient factory. No React | `workspace` |
+| [`@tetherto/mdk-fonts`][mdk-fonts] | Font assets for MDK | `publishable` |
+| [`@tetherto/mdk-react-adapter`][mdk-react-adapter] | React framework adapter for @tetherto/mdk-ui-foundation. Binds Zustand vanilla stores and TanStack QueryClient to React-native hooks. No Redux | `publishable` |
+| [`@tetherto/mdk-react-devkit`][mdk-react-devkit] | MDK Devkit (React) — generic UI primitives (src/primitives) plus mining-domain components, hooks, and state bindings (src/domain) | `publishable` |
+| [`@tetherto/mdk-ui-agent`][mdk-ui-agent] | Injectable operator Co-pilot chat UI for the MDK agent gateway plugin. Streams the six-event agent contract over SSE and renders it as a docked panel or a full-page route | `publishable` |
+| [`@tetherto/mdk-ui-foundation`][mdk-ui-foundation] | Framework-agnostic headless foundation for the MDK Devkit. Currently exposes Zustand vanilla stores and a TanStack QueryClient factory. No React | `publishable` |
 
 ## Tools
 
 | Package | Purpose | Availability |
 | --- | --- | --- |
-| [`@tetherto/mdk-cli`][mdk-cli] | MDK command-line tool: onboard, scaffold, run and inspect an MDK stack. Commands marked (stub) are wired up but not implemented yet | `publishable` |
+| [`@tetherto/mdk-cli`][mdk-cli] | MDK command-line tool: onboard, scaffold, run and inspect an MDK stack | `publishable` |
 | [`@tetherto/mdk-skill`][mdk-skill] | MDK Developer Skill Suite — Agent Skills (SKILL.md) bundle assembled from the MDK monorepo's real artifacts and versioned to track the MDK release line. Copy-only assembler: each library owns its artifacts, this package curates them into dist/skills/ and installs them flat into .cursor/skills/ or .claude/skills/ | `publishable` |
 
 ## Next steps
@@ -106,6 +105,9 @@ Availability says how you get a package:
 [mdk-agent]: ../../backend/core/agent/README.md
 <!-- docs@tether.io: mdk-agent → https://github.com/tetherto/mdk/blob/main/backend/core/agent/README.md -->
 
+[mdk-app-runtime]: ../../backend/core/app-runtime/README.md
+<!-- docs@tether.io: mdk-app-runtime → https://github.com/tetherto/mdk/blob/main/backend/core/app-runtime/README.md -->
+
 [mdk-client]: ../../backend/core/client/README.md
 <!-- docs@tether.io: mdk-client → https://github.com/tetherto/mdk/blob/main/backend/core/client/README.md -->
 
@@ -121,14 +123,8 @@ Availability says how you get a package:
 [mdk-mcp]: ../../backend/core/mcp/README.md
 <!-- docs@tether.io: mdk-mcp → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->
 
-[mdk-plugins]: ../../backend/core/plugins/README.md
-<!-- docs@tether.io: mdk-plugins → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md -->
-
 [mdk-worker]: ../../backend/core/mdk-worker/README.md
 <!-- docs@tether.io: mdk-worker → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/README.md -->
-
-[mdk-worker-antminer]: ../../backend/workers/miners/antminer/README.md
-<!-- docs@tether.io: mdk-worker-antminer → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/antminer/README.md -->
 
 [mdk-worker-avalon]: ../../backend/workers/miners/avalon/README.md
 <!-- docs@tether.io: mdk-worker-avalon → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/avalon/README.md -->
@@ -157,8 +153,8 @@ Availability says how you get a package:
 [mdk-worker-ocean]: ../../backend/workers/minerpools/ocean/README.md
 <!-- docs@tether.io: mdk-worker-ocean → https://github.com/tetherto/mdk/blob/main/backend/workers/minerpools/ocean/README.md -->
 
-[mdk-plugin-agent]: ../../backend/plugins/agent/README.md
-<!-- docs@tether.io: mdk-plugin-agent → https://github.com/tetherto/mdk/blob/main/backend/plugins/agent/README.md -->
+[mdk-app-agent]: ../../backend/apps/agent/README.md
+<!-- docs@tether.io: mdk-app-agent → https://github.com/tetherto/mdk/blob/main/backend/apps/agent/README.md -->
 
 [mdk-worker-mock]: ../../backend/workers/mock/README.md
 <!-- docs@tether.io: mdk-worker-mock → https://github.com/tetherto/mdk/blob/main/backend/workers/mock/README.md -->

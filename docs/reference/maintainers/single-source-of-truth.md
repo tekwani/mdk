@@ -117,13 +117,13 @@ Maintainer workflow for the UI manifests: what is committed vs. generated, and h
 
 ### What ships vs. what's tracked
 
-The UI packages ship machine-readable manifests under `dist/` (`registry.json`, `blueprints.json`, `hooks.json`, `stores.json`); [`ui/AGENTS.md`](../../../ui/AGENTS.md#machine-readable-artifacts) has the full table with packages, subpath imports, and CLI commands.
+The UI packages ship machine-readable manifests under `dist/` (`registry.json`, `hooks.json`, `stores.json`); [`ui/AGENTS.md`](../../../ui/AGENTS.md#machine-readable-artifacts) has the full table with packages, subpath imports, and CLI commands.
 
 **These are build artifacts, not source files.** `ui/packages/*/dist/` is gitignored: manifests are generated on every `npm run build` and never committed. They **are** included in the published npm packages, so consumers get manifests that match the installed version.
 
 **Source of truth:**
 
-- `registry.json` / `blueprints.json`: props and metadata read from JSDoc tags (`@tier`, `@category`, `@domain`, `@kernelCapability`) and types in component source. For agent-ready components the registry also records a pointer to the co-located `USAGE.md` and `*.example.tsx` files (referenced as docs, not read for prop facts). See the export contract at [`ui/packages/react-devkit/AGENT_READY.md`](../../../ui/packages/react-devkit/AGENT_READY.md).
+- `registry.json`: props and metadata read from JSDoc tags (`@tier`, `@category`, `@domain`, `@kernelCapability`) and types in component source. For agent-ready components the registry also records a pointer to the co-located `USAGE.md` and `*.example.tsx` files (referenced as docs, not read for prop facts). See the export contract at [`ui/packages/react-devkit/AGENT_READY.md`](../../../ui/packages/react-devkit/AGENT_READY.md).
 - `hooks.json`: read from JSDoc in [`ui/packages/react-adapter/src/`](../../../ui/packages/react-adapter/src/index.ts) hooks.
 - `stores.json`: read from JSDoc in [`ui/packages/ui-foundation/src/`](../../../ui/packages/ui-foundation/src/index.ts) stores.
 
@@ -181,7 +181,7 @@ When one thing has changed, run that generator on its own. Each has its own comm
 | Generated target | Command | Run from |
 |---|---|---|
 | Supported hardware | `npm run generate:catalogue` | repo root |
-| Supported plugins page | `npm run generate:plugin-reference` | repo root |
+| App route tables | `npm run generate:plugin-reference` | repo root |
 | Package reference | `npm run generate:package-catalog` | repo root |
 | Component reference in the skill | `npm run generate:ui-registry` | repo root |
 | Props sections in devkit `USAGE.md` files | `npm run generate:usage-proptables` | repo root |
@@ -196,7 +196,7 @@ npm run regenerate-docs -- --check
 
 Report mode regenerates into the working tree, diffs the result against the last commit, then restores the tree exactly as found. It declares when a page is out of date: it exits non-zero and names the stale files. This is the pre-release check, the only mode that catches a stale page before someone suspects one.
 
-Behaviours to know:
+Behaviors to know:
 
 - Report mode declines to run when a generated file already carries uncommitted edits, because it cannot tell a stale page from work in progress. Commit or stash first.
 - The component reference and the `USAGE.md` props sections need [`ui/`](../../../ui/README.md)'s dependencies installed. Without them those targets are skipped (named in the output) and the rest still run. The skip is reported, not fatal. Run [`npm run setup:ui`](../../../README.md) to cover the component reference too.
@@ -257,14 +257,12 @@ This pipeline is temporary: supported Workers are moving to separately published
 
 ### Supported plugins page
 
-Generates the route tables for the plugins that ship with MDK, from their manifest files: the bundled site plugins in `backend/core/plugins/*`
-(`telemetry`, `site-hashrate`, `site-monitor`) and the standalone plugins in `backend/plugins/*` offered via `mdk onboard` (`agent`, `demo`).
+Generates the route tables for the apps MDK ships from their route tables.
 
-**Source:** `backend/core/plugins/*/mdk-plugin.json` and `backend/plugins/*/mdk-plugin.json`
+**Source:** `backend/apps/*/mdk-plugin.json`
 
-**Output:** [`docs/reference/supported-plugins.md`](../supported-plugins.md), within the `BEGIN GENERATED: supported-plugins` and `END GENERATED: supported-plugins`
-markers. The prose around the markers is hand-maintained and the generator leaves it untouched. The machine-readable twin is
-[`backend/plugins/docs/plugins.json`](../../../backend/plugins/docs/plugins.json), overwritten each run.
+**Output:** [`docs/reference/supported-plugins.md`](../supported-plugins.md), within the `BEGIN GENERATED` and `END GENERATED`
+markers. The prose around the markers is hand-maintained and the generator leaves it untouched.
 
 **Generator:** [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js), runnable on its own with `npm run generate:plugin-reference` from
 the repo root
@@ -273,7 +271,7 @@ the repo root
 
 Lists every package in the monorepo on one page, so a reader can see what exists without walking each workspace.
 
-**Source:** each `package.json` under `backend/core`, `backend/plugins`, `backend/workers`, `ui/packages`, and `packages`, plus each integration's `mdk-contract.json`
+**Source:** each `package.json` under `backend/core`, `backend/apps`, `backend/workers`, `ui/packages`, and `packages`, plus each integration's `mdk-contract.json`
 
 **Output:** [`docs/reference/packages.md`](../packages.md)
 
@@ -281,13 +279,15 @@ Lists every package in the monorepo on one page, so a reader can see what exists
 
 Every column is inferred, so no `package.json` carries metadata for this page:
 
-- Group: where the package lives. `backend/core` is Core, `backend/plugins` and `backend/workers` are Extensions, `ui/packages` is UI, and `packages` is Tools
-- Integration: any package with an `mdk-contract.json` at its root or under `plugin/`. Its section, name, and models come from the contract's `deviceFamily`, `brand`, and `modelsSupported`, and its purpose is the first sentence of `overview`
+- Group: where the package lives. `backend/core` is Core, `backend/apps` and `backend/workers` are Extensions, `ui/packages` is UI, and `packages` is Tools
+- Integration: any package with an `mdk-contract.json` at its root or under `plugin/`. Its section, name, and models come from the contract's `deviceFamily`, `brand`, and
+  `modelsSupported`, and its purpose is the first sentence of `overview`
 - Purpose for every other package: its `package.json` `description`
 - Availability: `workspace` when the package is `"private": true`, otherwise `publishable`
 - Link: the package's `README.md`, or its `package.json` when there is no README
 
-Samples and demos (`backend/workers/samples/` and `backend/plugins/demo/`) are skipped by a list in the generator. Add to that list when a new sample or demo should stay off the page.
+Samples and demos (`backend/workers/samples/` and `backend/apps/demo/`) are skipped by a list in the generator. Add to that list when a new sample or demo should stay off
+the page.
 
 The generator writes nothing and exits non-zero when a listed package has no description, shares its name with another, or has a contract that cannot be parsed. Schema conformance is not checked here; the [Worker hardware catalogue](#worker-hardware-catalogue) already validates every contract.
 
@@ -307,7 +307,7 @@ Regenerate through `npm run regenerate-docs` or `npm run generate:ui-registry` f
 
 ### Freshness in CI
 
-`.github/workflows/docs-freshness.yml` runs `regenerate-docs --check` on every pull request. It is a required status check with no path filter (a required check that never reports leaves the pull request unmergeable), so even a change that touches neither the sources nor the generated pages gets a quick, passing run. It installs the UI workspace and treats a skipped target as a failure, since there a skip means the install broke. It **blocks** the pull request whenever any generated page is stale and lists every stale path in the job summary. When a source change needs regenerated output, run `npm run regenerate-docs` from the repo root and commit the deterministic result in the same pull request. A generator that crashes, or any target skipped in CI, also blocks, because then the run did not verify every page.
+`.github/workflows/docs-freshness.yml` runs `regenerate-docs --check` on every pull request. The job is a required status check, and a required check that never reports leaves the pull request unmergeable, so the workflow has no path filter: a change that touches neither the sources nor the generated pages still gets a quick, passing run. It installs the UI workspace and treats a skipped target as a failure, since there a skip means the install broke rather than that someone is working light. It **blocks** the pull request whenever any generated page is stale — a stale page ships facts the sources no longer support — and lists every stale path in the job summary. When a source change requires regenerated output, run `npm run regenerate-docs` from the repo root and commit the deterministic result in the same pull request. A generator that crashes, or any target skipped in CI, also blocks, because then the run did not verify every page.
 
 ## Next steps
 

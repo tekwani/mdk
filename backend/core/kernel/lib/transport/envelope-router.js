@@ -1,10 +1,29 @@
 'use strict'
 
-const { validate: validateEnvelope } = require('../protocol/envelope')
+const { validateFull: validateEnvelope } = require('../protocol/envelope')
 const { ACTIONS } = require('../protocol/actions')
+const { ROLES, hasRole, requiredRole } = require('./caller-auth')
+
+// Approval identity. A caller holding `admin` is a trusted delegate (the
+// Gateway authenticates its own users and forwards who they are), so its
+// payload `voter` is kept; any other caller votes as its transport key, so
+// one key cannot pose as several voters to satisfy reqVotes > 1.
+function _voterFor (payload, caller) {
+  if (!caller || hasRole(caller.roles, ROLES.ADMIN)) return payload.voter
+  return caller.publicKey
+}
+
+function _withVoter (payload, caller) {
+  return { ...payload, voter: _voterFor(payload, caller) }
+}
 
 /**
  * Shared envelope routing for Kernel listeners (HRPC).
+ *
+ * `caller` is set by a transport that authenticated the peer:
+ * `{ publicKey: hex, roles: string[] }`. It gates each action on a role and
+ * replaces self-asserted identity (requester, non-delegate voter) with the
+ * transport key. Without it (in-process callers) every action is allowed.
  *
  * @param {object} envelope
  * @param {object} deps
@@ -13,15 +32,19 @@ const { ACTIONS } = require('../protocol/actions')
  * @param {import('../modules/worker-registry')} deps.registry
  * @param {import('../modules/action-manager')} deps.actionManager
  */
-async function routeEnvelope (envelope, deps) {
+async function routeEnvelope (envelope, deps, caller) {
   const validation = validateEnvelope(envelope)
   if (!validation.valid) return { error: validation.error }
+
+  if (caller && !hasRole(caller.roles, requiredRole(envelope.action))) {
+    return { error: `ERR_KERNEL_ACTION_FORBIDDEN: ${envelope.action} requires role ${requiredRole(envelope.action)}` }
+  }
 
   const { dispatcher, telemetryCollector, registry, actionManager } = deps
 
   switch (envelope.action) {
     case ACTIONS.COMMAND_REQUEST:
-      return dispatcher.dispatch(envelope)
+      return dispatcher.dispatch(envelope, caller ? { requesterId: caller.publicKey } : undefined)
     case ACTIONS.COMMAND_STATUS:
       return dispatcher.getStatus(envelope.payload && envelope.payload.commandId)
     case ACTIONS.COMMAND_CANCEL:
@@ -44,9 +67,9 @@ async function routeEnvelope (envelope, deps) {
       return { status: 'TERMINATED', workerId }
     }
     case ACTIONS.ACTION_PUSH:
-      return actionManager.pushAction(envelope.payload)
+      return actionManager.pushAction(_withVoter(envelope.payload, caller))
     case ACTIONS.ACTION_PUSH_BATCH:
-      return actionManager.pushActionsBatch(envelope.payload)
+      return actionManager.pushActionsBatch(_withVoter(envelope.payload, caller))
     case ACTIONS.ACTION_GET:
       return actionManager.getAction(envelope.payload)
     case ACTIONS.ACTION_GET_BATCH:
@@ -54,9 +77,9 @@ async function routeEnvelope (envelope, deps) {
     case ACTIONS.ACTION_QUERY:
       return actionManager.queryActions(envelope.payload)
     case ACTIONS.ACTION_VOTE:
-      return actionManager.voteAction(envelope.payload)
+      return actionManager.voteAction(_withVoter(envelope.payload, caller))
     case ACTIONS.ACTION_CANCEL_BATCH:
-      return actionManager.cancelActionsBatch(envelope.payload)
+      return actionManager.cancelActionsBatch(_withVoter(envelope.payload, caller))
     default:
       return { error: `ERR_UNKNOWN_ACTION: ${envelope.action}` }
   }

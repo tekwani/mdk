@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Generate `dist/registry.json` — the machine-readable component registry
  * consumed by AI agents and the docs-generation pipeline.
@@ -36,7 +36,6 @@ import {
 } from "ts-morph";
 
 import { summarizeInterfaceMembers } from "../../../scripts/ts-morph-utils.mts";
-import { buildBlueprints } from "./generate-blueprints.mts";
 import type {
   ComponentMeta,
   HookMeta,
@@ -83,7 +82,6 @@ const ENTRY_PATH = join(SRC_ROOT, "index.ts");
 const DIST_DIR = join(PACKAGE_ROOT, "dist");
 const TSCONFIG_PATH = join(PACKAGE_ROOT, "tsconfig.json");
 const PACKAGE_JSON_PATH = join(PACKAGE_ROOT, "package.json");
-const BLUEPRINTS_DIR = join(PACKAGE_ROOT, "blueprints");
 
 const EXCLUDED_FILE_PATTERNS = [/\.test\.tsx?$/, /\.spec\.tsx?$/, /\/specs\//, /\.d\.ts$/];
 
@@ -507,7 +505,7 @@ const buildComponentMeta = (resolved: ResolvedComponent): ComponentMeta => {
     kernelCapabilities: kernelCapabilities.length
       ? (kernelCapabilities as ComponentMeta["kernelCapabilities"])
       : undefined,
-    domainContext: domainContext ? (domainContext as ComponentMeta["domainContext"]) : undefined,
+    domainContext: (domainContext || undefined) as ComponentMeta["domainContext"],
     props,
     ...(shapes.length ? { shapes } : {}),
     ...(isAgentReady && examplePaths.length
@@ -534,7 +532,7 @@ const buildHookMeta = (resolved: ResolvedHook): HookMeta => {
     signature: truncateType(resolved.signature),
     category: category || undefined,
     kernelCapabilities: kernelCapabilities.length ? (kernelCapabilities as HookMeta["kernelCapabilities"]) : undefined,
-    domainContext: domainContext ? (domainContext as HookMeta["domainContext"]) : undefined,
+    domainContext: (domainContext || undefined) as HookMeta["domainContext"],
   };
 };
 
@@ -646,7 +644,7 @@ const buildTypeMeta = (
     public: hasPublicTag,
     definition: truncate(definition.replace(/\s+/g, " ").trim(), TYPE_MAX_CHARS),
     category: category || undefined,
-    domainContext: domainContext ? (domainContext as TypeMeta["domainContext"]) : undefined,
+    domainContext: (domainContext || undefined) as TypeMeta["domainContext"],
   };
 };
 
@@ -775,31 +773,6 @@ const main = (): void => {
     + `${publicTypes.length} types (${publicTypes.length} public, ${internalT} internal).`,
   );
 
-  // Blueprints: curated intent → recipe layer. Validation errors are non-fatal
-  // here (we still emit the manifest); `check:agent-ready` re-runs validation
-  // and fails the build for new violations.
-  // Blueprints only reference the public surface — no internal components.
-  const blueprintsResult = buildBlueprints({
-    blueprintsDir: BLUEPRINTS_DIR,
-    packageRoot: PACKAGE_ROOT,
-    packageName: pkg.name,
-    components: publicComponents,
-    hooks: publicHooks,
-  });
-  const blueprintsPath = join(DIST_DIR, "blueprints.json");
-  const blueprintsSerialised = `${JSON.stringify(blueprintsResult.manifest)}\n`;
-  writeFileSync(blueprintsPath, blueprintsSerialised, "utf8");
-  const bpSizeKb = (Buffer.byteLength(blueprintsSerialised, "utf8") / 1024).toFixed(1);
-  console.log(
-    `✓ Wrote ${toRelativeFromPackage(blueprintsPath)} (${bpSizeKb} KB) — `
-    + `${blueprintsResult.manifest.blueprints.length} blueprints.`,
-  );
-  if (blueprintsResult.errors.length > 0) {
-    console.warn(
-      `⚠ ${blueprintsResult.errors.length} blueprint validation issue(s):`,
-    );
-    for (const err of blueprintsResult.errors) console.warn(`  - ${err}`);
-  }
 };
 
 main();

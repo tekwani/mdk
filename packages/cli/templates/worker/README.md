@@ -19,6 +19,7 @@ src/client.js         # your device "vendor SDK" — binds to this device once, 
 src/telemetry/*.js    # telemetry handlers (metrics read live from the device)
 src/commands/*.js     # command handlers (reboot, set-power-mode, ...)
 mock/server.js        # a standalone device simulator (createServer)
+smoke.config.js       # the device spec `mdk validate worker --smoke` checks against
 ```
 
 Handlers are plain `(params)` functions — they call `require('../client')` for
@@ -53,6 +54,18 @@ mdk run worker __WORKER_NAME__     # boots the worker (+ its mocks with mock: tr
 With `mock: true` the CLI starts one simulator from [`mock/server.js`](./mock/server.js) per device
 so the worker talks to a simulator instead of hardware. Drop `mock` (or set it
 `false`) and point `opts.host`/`opts.port` at real devices for production.
+
+## Check it
+
+```bash
+mdk validate worker __WORKER_NAME__                  # the contract and handler files, without running them
+mdk validate worker --path . --smoke                 # also runs every handler against the simulator
+```
+
+`--smoke` starts the simulator through [`smoke.config.js`](./smoke.config.js), calls every telemetry
+handler and each sample command it lists, then stops the simulator and expects every handler to fail
+with an `ERR_*` error code. Add a sample to `commands` for each command you add, unless it interrupts
+the device.
 
 ## Builtin per-device health check
 

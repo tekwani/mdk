@@ -11,9 +11,8 @@
   &__overlay {
     position: fixed;
     inset: 0;
-    /* Above drawers like the ActionsSidebar (z-index 200); still below the
-       floating-UI layer (dropdowns/tooltips at 10000+) so those render on top
-       of the dialog when opened from inside it. */
+    /* Above side drawers; still below the floating-UI layer (dropdowns/tooltips
+       at 10000+) so those render on top of the dialog when opened from inside it. */
     z-index: 300;
     background: var(--mdk-overlay-bg);
 

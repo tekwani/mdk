@@ -112,8 +112,9 @@ not one shared or federated one.
 
 - A single Worker going offline degrades reads/writes for that Worker's devices only: Kernel continues routing to
   every other registered Worker
-- A Kernel crash is recovered from its own command write-ahead log on restart: `recover()` restores in-flight commands to `QUEUED` and
-  fails those out of retries, without re-sending either. It does not need to reconstruct device state, since it never owned it
+- A Kernel crash is recovered from its own command write-ahead log on restart: `recover()` settles in-flight commands as `TIMEOUT`
+  (`ERR_COMMAND_UNCONFIRMED`) without re-sending them, since they may already have run. It does not need to reconstruct device state,
+  since it never owned it
 - In a multi-Kernel deployment, a crash at one site has zero effect on any other, there's no
   shared state to become inconsistent
 

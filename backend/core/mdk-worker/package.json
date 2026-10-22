@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-worker",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "MDK Worker Runtime — hosts a Worker Plugin's devices behind one HRPC channel to the Kernel",
   "main": "index.js",
   "keywords": [
@@ -23,16 +23,37 @@
     "test:coverage": "NODE_ENV=test brittle --coverage 'tests/**/*.test.js'"
   },
   "dependencies": {
+    "@tetherto/mdk-kernel": "^0.12.0",
     "@hyperswarm/rpc": "3.5.0",
     "debug": "4.4.1",
-    "hyperdht": "6.32.0",
+    "hyperdht": "6.34.1",
     "hyperswarm": "4.17.0"
   },
   "devDependencies": {
     "brittle": "3.18.0",
     "standard": "17.1.2"
   },
-  "overrides": {
-    "brace-expansion": "5.0.9"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tetherto/mdk.git",
+    "directory": "backend/core/mdk-worker"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "index.js",
+    "device.js",
+    "lib/",
+    "mdk-contract.schema.json",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./device": "./device.js",
+    "./lib/module-context": "./lib/module-context.js",
+    "./lib/worker-runtime": "./lib/worker-runtime.js",
+    "./mdk-contract.schema.json": "./mdk-contract.schema.json",
+    "./package.json": "./package.json"
   }
 }

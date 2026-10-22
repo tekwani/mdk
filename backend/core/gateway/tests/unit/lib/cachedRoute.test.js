@@ -13,7 +13,7 @@ test('cachedRoute - returns cached value', async (t) => {
     },
     lru_30s: {
       get: (key) => {
-        t.is(key, 'test-key', 'should use correct cache key')
+        t.is(key, '["test-key"]', 'should use correct cache key')
         return cachedValue
       },
       set: () => {}
@@ -39,7 +39,7 @@ test('cachedRoute - overwrites cache', async (t) => {
       get: () => ({ data: 'cached' }),
       set: (key, value) => {
         setCalled = true
-        t.is(key, 'test-key', 'should use correct cache key')
+        t.is(key, '["test-key"]', 'should use correct cache key')
         t.is(value.data, 'new', 'should set new value')
       }
     },
@@ -63,7 +63,7 @@ test('cachedRoute - handles queued requests', async (t) => {
       get: () => undefined,
       set: (key, value) => {
         // Simulate queued requests
-        const queued = mockCtx.queuedRequests.get('test-key')
+        const queued = mockCtx.queuedRequests.get('["test-key"]')
         if (queued) {
           queued.forEach(({ resolve }) => resolve(value))
         }
@@ -184,7 +184,7 @@ test('cachedRoute - null key parts', async (t) => {
     },
     lru_30s: {
       get: (key) => {
-        t.is(key, 'test:-:-', 'should handle null key parts as dashes')
+        t.is(key, '["test",null,null]', 'should encode null key parts as null')
         return undefined
       },
       set: () => {}
@@ -194,4 +194,18 @@ test('cachedRoute - null key parts', async (t) => {
 
   await cachedRoute(mockCtx, ['test', null, null], '/test', async () => ({}), false)
   t.pass()
+})
+
+test('cachedRoute - parts containing the old separator do not collide', async (t) => {
+  const cache = new Map()
+  const mockCtx = {
+    conf: {},
+    lru_30s: { get: (k) => cache.get(k), set: (k, v) => cache.set(k, v) },
+    queuedRequests: new Map()
+  }
+
+  await cachedRoute(mockCtx, ['r', 'a:b', 'c'], '/test', async () => ({ who: 1 }), false)
+  const second = await cachedRoute(mockCtx, ['r', 'a', 'b:c'], '/test', async () => ({ who: 2 }), false)
+  t.is(second.who, 2, 'a different split of the same characters is a different key')
+  t.is(cache.size, 2)
 })

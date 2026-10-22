@@ -62,7 +62,7 @@
               "schema": {
                 "type": "object",
                 "required": ["mode"],
-                "properties": { "mode": { "type": "string", "enum": ["low", "normal", "high"] } }
+                "properties": { "mode": { "type": "string", "enum": ["low", "normal", "high", "high_performance"] } }
               }
             }
           }

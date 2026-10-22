@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GATEWAY_CATALOG,
+  APP_CATALOG,
   WORKER_CATALOG,
-  findCatalogGatewayPlugin,
+  findCatalogApp,
   findCatalogWorker,
   resolveCatalogPackage,
   type CatalogWorker,
 } from '../../src/lib/catalog.js';
 
 describe('findCatalogWorker', () => {
-  it('finds a known worker by its package value', () => {
-    const entry = findCatalogWorker('@tetherto/mdk-worker-demo');
-    expect(entry?.label).toBe('mdk-worker-demo');
+  it('finds a catalog worker by its package value', () => {
+    const [first] = WORKER_CATALOG;
+    if (!first) return; // the shipped worker catalog may be empty
+    expect(findCatalogWorker(first.value)).toBe(first);
   });
 
   it('returns undefined for an unknown package', () => {
@@ -32,31 +33,24 @@ describe('resolveCatalogPackage', () => {
     expect(resolved.packageName).toBe(entry.value);
   });
 
-  it('resolves the bundled demo-worker entry from this monorepo checkout', () => {
-    const entry = findCatalogWorker('@tetherto/mdk-worker-demo');
-    const resolved = resolveCatalogPackage(entry as CatalogWorker);
-    expect(resolved.bundled).toBe(true);
-    expect(resolved.checkoutDir).toMatch(/backend[/\\]workers[/\\]samples[/\\]demo-worker$/);
-  });
-
-  it('resolves the bundled agent gateway plugin from this checkout', () => {
-    const entry = findCatalogGatewayPlugin('@tetherto/mdk-plugin-agent');
+  it('resolves the bundled agent app from this checkout', () => {
+    const entry = findCatalogApp('@tetherto/mdk-app-agent');
     expect(entry).toBeDefined();
     const resolved = resolveCatalogPackage(entry!);
     expect(resolved.bundled).toBe(true);
-    expect(resolved.checkoutDir).toMatch(/backend[/\\]plugins[/\\]agent$/);
+    expect(resolved.checkoutDir).toMatch(/backend[/\\]apps[/\\]agent$/);
   });
 
-  it('resolves the bundled demo gateway plugin from this checkout', () => {
-    const entry = findCatalogGatewayPlugin('@tetherto/mdk-plugin-demo');
+  it('resolves the bundled demo app from this checkout', () => {
+    const entry = findCatalogApp('@tetherto/mdk-app-demo');
     expect(entry).toBeDefined();
     const resolved = resolveCatalogPackage(entry!);
     expect(resolved.bundled).toBe(true);
-    expect(resolved.checkoutDir).toMatch(/backend[/\\]plugins[/\\]demo$/);
+    expect(resolved.checkoutDir).toMatch(/backend[/\\]apps[/\\]demo$/);
   });
 
-  it('findCatalogGatewayPlugin returns undefined for an unknown package', () => {
-    expect(findCatalogGatewayPlugin('@nope/not-a-plugin')).toBeUndefined();
+  it('findCatalogApp returns undefined for an unknown package', () => {
+    expect(findCatalogApp('@nope/not-a-plugin')).toBeUndefined();
   });
 
   it('marks an entry unavailable when its repoPath does not exist in the checkout', () => {
@@ -74,10 +68,9 @@ describe('resolveCatalogPackage', () => {
 });
 
 describe('catalog contents', () => {
-  it('exposes non-empty worker and gateway catalogs with the expected shape', () => {
-    expect(WORKER_CATALOG.length).toBeGreaterThan(0);
-    expect(GATEWAY_CATALOG.length).toBeGreaterThan(0);
-    for (const entry of [...WORKER_CATALOG, ...GATEWAY_CATALOG]) {
+  it('exposes a non-empty app catalog, and well-formed worker entries if any', () => {
+    expect(APP_CATALOG.length).toBeGreaterThan(0);
+    for (const entry of [...WORKER_CATALOG, ...APP_CATALOG]) {
       expect(entry.value).toBeTruthy();
       expect(entry.label).toBeTruthy();
       expect(entry.hint).toBeTruthy();

@@ -1,5 +1,4 @@
 import type { LineChartCardData } from "@tetherto/mdk-react-devkit/domain";
-import { Socket } from "@tetherto/mdk-react-devkit/domain";
 
 import { MINER_POWER_MODES, type MinerFamily } from "./constants";
 import type { History, Miner } from "./types";
@@ -20,8 +19,21 @@ export function minerFamilyFromType(type: string): MinerFamily | null {
   return null;
 }
 
-export function powerModesForMiner(miner: Pick<Miner, "type"> | undefined): readonly string[] {
-  const family = miner ? minerFamilyFromType(miner.type) : null;
+// Contract-only workers (whatsminer-/antminer-/sealminer-mdk-worker) report no device
+// type, so fall back to the owning workerId, which names the brand.
+export function minerFamily(miner: Pick<Miner, "type" | "workerId">): MinerFamily | null {
+  const fromType = minerFamilyFromType(miner.type);
+  if (fromType) return fromType;
+  const workerId = miner.workerId.toLowerCase();
+  if (workerId.includes("whatsminer")) return "whatsminer";
+  if (workerId.includes("antminer")) return "antminer";
+  if (workerId.includes("sealminer")) return "sealminer";
+  if (workerId.includes("avalon")) return "avalon";
+  return null;
+}
+
+export function powerModesForMiner(miner: Pick<Miner, "type" | "workerId"> | undefined): readonly string[] {
+  const family = miner ? minerFamily(miner) : null;
   return family ? MINER_POWER_MODES[family] : ["normal"];
 }
 
@@ -37,17 +49,6 @@ export function groupByPdu(miners: Miner[]) {
     groups[pdu].sort((a, b) => Number(a.pos.split("_").pop()) - Number(b.pos.split("_").pop()));
   }
   return groups;
-}
-
-type SocketMiner = Parameters<typeof Socket>[0]["miner"];
-
-// Shape a miner into the structure <Socket> reads (snap.stats / snap.config).
-export function toSocketMiner(m: Miner): SocketMiner {
-  const snap = {
-    stats: { status: m.status, hashrate_mhs: { t_5m: m.hashrateMhs } },
-    config: { power_mode: m.powerMode ?? "normal" },
-  };
-  return { snap, last: { snap }, temperature: { chip: m.temperature } } as unknown as SocketMiner;
 }
 
 export type XYPoint = { x: number; y: number };

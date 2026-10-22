@@ -4,12 +4,12 @@
 
 The monorepo builds on contracts that already ship:
 
-- **Workers** ship [`mdk-contract.json`](../../../backend/workers/miners/antminer/plugin/mdk-contract.json) per package,
+- **Workers** ship [`mdk-contract.json`](../../../backend/workers/miners/avalon/plugin/mdk-contract.json) per package,
 validated against [`mdk-contract.schema.json`](../../../backend/core/mdk-worker/mdk-contract.schema.json), vendored in this repo.
 The contract carries metadata, telemetry, commands, health, and errors — programmatic contract + AI reasoning context in one file.
 - **UI** components carry JSDoc tags (`@tier`, `@category`, `@domain`, `@kernelCapability`); the registry generator (`ui/packages/react-devkit/scripts/generate-registry.mts`)
 and sibling generators emit `dist/registry.json`,
-`dist/blueprints.json`, `dist/hooks.json`, `dist/stores.json`. See [`ui/AGENTS.md`](../../../ui/AGENTS.md).
+`dist/hooks.json`, `dist/stores.json`. See [`ui/AGENTS.md`](../../../ui/AGENTS.md).
 <!-- mdk-monorepo: repoint to package-level AGENTS.md until ui/docs/AGENT_READY.md is populated -->
 
 Every public artefact adds `USAGE.md` plus runnable examples on top of its existing contract.
@@ -189,22 +189,22 @@ in the generated tables.
 The check **blocks** the pull request when the generated tables are stale: a route change and its regenerated tables must land together. Run
 `npm run regenerate-docs` and commit the result in the same pull request.
 
-**Why it matters:** the route tables are the published API surface of the plugins MDK ships — which a stack declares like any other package,
+**Why it matters:** the route tables are the published API surface of the apps MDK ships — which a stack declares like any other package,
 and which serve nothing until it does. A table that lags the manifest documents routes that no longer exist or omits ones that do. Only the
-plugins that ship in the repo are covered (those under [`backend/core/plugins/`](../../../backend/core/plugins/README.md) and [`backend/plugins/`](../../../backend/plugins/));
-plugins mounted via `extraPluginDirs` are external and document their own routes.
+apps that ship in the repo are covered (those under [`backend/apps/`](../../../backend/apps/)); third-party apps a stack declares in
+`spec.apps` are external and document their own routes.
 
-Maintainers re-run `npm run regenerate-docs` and commit the output whenever a shipped plugin's routes change.
+Maintainers re-run `npm run regenerate-docs` and commit the output whenever a shipped app's routes change.
 
 ### `check:plugin-manifest`
 
 There is no `mdk-plugin.schema.json` today. The manifest format is enforced imperatively by `_validateManifest` in
-[`backend/core/gateway/workers/lib/plugin-loader.js`](../../../backend/core/gateway/workers/lib/plugin-loader.js) and documented
+[`backend/core/app-runtime/lib/plugin-loader.js`](../../../backend/core/app-runtime/lib/plugin-loader.js) and documented
 by example (the shipping manifests) and by the loader rather than as a generated field table.
 
 A machine-readable schema would enable:
 
-1. **Generated field-table docs** — the manifest format section in [`backend/core/plugins/README.md`](../../../backend/core/plugins/README.md)
+1. **Generated field-table docs** — the manifest format section in the [Gateway apps guide](../../guides/gateway/plugins.md)
    could be generated from the schema the same way route tables are generated from manifests
 2. **Well-formedness validation (`check:plugin-manifest`)** — a CI gate that validates every `mdk-plugin.json` in the repo against
    the schema, catching malformed manifests before they reach the loader at startup
@@ -218,7 +218,7 @@ remains documented by example and the loader is the authoritative validator.
 
 Drift detector for hardwired command lists in tutorial prose — not currently applicable. This gate was written when
 [`docs/tutorials/run-a-site.md`](../../tutorials/run-a-site.md) hardcoded a curated subset of the CLI's `HELP` block; that tutorial no longer embeds
-any command list (verified: no reference to `full-site/cli`, `HELP`, or `cli.js` remains in it). Revive this section if a tutorial starts
+any command list (verified: no reference to `HELP` or `cli.js` remains in it). Revive this section if a tutorial starts
 hardcoding a command list again — the mechanism (diff a CI-run `--help` output against the hardwired block) still applies.
 
 ### Combined effect

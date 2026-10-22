@@ -21,7 +21,7 @@ next level of detail:
    paste-ready templates, and the full error catalogue.
 5. **Operator agent chat** —
    [`packages/ui-agent/README.md`](packages/ui-agent/README.md). `<CoPilot />`
-   is a one-line drop-in, but it needs a gateway carrying the agent plugin and
+   is a one-line drop-in, but it needs a gateway carrying the agent app and
    an MCP tool server behind it; the README walks the whole chain.
 6. **Run the shell template end-to-end** —
    [`docs/AGENT_FIRST.md#run-the-mdk-ui-shell-template-end-to-end`](docs/AGENT_FIRST.md#run-the-mdk-ui-shell-template-end-to-end).
@@ -37,7 +37,6 @@ exports, so no tooling sits between you and the data.
 | Package                       | Artifact                | Subpath import                                | What it describes                                                  |
 | ----------------------------- | ----------------------- | --------------------------------------------- | ------------------------------------------------------------------ |
 | `@tetherto/mdk-react-devkit`  | `dist/registry.json`    | `@tetherto/mdk-react-devkit/registry.json`    | Every public component + hook with props, JSDoc, tier, indexes.    |
-| `@tetherto/mdk-react-devkit`  | `dist/blueprints.json`  | `@tetherto/mdk-react-devkit/blueprints.json`  | Intent → recipe map (Markdown body included).                      |
 | `@tetherto/mdk-react-adapter` | `dist/hooks.json`       | `@tetherto/mdk-react-adapter/hooks.json`      | React hooks (store / utility / permission / ui / external) + provider. |
 | `@tetherto/mdk-ui-foundation` | `dist/stores.json`      | `@tetherto/mdk-ui-foundation/stores.json`     | Zustand stores (state + actions) and TanStack Query helpers.       |
 
@@ -70,8 +69,7 @@ entry.usageDoc   // → 'src/domain/components/.../USAGE.md'
 entry.examples   // → ['src/domain/components/.../line-chart-card.example.tsx']
 ```
 
-`blueprints.json` (intent → recipe), `hooks.json` (adapter hooks), and
-`stores.json` (`{ stores, queryHelpers, utilities }`) read the same way.
+`hooks.json` (adapter hooks) and `stores.json` (`{ stores, queryHelpers, utilities }`) read the same way.
 
 ## Separation of concerns — load-bearing rule
 
@@ -97,8 +95,7 @@ violates), per [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md#tracking-tech-debt)
 
 The full red-flags list, the retired `ConsumptionLineChart` /
 `HashRateLineChart` anti-examples, and the canonical `<LineChartCard>` +
-adapter-hook pattern (`useHashrateChartData`, `useSiteConsumptionChartData`)
-live in [`CLAUDE.md`](CLAUDE.md#separation-of-concerns-load-bearing-rule) —
+`useQuery`-with-`select` pattern live in [`CLAUDE.md`](CLAUDE.md#separation-of-concerns-load-bearing-rule) —
 the single source for this rule.
 
 ## Quick recipe (for agents in downstream apps)
@@ -107,18 +104,16 @@ the single source for this rule.
    [`examples/mdk-ui-shell-template/`](../examples/mdk-ui-shell-template/README.md),
    or run [`mdk create dashboard`](../packages/cli/README.md) to get the same
    template alongside a running backend stack.
-1. **Intent → recipe** — scan `blueprints.json` for a blueprint whose
-   `intent` matches the user's goal; its Markdown `body` is the recipe.
-2. **Recipe → component** — intersect `registry.json`'s `indexes`
+1. **Intent → component** — intersect `registry.json`'s `indexes`
    (`componentsByDomain`, `componentsByKernelCapability`,
    `componentsByCategory`, `componentsByTier`) to find the component.
-3. **Read the contract before generating** — every registry entry points at
+2. **Read the contract before generating** — every registry entry points at
    its `usageDoc` (`USAGE.md`) and `examples` (`*.example.tsx`). Read both;
    copy prop names and types verbatim from the entry's `props`.
-4. **Add the page** — write `src/pages/<Name>.tsx`, append a one-line entry
+3. **Add the page** — write `src/pages/<Name>.tsx`, append a one-line entry
    to `src/routes.ts` above `// mdk:routes-end`, and add its nav icon in
    `src/constants/navigation.tsx` above `// mdk:nav-end`.
-5. **Verify** — `npx tsc --noEmit` and `npx eslint src/pages/<Name>.tsx`.
+5. **Verify** — `npx tsc --noEmit` and `npx oxlint --type-aware src/pages/<Name>.tsx`.
 
 ## Quick recipe (for contributors)
 

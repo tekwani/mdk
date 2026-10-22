@@ -1,7 +1,7 @@
 'use strict'
 
 const { templates, utils } = require('../../../../../core/mdk')
-const { groupBy } = require('../../../../../core/lib-stats/utils')
+const { groupBy } = require('../../../../../core/mdk').libStats
 
 const { isOffline } = utils
 const { conf, specs: baseSpecs } = templates.stats

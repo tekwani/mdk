@@ -30,9 +30,8 @@ export type DashboardDateRangePickerProps = {
 
 /**
  * Dashboard-friendly wrapper around the core `DateRangePicker` that speaks
- * `{ start, end }` epoch-millisecond timestamps instead of `Date` objects, so
- * it drops straight into `useDashboardDateRange` from
- * `@tetherto/mdk-react-adapter`.
+ * `{ start, end }` epoch-millisecond timestamps instead of `Date` objects, the
+ * shape a history route usually takes as query params.
  *
  * @category dashboard
  * @domain mining-operations
@@ -41,11 +40,8 @@ export type DashboardDateRangePickerProps = {
  *
  * @example
  * ```tsx
- * const { start, end, setRange } = useDashboardDateRange()
- * <DashboardDateRangePicker
- *   value={{ start, end }}
- *   onChange={({ start, end }) => setRange(start, end)}
- * />
+ * const [range, setRange] = useState({ start: Date.now() - DAY_MS, end: Date.now() })
+ * <DashboardDateRangePicker value={range} onChange={setRange} />
  * ```
  */
 export const DashboardDateRangePicker = ({

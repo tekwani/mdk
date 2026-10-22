@@ -5,9 +5,9 @@ the universal Agent Skills format (`SKILL.md`), that makes any
 skills-compatible coding agent (Cursor, Claude Code, …) fluent in MDK
 conventions the moment the repo is cloned.
 
-The suite ships six flat skills: the `mdk` router plus full workflows for
-device Workers, Gateway plugins, UI pages, stack deployment, and site sizing
-from a measured envelope. Composite prompts (e.g. "create a UI to show
+The suite ships eight flat skills: the `mdk` router plus full workflows for
+device Workers, app routes served through the Gateway, MDK Apps, UI pages, stack deployment, site sizing
+from a measured envelope, and the pre-publish security audit. Composite prompts (e.g. "create a UI to show
 \<metric\> for \<device family\>") are routed as an ordered chain in
 [`mdk/SKILL.md`](./src/skills/mdk/SKILL.md).
 
@@ -22,10 +22,12 @@ src/
 ├── skills/                 # Suite content (flat: one dir per skill), hand-authored except where noted
 │   ├── mdk/                # Router + suite-wide references/
 │   ├── mdk-worker-plugin/  # Worker plugin workflow + scripts/assets
-│   ├── mdk-gateway-plugin/ # Gateway plugin workflow (scaffold via `mdk create plugin`)
+│   ├── mdk-gateway-plugin/ # App route table + controllers workflow (scaffold via `mdk create app`)
+│   ├── mdk-create-app/     # MDK App workflow (package layout, manifest, plugin, UI; `mdk create app`)
 │   ├── mdk-ui-component/   # Dashboard page workflow + ui-registry (generated)
 │   ├── mdk-deployment/     # mdk.yaml / mdk run workflow
-│   └── mdk-site-sizing/    # Size a site from a description + measured envelope
+│   ├── mdk-site-sizing/    # Size a site from a description + measured envelope
+│   └── mdk-publish-security/ # Pre-publish security audit: tarball scan + 18-class review
 ├── sources.map.json        # Source-of-truth -> bundle mapping (contract schema comes from backend/core/mdk-worker)
 ├── index.mjs               # Programmatic entry point (assemble / installSkills)
 ├── index.d.ts              # TypeScript types for the entry point
@@ -70,9 +72,16 @@ import { installSkills } from '@tetherto/mdk-skill'
 // <target>/.claude/skills. Assembles on demand inside the monorepo.
 // Stale MDK-shipped skills (renamed or dropped since the last install) are
 // removed; each `installed` entry lists them in `removed`. Skills without the
-// `suite: mdk-developer-skill` frontmatter stamp are never touched.
-const { skills, installed } = installSkills({ client: 'all', target: process.cwd() })
+// `suite: mdk-developer-skill` frontmatter stamp are never touched, and a
+// same-named one is reported in `skipped`.
+const { skills, installed, skipped } = installSkills({ client: 'all', target: process.cwd() })
 ```
+
+Install safety: it throws if `.cursor`, `.claude` or their `skills` dir under
+the target is a symlink, and it only replaces an existing `<skills-dir>/<name>`
+whose `SKILL.md` carries `metadata.suite: mdk-developer-skill`. Symlinked or
+foreign skill dirs with a suite skill's name are left alone, listed in
+`skipped`, and reported through `onWarn` (default `console.warn`).
 
 Also exported: `assemble()`, `isAssembled()`, `canAssemble()`, and `CLIENT_DIRS`.
 
@@ -92,6 +101,8 @@ prompt activates the matching skills:
 | "Create a UI to show \<metric\> for \<device family\>"      | discover → `mdk-gateway-plugin` → `mdk-deployment` → `mdk-ui-component` |
 | "How do I deploy the MDK stack?"                            | `mdk-deployment`                    |
 | "Size this site: 80 Whatsminer M56S on a 16-core NVMe box"  | `mdk-site-sizing`                   |
+| "Security check the packages before we publish to npm"      | `mdk-publish-security`              |
+| "Create an MDK app called sentinel"                         | `mdk-create-app`                    |
 | "What is MDK and how is it structured?"                     | `mdk` (router)                      |
 
 ## Verify the device-Worker skill

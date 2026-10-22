@@ -3,7 +3,7 @@ import { createIcon } from './create-icon'
 /**
  * Angled chevron divider rendered between cells of `<HeaderStatsBar>`.
  *
- * The path matches the reference app's `HeaderRightBorder`.
+ * The angled divider between header stat cells.
  * Stroke colour resolves from `color` (defaults to `currentColor`), so
  * consumers can theme it via the surrounding text colour. Internal —
  * HeaderStatsBar wires it in automatically; consumers shouldn't pick

@@ -381,3 +381,50 @@ test('saveWorkers persists workers snapshot', async (t) => {
   t.is(saved[0].db, m.workersDb)
   t.is(saved[0].payload.workers.length, 1)
 })
+
+test('filterWorkers rejects negative / fractional paging', (t) => {
+  const m = createManager()
+  t.exception(() => m.filterWorkers([], -1, 10), /ERR_OFFSET_INVALID/)
+  t.exception(() => m.filterWorkers([], 0, 1.5), /ERR_LIMIT_INVALID/)
+})
+
+test('getDbData validates the range and caps rows read', async (t) => {
+  const m = createManager({ maxDbReadLimit: 2 })
+  let seen = null
+  const db = { createReadStream: (q) => { seen = q; return (async function * () {})() } }
+  await t.exception(m.getDbData(db, { start: 'x', end: 1 }), /ERR_START_INVALID/)
+  await t.exception(m.getDbData(db, { start: 1, end: 2, limit: -1 }), /ERR_LIMIT_INVALID/)
+  await m.getDbData(db, { start: 1, end: 2, limit: 50 })
+  t.is(seen.limit, 2)
+})
+
+test('init binds SIGINT/SIGTERM only when ctx.handleSignals is set', async (t) => {
+  let bound = 0
+  const boot = async (ctxExtra) => {
+    const m = createManager({}, ctxExtra)
+    m._bindProcessExit = () => { bound++ }
+    m._createFacilities = async () => { m._ownsFacilities = true; m.store_s1 = fakeStore(); m.scheduler_0 = { add () {} } }
+    await m.init('p')
+  }
+  await boot({})
+  t.is(bound, 0, 'library default: no handlers')
+  await boot({ handleSignals: true })
+  t.is(bound, 1, 'opt-in binds')
+})
+
+test('getWrkExtData does not expose inherited members', async (t) => {
+  const m = createManager()
+  t.is(await m.getWrkExtData({ query: { key: 'constructor' } }), undefined)
+})
+
+function createManager (conf = {}, ctx = {}) {
+  return new PoolService(
+    { wtype: WTYPE, baseUrl: 'http://localhost', ...conf },
+    { rack: 'r1', loadConf: () => {}, ...ctx }
+  )
+}
+
+function fakeStore () {
+  const sub = () => ({})
+  return { getBee: async () => ({ ready: async () => {}, sub }) }
+}

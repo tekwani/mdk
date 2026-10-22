@@ -15,7 +15,7 @@ count, container count) into one horizontal card.
 | `hashrateUnit` | Optional | `string` | `"TH/s"` | Hashrate display unit — defaults to `TH/s` |
 | `isLoading` | Optional | `boolean` | `false` | Render a skeleton bar while data is loading |
 | `minerCount` | Optional | `number` | - | Total miner count across the site |
-| `power` | Optional | `number` | - | Current site-level power consumption, in watts (or whatever `powerUnit` says) |
+| `power` | Optional | `number` | - | Current site-level power consumption, in watts. It is displayed divided by 1000, so `powerUnit` names the kilo unit (`kW` by default) |
 | `powerUnit` | Optional | `string` | `"kW"` | Display unit for `power` — defaults to `kW` |
 | `totalHashrate` | Optional | `number` | - | Aggregate hashrate, in TH/s |
 <!-- END GENERATED: props -->
@@ -25,7 +25,7 @@ count, container count) into one horizontal card.
 ```tsx
 <SiteStatsBar
   title='Site A'
-  power={1320}
+  power={1_320_000}
   totalHashrate={92.3}
   minerCount={1024}
   containerCount={4}

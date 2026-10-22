@@ -1,4 +1,4 @@
-export type Alert = {
+export type AlertRecord = {
   id?: string
   severity: string
   createdAt: number | string
@@ -10,14 +10,3 @@ export type Alert = {
   [key: string]: unknown
 }
 
-export type LogFormattedAlertData = {
-  title: string
-  subtitle: string
-  status: string
-  severityLevel: number
-  creationDate: number | string
-  body: string
-  id: string
-  uuid?: string
-  [key: string]: unknown
-}

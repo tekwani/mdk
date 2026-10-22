@@ -1,21 +1,30 @@
 'use strict'
 
 const { loadPlugin } = require('@tetherto/mdk-gateway/workers/lib/plugin-loader')
+const { runtimeKey } = require('@tetherto/mdk-gateway/workers/lib/plugin-adapter')
+const { resolvePluginDir } = require('@tetherto/mdk-app-runtime')
 const { generateToolsFromGatewayPlugin } = require('./from-http-plugin')
 
 /**
- * Loads a Gateway plugin's manifest + routes ("contract") from `pluginDir` and
- * converts each route into an MCP tool, so a Gateway plugin's HTTP routes are
- * available to an AI agent with no separate tool authoring.
+ * Turns an app's route table into MCP tools that forward every call to the
+ * app's runtime over HRPC, as the Gateway does: only the table is read here, so
+ * no app code runs in the MCP server.
  *
- * @param {string} pluginDir - Directory holding the plugin's `mdk-plugin.json` + routes.
- * @param {object} context - The plugin context (`require('@tetherto/mdk-gateway/plugin')`
- *   shape) to hand the plugin's route handlers.
- * @returns {Array<object>} MCP tools generated from the plugin's routes.
+ * @param {{ name: string, appDir: string, keyFile: string }} app - The app's package
+ *   dir and the file its runtime publishes its key to (re-read on every call).
+ * @param {object} client - A `createRuntimeClient()` from `@tetherto/mdk-app-runtime`.
+ * @param {object} [opts]
+ * @param {object} [opts.identity] - Sent with every call as the caller's identity.
+ *   Required for `auth: true` routes, which otherwise throw ERR_MCP_AUTH_REQUIRED.
+ * @param {number} [opts.timeoutMs] - Bound on each call.
+ * @returns {Array<object>} MCP tools generated from the app's routes (stream routes are skipped).
  */
-function loadGatewayPluginTools (pluginDir, context) {
-  const plugin = loadPlugin(pluginDir, context)
-  return generateToolsFromGatewayPlugin(plugin)
+function loadAppTools (app, client, opts = {}) {
+  if (!app?.appDir || !app?.keyFile) throw new Error(`ERR_INVALID_MCP_APP: ${JSON.stringify(app)}`)
+  const plugin = loadPlugin(resolvePluginDir(app.appDir), undefined, { handlers: false })
+  const call = async (routeId, req, identity) =>
+    client.invoke(await runtimeKey(app), routeId, req, { identity, timeoutMs: opts.timeoutMs })
+  return generateToolsFromGatewayPlugin(plugin, { identity: opts.identity, call })
 }
 
-module.exports = { loadGatewayPluginTools }
+module.exports = { loadAppTools }

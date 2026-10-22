@@ -1,10 +1,12 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
-import { isMap, isSeq, parseDocument, YAMLSeq, type YAMLMap } from 'yaml';
+import type { Document, YAMLMap } from 'yaml';
 import { installScaffold } from './npm.js';
-import { DIRS, addFileDependency, ensureProjectManifest, readStackName } from './project.js';
+import { DIRS } from './project.js';
+import { appendToStackList, copyTemplate, linkIntoProject, updateJson, type StackFileUpdate } from './scaffold.js';
 import { deviceId, deviceSerial, MOCK_PORT_BASE } from './spec.js';
+import { NAME_RE, parseOrg } from './names.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -12,8 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const NAME_TOKEN = '__WORKER_NAME__';
 
 /**
- * Absolute path to the bundled worker template (`templates/worker`), a mirror of
- * the monorepo's `backend/workers/samples/demo-worker`. Resolves the same from
+ * Absolute path to the bundled worker template (`templates/worker`). Resolves the same from
  * `dist/lib` (built) and `src/lib` (tsx dev) since both sit one level under the
  * package root.
  */
@@ -36,9 +37,6 @@ export interface WorkerScaffoldOptions {
   updateStackFile?: boolean;
 }
 
-/** Outcome of writing the worker into `mdk.yaml`. */
-export type StackFileUpdate = 'added' | 'exists' | 'no-file' | 'error';
-
 export interface WorkerScaffoldResult {
   ok: boolean;
   message?: string;
@@ -59,15 +57,13 @@ export interface WorkerScaffoldResult {
   mockPort?: number;
 }
 
-const NAME_RE = /^[a-z0-9][a-z0-9._-]*$/;
-
 /**
  * Lowest mock port from `MOCK_PORT_BASE` up that no device in this project's
  * spec already claims, so scaffolding a second worker cannot collide with the
  * first. Only covers *this* project — a port taken by another stack on the
  * machine is resolved at boot (see `resolveMockPorts` in runtime.ts).
  */
-function nextMockPort(doc: ReturnType<typeof parseDocument>): number {
+function nextMockPort(doc: Document): number {
   const spec = doc.toJS() as {
     spec?: { workers?: Array<{ config?: { devices?: Array<{ opts?: { port?: unknown } }> } }> };
   };
@@ -86,81 +82,52 @@ function nextMockPort(doc: ReturnType<typeof parseDocument>): number {
 }
 
 /** Outcome of the `mdk.yaml` edit, plus the mock port the entry was given. */
-interface StackFileResult {
+export interface StackFileResult {
   update: StackFileUpdate;
   port: number;
 }
 
 /**
- * Appends the new worker to `spec.workers` in `<parentDir>/mdk.yaml`, preserving
- * the file's existing formatting/comments (edits the parsed document rather than
- * re-serializing from scratch). Seeds a `mock: true` config with one sample
- * device on an unclaimed port so the entry is runnable immediately. No-ops
- * (returns `'exists'`) when a worker of the same name is already present.
+ * Appends a worker to `spec.workers` in `<parentDir>/mdk.yaml`. With `mock` (the
+ * default) it seeds a `mock: true` config with one sample device on an unclaimed port
+ * so the entry is runnable immediately; without, the device options are the
+ * operator's to fill in. No-ops (`'exists'`) when this worker is listed already;
+ * `'name-taken'` when the name belongs to a worker running another package.
  */
-function addWorkerToStackFile(
+export function addWorkerToStackFile(
   parentDir: string,
   name: string,
   relPackage: string,
+  { mock = true }: { mock?: boolean } = {},
 ): StackFileResult {
-  const specPath = resolve(parentDir, 'mdk.yaml');
-  if (!existsSync(specPath)) return { update: 'no-file', port: MOCK_PORT_BASE };
-
-  try {
-    const doc = parseDocument(readFileSync(specPath, 'utf8'));
-    const port = nextMockPort(doc);
-
-    const existing = doc.getIn(['spec', 'workers']);
-    if (!isSeq(existing)) {
-      doc.setIn(['spec', 'workers'], new YAMLSeq());
-    }
-    const workers = doc.getIn(['spec', 'workers']) as YAMLSeq;
-
-    // An empty stack is written as `workers: []` — a *flow* sequence. Appending
-    // to it as-is would render the whole worker inline (valid YAML, unreadable
-    // in the file people are told to edit), and nothing nested inside a flow
-    // collection can use block style. Switch it to block before adding.
-    workers.flow = false;
-
-    for (const item of workers.items) {
-      if (isMap(item) && (item as YAMLMap).get('name') === name) {
-        return { update: 'exists', port };
-      }
-    }
-
-    // Flow-style opts to match the compact form the scaffold documents. The
-    // device identity is derived from the (project-unique) worker name: the
-    // Kernel registers device ids globally, so a shared `dev-0` would leave the
-    // second worker silently unregistered.
-    const opts = doc.createNode({ host: '127.0.0.1', port, serial: deviceSerial(name) });
-    (opts as unknown as { flow: boolean }).flow = true;
-
-    const worker = doc.createNode({
-      name,
-      package: relPackage,
-      config: { mock: true, devices: [{ id: deviceId(name) }] },
-    }) as YAMLMap;
-    worker.setIn(['config', 'devices', 0, 'opts'], opts);
-
-    workers.add(worker);
-    writeFileSync(specPath, doc.toString(), 'utf8');
-    return { update: 'added', port };
-  } catch {
-    return { update: 'error', port: MOCK_PORT_BASE };
-  }
-}
-
-function walk(dir: string, out: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) walk(full, out);
-    else out.push(full);
-  }
-  return out;
+  let port = MOCK_PORT_BASE;
+  const update = appendToStackList(
+    parentDir,
+    'workers',
+    name,
+    (entry) => entry.get('name') === name && entry.get('package') === relPackage,
+    (doc) => {
+      port = nextMockPort(doc);
+      // Flow-style opts to match the compact form the scaffold documents. The
+      // device identity is derived from the (project-unique) worker name: the
+      // Kernel registers device ids globally, so a shared `dev-0` would leave the
+      // second worker silently unregistered.
+      const opts = doc.createNode(mock ? { host: '127.0.0.1', port, serial: deviceSerial(name) } : {});
+      (opts as unknown as { flow: boolean }).flow = true;
+      const worker = doc.createNode({
+        name,
+        package: relPackage,
+        config: { ...(mock ? { mock: true } : {}), devices: [{ id: deviceId(name) }] },
+      }) as YAMLMap;
+      worker.setIn(['config', 'devices', 0, 'opts'], opts);
+      return worker;
+    },
+  );
+  return { update, port };
 }
 
 /**
- * Scaffolds a new Worker Plugin package from the bundled `demo-worker` template
+ * Scaffolds a new Worker Plugin package from the bundled worker template
  * into `<parentDir>/workers/<name>` — the local-path layout `mdk run worker`
  * expects. Substitutes the name token and sets the package.json `name`.
  */
@@ -172,6 +139,9 @@ export function createWorker(opts: WorkerScaffoldOptions): WorkerScaffoldResult 
       message: `Invalid worker name "${opts.name}". Use lowercase letters, digits, '.', '_' or '-'.`,
     };
   }
+
+  const org = parseOrg(opts.org);
+  if (!org.ok) return { ok: false, message: org.message };
 
   const src = templateDir();
   if (!existsSync(src)) {
@@ -185,39 +155,12 @@ export function createWorker(opts: WorkerScaffoldOptions): WorkerScaffoldResult 
 
   try {
     mkdirSync(resolve(opts.parentDir, DIRS.workers), { recursive: true });
-    cpSync(src, workerPath, { recursive: true });
+    copyTemplate(src, workerPath, { [NAME_TOKEN]: name });
 
-    for (const file of walk(workerPath)) {
-      const content = readFileSync(file, 'utf8');
-      if (content.includes(NAME_TOKEN)) {
-        writeFileSync(file, content.replaceAll(NAME_TOKEN, name), 'utf8');
-      }
-    }
+    const packageName = org.org ? `@${org.org}/${name}` : name;
+    updateJson(join(workerPath, 'package.json'), { name: packageName });
 
-    const packageName = opts.org ? `@${opts.org.replace(/^@/, '')}/${name}` : name;
-    const pkgPath = join(workerPath, 'package.json');
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as Record<string, unknown>;
-    pkg.name = packageName;
-    writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
-
-    // `mdk run` resolves workers through the project's node_modules via a
-    // `file:` dependency (no `workspaces` key on the root manifest). Best
-    // effort, like the old workspace-membership check it replaces: an
-    // unparseable existing package.json must not undo the worker files
-    // already written above, so only the link step is guarded here.
-    const stackName = readStackName(opts.parentDir);
-    let linkWarning: string | undefined;
-    if (stackName) {
-      try {
-        ensureProjectManifest(opts.parentDir, stackName);
-        addFileDependency(opts.parentDir, packageName, workerPath);
-      } catch (error) {
-        linkWarning = `Could not link ${packageName} into package.json: ${
-          error instanceof Error ? error.message : String(error)
-        }`;
-      }
-    }
-
+    const linkWarning = linkIntoProject(opts.parentDir, packageName, workerPath);
     const install = installScaffold(opts.parentDir, workerPath, opts.install !== false);
 
     const relPackage = `./${DIRS.workers}/${name}`;

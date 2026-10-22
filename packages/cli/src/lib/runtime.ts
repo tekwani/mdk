@@ -1,10 +1,14 @@
 import { createRequire } from 'node:module';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { once, type EventEmitter } from 'node:events';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { isLocalPackagePath, type StackSpec, type WorkerInstance } from './spec.js';
+import { isLocalPackagePath, unresolvedEnvRef, type AppInstance, type StackSpec, type WorkerInstance } from './spec.js';
 import { DEFAULT_HOST, findFreePort, isPortFree } from './ports.js';
+import { APP_MANIFEST } from './app-package.js';
+import { WORKER_CONTRACT } from './worker-package.js';
 import { theme, tick, arrow } from './theme.js';
+import { appChildFile, appChildPid } from './run-lock.js';
 
 const require = createRequire(import.meta.url);
 
@@ -17,6 +21,12 @@ const require = createRequire(import.meta.url);
 /** Handle returned by `getKernel`. */
 export interface KernelHandle {
   getPublicKey?: () => Buffer | string;
+  /** The key the Kernel dials workers with — what a worker must allow. */
+  getClientPublicKey?: () => Buffer | null;
+  /** Admit an HRPC caller (the Kernel is fail-closed). */
+  allowKey?: (key: Buffer | string, roles?: string[]) => string;
+  /** Hex keys admitted with at least `minRole`. */
+  listAllowedKeys?: (minRole?: string) => string[];
   _cleanup: Array<() => unknown>;
   stop: () => Promise<void>;
   [key: string]: unknown;
@@ -24,7 +34,6 @@ export interface KernelHandle {
 
 /** Handle returned by `startGateway`. */
 export interface GatewayHandle {
-  mdkClient?: unknown;
   stop: (cb?: () => void) => void;
   [key: string]: unknown;
 }
@@ -42,7 +51,10 @@ interface StartGatewayOpts {
   kernel?: KernelHandle;
   kernelKey?: unknown;
   keyFile?: string;
-  extraPluginDirs?: Array<string | { dir: string; config?: Record<string, unknown> }>;
+  /** The Gateway reads each app's route table and forwards to the runtime whose key is in `keyFile`. */
+  apps?: Array<{ name: string; appDir: string; keyFile: string; mount?: string }>;
+  /** Where the Gateway publishes its own public key; the app runtimes accept calls from it only. */
+  gatewayKeyFile?: string;
   /** Overrides merged into the gateway's `config/common.json`. */
   common?: Record<string, unknown>;
   [key: string]: unknown;
@@ -62,8 +74,8 @@ function mdkCore(): MdkCore {
 // --- @tetherto/mdk-worker runtime -----------------------------------------
 // Same lazy-`require` contract as `mdkCore` above: the WorkerRuntimeV2 host
 // lives in the backend and is only loaded when a worker actually boots. `mdk
-// run` plays the "caller" role (the way examples/backend/demo-worker-caller
-// does) — it constructs the runtime from the package's directory, seeds
+// run` plays the "caller" role (the way a host process
+// would) — it constructs the runtime from the package's directory, seeds
 // devices, and owns the lifecycle, while the worker *package* ships only its
 // `mdk-contract.json` + handlers and an optional mock.
 
@@ -87,11 +99,22 @@ function mdkWorker(): MdkWorker {
   return require('@tetherto/mdk-worker') as MdkWorker;
 }
 
-/** Local-discovery helpers from mdk-core — how a worker publishes its RPC key. */
+/** A persistent caller identity (`callerKeyPair`), in hyperdht's key format. */
+export interface CallerKeyPair {
+  publicKey: Buffer;
+  secretKey: Buffer;
+}
+
+/** Local-discovery helpers from mdk-core — how components publish and trust each other's keys. */
 interface LocalDiscovery {
   publishWorkerKey(dir: string, workerId: string, rpcKeyHex: string): void;
+  publishTrustedKey(dir: string, name: string, key: Buffer | string): string;
+  readTrustedKeys(dir: string): Array<{ name: string; key: string }>;
+  trustKernel(runtime: WorkerRuntimeV2Instance, kernel: KernelHandle): { stop(): void };
+  trustKeysFromDir(runtime: WorkerRuntimeV2Instance, dir: string): { stop(): void };
+  callerKeyPair(dir: string): CallerKeyPair;
 }
-function localDiscovery(): LocalDiscovery {
+export function localDiscovery(): LocalDiscovery {
   return require('@tetherto/mdk-core/lib/local-discovery') as LocalDiscovery;
 }
 
@@ -104,13 +127,26 @@ interface McpServerHandle {
   close: (cb?: () => void) => void;
   [key: string]: unknown;
 }
+/** `createMcpServer`'s security/lifecycle options (see backend/core/mcp/server.js). */
+interface McpServerOptions {
+  token?: string;
+  allowWrite?: boolean;
+  allowTools?: string[];
+  identity?: Record<string, unknown>;
+  allowedHosts?: string[];
+  allowedOrigins?: string[];
+  maxOutputLength?: number;
+  handleSignals?: boolean;
+  keyFile?: string;
+}
 interface MdkMcp {
   createMcpServer(
     root: string,
     port: number,
     config: Record<string, unknown>,
     pluginDirs: string[],
-    gatewayPluginDirs: Array<string | { dir: string; config?: Record<string, unknown> }>,
+    apps: ForwardedApp[],
+    options?: McpServerOptions,
   ): Promise<McpServerHandle>;
   [key: string]: unknown;
 }
@@ -118,6 +154,34 @@ interface MdkMcp {
 /** Lazily loads the `@tetherto/mdk-mcp` runtime (a workspace dependency). */
 function mdkMcp(): MdkMcp {
   return require('@tetherto/mdk-mcp') as MdkMcp;
+}
+
+// --- @tetherto/mdk-app-runtime ----------------------------------------------
+// Same lazy-`require` contract as `mdkCore` above. `mdk run app` creates the
+// runtime in-process; `mdk run` spawns the package's `bin/run-app.js` per app.
+
+/** `createAppRuntime` options; a supervised child gets them JSON-encoded in `MDK_APP_RUNTIME_OPTIONS`. */
+export interface AppRuntimeOptions {
+  name: string;
+  appDir: string;
+  config: Record<string, unknown>;
+  kernelKey?: string;
+  storeDir: string;
+  allowedKeyFiles: string[];
+  keyFile: string;
+  kernelKeyFile: string;
+}
+
+interface MdkAppRuntime {
+  createAppRuntime(opts: AppRuntimeOptions): {
+    start(): Promise<unknown>;
+    stop(): Promise<void>;
+  };
+}
+
+/** Lazily loads the `@tetherto/mdk-app-runtime` package (a workspace dependency). */
+function mdkAppRuntime(): MdkAppRuntime {
+  return require('@tetherto/mdk-app-runtime') as MdkAppRuntime;
 }
 
 // --- project-local runtime state ------------------------------------------
@@ -143,6 +207,21 @@ export function kernelKeyFile(projectDir: string): string {
   return componentDir(projectDir, 'kernel.key');
 }
 
+/** Where the Gateway publishes its public key; app runtimes accept calls from it and the MCP server's. */
+export function gatewayKeyFile(projectDir: string): string {
+  return componentDir(projectDir, 'gateway.key');
+}
+
+/** Where the MCP server publishes the key it calls app runtimes with. */
+export function mcpKeyFile(projectDir: string): string {
+  return componentDir(projectDir, 'mcp.key');
+}
+
+/** Where an app runtime publishes its public key, for the Gateway to find it. */
+export function appKeyFile(projectDir: string, name: string): string {
+  return componentDir(projectDir, 'apps', name, 'runtime.key');
+}
+
 /**
  * Shared worker-key dir for `discovery: { mode: 'local' }`, passed *explicitly*
  * to both sides. mdk-core otherwise defaults it to `<root>/.worker-keys`, which
@@ -153,23 +232,44 @@ export function workerKeysDir(projectDir: string): string {
   return componentDir(projectDir, 'keys');
 }
 
+/**
+ * Shared trusted-keys dir. The Kernel and every Worker reject unknown RPC
+ * callers, so each component publishes the key it dials with here
+ * (`kernel.pub`, `gateway.pub`, `mcp.pub`, `app-<name>.pub`): the Kernel admits callers from it
+ * and separately-run workers allow what they find in it.
+ */
+export function trustedKeysDir(projectDir: string): string {
+  return componentDir(projectDir, 'trusted-keys');
+}
+
 /** Default gap between the Gateway's port and the MCP server's, when `spec.mcp.port` is not set. */
 export const DEFAULT_MCP_PORT_OFFSET = 100;
 
 /**
  * Splits a spec `package` into the npm package to resolve and the subdirectory
- * inside it, if any: `@tetherto/mdk-plugins/telemetry` is one installed package
- * and one directory within it, not a package called `.../telemetry`.
+ * inside it, if any: `@scope/pkg/plugin-a` is one installed package and one
+ * directory within it, not a package called `.../plugin-a`.
  *
- * Subpaths exist because the plugins MDK ships are subdirectories of a single
- * `@tetherto/mdk-plugins` package, with no `package.json` of their own — and the
- * three the Gateway used to register unasked (`telemetry`, `site-hashrate`,
- * `site-monitor`) are now declared like anything else, so naming one has to work.
+ * Subpaths exist for packages that ship several plugins as subdirectories of a
+ * single package, with no `package.json` of their own.
  */
 function splitPackageSubpath(pkgName: string): { pkg: string; subpath: string } {
   const parts = pkgName.split('/');
   const nameLength = pkgName.startsWith('@') ? 2 : 1;
   return { pkg: parts.slice(0, nameLength).join('/'), subpath: parts.slice(nameLength).join('/') };
+}
+
+/** The spec the project's package.json gives `pkg`, if it lists it. */
+function declaredDependency(projectDir: string, pkg: string): string | undefined {
+  try {
+    const manifest = JSON.parse(readFileSync(join(resolve(projectDir), 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    return manifest.dependencies?.[pkg] ?? manifest.devDependencies?.[pkg];
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -185,11 +285,16 @@ export function resolveProjectPackageDir(projectDir: string, pkgName: string): s
   try {
     root = dirname(require.resolve(`${pkg}/package.json`, { paths: [resolve(projectDir)] }));
   } catch {
-    // The install command names the *package*: `npm install
-    // @tetherto/mdk-plugins/telemetry` is not a thing npm can do.
+    // A dependency package.json already declares (a `file:` app, say) only needs
+    // `npm install`; naming it would fetch an unrelated registry package. The
+    // install command names the *package*: `npm install @scope/pkg/plugin-a`
+    // is not a thing npm can do.
+    const declared = declaredDependency(projectDir, pkg);
     throw new Error(
-      `Gateway plugin package "${pkgName}" is not installed in ${resolve(projectDir)}.\n` +
-        `Install it first, e.g.: npm install ${pkg}`,
+      `Package "${pkgName}" is not installed in ${resolve(projectDir)}.\n` +
+        (declared
+          ? `package.json declares it ("${declared}"), so run: npm install`
+          : `Install it first, e.g.: npm install ${pkg}`),
     );
   }
 
@@ -202,8 +307,8 @@ export function resolveProjectPackageDir(projectDir: string, pkgName: string): s
   const dir = join(root, subpath);
   if (!existsSync(dir)) {
     throw new Error(
-      `Gateway plugin package "${pkgName}" is installed as "${pkg}", but it has no "${subpath}" in it (looked in ${dir}).\n` +
-        `Check the subpath — e.g. package: "${pkg}/telemetry".`,
+      `Package "${pkgName}" is installed as "${pkg}", but it has no "${subpath}" in it (looked in ${dir}).\n` +
+        `Check the subpath — e.g. package: "${pkg}/<dir>".`,
     );
   }
   return dir;
@@ -220,6 +325,7 @@ export async function runKernel(projectDir: string): Promise<KernelHandle> {
     root,
     keyFile: kernelKeyFile(projectDir),
     discovery: { mode: 'local', dir: workerKeysDir(projectDir) },
+    trustedKeysDir: trustedKeysDir(projectDir),
   });
 
   const key = typeof kernel.getPublicKey === 'function' ? kernel.getPublicKey() : undefined;
@@ -249,19 +355,21 @@ export async function assertGatewayPortFree(port: number): Promise<void> {
   return assertPortFree(port, 'Gateway', 'spec.gateway.port');
 }
 
-/**
- * Resolves each declared gateway plugin's package to an absolute dir, pairing
- * it with its per-plugin config (if any) — the shape both the Gateway and the
- * MCP server expect for their respective `extraPluginDirs`/`gatewayPluginDirs`
- * lists.
- */
-function resolveGatewayPluginDirs(
-  projectDir: string,
-  plugins: StackSpec['spec']['gateway']['plugins'],
-): Array<{ dir: string; config?: Record<string, unknown> }> {
-  return plugins.map((p) => ({
-    dir: resolveProjectPackageDir(projectDir, p.package),
-    ...(Object.keys(p.config ?? {}).length ? { config: p.config } : {}),
+/** An app as the Gateway and the MCP server take it: its route table, and its runtime's key file to forward to. */
+interface ForwardedApp {
+  name: string;
+  appDir: string;
+  keyFile: string;
+  mount?: string;
+}
+
+/** Neither runs app code, so an app's config goes to its runtime only. */
+function forwardedApps(projectDir: string, apps: AppInstance[]): ForwardedApp[] {
+  return apps.map((a) => ({
+    name: a.name,
+    appDir: resolveAppPackageDir(projectDir, a.package),
+    keyFile: appKeyFile(projectDir, a.name),
+    ...(a.mount !== undefined ? { mount: a.mount } : {}),
   }));
 }
 
@@ -281,9 +389,9 @@ export async function runGateway(
   // depends on the (about-to-change) working directory.
   const keyFile = kernelKeyFile(projectDir);
   const root = componentDir(projectDir, 'gateway');
-  // Each plugin travels with its own config block (spec.gateway.plugins[].config)
-  // so its settings reach that plugin alone, not the gateway-wide conf.
-  const extraPluginDirs = resolveGatewayPluginDirs(projectDir, spec.spec.gateway.plugins);
+  const ownKeyFile = gatewayKeyFile(projectDir);
+  const trustDir = trustedKeysDir(projectDir);
+  const apps = forwardedApps(projectDir, spec.spec.apps);
 
   // Out-of-process gateway: the Kernel must already be running so its HRPC key
   // is on disk. Fail early with an actionable message instead of silently
@@ -311,14 +419,18 @@ export async function runGateway(
     root,
     port: spec.spec.gateway.port,
     ...(kernel ? { kernel } : { keyFile }),
-    ...(extraPluginDirs.length ? { extraPluginDirs } : {}),
+    apps,
+    gatewayKeyFile: ownKeyFile,
+    // Admits the gateway's client key on the Kernel and on workers in other processes.
+    trustedKeysDir: trustDir,
     ...(Object.keys(spec.spec.gateway.config ?? {}).length ? { common: spec.spec.gateway.config } : {}),
+    // `auth: true` routes (the agent chat) admit callers on this machine unless
+    // mdk.yaml names another built-in verifier in gateway.config.authVerifier.
+    ...(spec.spec.gateway.config?.authVerifier === undefined ? { authVerifier: 'loopback' } : {}),
   });
 
-  const connected = gateway.mdkClient != null;
   process.stderr.write(
-    `${tick} ${theme.label('gateway')} listening on ${theme.value(`http://localhost:${spec.spec.gateway.port}`)} ` +
-      `${theme.muted(connected ? '(kernel connected)' : '(kernel pending)')}\n`,
+    `${tick} ${theme.label('gateway')} listening on ${theme.value(`http://localhost:${spec.spec.gateway.port}`)}\n`,
   );
   return gateway;
 }
@@ -328,15 +440,30 @@ export async function assertMcpPortFree(port: number): Promise<void> {
   return assertPortFree(port, 'MCP', 'spec.mcp.port');
 }
 
+/** The Kernel's public key (hex): from an in-process handle, else from the key file `mdk run kernel` wrote. */
+function resolveKernelKey(projectDir: string, kernel?: KernelHandle): string | undefined {
+  if (kernel) {
+    const key = typeof kernel.getPublicKey === 'function' ? kernel.getPublicKey() : undefined;
+    return key ? (Buffer.isBuffer(key) ? key.toString('hex') : String(key)) : undefined;
+  }
+  const keyFile = kernelKeyFile(projectDir);
+  if (existsSync(keyFile)) return readFileSync(keyFile, 'utf8').trim();
+  throw new Error(
+    'Kernel is not running (no key file found).\nStart it first: `mdk run kernel`.',
+  );
+}
+
 /** Handle returned by `runMcp`. */
 export interface McpHandle {
   stop: () => Promise<void>;
 }
 
 /**
- * Boots the standalone MCP server, pointed at the same Gateway plugins
- * `mdk.yaml` declares under `spec.gateway.plugins` — their routes become MCP
- * tools with no separate mcp-specific plugin authoring required. Requires the
+ * Boots the standalone MCP server, pointed at the apps `mdk.yaml` declares
+ * under `spec.apps` — their routes become MCP
+ * tools with no separate mcp-specific plugin authoring required, each call
+ * forwarded to the app's runtime, so an app's tools answer once `mdk run` has
+ * started it. Requires the
  * Kernel to already be reachable: an in-process `kernel` handle (target
  * `all`, if this is ever wired into it), or the shared key file written by a
  * separately-running `mdk run kernel` — the same contract `runGateway` uses.
@@ -345,46 +472,64 @@ export async function runMcp(
   projectDir: string,
   spec: StackSpec,
   kernel?: KernelHandle,
+  flags: { allowWrite?: boolean } = {},
 ): Promise<McpHandle> {
-  const mcp = mdkMcp();
-
-  const keyFile = kernelKeyFile(projectDir);
-  const root = componentDir(projectDir, 'mcp');
-  const gatewayPluginDirs = resolveGatewayPluginDirs(projectDir, spec.spec.gateway.plugins);
-
-  let kernelKey: string | undefined;
-  if (kernel) {
-    const key = typeof kernel.getPublicKey === 'function' ? kernel.getPublicKey() : undefined;
-    kernelKey = key ? (Buffer.isBuffer(key) ? key.toString('hex') : String(key)) : undefined;
-  } else if (existsSync(keyFile)) {
-    kernelKey = readFileSync(keyFile, 'utf8').trim();
-  } else {
+  // An unset variable leaves the literal `${NAME}` as the token: /mcp would look
+  // protected while accepting a bearer anyone can read in mdk.yaml.
+  const token = spec.spec.mcp.token;
+  const unresolved = token ? unresolvedEnvRef(token) : undefined;
+  if (unresolved) {
     throw new Error(
-      'Kernel is not running (no key file found).\nStart it first: `mdk run kernel`.',
+      `\`spec.mcp.token\` uses \${${unresolved}}, but ${unresolved} is not set in the environment or the project .env.\n` +
+        `Set ${unresolved}, or remove \`spec.mcp.token\` to run /mcp without a bearer token.`,
     );
   }
+
+  const mcp = mdkMcp();
+
+  const root = componentDir(projectDir, 'mcp');
+  const apps = forwardedApps(projectDir, spec.spec.apps);
+  const kernelKey = resolveKernelKey(projectDir, kernel);
 
   const port = spec.spec.mcp.port ?? spec.spec.gateway.port + DEFAULT_MCP_PORT_OFFSET;
   await assertMcpPortFree(port);
   mkdirSync(root, { recursive: true });
 
+  // A persistent caller identity every tool plugin's client dials with
+  // (config.kernelKeyPair), admitted on the in-process Kernel and published
+  // for a separately-running Kernel and its workers.
+  const discovery = localDiscovery();
+  const kernelKeyPair = discovery.callerKeyPair(join(root, 'identity'));
+  if (kernel && typeof kernel.allowKey === 'function') kernel.allowKey(kernelKeyPair.publicKey);
+  discovery.publishTrustedKey(trustedKeysDir(projectDir), 'mcp', kernelKeyPair.publicKey);
+
   process.stderr.write(`${theme.muted('Starting mcp')} ${arrow} ${theme.value(`:${port}`)}\n`);
-  // Forward the gateway-wide config the same way `runGateway` does (as the base
-  // layer under each plugin's own config), so a plugin reading a gateway-wide
-  // config key sees the same value whether it's mounted under `mdk run gateway`
-  // or read here by `mdk run mcp`.
+  // Like the Gateway, the MCP server runs no app code: every tool call is
+  // forwarded to the app's runtime (started by `mdk run`), bounded by
+  // `spec.gateway.config.appTimeoutMs`.
   const server = await mcp.createMcpServer(
     root,
     port,
-    { ...(spec.spec.gateway.config ?? {}), kernelKey },
+    { ...(spec.spec.gateway.config ?? {}), kernelKey, kernelKeyPair },
     // `pluginDirs` (native, author-written `mcp-plugin.json` tools) is not yet
-    // reachable from `mdk.yaml` — there is no `spec.mcp.plugins` list. Gateway-
-    // derived tools (via `gatewayPluginDirs` below) are deliberately the only
-    // CLI path today: every declared gateway plugin's routes already become
+    // reachable from `mdk.yaml` — there is no `spec.mcp.plugins` list. App
+    // route tools (via `apps` below) are deliberately the only
+    // CLI path today: every declared app's routes already become
     // tools with no separate authoring, which covers the common case. Add a
     // `spec.mcp.plugins` list here if native MCP-only plugins need a CLI path.
     [],
-    gatewayPluginDirs,
+    apps,
+    {
+      // Write tools are opt-in: `--allow-write` or `spec.mcp.allowWrite`.
+      allowWrite: flags.allowWrite === true || spec.spec.mcp.allowWrite === true,
+      ...(spec.spec.mcp.allowTools ? { allowTools: spec.spec.mcp.allowTools } : {}),
+      ...(spec.spec.mcp.token ? { token: spec.spec.mcp.token } : {}),
+      ...(spec.spec.mcp.identity ? { identity: spec.spec.mcp.identity } : {}),
+      // The CLI owns SIGINT/SIGTERM (installShutdown) and stops via close().
+      handleSignals: false,
+      // Every app runtime allow-lists this key (resolveAppOptions).
+      keyFile: mcpKeyFile(projectDir),
+    },
   );
   process.stderr.write(
     `${tick} ${theme.label('mcp')} listening on ${theme.value(`http://localhost:${port}/mcp`)}\n`,
@@ -401,7 +546,7 @@ interface SeedDevice {
   opts?: Record<string, unknown>;
 }
 
-/** A running mock device server (the shape mvp-site / demo-worker mocks return). */
+/** A running mock device server (the shape mvp-site and scaffolded-worker mocks return). */
 interface MockServer {
   /**
    * The listening object, whose type depends on the mock's transport: a
@@ -514,31 +659,19 @@ export interface WorkerHandle {
 }
 
 /**
- * Resolves a worker package's directory. `package` in `mdk.yaml` may be a
- * **local path** (starts with `.` or `/`, resolved against the project dir —
- * the common case, since worker plugins live beside the stack and are not
- * published to npm) or an installed npm package name.
+ * Resolves a spec `package` to its directory, the one way `run`, `status` and
+ * `add` all do it: a **local path** (`./…`, `../…` or absolute, resolved against
+ * the project dir) or an installed package, optionally with a subpath (see
+ * `resolveProjectPackageDir`). Throws naming the fix when it does not resolve.
  */
-function resolveWorkerPackageDir(projectDir: string, pkg: string): string {
-  if (isLocalPackagePath(pkg)) {
-    const dir = resolve(projectDir, pkg);
-    if (!existsSync(dir)) {
-      throw new Error(`Worker package path "${pkg}" does not exist (looked in ${dir}).`);
-    }
-    return dir;
+export function resolvePackageDir(projectDir: string, pkg: string): string {
+  if (!isLocalPackagePath(pkg)) return resolveProjectPackageDir(projectDir, pkg);
+  const dir = resolve(projectDir, pkg);
+  if (!existsSync(dir)) {
+    throw new Error(`Package path "${pkg}" does not exist (looked in ${dir}).`);
   }
-  try {
-    return dirname(require.resolve(`${pkg}/package.json`, { paths: [resolve(projectDir)] }));
-  } catch {
-    throw new Error(
-      `Worker package "${pkg}" is not installed in ${resolve(projectDir)}.\n` +
-        `Install it, or use a local path (e.g. package: ./workers/${pkg}).`,
-    );
-  }
+  return dir;
 }
-
-/** Marks a contract-first Worker Plugin package — see `resolveWorkerContractDir`. */
-const CONTRACT_FILE = 'mdk-contract.json';
 
 /**
  * Resolves a worker package to its directory, and confirms it is a
@@ -548,11 +681,11 @@ const CONTRACT_FILE = 'mdk-contract.json';
  * so a misshapen package gets a message that names the fix.
  */
 function resolveWorkerContractDir(projectDir: string, pkg: string): string {
-  const dir = resolveWorkerPackageDir(projectDir, pkg);
-  if (!existsSync(join(dir, CONTRACT_FILE))) {
+  const dir = resolvePackageDir(projectDir, pkg);
+  if (!existsSync(join(dir, WORKER_CONTRACT))) {
     throw new Error(
-      `Worker package "${pkg}" has no ${CONTRACT_FILE} — mdk run only supports contract-first ` +
-        'Worker Plugins (a directory with mdk-contract.json at its root; see backend/workers/samples/demo-worker).',
+      `Worker package "${pkg}" has no ${WORKER_CONTRACT} — mdk run only supports contract-first ` +
+        'Worker Plugins (a directory with mdk-contract.json at its root; `mdk create worker` scaffolds one).',
     );
   }
   return dir;
@@ -594,7 +727,9 @@ export async function runWorker(
   mkdirSync(storeDir, { recursive: true });
   const dbPath = join(storeDir, 'data.db');
   const identityDir = join(storeDir, 'identity');
-  mkdirSync(identityDir, { recursive: true });
+  // Holds the worker's key seeds: owner-only, also for a dir an older CLI made.
+  mkdirSync(identityDir, { recursive: true, mode: 0o700 });
+  chmodSync(identityDir, 0o700);
 
   process.stderr.write(
     `${theme.muted('Starting worker')} ${arrow} ${theme.value(worker.name)} ` +
@@ -638,24 +773,55 @@ export async function runWorker(
   // dbPath is threaded through for the sample plugin's SQLite persistence.
   const devices = seeds.map((d, i) => ({ deviceId: d.id, config: { ...deviceOpts[i], dbPath } }));
 
+  // Worker RPC is fail-closed: allow the Kernel's client key and the callers
+  // it admitted (in process), or what the Kernel and Gateway published to the
+  // trusted-keys dir (separate process), and keep following later admissions.
+  const discovery = localDiscovery();
+  const trustDir = trustedKeysDir(projectDir);
+  let allowedKeys: Array<Buffer | string>;
+  if (kernel) {
+    const client = typeof kernel.getClientPublicKey === 'function' ? kernel.getClientPublicKey() : null;
+    if (!client) throw new Error('Kernel has no client key (is HRPC enabled?) — cannot admit it on the worker.');
+    allowedKeys = [client, ...(kernel.listAllowedKeys?.('write') ?? [])];
+  } else {
+    const trusted = discovery.readTrustedKeys(trustDir);
+    if (!trusted.some((k) => k.name === 'kernel')) {
+      throw new Error(
+        'Kernel is not running (no kernel key in the trusted-keys dir).\nStart it first: `mdk run kernel`.',
+      );
+    }
+    allowedKeys = trusted.map((k) => k.key);
+  }
+
   const { WorkerRuntimeV2 } = mdkWorker();
   const runtime = new WorkerRuntimeV2(dir, {
     workerId: worker.name,
     devices,
     env: worker.env ?? {},
     storeDir: identityDir,
+    allowedKeys,
   });
-  await runtime.start();
+  const trust = kernel ? discovery.trustKernel(runtime, kernel) : discovery.trustKeysFromDir(runtime, trustDir);
+  try {
+    await runtime.start();
+  } catch (error) {
+    trust.stop();
+    throw error;
+  }
 
   const rpcKeyHex = runtime.getPublicKey().toString('hex');
   if (kernel) {
     await (kernel as unknown as { registerWorker: (k: Buffer) => Promise<void> }).registerWorker(
       runtime.getPublicKey(),
     );
-    if (Array.isArray(kernel._cleanup)) kernel._cleanup.push(() => runtime.stop());
+    if (Array.isArray(kernel._cleanup)) {
+      kernel._cleanup.push(() => {
+        trust.stop();
+        return runtime.stop();
+      });
+    }
   } else {
-    const { publishWorkerKey } = localDiscovery();
-    publishWorkerKey(workerKeysDir(projectDir), worker.name, rpcKeyHex);
+    discovery.publishWorkerKey(workerKeysDir(projectDir), worker.name, rpcKeyHex);
   }
 
   process.stderr.write(
@@ -665,6 +831,7 @@ export async function runWorker(
   // Signals are owned by the `run` command (see lib/shutdown.ts), which stops
   // every component in reverse boot order and exits even if one of them wedges.
   const stop = async (): Promise<void> => {
+    trust.stop();
     await runtime.stop();
     for (const m of mocks) {
       try {
@@ -679,4 +846,178 @@ export async function runWorker(
   };
 
   return { runtime, mocks, stop };
+}
+
+// --- app runtimes ---------------------------------------------------------
+
+/**
+ * Resolves an app package's directory — a local path (resolved against the
+ * project dir) or an installed package, optionally with a subpath — and
+ * confirms it holds an `mdk-app.yaml`.
+ */
+export function resolveAppPackageDir(projectDir: string, pkg: string): string {
+  const dir = resolvePackageDir(projectDir, pkg);
+  if (!existsSync(join(dir, APP_MANIFEST))) {
+    throw new Error(`App package "${pkg}" has no ${APP_MANIFEST} (looked in ${dir}).`);
+  }
+  return dir;
+}
+
+/** The `createAppRuntime` options for one `spec.apps[]` entry. */
+export function resolveAppOptions(
+  projectDir: string,
+  app: AppInstance,
+  kernel?: KernelHandle,
+): AppRuntimeOptions {
+  return {
+    name: app.name,
+    appDir: resolveAppPackageDir(projectDir, app.package),
+    config: app.config,
+    kernelKey: resolveKernelKey(projectDir, kernel),
+    storeDir: componentDir(projectDir, 'apps', app.name, 'store'),
+    // Read per connection by the runtime, so the Gateway and MCP server may start after the app.
+    allowedKeyFiles: [gatewayKeyFile(projectDir), mcpKeyFile(projectDir)],
+    keyFile: appKeyFile(projectDir, app.name),
+    // The Kernel is fail-closed and admits every `<name>.pub` in the trusted-keys dir.
+    kernelKeyFile: join(trustedKeysDir(projectDir), `app-${app.name}.pub`),
+  };
+}
+
+/** Boots one app runtime in this process (`mdk run app <name>`); the Kernel must already be running. */
+export async function runApp(projectDir: string, app: AppInstance): Promise<{ stop: () => Promise<void> }> {
+  const options = resolveAppOptions(projectDir, app);
+  mkdirSync(options.storeDir, { recursive: true });
+
+  process.stderr.write(`${theme.muted('Starting app')} ${arrow} ${theme.value(app.name)}\n`);
+  const runtime = mdkAppRuntime().createAppRuntime(options);
+  await runtime.start();
+  process.stderr.write(`${tick} ${theme.label('app')} ${theme.value(app.name)} ready\n`);
+  return { stop: () => runtime.stop() };
+}
+
+const APP_STARTUP_TIMEOUT_MS = 30_000;
+/** First restart delay; doubled after each crash, up to the max. */
+const APP_RESTART_DELAY_MS = 1000;
+const APP_RESTART_MAX_MS = 30_000;
+/** A child that ran this long before exiting was healthy: its restart starts the backoff over. */
+const APP_STABLE_MS = 60_000;
+const APP_STOP_GRACE_MS = 3000;
+
+/**
+ * Runs one app runtime as a child process (`mdk run`). Resolves once the child
+ * reports `ready`; rejects if it reports an `error`, exits first, or stays
+ * silent past the startup timeout. An exit `stop()` did not ask for is
+ * restarted, with a delay that doubles while the app keeps crashing. `entry`
+ * defaults to the runtime's `bin/run-app.js`.
+ */
+export async function superviseApp(
+  projectDir: string,
+  app: AppInstance,
+  kernel?: KernelHandle,
+  entry = require.resolve('@tetherto/mdk-app-runtime/bin/run-app.js'),
+): Promise<{ stop: () => Promise<void> }> {
+  const options = resolveAppOptions(projectDir, app, kernel);
+  mkdirSync(options.storeDir, { recursive: true });
+  // Resolved now: a restart runs after the CLI has chdir'd into the Gateway's state root.
+  const cwd = resolve(projectDir);
+  // The options carry the app's config, so they go in the environment, not argv.
+  const env = { ...process.env, MDK_APP_RUNTIME_OPTIONS: JSON.stringify(options) };
+  const log = (line: string): boolean => process.stderr.write(`${line}\n`);
+  const childFile = appChildFile(projectDir, app.name);
+
+  let child: ChildProcess | undefined;
+  let stopped = false;
+  let restartTimer: NodeJS.Timeout | undefined;
+  let restartDelay = APP_RESTART_DELAY_MS;
+  let readyAt = 0;
+
+  const launch = (): Promise<void> =>
+    new Promise((resolveReady, rejectReady) => {
+      // `cwd` is pinned because the CLI later chdirs into the Gateway's state
+      // root. `detached` keeps a terminal Ctrl+C from reaching the child: the
+      // CLI stops it, and the child exits by itself when its IPC channel closes.
+      const proc = spawn(process.execPath, [entry], {
+        stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+        env,
+        cwd,
+        // On Windows `detached` opens a console window per child instead.
+        detached: process.platform !== 'win32',
+      });
+      child = proc;
+      let ready = false;
+      const fail = (error: Error): void => {
+        clearTimeout(timer);
+        proc.kill('SIGKILL');
+        rejectReady(error);
+      };
+      const timer = setTimeout(
+        () => fail(new Error(`App "${app.name}" did not report ready within ${APP_STARTUP_TIMEOUT_MS}ms.`)),
+        APP_STARTUP_TIMEOUT_MS,
+      );
+
+      proc.on('message', (raw) => {
+        const msg = (raw ?? {}) as { type?: string; message?: string };
+        if (ready) return;
+        if (msg.type === 'ready') {
+          ready = true;
+          readyAt = Date.now();
+          clearTimeout(timer);
+          mkdirSync(dirname(childFile), { recursive: true });
+          writeFileSync(childFile, String(proc.pid));
+          resolveReady();
+        } else if (msg.type === 'error') {
+          fail(new Error(msg.message ?? 'unknown error'));
+        }
+      });
+      proc.on('error', fail);
+      proc.on('exit', (code, signal) => {
+        clearTimeout(timer);
+        if (child === proc) child = undefined;
+        if (appChildPid(projectDir, app.name) === proc.pid) rmSync(childFile, { force: true });
+        const how = signal ? `signal ${signal}` : `code ${code}`;
+        if (!ready) {
+          rejectReady(new Error(`App "${app.name}" exited before it was ready (${how}).`));
+        } else if (!stopped) {
+          if (Date.now() - readyAt >= APP_STABLE_MS) restartDelay = APP_RESTART_DELAY_MS;
+          log(
+            `${theme.warn('!')} app ${theme.value(app.name)} exited unexpectedly (${how}); ` +
+              `restarting in ${Math.round(restartDelay / 1000)}s`,
+          );
+          scheduleRestart();
+        }
+      });
+    });
+
+  const scheduleRestart = (): void => {
+    const delay = restartDelay;
+    restartDelay = Math.min(restartDelay * 2, APP_RESTART_MAX_MS);
+    restartTimer = setTimeout(() => {
+      launch().then(
+        () => log(`${tick} ${theme.label('app')} ${theme.value(app.name)} restarted`),
+        (error: Error) => {
+          if (stopped) return;
+          log(`${theme.warn('!')} app ${theme.value(app.name)} failed to restart: ${error.message}`);
+          scheduleRestart();
+        },
+      );
+    }, delay);
+  };
+
+  log(`${theme.muted('Starting app')} ${arrow} ${theme.value(app.name)}`);
+  await launch();
+  log(`${tick} ${theme.label('app')} ${theme.value(app.name)} ready`);
+
+  return {
+    stop: async () => {
+      stopped = true;
+      clearTimeout(restartTimer);
+      const proc = child;
+      if (!proc) return;
+      const killTimer = setTimeout(() => proc.kill('SIGKILL'), APP_STOP_GRACE_MS);
+      const exited = once(proc, 'exit');
+      proc.kill('SIGTERM');
+      await exited;
+      clearTimeout(killTimer);
+    },
+  };
 }

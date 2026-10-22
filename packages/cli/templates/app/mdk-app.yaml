@@ -1,0 +1,10 @@
+# The app manifest `mdk run` reads; `plugin/mdk-plugin.json` holds the route table.
+id: com.example.__PLUGIN_APP__
+version: 0.1.0
+displayName: "__PLUGIN_NAME__"
+# What the app asks the operator to approve, e.g.
+#   - resources: [workers, devices]
+#     verbs: [list, read]
+permissions: []
+# Defaults for the app's settings, overridden by its `config` in mdk.yaml.
+config: {}

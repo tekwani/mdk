@@ -13,6 +13,27 @@ const {
  * Returns { valid: true } or { valid: false, error: 'ERR_...' }
  */
 
+// Upper bounds on caller-supplied arrays, so one request cannot fan out into
+// unbounded worker calls, store reads or approver writes.
+const LIMITS = Object.freeze({
+  targets: 1000,
+  devices: 10000,
+  batchActions: 100,
+  ids: 1000,
+  queries: 50,
+  authPerms: 256,
+  params: 256,
+  // Worker write.calls.response: calls per Worker, and the most approvals a
+  // Worker may demand (a huge reqVotes would block an action forever).
+  writeCalls: 10000,
+  reqVotes: 10
+})
+
+function tooLong (arr, max, name) {
+  if (arr.length > max) return { valid: false, error: `ERR_PAYLOAD_${name}_TOO_MANY: max ${max}` }
+  return null
+}
+
 function requirePayloadObject (payload) {
   if (!payload || typeof payload !== 'object') {
     return { valid: false, error: 'ERR_PAYLOAD_NOT_OBJECT' }
@@ -49,6 +70,8 @@ function validateIdentityResponse (payload) {
   if (!Array.isArray(payload.devices)) {
     return { valid: false, error: 'ERR_PAYLOAD_DEVICES_REQUIRED' }
   }
+  const devicesLen = tooLong(payload.devices, LIMITS.devices, 'DEVICES')
+  if (devicesLen) return devicesLen
   for (let i = 0; i < payload.devices.length; i++) {
     const d = payload.devices[i]
     if (!d || typeof d !== 'object' || !d.deviceId || typeof d.deviceId !== 'string') {
@@ -62,8 +85,15 @@ function validateCapabilityResponse (payload) {
   if (!payload || typeof payload !== 'object') {
     return { valid: false, error: 'ERR_PAYLOAD_NOT_OBJECT' }
   }
-  if (!payload.contract || typeof payload.contract !== 'object') {
+  if (!payload.contract || typeof payload.contract !== 'object' || Array.isArray(payload.contract)) {
     return { valid: false, error: 'ERR_PAYLOAD_CONTRACT_REQUIRED' }
+  }
+  const { capabilities, metadata } = payload.contract
+  if (!capabilities || typeof capabilities !== 'object' || Array.isArray(capabilities)) {
+    return { valid: false, error: 'ERR_PAYLOAD_CONTRACT_CAPABILITIES_REQUIRED' }
+  }
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return { valid: false, error: 'ERR_PAYLOAD_CONTRACT_METADATA_REQUIRED' }
   }
   return { valid: true }
 }
@@ -108,6 +138,8 @@ function validateCommandRequest (payload) {
     if (!Array.isArray(payload.targets)) {
       return { valid: false, error: 'ERR_PAYLOAD_TARGETS_INVALID' }
     }
+    const targetsLen = tooLong(payload.targets, LIMITS.targets, 'TARGETS')
+    if (targetsLen) return targetsLen
     for (let i = 0; i < payload.targets.length; i++) {
       if (typeof payload.targets[i] !== 'string' || !payload.targets[i]) {
         return { valid: false, error: `ERR_PAYLOAD_TARGET_INVALID at index ${i}` }
@@ -181,7 +213,9 @@ function validateActionPush (payload) {
   if (!Array.isArray(payload.params)) {
     return { valid: false, error: 'ERR_PAYLOAD_PARAMS_REQUIRED' }
   }
-  return { valid: true }
+  return tooLong(payload.authPerms, LIMITS.authPerms, 'AUTH_PERMS') ||
+    tooLong(payload.params, LIMITS.params, 'PARAMS') ||
+    { valid: true }
 }
 
 function validateActionPushBatch (payload) {
@@ -196,6 +230,18 @@ function validateActionPushBatch (payload) {
   }
   if (!Array.isArray(payload.authPerms)) {
     return { valid: false, error: 'ERR_PAYLOAD_AUTH_PERMS_REQUIRED' }
+  }
+  const len = tooLong(payload.batchActionsPayload, LIMITS.batchActions, 'BATCH_ACTIONS') ||
+    tooLong(payload.authPerms, LIMITS.authPerms, 'AUTH_PERMS')
+  if (len) return len
+  for (let i = 0; i < payload.batchActionsPayload.length; i++) {
+    const entry = payload.batchActionsPayload[i]
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      return { valid: false, error: `ERR_PAYLOAD_BATCH_ACTION_INVALID at index ${i}` }
+    }
+    if (entry.params !== undefined && Array.isArray(entry.params) && entry.params.length > LIMITS.params) {
+      return { valid: false, error: `ERR_PAYLOAD_PARAMS_TOO_MANY at index ${i}: max ${LIMITS.params}` }
+    }
   }
   return { valid: true }
 }
@@ -220,7 +266,7 @@ function validateActionGetBatch (payload) {
   if (!Array.isArray(payload.ids)) {
     return { valid: false, error: 'ERR_PAYLOAD_IDS_REQUIRED' }
   }
-  return { valid: true }
+  return tooLong(payload.ids, LIMITS.ids, 'IDS') || { valid: true }
 }
 
 function validateActionQuery (payload) {
@@ -230,7 +276,7 @@ function validateActionQuery (payload) {
   if (!Array.isArray(payload.queries)) {
     return { valid: false, error: 'ERR_PAYLOAD_QUERIES_REQUIRED' }
   }
-  return { valid: true }
+  return tooLong(payload.queries, LIMITS.queries, 'QUERIES') || { valid: true }
 }
 
 function validateActionVote (payload) {
@@ -249,7 +295,7 @@ function validateActionVote (payload) {
   if (!Array.isArray(payload.authPerms)) {
     return { valid: false, error: 'ERR_PAYLOAD_AUTH_PERMS_REQUIRED' }
   }
-  return { valid: true }
+  return tooLong(payload.authPerms, LIMITS.authPerms, 'AUTH_PERMS') || { valid: true }
 }
 
 function validateActionCancelBatch (payload) {
@@ -262,7 +308,7 @@ function validateActionCancelBatch (payload) {
   if (!payload.voter) {
     return { valid: false, error: 'ERR_PAYLOAD_VOTER_REQUIRED' }
   }
-  return { valid: true }
+  return tooLong(payload.ids, LIMITS.ids, 'IDS') || { valid: true }
 }
 
 function validateWriteCallsRequest (payload) {
@@ -288,8 +334,19 @@ function validateWriteCallsResponse (payload) {
   if (!Array.isArray(payload.calls)) {
     return { valid: false, error: 'ERR_PAYLOAD_CALLS_REQUIRED' }
   }
-  if (typeof payload.reqVotes !== 'number') {
-    return { valid: false, error: 'ERR_PAYLOAD_REQ_VOTES_REQUIRED' }
+  if (!Number.isInteger(payload.reqVotes) || payload.reqVotes < 1 || payload.reqVotes > LIMITS.reqVotes) {
+    return { valid: false, error: `ERR_PAYLOAD_REQ_VOTES_INVALID: integer 1-${LIMITS.reqVotes}` }
+  }
+  const len = tooLong(payload.calls, LIMITS.writeCalls, 'CALLS')
+  if (len) return len
+  for (let i = 0; i < payload.calls.length; i++) {
+    const call = payload.calls[i]
+    if (!call || typeof call !== 'object' || Array.isArray(call) || !call.id || typeof call.id !== 'string') {
+      return { valid: false, error: `ERR_PAYLOAD_CALL_INVALID at index ${i}` }
+    }
+    if (call.tags !== undefined && !Array.isArray(call.tags)) {
+      return { valid: false, error: `ERR_PAYLOAD_CALL_TAGS_INVALID at index ${i}` }
+    }
   }
   return { valid: true }
 }
@@ -335,6 +392,7 @@ function validatePayload (action, payload) {
 }
 
 module.exports = {
+  LIMITS,
   validatePayload,
   validateIdentityResponse,
   validateCapabilityResponse,

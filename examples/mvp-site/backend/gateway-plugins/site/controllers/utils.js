@@ -7,9 +7,12 @@
 const WORKER_FAMILY = {
   'whatsminer-worker': 'miner',
   'minerpool-worker': 'minerpool',
-  // The Ocean pool worker has no provisioning service, so the contract
-  // `config` pull can't classify it — the fallback map must.
-  'ocean-pool-worker': 'minerpool'
+  // The pool workers have no provisioning service, so the contract
+  // `config` pull can't classify them — the fallback map must.
+  'ocean-pool-worker': 'minerpool',
+  'emcd-pool-worker': 'minerpool',
+  'spiderpool-pool-worker': 'minerpool',
+  'foundry-pool-worker': 'minerpool'
 }
 
 const resolveFamily = (worker, cfg) => {
@@ -24,7 +27,7 @@ const telemetryAnchor = (worker) => {
 }
 
 // Adapter for workers that don't serve the worker-infra `config`/`list`
-// queries (e.g. a third-party plugin like backend/workers/samples/demo-worker):
+// queries (e.g. a Worker scaffolded by `mdk create worker`):
 // classify by published
 // capability (the Kernel registry exposes contract.capabilities, not
 // metadata — a worker declaring a hashrate_rt channel is a miner) and

@@ -41,7 +41,7 @@ export const CurrentAlertsExample = () => {
       filterTags={filterTags}
       onFilterTagsChange={setFilterTags}
       onAlertClick={(id) => {
-        // eslint-disable-next-line no-console
+        // oxlint-disable-next-line no-console
         console.log(`open alert ${id}`)
       }}
       isDemoMode

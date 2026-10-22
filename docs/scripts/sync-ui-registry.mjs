@@ -14,9 +14,13 @@
 //
 // The build goes through turbo, not `npm run` in the devkit alone. The generator resolves the
 // devkit's imports from mdk-ui-foundation and mdk-react-adapter through their dist/ type output;
-// turbo's build:registry -> build:ts -> ^build:ts chain builds those first. Calling the devkit's
-// script directly on an unbuilt checkout resolves every such import to `any` and writes a registry
-// that never matches one produced from a built tree.
+// turbo builds those first. Calling the devkit's script directly on an unbuilt checkout resolves
+// every such import to `any` and writes a registry that never matches one produced from a built tree.
+//
+// It runs the devkit's whole `build` (build:ts -> check:styles -> build:scss -> build:registry), not
+// the `build:registry` task alone. That task depends on `build:ts`, whose `rimraf dist` deletes the
+// compiled stylesheets, and nothing in its chain rebuilds them: on a turbo cache miss the devkit was
+// left with no styles.css, so the catalog, the shell template and mvp-site rendered unstyled.
 //
 // Usage: `npm run generate:ui-registry` from the repo root. `npm run regenerate-docs` runs it alongside
 // the repo's other generators.
@@ -50,17 +54,17 @@ export function ensureDevkitRegistry () {
     fail(`ui/ dependencies are not installed, so the devkit registry cannot be built. Run \`npm run setup:ui\` from ${rel(REPO_ROOT) || 'the repo root'}, then re-run.`, EXIT_PREREQUISITE)
   }
 
-  log('building the devkit registry (and the sibling packages it reads types from)')
-  const build = spawnSync('npx', ['turbo', 'run', 'build:registry', '--filter=@tetherto/mdk-react-devkit'], {
+  log('building the devkit, its registry included (and the sibling packages it reads types from)')
+  const build = spawnSync('npx', ['turbo', 'run', 'build', '--filter=@tetherto/mdk-react-devkit'], {
     cwd: UI_ROOT,
     stdio: 'inherit',
     shell: process.platform === 'win32'
   })
   if (build.error) fail(`could not run turbo in ${rel(UI_ROOT)}: ${build.error.message}`)
-  if (build.status !== 0) fail(`turbo run build:registry exited ${build.status}; nothing was changed`)
+  if (build.status !== 0) fail(`turbo run build exited ${build.status}; nothing was changed`)
 
   if (!fs.existsSync(REGISTRY)) {
-    fail(`build:registry reported success but ${rel(REGISTRY)} is missing; nothing was changed`)
+    fail(`the devkit build reported success but ${rel(REGISTRY)} is missing; nothing was changed`)
   }
 }
 

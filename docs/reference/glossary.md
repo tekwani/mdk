@@ -18,11 +18,17 @@ This section explains the terms you need to familiarize yourself with, using an 
 | **Kernel** (Orchestration Kernel) | The pull-only kernel that owns the device registry, routes commands, and pulls telemetry on its own cadence — it performs no aggregation itself | [`backend/core/kernel/`][kernel-package] |
 | **Gateway** | The developer-owned HTTP entry point between non-Node clients (UI) and Kernel. Required for browser and HTTP consumers; AI agents reach Kernel through the standalone MCP server instead. Not used in the in-process Antminer-rack example below | [`backend/core/gateway/`][gateway-package] |
 | **Worker** | A device-family translator. Speaks the MDK Protocol upward to Kernel and the vendor's native API downward to one device family (one miner brand, one container type, one pool API). | [`backend/workers/`][worker-readme] |
-| **Worker Plugin** | The executable device integration: [`mdk-contract.json`][contract-schema] plus its handler files, loaded from a package directory by `WorkerRuntimeV2` | [`backend/workers/miners/antminer/plugin/index.js`][antminer-plugin] |
-| **Worker contract** | The declarative [`mdk-contract.json`][contract-schema] alone, as read, validated, published, rendered, or queried | [`backend/workers/miners/antminer/plugin/mdk-contract.json`][antminer-contract] |
-| **Driver class** | The JavaScript class a Worker exports, one per device family (for example `Antminer`, `Whatsminer`), not one per model. Drives every device that Worker registers. | [`backend/workers/miners/antminer/lib/antminer.js`][antminer-worker] |
-| **Thing** | One registered device instance. Created by sending a `registerThing` command to the Worker's provisioning service, not by calling a driver-class method directly. Identified by a generated `deviceId`. | [`backend/core/mdk/lib/services/provisioning.service.js`][provisioning-service] |
+| **Worker Plugin** | The executable device integration: [`mdk-contract.json`][contract-schema] plus its handler files, loaded from a package directory by `WorkerRuntimeV2` | [`backend/workers/miners/avalon/plugin/index.js`][avalon-plugin] |
+| **Worker contract** | The declarative [`mdk-contract.json`][contract-schema] alone, as read, validated, published, rendered, or queried | [`backend/workers/miners/avalon/plugin/mdk-contract.json`][avalon-contract] |
+| **Driver class** | The JavaScript class a Worker exports, one per device family (for example `AvalonMiner`), not one per model. Drives every device that Worker registers. | [`backend/workers/miners/avalon/lib/avalon.miner.js`][avalon-worker] |
+| **Thing** | Deprecated: one registered device instance on the legacy [store services surface][worker-runtime-store]. Created by sending a `registerThing` command to the Worker's provisioning service, not by calling a driver-class method directly. Identified by a generated `deviceId`. A `WorkerRuntimeV2` Worker has no Things: its device list is fixed at construction. | [`backend/core/mdk/lib/services/provisioning.service.js`][provisioning-service] |
 | **MCP** (Model Context Protocol) | The protocol AI agents use to discover and call tools. `@tetherto/mdk-mcp` runs as its own standalone process, deriving tools from a plugin's routes; the Gateway hosts no MCP itself | [`backend/core/mcp/`][mcp-package] |
+| **HyperDHT** | The peer-to-peer network HRPC rides on. Every Kernel, Worker, Gateway and client starts a HyperDHT node in every deployment shape, so each process needs outbound UDP to the bootstrap nodes | [`hyperdht`][hyperdht-repo] |
+| **Bootstrap nodes** | The well-known peers a HyperDHT node contacts on start to join the network. The public set is the default; a private DHT network supplies its own bootstrap list to each component | [`backend/core/mdk/README.md`][mdk-readme] |
+| **Discovery mode** | How Kernel first learns a Worker's RPC key: in-process registration, a shared directory on one machine, or a DHT topic. The transport is the same HRPC in all three | [`backend/workers/docs/architecture.md`][worker-discovery] |
+| **Discovery topic** | A 32-byte hex rendezvous value Kernel and Workers join in DHT mode so Kernel can find them. It is deployment configuration, not a credential: admission is the Kernel's `discovery.workerKeys` list | [`backend/core/kernel/README.md`][kernel-package] |
+| **READY** | The Worker registry state reached once Kernel has the Worker's capability response. It means Kernel can route to the Worker's devices, not that any device answered | [`backend/core/kernel/README.md`][kernel-package] |
+| **HEALTHY, SICK, DEAD** | The health states Kernel assigns from `health.ping`, which the Worker process answers from memory. `DEAD` stops command routing and nothing else. None of the three describes a device; the [control plane][worker-health] explains where device liveness lives | [`backend/core/kernel/README.md`][kernel-package] |
 
 ### How they compose, for an Antminer rack
 
@@ -67,10 +73,15 @@ RPC defines the conversation — a caller names a method and receives a reply.
 
 **Practical implications:**
 
+- A caller must hold or discover the callee's public key before connecting; there is no HTTP URL to open in a browser
 - You work with services, methods, requests, and responses — not URLs and routes
 - The RPC-shaped API is identical across same-process, same-host, and distributed deployments; only the discovery
   mechanism changes (same-process registration, shared directory, or DHT topic)
 - Peers discover and communicate without a central HTTP server
+
+HRPC uses Noise to encrypt connections and authenticate peers by key, so these backend connections do not require TLS certificates.
+It does not expose an HTTP listening endpoint for each peer. HyperDHT still uses network sockets, so UDP reachability, network policy,
+and caller allowlists remain part of the deployment. The Gateway's HTTP interface has its own security requirements.
 
 ### HRPC on the same host
 
@@ -86,7 +97,8 @@ The Noise handshake that HRPC performs on every connection authenticates by key,
 same machine or a remote host.
 
 This is consistent with the broader Holepunch ecosystem philosophy — everything is a peer addressed by public key. When the peer is on the same
-machine it routes locally over the local network interface; the application code sees no difference.
+machine it routes locally over the local network interface; the application code sees no difference. The DHT node still starts and
+contacts its bootstrap nodes, so a same-host deployment needs that outbound reachability too.
 
 ## Next steps
 
@@ -96,7 +108,7 @@ machine it routes locally over the local network interface; the application code
   - Gateway implementation details, including HTTP routing and plugin registration: [`backend/core/gateway/README.md`][gateway-package]
   - Building your own Worker for a new device family: [the build walkthrough][build-a-worker]
   - The install and run pattern every shipped Worker package follows: [`backend/workers/docs/install-pattern.md`][worker-install]
-  - Per-device contract details (telemetry units, command shapes, error codes): those live in each Worker's `mdk-contract.json`, e.g. [`backend/workers/miners/antminer/plugin/mdk-contract.json`][antminer-contract]
+  - Per-device contract details (telemetry units, command shapes, error codes): those live in each Worker's `mdk-contract.json`, e.g. [`backend/workers/miners/avalon/plugin/mdk-contract.json`][avalon-contract]
 
 ## Links
 
@@ -124,14 +136,17 @@ machine it routes locally over the local network interface; the application code
 [build-a-worker]: ../guides/workers/build-a-worker.md
 <!-- docs@tether.io: build-a-worker → guides/workers/build-a-worker -->
 
-[antminer-worker]: ../../backend/workers/miners/antminer/lib/antminer.js
-<!-- docs@tether.io: antminer-worker → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/antminer/lib/antminer.js -->
+[avalon-worker]: ../../backend/workers/miners/avalon/lib/avalon.miner.js
+<!-- docs@tether.io: avalon-worker → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/avalon/lib/avalon.miner.js -->
 
-[antminer-plugin]: ../../backend/workers/miners/antminer/plugin/index.js
-<!-- docs@tether.io: antminer-plugin → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/antminer/plugin/index.js -->
+[avalon-plugin]: ../../backend/workers/miners/avalon/plugin/index.js
+<!-- docs@tether.io: avalon-plugin → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/avalon/plugin/index.js -->
 
 [contract-schema]: ../../backend/core/mdk-worker/mdk-contract.schema.json
 <!-- docs@tether.io: contract-schema → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/mdk-contract.schema.json -->
+
+[worker-runtime-store]: ../../backend/core/mdk-worker/README.md#store-services
+<!-- docs@tether.io: worker-runtime-store → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/README.md#store-services -->
 
 [provisioning-service]: ../../backend/core/mdk/lib/services/provisioning.service.js
 <!-- docs@tether.io: provisioning-service → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/lib/services/provisioning.service.js -->
@@ -139,8 +154,17 @@ machine it routes locally over the local network interface; the application code
 [worker-discovery]: ../../backend/workers/docs/architecture.md#discovery-model
 <!-- docs@tether.io: worker-discovery → https://github.com/tetherto/mdk/blob/main/backend/workers/docs/architecture.md#discovery-model -->
 
-[antminer-contract]: ../../backend/workers/miners/antminer/plugin/mdk-contract.json
-<!-- docs@tether.io: antminer-contract → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/antminer/plugin/mdk-contract.json -->
+[avalon-contract]: ../../backend/workers/miners/avalon/plugin/mdk-contract.json
+<!-- docs@tether.io: avalon-contract → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/avalon/plugin/mdk-contract.json -->
 
 [hrpc-repo]: https://github.com/holepunchto/rpc
 <!-- docs@tether.io: external link — preserve URL -->
+
+[hyperdht-repo]: https://github.com/holepunchto/hyperdht
+<!-- docs@tether.io: external link — preserve URL -->
+
+[mdk-readme]: ../../backend/core/mdk/README.md
+<!-- docs@tether.io: mdk-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/README.md -->
+
+[worker-health]: ../concepts/control-plane.md#worker-health-is-not-device-liveness
+<!-- docs@tether.io: worker-health → concepts/control-plane#worker-health-is-not-device-liveness -->

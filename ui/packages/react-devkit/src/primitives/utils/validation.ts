@@ -28,7 +28,7 @@ export const isValidEmail = (email: string): boolean => {
  */
 export const isValidUrl = (url: string): boolean => {
   try {
-    // eslint-disable-next-line no-new
+    // oxlint-disable-next-line no-new
     new URL(url)
     return true
   } catch {

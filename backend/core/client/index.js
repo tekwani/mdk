@@ -1,8 +1,8 @@
 'use strict'
 
 const { HRPCClient } = require('./lib/hrpc-client')
-const { build } = require('../kernel/lib/protocol/envelope')
-const { ACTIONS, MESSAGE_TYPES } = require('../kernel/lib/protocol/actions')
+const { build } = require('@tetherto/mdk-kernel/protocol/envelope')
+const { ACTIONS, MESSAGE_TYPES } = require('@tetherto/mdk-kernel/protocol/actions')
 
 /**
  * createRawMdkClient
@@ -14,22 +14,39 @@ const { ACTIONS, MESSAGE_TYPES } = require('../kernel/lib/protocol/actions')
  * lifecycle: call connect() before the first request. Most consumers want
  * createMdkClient instead, which connects itself.
  *
+ * Every action method takes an optional trailing `callOpts` ({ timeout } in
+ * ms) that overrides the transport's default per-request timeout (30 s) for
+ * that call.
+ *
  * @param {object} opts
- * @param {object} [opts.hrpc]     - HRPC transport opts ({ key, seed?, bootstrap?, dht?, rpc? })
+ * @param {object} [opts.hrpc]     - HRPC transport opts ({ key, keyPair?, seed?, bootstrap?, timeout?, envelope?, dht?, rpc? })
  * @param {object} [opts.transport] - Pre-built transport ({ connect, close, request }); test seam
  * @returns {object} Client with connect/close and action methods
  */
 function createRawMdkClient (opts) {
   const transport = _createTransport(opts)
 
-  function request (action, payload, deviceId) {
+  function request (action, payload, deviceId, callOpts) {
     return transport.request(build({
       action,
       type: MESSAGE_TYPES.REQUEST,
       sender: 'gateway',
       deviceId: deviceId || null,
       payload: payload || {}
-    }))
+    }), _callOpts(callOpts))
+  }
+
+  // A client bound to a Worker that dials with this client's identity (and,
+  // once connected, over this client's own DHT node), so a Worker allowlist
+  // that admits the Kernel-facing key admits these too. Explicit identity or
+  // transport opts in `hrpc` replace the inherited ones.
+  function workerClient (key, hrpc) {
+    const inherited = typeof transport.childOpts === 'function' ? transport.childOpts() : {}
+    if (hrpc.rpc || hrpc.dht || hrpc.keyPair || hrpc.seed) {
+      delete inherited.rpc
+      delete inherited.dht
+    }
+    return createWorkerClient(key, { ...inherited, ...hrpc })
   }
 
   const client = {
@@ -59,7 +76,7 @@ function createRawMdkClient (opts) {
       let lastErr
       for (let i = 0; i < retries; i++) {
         try {
-          const resp = await _withTimeout(client.listWorkers(), timeoutMs, 'ERR_MDK_STATUS_TIMEOUT')
+          const resp = await _withTimeout(client.listWorkers({ timeout: timeoutMs }), timeoutMs, 'ERR_MDK_STATUS_TIMEOUT')
           const workers = (resp && resp.workers) || []
           return {
             workers: workers.map((w) => ({
@@ -107,29 +124,33 @@ function createRawMdkClient (opts) {
       throw new Error('ERR_MDK_WAIT_DEVICE_TIMEOUT')
     },
 
-    listWorkers () {
-      return request(ACTIONS.WORKER_LIST)
+    listWorkers (callOpts) {
+      return request(ACTIONS.WORKER_LIST, {}, null, callOpts)
     },
 
-    getCapabilities (deviceId) {
-      return request(ACTIONS.DEVICE_CAPABILITIES, {}, deviceId)
+    getCapabilities (deviceId, callOpts) {
+      return request(ACTIONS.DEVICE_CAPABILITIES, {}, deviceId, callOpts)
     },
 
-    pullTelemetry (deviceId, query) {
+    pullTelemetry (deviceId, query, callOpts) {
       // query may be a string (the query type) or a full query object
       // ({ type, key, tag, start, end, limit, ... }) forwarded to the worker.
       const q = (query && typeof query === 'object')
         ? { type: 'metrics', ...query }
         : { type: query || 'metrics' }
-      return request(ACTIONS.TELEMETRY_PULL, { query: q }, deviceId)
+      return request(ACTIONS.TELEMETRY_PULL, { query: q }, deviceId, callOpts)
     },
 
-    pullState (deviceId) {
-      return request(ACTIONS.STATE_PULL, {}, deviceId)
+    pullState (deviceId, callOpts) {
+      return request(ACTIONS.STATE_PULL, {}, deviceId, callOpts)
     },
 
-    sendCommand (deviceId, command, params) {
-      return request(ACTIONS.COMMAND_REQUEST, { command, params: params || {}, requesterId: 'gateway' }, deviceId)
+    sendCommand (deviceId, command, params, callOpts) {
+      return request(ACTIONS.COMMAND_REQUEST, { command, params: params || {}, requesterId: 'gateway' }, deviceId, callOpts)
+    },
+
+    getCommandStatus (commandId, callOpts) {
+      return request(ACTIONS.COMMAND_STATUS, { commandId }, null, callOpts)
     },
 
     // Resolve a worker's RPC public key (hex) from the Kernel registry, or null.
@@ -142,13 +163,13 @@ function createRawMdkClient (opts) {
     // Resolve the worker's key, open a short-lived worker client, send the
     // command, close. For adapter-handled ops (registerThing/forgetThings/...).
     // Throws ERR_MDK_WORKER_KEY_UNKNOWN if the worker isn't registered.
-    async sendWorkerCommand (workerId, deviceId, command, params, { hrpc = {} } = {}) {
+    async sendWorkerCommand (workerId, deviceId, command, params, { hrpc = {}, timeout } = {}) {
       const key = await client.getWorkerKey(workerId)
       if (!key) throw new Error('ERR_MDK_WORKER_KEY_UNKNOWN')
-      const wc = createWorkerClient(key, hrpc)
+      const wc = workerClient(key, hrpc)
       await wc.connect()
       try {
-        return await wc.sendCommand(deviceId, command, params)
+        return await wc.sendCommand(deviceId, command, params, { timeout })
       } finally {
         await wc.close()
       }
@@ -158,49 +179,49 @@ function createRawMdkClient (opts) {
     // the worker-infra queries that aggregate over a worker's own store rather
     // than one device). Same key-resolve/short-lived-client shape as
     // sendWorkerCommand; resolves with the bare telemetry payload.
-    async pullWorkerTelemetry (workerId, query, { hrpc = {} } = {}) {
+    async pullWorkerTelemetry (workerId, query, { hrpc = {}, timeout } = {}) {
       const key = await client.getWorkerKey(workerId)
       if (!key) throw new Error('ERR_MDK_WORKER_KEY_UNKNOWN')
-      const wc = createWorkerClient(key, hrpc)
+      const wc = workerClient(key, hrpc)
       await wc.connect()
       try {
-        const res = await wc.pullTelemetry(null, query)
+        const res = await wc.pullTelemetry(null, query, { timeout })
         return res && res.payload !== undefined ? res.payload : res
       } finally {
         await wc.close()
       }
     },
 
-    terminateWorker (workerId) {
-      return request(ACTIONS.WORKER_TERMINATE, { workerId })
+    terminateWorker (workerId, callOpts) {
+      return request(ACTIONS.WORKER_TERMINATE, { workerId }, null, callOpts)
     },
 
-    pushAction ({ query, action, params, voter, authPerms, batchActionUID }) {
-      return request(ACTIONS.ACTION_PUSH, { query, action, params, voter, authPerms, batchActionUID })
+    pushAction ({ query, action, params, voter, authPerms, batchActionUID }, callOpts) {
+      return request(ACTIONS.ACTION_PUSH, { query, action, params, voter, authPerms, batchActionUID }, null, callOpts)
     },
 
-    pushActionsBatch ({ batchActionsPayload, voter, authPerms, batchActionUID, suffix }) {
-      return request(ACTIONS.ACTION_PUSH_BATCH, { batchActionsPayload, voter, authPerms, batchActionUID, suffix })
+    pushActionsBatch ({ batchActionsPayload, voter, authPerms, batchActionUID, suffix }, callOpts) {
+      return request(ACTIONS.ACTION_PUSH_BATCH, { batchActionsPayload, voter, authPerms, batchActionUID, suffix }, null, callOpts)
     },
 
-    getAction ({ id, type }) {
-      return request(ACTIONS.ACTION_GET, { id, type })
+    getAction ({ id, type }, callOpts) {
+      return request(ACTIONS.ACTION_GET, { id, type }, null, callOpts)
     },
 
-    getActionsBatch ({ ids }) {
-      return request(ACTIONS.ACTION_GET_BATCH, { ids })
+    getActionsBatch ({ ids }, callOpts) {
+      return request(ACTIONS.ACTION_GET_BATCH, { ids }, null, callOpts)
     },
 
-    queryActions ({ queries, suffix, groupBatch }) {
-      return request(ACTIONS.ACTION_QUERY, { queries, suffix, groupBatch })
+    queryActions ({ queries, suffix, groupBatch }, callOpts) {
+      return request(ACTIONS.ACTION_QUERY, { queries, suffix, groupBatch }, null, callOpts)
     },
 
-    voteAction ({ id, voter, approve, authPerms }) {
-      return request(ACTIONS.ACTION_VOTE, { id, voter, approve, authPerms })
+    voteAction ({ id, voter, approve, authPerms }, callOpts) {
+      return request(ACTIONS.ACTION_VOTE, { id, voter, approve, authPerms }, null, callOpts)
     },
 
-    cancelActionsBatch ({ ids, voter }) {
-      return request(ACTIONS.ACTION_CANCEL_BATCH, { ids, voter })
+    cancelActionsBatch ({ ids, voter }, callOpts) {
+      return request(ACTIONS.ACTION_CANCEL_BATCH, { ids, voter }, null, callOpts)
     }
   }
 
@@ -208,9 +229,12 @@ function createRawMdkClient (opts) {
 }
 
 // A client bound directly to a worker by its RPC public key — same surface as
-// the Kernel client, for ops the worker adapter handles directly.
+// the Kernel client, for ops the worker adapter handles directly. Worker
+// replies are MDK envelopes and are validated as such (ERR_MDK_RESPONSE_INVALID).
+// Called on its own it dials with whatever identity `hrpcOpts` names (a random
+// one if none); sendWorkerCommand/pullWorkerTelemetry pass the parent's.
 function createWorkerClient (rpcKey, hrpcOpts = {}) {
-  return createRawMdkClient({ hrpc: { key: rpcKey, ...hrpcOpts } })
+  return createRawMdkClient({ hrpc: { envelope: true, ...hrpcOpts, key: rpcKey } })
 }
 
 /**
@@ -230,6 +254,7 @@ function createWorkerClient (rpcKey, hrpcOpts = {}) {
  * @param {object} config - Ambient plugin config; reads kernelKey/kernelKeyPair/kernelBootstrap
  * @param {object} [opts]
  * @param {string} [opts.errorCode]  - ERR_ code for missing key / failed connect / failed Kernel request
+ * @param {number} [opts.timeout]    - Default per-request timeout in ms (30000); each call can override it
  * @param {object} [opts.transport]  - Pre-built transport; test seam
  * @returns {object} Auto-connecting client with the raw client's surface
  */
@@ -242,7 +267,8 @@ function createMdkClient (config = {}, opts = {}) {
         hrpc: {
           key: config.kernelKey,
           ...(config.kernelKeyPair ? { keyPair: config.kernelKeyPair } : {}),
-          ...(config.kernelBootstrap ? { bootstrap: config.kernelBootstrap } : {})
+          ...(config.kernelBootstrap ? { bootstrap: config.kernelBootstrap } : {}),
+          ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {})
         }
       })
       : null
@@ -282,7 +308,11 @@ function createMdkClient (config = {}, opts = {}) {
       }
       return async (...args) => {
         const client = await ensure()
-        if (typeof client[prop] !== 'function') throw new Error(`ERR_MDK_CLIENT_NO_SUCH_METHOD: ${prop}`)
+        // Own methods only: inherited Object.prototype members (constructor,
+        // toString, __proto__ ...) are not client actions.
+        if (!Object.hasOwn(client, prop) || typeof client[prop] !== 'function') {
+          throw new Error(`ERR_MDK_CLIENT_NO_SUCH_METHOD: ${prop}`)
+        }
         try {
           return await client[prop](...args)
         } catch (err) {
@@ -301,6 +331,11 @@ function _createTransport (opts) {
   if (opts && opts.transport) return opts.transport
   if (opts && opts.hrpc) return new HRPCClient(opts.hrpc)
   throw new Error('ERR_MDK_CLIENT_TRANSPORT_REQUIRED')
+}
+
+// Only `timeout` is forwarded; an absent one leaves the transport default.
+function _callOpts (callOpts) {
+  return callOpts && callOpts.timeout !== undefined ? { timeout: callOpts.timeout } : {}
 }
 
 function _sleep (ms) {

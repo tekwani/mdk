@@ -9,10 +9,12 @@ function dequeueRequests (requests, key, data, err = null) {
 }
 
 async function cachedRoute (ctx, ckeyParts, apiPath, func, overwriteCache = false) {
-  const lru = ctx[`lru_${ctx.conf.cacheTiming[apiPath] || '30s'}`]
+  const lru = ctx[`lru_${ctx.conf.cacheTiming?.[apiPath] || '30s'}`]
   if (!lru) throw new Error('INTERNAL_SERVER_ERROR')
 
-  const ckey = ckeyParts.map(k => k ?? '-').join(':')
+  // JSON keeps part boundaries: joining on ':' let ['a:b', 'c'] and
+  // ['a', 'b:c'] share one entry. undefined and null both encode as null.
+  const ckey = JSON.stringify(ckeyParts.map(k => k ?? null))
 
   if (!overwriteCache) {
     const cached = lru.get(ckey)

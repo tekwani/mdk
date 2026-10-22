@@ -165,6 +165,31 @@
       gap: 2rem;
     }
 
+    // Tight vertical / wrapping horizontal stacks for demo content. The stack
+    // spans its block (so a full-width child can stretch) while children keep
+    // their natural width.
+    &__stack {
+      @include flex_column;
+
+      align-self: stretch;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    &__row {
+      @include flex_wrap;
+
+      gap: 1rem;
+      align-items: center;
+    }
+
+    // Padded placeholder content inside a demoed card
+    &__card-body {
+      margin: 0;
+      padding: 0.75rem 1rem;
+      color: var(--mdk-color-text-secondary, inherit);
+    }
+
     &__buttons {
       @include flex_wrap;
 

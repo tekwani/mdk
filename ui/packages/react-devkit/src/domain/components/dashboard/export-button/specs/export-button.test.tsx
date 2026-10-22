@@ -1,13 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ExportButton } from '../export-button'
 
 vi.mock('@primitives', () => ({
-  Button: ({ children, disabled, icon, className }: any) => (
+  Button: ({ children, disabled, loading, icon, className }: any) => (
     <button
       type="button"
       data-testid="export-trigger-button"
       data-disabled={String(disabled)}
+      data-loading={String(Boolean(loading))}
       data-class={className}
     >
       <span data-testid="export-icon">{icon}</span>
@@ -200,6 +201,40 @@ describe('ExportButton', () => {
       fireEvent.click(screen.getAllByTestId('dropdown-item')[0])
 
       expect(onExport).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('async onExport', () => {
+    const trigger = () => screen.getByTestId('export-trigger-button')
+
+    it('never shows the loading state for a synchronous handler', () => {
+      render(<ExportButton onExport={vi.fn()} />)
+
+      fireEvent.click(screen.getAllByTestId('dropdown-item')[0])
+
+      expect(trigger()).toHaveAttribute('data-loading', 'false')
+    })
+
+    it('shows the loading state until the returned promise resolves', async () => {
+      let resolve!: () => void
+      const onExport = vi.fn(() => new Promise<void>((r) => (resolve = r)))
+      render(<ExportButton onExport={onExport} />)
+
+      fireEvent.click(screen.getAllByTestId('dropdown-item')[0])
+      await waitFor(() => expect(trigger()).toHaveAttribute('data-loading', 'true'))
+
+      await act(async () => resolve())
+      expect(trigger()).toHaveAttribute('data-loading', 'false')
+    })
+
+    it('clears the loading state when the returned promise rejects', async () => {
+      const onExport = vi.fn().mockRejectedValue(new Error('network down'))
+      render(<ExportButton onExport={onExport} />)
+
+      fireEvent.click(screen.getAllByTestId('dropdown-item')[1])
+
+      await waitFor(() => expect(trigger()).toHaveAttribute('data-loading', 'false'))
+      expect(onExport).toHaveBeenCalledWith('json')
     })
   })
 })

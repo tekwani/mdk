@@ -15,7 +15,7 @@ an embedded `DateRangePicker`.
 | `filterTags` | Required | `string[]` | - | Shared with `CurrentAlerts` |
 | `localFilters` | Required | `AlertLocalFilters` | - | Filters and search tags coming from the parent (typically shared with `CurrentAlerts`) |
 | `onDateRangeChange` | Required | `(range: HistoricalAlertsRange) => void` | - | Setter for the date range |
-| `alerts` | Optional | `Alert[]` | `[]` | Pre-fetched historical alerts log entries (each with a `thing` device payload) |
+| `alerts` | Optional | `AlertRecord[]` | `[]` | Pre-fetched historical alerts log entries (each with a `thing` device payload) |
 | `className` | Optional | `string` | - | Additional class names |
 | `isLoading` | Optional | `boolean` | `false` | Show DataTable loading overlay |
 | `onAlertClick` | Optional | `((id?: string \| undefined, uuid?: string \| undefined) => void)` | - | Called when the user opens an alert |
@@ -42,7 +42,7 @@ an embedded `DateRangePicker`.
 
 ## Data contracts
 
-- `Alert` — `@tetherto/mdk-react-devkit` / [`foundation/types/alerts`](../../../types/alerts.ts)
+- `AlertRecord` — `@tetherto/mdk-react-devkit` / [`domain/types/alerts`](../../../types/alerts.ts)
 - `AlertLocalFilters` — same package, [`foundation/components/alerts/alerts-types`](../alerts-types.ts)
 
 ## Notes

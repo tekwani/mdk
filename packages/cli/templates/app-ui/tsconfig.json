@@ -1,0 +1,29 @@
+// Editor-only: lets you edit the starter UI in an MDK checkout without errors.
+// `mdk create app` copies only ui-src/, and writes the app's own tsconfig there.
+// The MDK packages resolve to this checkout's built ui/packages (npm run build in ui/).
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "typeRoots": ["../../../../ui/node_modules/@types"],
+    "paths": {
+      "@tetherto/mdk-ui-foundation": ["../../../../ui/packages/ui-foundation/dist/index.d.ts"],
+      "@tetherto/mdk-ui-foundation/app-shared-modules": ["../../../../ui/packages/ui-foundation/dist/apps/shared-modules.d.ts"],
+      "@tetherto/mdk-react-adapter": ["../../../../ui/packages/react-adapter/dist/index.d.ts"],
+      "@tetherto/mdk-react-devkit": ["../../../../ui/packages/react-devkit/dist/index.d.ts"],
+      "react": ["../../../../ui/node_modules/@types/react"],
+      "react/*": ["../../../../ui/node_modules/@types/react/*"],
+      "vite": ["../../../../ui/node_modules/vite"],
+      "@vitejs/plugin-react": ["../../../../ui/node_modules/@vitejs/plugin-react/dist/index.d.ts"]
+    }
+  },
+  "include": ["ui-src"]
+}

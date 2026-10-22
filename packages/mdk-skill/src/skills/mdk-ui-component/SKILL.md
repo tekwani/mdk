@@ -24,8 +24,8 @@ shell's own [`USAGE.md`](../../../../../examples/mdk-ui-shell-template/USAGE.md)
 
 | Layer            | Owns                                                                           |
 | ---------------- | ------------------------------------------------------------------------------ |
-| Foundation query | `@tetherto/mdk-ui-foundation` `src/query/factories.ts` — endpoint + fetch      |
-| Hook             | `@tetherto/mdk-react-adapter` (reusable) or app-local `src/hooks/use-<thing>.ts` — binds the query, shapes the payload |
+| Gateway route    | Your Gateway plugin's route — serves the data                                  |
+| Hook             | app-local `src/hooks/use-<thing>.ts` — `useQuery` against the route, shapes the payload in `select` |
 | Page             | `apps/dashboard/src/pages/<Name>.tsx` — thin glue, no fetch/shaping            |
 | Panel            | `apps/dashboard/src/components/<Name>Panel.tsx` — props in, markup out         |
 | Route            | `apps/dashboard/src/routes.ts` — one line                                      | 
@@ -94,21 +94,23 @@ parsed line-wise by tooling. Do not add feature pages to `router.tsx`.
 
 ### 3. Create the data hook (shape the payload)
 
-For a **project-local plugin** (one scaffolded under `plugins/`, referenced by
-its package name in `mdk.yaml` → `spec.gateway.plugins`), put the hook in the
-app:
+For a **project-local app** (one scaffolded under `apps/<app-name>` by `mdk create app`, referenced by
+its package name in `mdk.yaml` → `spec.apps`), put the hook in the
+dashboard. The Gateway serves the app's routes under `/apps/<app-name>` unless its entry sets
+`mount: /`, so fetch `/apps/<app-name>/api/...`. In dev, the dashboard's Vite proxy must forward
+`/apps` to the Gateway too; add `'/apps': gatewayUrl` next to `/api` in `vite.config.ts` if it is missing:
 
 `src/hooks/use-<thing>.ts`
 
 ```ts
 import { useQuery } from '@tetherto/mdk-react-adapter'
 
-// types matching the plugin JSON schema
+// types matching the route's JSON schema in mdk-plugin.json
 export const useThing = () => {
   const result = useQuery({
     queryKey: ['thing'],
     queryFn: async () => {
-      const res = await fetch('/api/...')
+      const res = await fetch('/apps/<app-name>/api/...')
       if (!res.ok) throw new Error(`Failed (HTTP ${res.status})`)
       const raw = await res.json()
       // shape → render-ready; never leave shaping to the panel
@@ -191,8 +193,8 @@ End-to-end chain this kind of prompt implies (router skill expands this):
    the Worker contract's telemetry channel.
 2. This skill — hook + `SingleStatCard` grid (total + per-device) + page +
    route.
-3. `mdk-deployment` — plugin listed in `mdk.yaml`, Gateway running, Worker
-   online with a device.
+3. `mdk-deployment` — app listed in `mdk.yaml` → `spec.apps`, `mdk run` up (app runtime + Gateway),
+   Worker online with a device.
 
 Detailed file checklist: [`references/page-recipe.md`](./references/page-recipe.md).
 
@@ -201,5 +203,5 @@ Detailed file checklist: [`references/page-recipe.md`](./references/page-recipe.
 | Problem                    | Skill                       |
 | -------------------------- | --------------------------- |
 | No API route / wrong shape | `mdk-gateway-plugin`        |
-| Stack not running / plugin not loaded | `mdk-deployment` |
+| Stack not running / app not declared | `mdk-deployment` |
 | Device / telemetry channel missing | `mdk-worker-plugin` |

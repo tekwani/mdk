@@ -20,12 +20,7 @@ Please follow the private disclosure instructions in [SECURITY.md][security].
 
 ## Monorepo structure
 
-MDK is a monorepo with separate backend and frontend workspaces:
-
-- Backend:
-  - [`backend/core/`](./backend/core/README.md): Backend services, container modules, and integration/unit tests (npm-based)
-  - [`backend/workers/`](./backend/workers/README.md): Protocol-translator worker packages (miners, miner-pools, power-meter, temperature, containers), per-worker mock servers, and per-worker tests (npm-based)
-- Frontend: [`ui/`](./ui/README.md): Frontend packages, demo app, and shared UI foundation (npm + Turbo-based)
+MDK is a monorepo with separate backend `backend/` and frontend `ui/` workspaces:
 
 Choose the backend or frontend workflow that matches the area you are contributing to.
 
@@ -41,8 +36,8 @@ including UI source. That is exactly what caused a prior root ignore regression,
 swallowed [`ui/packages/ui-foundation/src/store/`](./ui/packages/ui-foundation/src/store/index.ts).
 - **Keep per-domain ignores in that domain's own `.gitignore`** ([`ui/.gitignore`](./ui/.gitignore), the per-package backend `.gitignore`s), 
 not the root. Things like `dist`, `.turbo`, and `build` belong to a domain.
-- **Lint/format/type config is domain-owned, not shared at the root.** [`ui/`](./ui/README.md) ships its own [`eslint.config.mjs`](ui/eslint.config.mjs) / 
-[`tsconfig.base.json`](ui/tsconfig.base.json) / `.prettierrc`; backend uses `standard`. Do not add a root-level eslint/tsconfig/prettier 
+- **Lint/format/type config is domain-owned, not shared at the root.** [`ui/`](./ui/README.md) ships its own [`.oxlintrc.json`](ui/.oxlintrc.json) / 
+[`tsconfig.base.json`](ui/tsconfig.base.json) / `.prettierrc`; backend uses `standard`. Do not add a root-level lint/tsconfig/prettier 
 that would apply across domains.
 - **A genuinely shared convention is fine if it applies identically to every domain** - e.g. committing 
 `config/*.json.example` while ignoring the generated `config/*.json`. Note it as shared so the intent is clear.
@@ -156,18 +151,18 @@ npm test
 
 MDK uses Conventional Commits-style types for both branch names and PR titles.
 
-| Type | Use for |
-|---|---|
-| `feat` | New features |
-| `fix` | Bug fixes |
-| `docs` | Documentation changes |
-| `refactor` | Code refactoring without behavior change |
-| `test` | Test additions or changes |
-| `chore` | Tooling, dependencies, repo maintenance |
-| `perf` | Performance improvements |
-| `style` | Formatting only (no logic change) |
-| `ci` | CI configuration changes |
-| `build` | Build system or external dependency changes |
+| Type       | Use for                                     |
+| ---------- | ------------------------------------------- |
+| `feat`     | New features                                |
+| `fix`      | Bug fixes                                   |
+| `docs`     | Documentation changes                       |
+| `refactor` | Code refactoring without behavior change    |
+| `test`     | Test additions or changes                   |
+| `chore`    | Tooling, dependencies, repo maintenance     |
+| `perf`     | Performance improvements                    |
+| `style`    | Formatting only (no logic change)           |
+| `ci`       | CI configuration changes                    |
+| `build`    | Build system or external dependency changes |
 
 ### Branch naming convention
 
@@ -192,7 +187,7 @@ git checkout -b fix/timeout-handling
 ### Commit message template
 
 The repository ships a commit message template at [`.gitmessage`][gitmessage] that pre-fills the
-commit editor with the expected format (type, summary, body, and Asana/Related PR references).
+commit editor with the expected format (type, summary, body, and Task Id/Related PR references).
 Enable it once per clone:
 
 ```bash
@@ -223,14 +218,15 @@ Before submitting your PR, ensure that:
 - [ ] Linting passes (`npm run lint`)
 - [ ] Type-check passes for frontend TypeScript changes (`npm run typecheck`)
 - [ ] New features include tests
-- [ ] Public behavior or APIs changes have a [`docs-needed` issue][docs-needed-issue] linked to the PR
+- [ ] Behavior, config, API, or CLI changes either include their documentation in the same PR or check the `docs-required`  
+box in the PR template to request input from the docs maintainer. 
+> Where documentation is included, you may request a review round from a maintainer with `docs-review`.
 - [ ] Generated pages affected by the change are regenerated, using the command named in that file's `DO NOT EDIT` header (a Worker contract, a plugin manifest, or devkit component source each rewrite a different file)
 
 > [!NOTE]
-> The `docs-freshness` workflow also checks this on a PR that touches a Worker
-> contract, a plugin manifest, devkit component source, or one of the generated pages themselves — it warns rather than
-> blocks when a page is stale, so regenerating is still on you, not something CI does for you. It does fail the run if a
-> generator itself breaks.
+> The `docs-freshness` workflow enforces this on every PR as a required check: a stale
+> generated page, a skipped generator, or a broken generator all fail the run. CI only detects the drift, it never regenerates
+> for you. Run `npm run regenerate-docs` and commit the result in the same PR.
 
 ### PR title format
 
@@ -332,9 +328,6 @@ Happy contributing, and thanks for helping improve MDK! 🚀
 <!-- docs@tether.io: npm-version → reference/environment -->
 
 [mdk-repo-git]: https://github.com/tetherto/mdk.git
-<!-- docs@tether.io: external link — preserve URL -->
-
-[docs-needed-issue]: https://github.com/tetherto/mdk/issues/new?template=docs-needed.yml
 <!-- docs@tether.io: external link — preserve URL -->
 
 [releasing]: RELEASING.md

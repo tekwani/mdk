@@ -6,25 +6,26 @@ const crypto = require('crypto')
 const os = require('os')
 const debug = require('debug')('mdk:lifecycle')
 const { setTimeout: sleep } = require('timers/promises')
-const { KernelManager } = require('../kernel')
+const { KernelManager } = require('@tetherto/mdk-kernel')
 const { MDK_STORE } = require('./utils/constants')
 const initialize = require('./utils/initialize')
 const { startServices } = require('./services')
-const { keysDir, discoverWorkerKeys } = require('./lib/local-discovery')
+const {
+  keysDir, discoverWorkerKeys, trustedKeysDir, publishTrustedKey, admitTrustedKeys, KERNEL_KEY_NAME
+} = require('./lib/local-discovery')
 
 const defaultRoot = path.join(os.homedir(), '.mdk')
 
-// The gateway package, which startGateway boots and whose dependencies include
-// the bundled plugins — see bundledPluginDir.
-const GATEWAY_PKG = path.resolve(__dirname, '..', 'gateway')
-
-const BUNDLED_PLUGINS_PKG = '@tetherto/mdk-plugins'
-const PLUGIN_MANIFEST = 'mdk-plugin.json'
+// The gateway package, which startGateway boots.
+const GATEWAY_PKG = path.dirname(require.resolve('@tetherto/mdk-gateway/package.json'))
 
 // Well-known paths used as defaults when running without explicit configuration.
 // Override via opts.topicFile / opts.keyFile if co-locating multiple instances.
 const DEFAULT_TOPIC_FILE = path.join(defaultRoot, '.dht-topic')
 const DEFAULT_KEY_FILE = path.join(defaultRoot, '.kernel-key')
+// Default rendezvous for caller/worker keys (fail-closed RPC admission); a
+// getKernel() with the default root uses the same dir.
+const DEFAULT_TRUSTED_KEYS_DIR = trustedKeysDir(defaultRoot)
 
 function _ensureDirs (...dirs) {
   for (const d of dirs) fs.mkdirSync(d, { recursive: true, mode: 0o700 })
@@ -105,47 +106,6 @@ function _writeConfigWithOverride (examplePath, destPath, overrides) {
 }
 
 /**
- * Directory of one of the plugins MDK ships in `@tetherto/mdk-plugins`, for an
- * `extraPluginDirs` entry.
- *
- * Three of these — `telemetry`, `site-hashrate`, `site-monitor` — were registered
- * by every gateway whatever its caller asked for. They are not any more: what a
- * caller declares is the whole of what a gateway runs. Naming one here is how it
- * comes back, and is exactly what `package: "@tetherto/mdk-plugins/telemetry"` in
- * `mdk.yaml` does.
- *
- * Resolved from the gateway package rather than from the caller: the bundled
- * plugins are subdirectories of one package, so they have no `package.json` to
- * resolve on their own, and the gateway is where the dependency on them is
- * declared — a caller whose own `node_modules` happens not to have hoisted it
- * would otherwise get a resolution error instead of a directory.
- *
- * @param {string} name - Subdirectory name, e.g. 'telemetry'
- * @returns {string} Absolute plugin package directory
- */
-function bundledPluginDir (name) {
-  const root = path.dirname(require.resolve(`${BUNDLED_PLUGINS_PKG}/package.json`, { paths: [GATEWAY_PKG] }))
-  const dir = path.join(root, String(name))
-
-  // Read off disk rather than hard-coded, so this cannot drift from what the
-  // package actually ships — which is the only reason a caller is here.
-  const available = () => fs.readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(root, entry.name, PLUGIN_MANIFEST)))
-    .map((entry) => entry.name)
-  const notFound = () => new Error(`ERR_BUNDLED_PLUGIN_NOT_FOUND: ${BUNDLED_PLUGINS_PKG} ships no plugin "${name}" — it has: ${available().join(', ')}`)
-
-  // Containment has to be checked explicitly, before the manifest check below
-  // ever runs: `path.join` happily walks a `../`-laden (or absolute) `name`
-  // outside `root`, and the manifest check has no idea that's what it's
-  // looking at — it would just as happily say "found" for a sibling
-  // directory that happens to ship its own mdk-plugin.json.
-  if (path.resolve(dir) !== dir || !dir.startsWith(root + path.sep)) throw notFound()
-
-  if (fs.existsSync(path.join(dir, PLUGIN_MANIFEST))) return dir
-  throw notFound()
-}
-
-/**
  * Start the Kernel (Orchestration Kernel).
  *
  * When called with no arguments the kernel reads the DHT topic from
@@ -159,12 +119,31 @@ function bundledPluginDir (name) {
  * @param {string} [opts.topic]       - DHT topic hex (default: read from topicFile)
  * @param {string} [opts.topicFile]   - Path to topic file (default: DEFAULT_TOPIC_FILE)
  * @param {string|boolean} [opts.keyFile] - Path for the HRPC key file (default: DEFAULT_KEY_FILE); `false` to disable
- * @param {object} [opts.hrpc]        - HRPC config (default: enabled)
- * @param {object} [opts.discovery]   - Discovery config: { mode: 'dht' | 'local', dir? }.
+ * @param {object|false} [opts.hrpc] - HRPC listener config, or `false` to disable it. Admission is
+ *                                       fail-closed: only listed callers are admitted.
+ * @param {Array<string|{key: string, roles: string[]}>} [opts.hrpc.whitelist] - Caller allowlist: a hex
+ *                                       DHT public key (full access) or `{ key, roles }` with roles from
+ *                                       'read' | 'write' | 'admin'. Default `[]` = nobody until admitted via
+ *                                       kernel.allowKey(), startGateway({ kernel }) or the trusted-keys dir.
+ * @param {boolean} [opts.hrpc.allowAll] - Admit every DHT peer that knows the Kernel key. Development
+ *                                       only; logs a warning. Never the default.
+ * @param {Array}  [opts.hrpc.bootstrap] - DHT bootstrap nodes (testnets)
+ * @param {string|false} [opts.trustedKeysDir] - Same-machine key rendezvous (default <root>/.trusted-keys).
+ *                                       The Kernel publishes kernel.pub (its worker-dialing key,
+ *                                       kernel.getClientPublicKey()) there and admits every other
+ *                                       `<name>.pub` as a full-access caller. `false` disables both.
+ * @param {object} [opts.discovery]   - Discovery config: { mode: 'dht' | 'local', dir?, workerKeys?, allowAnyWorker? }.
  *                                       Default 'dht' (Hyperswarm topic; works on one host or
  *                                       across machines). 'local' is a faster same-machine option:
  *                                       the Kernel registers workers by the RPC keys they publish to a
  *                                       shared dir (default: <root>/.worker-keys), skipping the topic.
+ *                                       Topic admission is fail-closed: only `workerKeys` (or
+ *                                       kernel.allowWorkerKey()) register from the topic, unless
+ *                                       `allowAnyWorker: true` (development only; logs a warning).
+ *                                       kernel.registerWorker() skips the topic allowlist.
+ * @param {boolean} [opts.handleSignals] - Install SIGINT/SIGTERM handlers that drain kernel._cleanup,
+ *                                       stop the Kernel and call process.exit(0). Default false
+ *                                       (library use): stop it yourself with shutdown(kernel).
  */
 async function getKernel (opts = {}) {
   const root = opts.root || defaultRoot
@@ -189,11 +168,15 @@ async function getKernel (opts = {}) {
 
   const conf = { kernel: {} }
   // Propagate `false` explicitly — the manager treats an absent hrpc conf as enabled.
-  conf.kernel.hrpc = opts.hrpc === false ? false : (opts.hrpc || { whitelist: [] })
+  // An empty whitelist admits nobody (fail closed); callers are added below.
+  conf.kernel.hrpc = opts.hrpc === false ? false : { whitelist: [], ...(opts.hrpc || {}) }
   if (opts.telemetryPullMs) conf.kernel.telemetryPullMs = opts.telemetryPullMs
   if (opts.healthPingMs) conf.kernel.healthPingMs = opts.healthPingMs
+  if (opts.statePullMs) conf.kernel.statePullMs = opts.statePullMs
   if (opts.actionIntvlMs) conf.kernel.actionIntvlMs = opts.actionIntvlMs
-  conf.kernel.discovery = mode === 'local' ? { mode: 'local', dir: localKeysDir } : (opts.discovery || { topic })
+  conf.kernel.discovery = mode === 'local'
+    ? { mode: 'local', dir: localKeysDir }
+    : { ...(opts.discovery || {}), topic: (opts.discovery && opts.discovery.topic) || topic }
 
   const kernel = new KernelManager(conf, { storeDir, root, loadConf: () => {} })
   await kernel.init()
@@ -204,6 +187,17 @@ async function getKernel (opts = {}) {
   kernel.topic = topic
   kernel._cleanup = []
 
+  // Trusted-keys rendezvous: publish the key workers must allow, and admit the
+  // callers (Gateway, MCP, CLI) that other processes publish.
+  kernel.trustedKeysDir = null
+  if (opts.trustedKeysDir !== false && kernel.getClientPublicKey()) {
+    const dir = opts.trustedKeysDir || trustedKeysDir(root)
+    publishTrustedKey(dir, KERNEL_KEY_NAME, kernel.getClientPublicKey())
+    const admitter = admitTrustedKeys(kernel, dir)
+    kernel._cleanup.push(async () => admitter.stop())
+    kernel.trustedKeysDir = dir
+  }
+
   // Local mode: register workers by the RPC keys they publish to the shared dir,
   // skipping the DHT topic — immediate discovery for same-machine setups.
   if (mode === 'local') {
@@ -211,12 +205,16 @@ async function getKernel (opts = {}) {
     kernel._cleanup.push(async () => watcher.stop())
   }
 
-  onShutdown(async () => {
-    for (const fn of kernel._cleanup) {
-      try { await fn() } catch {}
-    }
-    await kernel.stop()
-  })
+  // Library default: leave the process's signals alone (tear down with
+  // shutdown(kernel)). Standalone processes opt in with handleSignals.
+  if (opts.handleSignals === true) {
+    onShutdown(async () => {
+      for (const fn of kernel._cleanup) {
+        try { await fn() } catch {}
+      }
+      await kernel.stop()
+    })
+  }
 
   return kernel
 }
@@ -227,6 +225,41 @@ async function getKernel (opts = {}) {
  */
 async function startKernel (opts = {}) {
   return await getKernel(opts)
+}
+
+const APP_NAME_RE = /^[a-z][a-z0-9-]*$/
+// A literal path segment: no Fastify `:param` / `*` wildcard, no `.` or `..`.
+const MOUNT_SEGMENT_RE = /^(?!\.\.?$)[A-Za-z0-9._~-]+$/
+
+// Checked before any boot side effect. Paths are resolved now: the process may
+// chdir before a request reads them.
+function _normalizeApps (apps = []) {
+  if (!Array.isArray(apps)) throw new Error('ERR_GATEWAY_APPS_INVALID: apps must be an array')
+  const names = new Set()
+  const mounts = new Map()
+  return apps.map((app, i) => {
+    const { name, appDir, keyFile, mount } = app || {}
+    if (typeof name !== 'string' || !APP_NAME_RE.test(name)) throw new Error(`ERR_GATEWAY_APP_NAME_INVALID: apps[${i}].name must match ${APP_NAME_RE}`)
+    if (names.has(name)) throw new Error(`ERR_GATEWAY_APP_DUPLICATE: ${name}`)
+    names.add(name)
+    if (typeof appDir !== 'string' || !appDir) throw new Error(`ERR_GATEWAY_APP_DIR_REQUIRED: ${name}`)
+    if (typeof keyFile !== 'string' || !keyFile) throw new Error(`ERR_GATEWAY_APP_KEY_REQUIRED: ${name} needs a keyFile`)
+    const out = { name, appDir: path.resolve(appDir), keyFile: path.resolve(keyFile) }
+    if (mount != null) {
+      if (typeof mount !== 'string' || !mount.startsWith('/')) throw new Error(`ERR_GATEWAY_APP_MOUNT_INVALID: ${name}: mount must start with "/"`)
+      const segments = mount.split('/').filter(Boolean)
+      if (!segments.every((s) => MOUNT_SEGMENT_RE.test(s))) {
+        throw new Error(`ERR_GATEWAY_APP_MOUNT_INVALID: ${name}: mount "${mount}" must be literal path segments (no ":", "*", "." or "..")`)
+      }
+      out.mount = '/' + segments.join('/')
+    }
+    const effective = out.mount || `/apps/${name}`
+    if (mounts.has(effective) && effective !== '/') {
+      throw new Error(`ERR_GATEWAY_APP_MOUNT_DUPLICATE: ${name} and ${mounts.get(effective)} are both mounted at ${effective}`)
+    }
+    mounts.set(effective, name)
+    return out
+  })
 }
 
 /**
@@ -248,27 +281,48 @@ async function startKernel (opts = {}) {
  *                                            without a Kernel connection. Default: resolved from opts.kernel,
  *                                            then the key file.
  * @param {string}  [opts.keyFile]       - Key file to resolve the Kernel key from (default: DEFAULT_KEY_FILE)
- * @param {Array}   [opts.bootstrap]     - DHT bootstrap nodes for the Client (testnets)
- * @param {Array}   [opts.extraPluginDirs] - The plugin package dirs this gateway loads and
- *                                           registers at boot — all of them, since a gateway
- *                                           registers nothing its caller did not name (see
- *                                           bundledPluginDir for the ones MDK ships).
- *                                           Each entry is either a plugin dir (string) or
- *                                           `{ dir, config }`, where `config` hands the plugin its
- *                                           own config block (merged over common in its ambient
- *                                           context). To reach these same routes as MCP tools, run
- *                                           the standalone @tetherto/mdk-mcp server (`mdk run mcp`)
- *                                           against the same plugin dirs — the gateway hosts no MCP
- *                                           server of its own.
+ * @param {Array}   [opts.bootstrap]     - DHT bootstrap nodes for the Client and the app runtime client (testnets)
+ * @param {Array}   [opts.apps]          - The apps this gateway mounts — all of them. Each runs in its own
+ *                                         runtime process (@tetherto/mdk-app-runtime); the gateway reads only
+ *                                         its route table and forwards every request over HRPC.
+ *                                         Entry: `{ name, appDir, keyFile, mount? }` — `keyFile` is where the
+ *                                         runtime publishes its key (re-read per request; 503 until then),
+ *                                         `mount` defaults to `/apps/<name>` (`/` mounts at the root).
+ * @param {string}  [opts.gatewayKeyFile] - Where the gateway writes its runtime-client public key once
+ *                                          serving: the key app runtimes allow-list (`allowedKeyFiles`).
  * @param {object}  [opts.common]        - Overrides for common.json
  * @param {object}  [opts.httpd]         - Overrides for httpd.config.json
  * @param {object}  [opts.net]           - Overrides for net.config.json
  * @param {object}  [opts.store]         - Overrides for store.config.json
  * @param {object}  [opts.logging]       - Overrides for logging.config.json
  * @param {Array}   [opts.additionalRoutes] - Extra Fastify routes to register
+ * @param {Function} [opts.authVerifier] - `async (request, route) => identity | false`. Gates every
+ *                                         app route whose manifest says `auth: true` (401 when absent
+ *                                         or falsy); the identity becomes the controller's `req._info`.
+ *                                         Routes without `auth: true` stay open.
+ * @param {string[]} [opts.allowedHosts] - Extra Host header values to serve (`name` or `name:port`);
+ *                                         loopback on `port` is always allowed. `['*']` disables the check.
+ * @param {*}       [opts.trustProxy]    - Fastify trustProxy (default: false)
+ * @param {number}  [opts.bodyLimit]     - Max request body in bytes (default: 1048576)
+ * @param {object|false} [opts.rateLimit] - @fastify/rate-limit options (default: 300 per minute per IP);
+ *                                          false disables
+ * @param {object|false} [opts.helmet]   - @fastify/helmet options; false disables
+ * @param {string|false} [opts.trustedKeysDir] - Where to publish the gateway's Kernel/Worker client key
+ *                                         (status.rpcClientKey) as `<trustedKeyName>.pub`, so a Kernel and
+ *                                         workers in other processes admit it. Default: opts.kernel's dir,
+ *                                         else DEFAULT_TRUSTED_KEYS_DIR. `false` disables. With opts.kernel
+ *                                         the key is also admitted in-process (kernel.allowKey).
+ * @param {string}  [opts.trustedKeyName] - File name for that key (default 'gateway')
+ * @param {boolean} [opts.handleSignals] - Standalone gateway (no opts.kernel) only: install
+ *                                         SIGINT/SIGTERM handlers that stop it and call
+ *                                         process.exit(0). Default false — use shutdown(hnd).
  * @returns {Promise<object>}  WrkServerHttp instance (already started)
  */
 async function startGateway (opts = {}) {
+  if (opts.extraPluginDirs !== undefined) {
+    throw new Error('ERR_GATEWAY_EXTRA_PLUGIN_DIRS_UNSUPPORTED: extraPluginDirs is not supported; run each app with @tetherto/mdk-app-runtime and pass it in apps: [{ name, appDir, keyFile, mount? }]')
+  }
+  const apps = _normalizeApps(opts.apps)
   const kernelKey = _resolveKernelKey(opts)
   const root = opts.root || path.join(defaultRoot, 'gateway')
   const facsDir = path.join(root, 'config', 'facs')
@@ -308,7 +362,7 @@ async function startGateway (opts = {}) {
 
   // require() resolves relative to the WrkServerHttp file itself so its dependencies
   // in gateway/node_modules are found by Node's normal resolution algorithm.
-  const WrkServerHttp = require('../gateway/workers/http.node.wrk')
+  const WrkServerHttp = require('@tetherto/mdk-gateway/workers/http.node.wrk')
 
   const ctx = {
     root,
@@ -317,9 +371,8 @@ async function startGateway (opts = {}) {
     port: opts.port || 3000,
     shard: opts.shard || 0
   }
-  // tether-wrk-base resolves the corestore to a CWD-relative `store/<storeDir>`
-  // unless env==='test' AND ctx.tmpdir is set, in which case it lives under
-  // tmpdir. The CWD-relative default makes every gateway sharing a working dir
+  // The gateway keeps its corestore at `<tmpdir || root>/store/http`, never
+  // relative to the working directory, so gateways sharing a working dir don't
   // contend for one RocksDB lock (ERR: "File descriptor could not be locked" →
   // a half-open corestore that later surfaces as "Corestore is closed"). Honour
   // an explicit tmpdir, and in test env default it to root so each instance is
@@ -327,26 +380,47 @@ async function startGateway (opts = {}) {
   if (opts.tmpdir) ctx.tmpdir = opts.tmpdir
   else if (ctx.env === 'test') ctx.tmpdir = root
   if (opts.kernel) ctx.kernel = opts.kernel
-  if (kernelKey) {
-    ctx.kernelKey = kernelKey
-    if (opts.bootstrap) ctx.kernelBootstrap = opts.bootstrap
-  }
-  if (opts.extraPluginDirs) ctx.extraPluginDirs = opts.extraPluginDirs
+  if (kernelKey) ctx.kernelKey = kernelKey
+  if (opts.bootstrap) ctx.kernelBootstrap = opts.bootstrap
+  if (apps.length) ctx.apps = apps
+  if (opts.gatewayKeyFile) ctx.gatewayKeyFile = path.resolve(opts.gatewayKeyFile)
   if (opts.additionalRoutes) ctx.additionalRoutes = opts.additionalRoutes
+  // HTTP hardening (see @tetherto/mdk-gateway workers/lib/security.js); unset
+  // keys fall back to common.json, then to the gateway's safe defaults.
+  for (const key of ['authVerifier', 'allowedHosts', 'trustProxy', 'bodyLimit', 'rateLimit', 'helmet']) {
+    if (opts[key] !== undefined) ctx[key] = opts[key]
+  }
 
   // WrkServerHttp constructor calls this.init() + this.start() automatically.
   // bfx-wrk-base emits 'started' (via process.nextTick) when start() completes.
   const hnd = new WrkServerHttp({}, ctx)
   await new Promise((resolve) => hnd.once('started', resolve))
 
+  _trustGatewayKey(hnd, opts)
+
   if (opts.kernel && Array.isArray(opts.kernel._cleanup)) {
     opts.kernel._cleanup.push(() => new Promise((resolve) => hnd.stop(resolve)))
-  } else if (!opts.kernel) {
-    // No kernel to register cleanup onto (standalone gateway): own the signal.
+  } else if (!opts.kernel && opts.handleSignals === true) {
+    // Standalone gateway that opted in: own SIGINT/SIGTERM. Otherwise the
+    // caller stops it via shutdown(hnd) / hnd.stop().
     onShutdown(() => new Promise((resolve) => hnd.stop(resolve)))
   }
 
   return hnd
+}
+
+// The Kernel and workers are fail-closed, so the gateway's client key (the
+// one plugin clients and worker clients dial with) must be admitted: directly
+// on an in-process Kernel (which mirrors it onto in-process workers, see
+// trustKernel), and through the trusted-keys dir for other processes.
+function _trustGatewayKey (hnd, opts) {
+  const key = hnd.status && hnd.status.rpcClientKey
+  if (!key) return
+  if (opts.kernel && typeof opts.kernel.allowKey === 'function') opts.kernel.allowKey(key)
+  if (opts.trustedKeysDir === false) return
+  const dir = opts.trustedKeysDir || (opts.kernel && opts.kernel.trustedKeysDir) ||
+    (opts.kernel ? null : DEFAULT_TRUSTED_KEYS_DIR)
+  if (dir) publishTrustedKey(dir, opts.trustedKeyName || 'gateway', key)
 }
 
 // Wait until the registry holds `minWorkers` READY workers (with ≥1 device unless
@@ -410,12 +484,12 @@ module.exports = {
   getKernel,
   startKernel,
   startGateway,
-  bundledPluginDir,
   waitForDiscovery,
   onShutdown,
   shutdown,
   DEFAULT_TOPIC_FILE,
   DEFAULT_KEY_FILE,
+  DEFAULT_TRUSTED_KEYS_DIR,
   startServices,
 
   // Worker-side infra: injectable services, device layer, and templates
@@ -439,5 +513,7 @@ module.exports = {
     alerts: require('./lib/templates/alerts'),
     stats: require('./lib/templates/stats')
   },
+  // Telemetry aggregation ops (applyStats/tallyStats, groupBy, getVal)
+  libStats: require('./lib/stats'),
   utils: require('./lib/utils')
 }

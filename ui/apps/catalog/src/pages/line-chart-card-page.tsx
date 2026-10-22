@@ -15,9 +15,8 @@ import {
 
 /**
  * LineChartCard demo. Each variant illustrates a different
- * `LineChartCardData` shape. In production, source the `data` prop
- * from `useHashrateChartData()` / `useSiteConsumptionChartData()`
- * (`@tetherto/mdk-react-adapter`) — see ./line-chart-card-page.fixtures.ts.
+ * `LineChartCardData` shape. In an app, build the `data` prop from your
+ * own history route — see ./line-chart-card-page.fixtures.ts.
  */
 export const LineChartCardPage = (): JSX.Element => {
   const [timeline, setTimeline] = useState('5m')

@@ -38,9 +38,10 @@ const server = await startGateway({ kernel, port: 3000 })
 ```
 
 > [!WARNING]
-> The Gateway ships no built-in authentication, so every route it serves is unauthenticated. Supply your own identity layer and call it from the
-> controllers that need protecting, as [auth and permissions][plugins-auth] describes. The [`@tetherto/mdk-plugin-auth`][auth-plugin] plugin bundled
-> with MDK is not a substitute: the Gateway neither registers it nor provides what its controllers expect.
+> The Gateway ships no identity layer. Routes a manifest marks `"auth": true` answer `401` until you pass `startGateway()` an `authVerifier`
+> backed by your own identity layer, as [auth and permissions][plugins-auth] describes; every other route is served to any caller. Only
+> `localhost`, `127.0.0.1` and `[::1]` on the bound port pass the Host check by default, so list the names your clients use in `allowedHosts`
+> when you bind to a LAN address.
 
 The full configuration reference, including all `startGateway()` options, is in the [Gateway API reference][gateway-readme].
 
@@ -79,7 +80,8 @@ const server = await startGateway({
 ```
 
 > [!NOTE]
-> Pre v1.0, Kernel's allowlist `auth.whitelist` defaults to empty and admits any HRPC caller. For production deployments, add the Gateway's
+> Kernel's allowlist `auth.whitelist` is fail-closed: empty admits nobody. `startGateway({ kernel })` admits the Gateway's key on an
+> in-process Kernel, and a same-machine Kernel admits it from the shared trusted-keys dir. For a Kernel on another host, add the Gateway's
 > DHT public key (`status.rpcClientKey` in its status file, stable across restarts) to Kernel's allowlist — see the
 > [Gateway concept page][gateway-concept] and [`opts.kernelKey` reference][mdk-readme].
 
@@ -138,8 +140,6 @@ npm start
 [plugins-how-to]: plugins.md
 <!-- docs@tether.io: plugins-how-to → guides/gateway/plugins -->
 
-[auth-plugin]: ../../../backend/core/plugins/README.md#the-bundled-auth-plugin
-<!-- docs@tether.io: auth-plugin → https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#the-bundled-auth-plugin -->
 
 [plugins-auth]: plugins.md#auth-and-permissions
 <!-- docs@tether.io: plugins-auth → guides/gateway/plugins#auth-and-permissions -->

@@ -58,6 +58,5 @@ the same directory for the full shape.
 ## Notes
 
 - Wrapped in `withErrorBoundary` — chart-level crashes won't blow up the page
-- For mining-domain charts, pair `<LineChartCard>` with adapter chart hooks
-  (`useHashrateChartData`, `useSiteConsumptionChartData`) — the hooks
-  return the `ChartCardData` payload pre-shaped
+- For mining-domain charts, map your history route's response to the
+  `ChartCardData` payload in the query's `select` and pass it in

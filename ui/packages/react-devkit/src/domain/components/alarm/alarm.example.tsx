@@ -44,7 +44,7 @@ export const AlarmExample = () => (
     <AlarmContents
       alarmsData={mockAlarms}
       onNavigate={(path) => {
-        // eslint-disable-next-line no-console
+        // oxlint-disable-next-line no-console
         console.log(`navigate to ${path}`)
       }}
     />

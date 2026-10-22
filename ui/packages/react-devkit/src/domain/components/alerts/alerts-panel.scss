@@ -1,0 +1,36 @@
+/* Current + Historical sections render as bordered cards:
+ * title, filters, and the table all live inside one panel.
+ *
+ * Kept as a plain block (not flex): the inner DataTable owns its own
+ * horizontal scroll via `overflow-x` on its content section, and a flex
+ * context would stretch it to content width instead of letting it scroll.
+ * `min-width: 0` lets the card shrink inside the flex page column. */
+.mdk-alerts-current,
+.mdk-alerts-historical {
+  min-width: 0;
+  padding: 20px 24px;
+  background: var(--mdk-color-surface-elevated, #191714);
+  border: 1px solid var(--mdk-table-border, #ffffff1a);
+
+  /* The alerts tables are wide (≈1440px of columns). Keep them horizontally
+   * scrollable even in the empty / loading state — the DataTable otherwise
+   * sets `overflow-x: hidden` when there are no rows, which clips the
+   * trailing columns (Severity → Created → Actions) and makes them
+   * unreachable. */
+  .mdk-table__content-section--no-overflow {
+    overflow-x: auto;
+  }
+
+  /* Scrollbar thumb in the primary colour. */
+  .mdk-table__content-section {
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--mdk-color-primary);
+    }
+  }
+
+  /* The default empty-state icon is 128px — too large inside the card. */
+  .mdk-table__empty-body svg {
+    width: 64px;
+    height: 64px;
+  }
+}

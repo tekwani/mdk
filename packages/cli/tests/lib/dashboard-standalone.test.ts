@@ -69,7 +69,7 @@ describe('createDashboard (standalone / GitHub template)', () => {
     expect(pkg.dependencies['@tetherto/mdk-ui-core']).not.toMatch(/^file:/);
 
     const displayed = readFileSync(join(result.appPath!, 'src', 'constants', 'env.ts'), 'utf8');
-    expect(displayed).toContain("APP_NAME = 'demo-dashboard'");
+    expect(displayed).toContain('APP_NAME = "demo-dashboard"');
   });
 
   it('reports a fetch failure without throwing', async () => {

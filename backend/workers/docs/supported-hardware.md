@@ -14,7 +14,17 @@ Built and maintained by the device manufacturer, fetched and schema-validated fr
 
 | Brand | Provider | Models | Worker package | Docs |
 |-------|----------|--------|----------------|------|
+| Antminer | Bitmain | Not enumerated; see manufacturer documentation | [`antminer-mdk-worker`](https://github.com/bitmain-official/antminer-mdk-worker) | [mdk-contract.json](https://github.com/bitmain-official/antminer-mdk-worker/blob/4fd776b4a048a1bc8284ec2eceed82b4631f960c/mdk-contract.json) |
+| SealMiner | Bitdeer | A2, A3, A4 | [`sealminer-mdk-worker`](https://github.com/sealminer/sealminer-mdk-worker) | [mdk-contract.json](https://github.com/sealminer/sealminer-mdk-worker/blob/63211a12245482cffb2d09f8cbeaa4c6411e51a3/mdk-contract.json) |
 | Whatsminer | MicroBT | Not enumerated; see manufacturer documentation | [`whatsminer-mdk-worker`](https://github.com/whatsminer/whatsminer-mdk-worker) | [mdk-contract.json](https://github.com/whatsminer/whatsminer-mdk-worker/blob/a47fa82020454f9bfa9963ccaaa319b7948e8aa2/mdk-contract.json) |
+
+### Manufacturer-maintained mining pools
+
+| Brand | Provider | Models | Worker package | Docs |
+|-------|----------|--------|----------------|------|
+| EMCD | emcd | EMCD-BTC | [`emcd-mdk-worker`](https://github.com/emcdio/emcd-mdk-worker) | [mdk-contract.json](https://github.com/emcdio/emcd-mdk-worker/blob/3ad188e1fef8fa080ce5096d7421e9b3a7052515/mdk-contract.json) |
+| Foundry USA Pool | foundry | FOUNDRY-BTC | [`foundry-mdk-worker`](https://github.com/foundryservices/foundry-mdk-worker) | [mdk-contract.json](https://github.com/foundryservices/foundry-mdk-worker/blob/310172ebe1cb4ef60cd14f39d9467f2c8e2bc534/mdk-contract.json) |
+| SpiderPool | spiderpool | SPIDERPOOL-BTC | [`spiderpool-mdk-worker`](https://github.com/SpiderPool-New/spiderpool-mdk-worker) | [mdk-contract.json](https://github.com/SpiderPool-New/spiderpool-mdk-worker/blob/345f4a2b46ff59135eb4dad1803f0653c3d88911/mdk-contract.json) |
 
 ## MDK-maintained Workers
 
@@ -24,7 +34,6 @@ Built and maintained in this repository, with a bundled mock and unit and integr
 
 | Brand | Provider | Models | Worker package | Docs |
 |-------|----------|--------|----------------|------|
-| Antminer | Bitmain | S19XP, S19XPH, S21, S21PRO | [`backend/workers/miners/antminer`](../miners/antminer/README.md) | [USAGE.md](../miners/antminer/USAGE.md) |
 | Avalon | Canaan | A1346 | [`backend/workers/miners/avalon`](../miners/avalon/README.md) | [USAGE.md](../miners/avalon/USAGE.md) |
 
 ### MDK-maintained containers

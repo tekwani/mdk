@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * SCSS lint: parse every package/app stylesheet with postcss-scss (a syntax
  * error fails the run) and ban relative `@use` paths into src/core from

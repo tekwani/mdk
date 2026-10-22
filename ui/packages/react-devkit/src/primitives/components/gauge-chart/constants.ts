@@ -27,8 +27,3 @@ export const GAUGE_DEFAULT_MAX_WIDTH = 500 // in pixels
 export const GAUGE_DEFAULT_NR_OF_LEVELS = 3 // number of arc segments
 export const GAUGE_DEFAULT_ARC_WIDTH = 0.2 // arc thickness as a fraction of the gauge radius (0–1)
 export const GAUGE_DEFAULT_COLORS = [COLOR.GREEN, COLOR.SOFT_GREEN, COLOR.RED]
-
-export const HEX_DIGITS_REGEX = /^[\da-f]+$/i // regex to match a hex color
-export const LEADING_HASH_REGEX = /^#/ // regex to match a leading hash symbol
-export const SHORT_HEX_LENGTH = 3
-export const LONG_HEX_LENGTH = 6

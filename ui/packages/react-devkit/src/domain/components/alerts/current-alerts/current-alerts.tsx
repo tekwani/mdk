@@ -18,6 +18,8 @@ import { TagFilterBar } from '../tag-filter-bar/tag-filter-bar'
 import type { TagFilterBarProps } from '../tag-filter-bar/tag-filter-bar'
 import { AlertConfirmationModal } from './alert-confirmation-modal/alert-confirmation-modal'
 
+import '../alerts-panel.scss'
+
 const ALERT_CONFIRMATION_KEY = 'alertsPageAlertConfirmed'
 
 const DEFAULT_SORTING: DataTableSortingState = [
@@ -29,7 +31,6 @@ export type CurrentAlertsProps = {
   /**
    * Devices carrying alerts (`last.alerts`), as a flat list. Unwrapping any
    * backend envelope is the data layer's job, not this component's.
-   * Shape mirrors the API response from the source app.
    */
   devices?: Device[]
   /**
@@ -46,7 +47,7 @@ export type CurrentAlertsProps = {
   onLocalFiltersChange: (filters: AlertLocalFilters) => void
 
   /**
-   * Search tags (controlled). Mirrors the redux `selectFilterTags` slice in the source app.
+   * Search tags (controlled).
    */
   filterTags: string[]
   /** Setter for the tags above */
@@ -69,7 +70,8 @@ export type CurrentAlertsProps = {
   isSoundEnabled?: boolean
 
   /**
-   * Skip sound entirely (e.g. in demo/preview environments).
+   * Skip sound entirely (e.g. in demo/preview environments), including the
+   * one-time "sound notifications" confirmation modal.
    * @default false
    */
   isDemoMode?: boolean
@@ -176,7 +178,7 @@ export const CurrentAlerts = ({
 
   return (
     <div className={cn('mdk-alerts-current', className)}>
-      <AlertConfirmationModal isOpen={!confirmed} onOk={handleConfirmed} />
+      <AlertConfirmationModal isOpen={!confirmed && !isDemoMode} onOk={handleConfirmed} />
 
       <AlertsTableTitle
         title="Current Alerts"

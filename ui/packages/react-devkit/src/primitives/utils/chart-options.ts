@@ -130,7 +130,7 @@ export const colorWithAlpha = (color: string, alpha: number): string => {
   return normalized
 }
 
-/** Legend swatch fill alpha (the reference app `hexToOpacity` default) */
+/** Legend swatch fill alpha */
 const CHART_LEGEND_FILL_ALPHA = 0.2
 const CHART_LEGEND_DISABLED_OPACITY = 0.3
 const CHART_LEGEND_LABEL_COLOR = 'rgba(255, 255, 255, 0.7)'

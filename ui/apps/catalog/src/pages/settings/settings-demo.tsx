@@ -147,7 +147,7 @@ export const SettingsDemoPage = (): ReactElement => {
   }
 
   const handleExport = () => {
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.log('Export triggered', { headerPrefs, featureFlags })
   }
 
@@ -183,7 +183,7 @@ export const SettingsDemoPage = (): ReactElement => {
                   </p>
                 ),
                 onConfirm: () => {
-                  // eslint-disable-next-line no-console
+                  // oxlint-disable-next-line no-console
                   console.log('Reboot confirmed')
                 },
               },
@@ -201,7 +201,7 @@ export const SettingsDemoPage = (): ReactElement => {
                   </p>
                 ),
                 onConfirm: () => {
-                  // eslint-disable-next-line no-console
+                  // oxlint-disable-next-line no-console
                   console.log('Toggle automation confirmed')
                 },
               },

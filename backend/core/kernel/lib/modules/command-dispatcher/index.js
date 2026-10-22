@@ -4,6 +4,8 @@ const debug = require('debug')('mdk:kernel:dispatcher')
 const { validate: validateEnvelope } = require('../../protocol/envelope')
 const { COMMAND_SCOPES } = require('../../protocol/actions')
 
+const DEFAULT_VERIFY_WITHIN_MS = 60000
+
 /**
  * Command Dispatcher
  *
@@ -20,7 +22,13 @@ class CommandDispatcher {
     this.stateMachine = opts.stateMachine
   }
 
-  async dispatch (envelope) {
+  /**
+   * @param {object} envelope - command.request envelope
+   * @param {object} [opts]
+   * @param {string} [opts.requesterId] - authenticated caller identity (the
+   *   transport public key); falls back to envelope.sender for in-process calls
+   */
+  async dispatch (envelope, opts) {
     const validation = validateEnvelope(envelope)
     if (!validation.valid) {
       return { error: validation.error, status: 'REJECTED' }
@@ -49,7 +57,8 @@ class CommandDispatcher {
       targets: target.targets,
       command,
       params: params || {},
-      requesterId: envelope.sender
+      requesterId: (opts && opts.requesterId) || envelope.sender,
+      verify: target.deviceId ? _verifySpec(_commandDef(command, target.capabilities), params || {}) : null
     })
 
     debug('dispatched: %s (%s %s → %s)', commandId, command, target.scope, target.routeKey)
@@ -97,9 +106,9 @@ class CommandDispatcher {
       deviceId: entry.deviceId || null,
       workerId: entry.workerId || null,
       scope: entry.scope || COMMAND_SCOPES.DEVICE,
-      retries: entry.retries,
       result: entry.result || null,
       error: entry.error || null,
+      verification: entry.verification || null,
       createdAt: entry.createdAt,
       updatedAt: entry.updatedAt
     }
@@ -114,11 +123,7 @@ class CommandDispatcher {
   _validateCommand (command, params, capabilities) {
     if (!capabilities.commands) return { valid: true }
 
-    const commands = capabilities.commands
-    const cmdDef = Array.isArray(commands)
-      ? commands.find(c => c.name === command)
-      : commands[command]
-
+    const cmdDef = _commandDef(command, capabilities)
     if (!cmdDef) {
       return { valid: false, error: `ERR_COMMAND_NOT_IN_CAPABILITIES: ${command}` }
     }
@@ -147,6 +152,27 @@ class CommandDispatcher {
 
     return { valid: true }
   }
+}
+
+function _commandDef (command, capabilities) {
+  const commands = capabilities && capabilities.commands
+  if (!commands) return undefined
+  return Array.isArray(commands)
+    ? commands.find(c => c.name === command)
+    : (Object.hasOwn(commands, command) ? commands[command] : undefined)
+}
+
+// The expected value is the request's own param, read the way WorkerRuntime
+// names positional params ({ value } / { args }) from the approval path.
+function _verifySpec (cmdDef, params) {
+  const verify = cmdDef && cmdDef.verify
+  if (!verify) return null
+  const index = (cmdDef.params || []).findIndex(p => p.name === verify.param)
+  let expected = Object.hasOwn(params, verify.param) ? params[verify.param] : undefined
+  if (expected === undefined && Array.isArray(params.args)) expected = params.args[index]
+  if (expected === undefined && index === 0) expected = params.value
+  if (expected === undefined) return null
+  return { telemetry: verify.telemetry, expected, withinMs: verify.withinMs || DEFAULT_VERIFY_WITHIN_MS }
 }
 
 module.exports = { CommandDispatcher }

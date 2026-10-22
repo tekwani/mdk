@@ -1,8 +1,8 @@
 {
   "name": "@tetherto/mdk-fonts",
   "type": "module",
-  "version": "0.11.0",
-  "private": true,
+  "version": "0.12.0",
+  "private": false,
   "description": "Font assets for MDK",
   "exports": {
     "./jetbrains-mono.css": "./dist/jetbrains-mono.css",

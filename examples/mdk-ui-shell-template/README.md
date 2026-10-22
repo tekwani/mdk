@@ -8,10 +8,9 @@ fresh app is wired end to end:
 - **App frame** — header (logo + user/timezone/sign-out menu) and sidebar.
 - **A Home landing page** — a placeholder that confirms auth + the frame work.
 
-**No example pages** ship out of the box. The full reference pages
-(Dashboard, Alerts, Pool Manager, Site Overview, Explorer) ship under
-[`_managed/pages/`](./_managed/pages/) — copy the one you want into `src/pages/`
-and wire it up (see [Adding a new page](#adding-a-new-page)).
+**No example pages** ship out of the box. Add your own (see
+[Adding a new page](#adding-a-new-page)); a page reads its data from your
+Gateway plugin's routes and passes it into devkit components as props.
 
 Everything you add respects the same boundaries this shell does: **API/state in
 `@tetherto/mdk-ui-foundation`, hooks in `@tetherto/mdk-react-adapter`,
@@ -28,7 +27,7 @@ components in `@tetherto/mdk-react-devkit`**.
 #    repo, so run this from your MDK checkout — not from this app.
 cd <mdk-repo>/backend/core/gateway
 ./setup-config.sh
-#  ↳ Google sign-in needs an identity plugin, which MDK does not ship
+#  ↳ Google sign-in needs an identity app, which MDK does not ship
 #    (see "Google OAuth setup" below).
 npm install
 npm start          # serves on http://localhost:3000
@@ -43,13 +42,13 @@ Then open `http://localhost:3030` and click **Sign in with Google**.
 
 ## Google OAuth setup
 
-**MDK ships no OAuth implementation.** As of v0.6 the Gateway is a plugin host
-with no API of its own, so sign-in is something you supply as a Gateway plugin
-and mount with `startGateway({ extraPluginDirs: [...] })`. See
-[`docs/guides/gateway/plugins.md`](../../docs/guides/gateway/plugins.md) in the MDK repo for the manifest and
+**MDK ships no OAuth implementation.** The Gateway has no API of its own and serves
+only the apps a stack declares, so sign-in is something you supply as an app
+(`mdk create app <name>`, declared under `spec.apps` with `mount: /` so its routes sit at the Gateway root). See
+[`docs/guides/gateway/plugins.md`](../../docs/guides/gateway/plugins.md) in the MDK repo for the manifests and
 controller contract.
 
-This app needs that plugin to honour two ends of a redirect:
+This app needs that identity app to honour two ends of a redirect:
 
 - a **start endpoint** at `${VITE_OAUTH_BASE_URL}/oauth/google`, which the
   sign-in button navigates to;
@@ -60,15 +59,15 @@ You also need a Google OAuth 2.0 client:
 
 1. Open <https://console.cloud.google.com/apis/credentials> → "Create
    credentials" → "OAuth client ID" → "Web application".
-2. Add an **authorised redirect URI** — the callback URL your plugin serves.
+2. Add an **authorised redirect URI** — the callback URL your identity app serves.
    The conventional one is `http://localhost:3000/oauth/google/callback`.
-3. Hand the client id and secret to your plugin, and allow your own Google
+3. Hand the client id and secret to your identity app, and allow your own Google
    account so it grants you a session.
 
 ## Environment variables
 
 `cp .env.example .env` to start; the file is already wired for local
-development against `miningos-gateway` on `localhost:3000`.
+development against the MDK Gateway on `localhost:3000`.
 
 | Variable               | Required | Dev default                | What it controls                                                                                                                                                                                                                                            |
 | ---------------------- | -------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -91,8 +90,8 @@ surface as type errors. `VITE_GATEWAY_URL` is a config-time-only variable read d
 
 ## Known limitation: no data without miners
 
-This only applies once you add a data-backed page (e.g. the managed Dashboard).
-`miningos-gateway` is the *API surface*, not the data source. It
+This only applies once you add a data-backed page; the template itself ships only a static Home page.
+The MDK Gateway is the *API surface*, not the data source. It
 expects Kernel clusters with real miners reporting in. **Without that, the
 charts render empty states.** This is the expected first-run experience
 for a community demo — the pages are honest about no data being available.
@@ -122,17 +121,14 @@ src/
     NotFound.tsx
 ```
 
-Start from a managed reference page under [`_managed/pages/`](./_managed/pages/)
-— see [Adding a new page](#adding-a-new-page) below and [`USAGE.md`](./USAGE.md)
-for the composition rules those pages should follow.
+See [Adding a new page](#adding-a-new-page) below and [`USAGE.md`](./USAGE.md)
+for the composition rules pages should follow.
 
 ## Adding a new page
 
-Three steps, whether the page is your own or one of the managed reference pages:
+Three steps:
 
-1. **Add the component** under [`src/pages/`](./src/pages/). For a reference
-   page, copy it across — e.g.
-   `cp -R _managed/pages/Dashboard.tsx src/pages/`. For your own, follow the
+1. **Add the component** under [`src/pages/`](./src/pages/), following the
    composition rules in [`USAGE.md`](./USAGE.md).
 2. **Register the route** — append a single-line entry to
    [`src/routes.ts`](./src/routes.ts), above the `// mdk:routes-end` marker:
@@ -154,6 +150,53 @@ auth-gated by default because they live inside the `<RequireAuth>` wrapper
 applied in [`src/router.tsx`](./src/router.tsx). To remove a page, delete its
 file and reverse steps 2 and 3.
 
+## Installed apps
+
+Apps installed on the stack (`spec.apps` in `mdk.yaml`) appear in the shell without any change to it, and finding
+them needs no Gateway:
+
+1. `mdk run dashboard` reads `spec.apps` from `mdk.yaml`, resolves each app's package and reads its `mdk-app.yaml`.
+   It hands the list to this dev server in the `MDK_DASHBOARD_APPS` environment variable.
+2. [`vite/mdk-installed-apps.ts`](vite/mdk-installed-apps.ts) serves each app's built `ui/` at `/app-ui/<name>/` and
+   lists the apps at `/app-ui.json`, both from the shell's own origin. `vite build` copies both into `dist/`.
+3. On load the shell reads `/app-ui.json`, imports each app's `ui/index.js`, and adds what it exports.
+
+Installing or removing an app means restarting `mdk run dashboard`, or rebuilding for production. A plain
+`npm run dev` (no `MDK_DASHBOARD_APPS`) loads no apps. What an app exports:
+
+- **Pages** (`routes`) are mounted under `/app/<name>/…` and listed in the sidebar. The prefix is `/app`, not
+  `/apps`, because `/apps/<name>/` is the Gateway's: it forwards those paths to the app's own routes.
+- **Panels** (`panels` with `slot: 'home'`) are rendered on Home.
+
+Each app renders inside its own error boundary and `MdkAppProvider`. An app that fails to load is listed on Home and
+does not affect the others. The code is in `src/apps/`: [`InstalledAppPage.tsx`](src/apps/InstalledAppPage.tsx) mounts an app's pages, [`AppPanels.tsx`](src/apps/AppPanels.tsx) renders its Home panels and load errors, and [`paths.ts`](src/apps/paths.ts) builds the `/app/<name>/…` paths and sidebar items.
+
+An app's UI is a plain ES module that imports React and the MDK packages by bare specifier. The shell maps those
+specifiers to its own instances through an import map written by
+[`vite/mdk-shared-modules.ts`](vite/mdk-shared-modules.ts), so an app ships no React of its own. To build one, leave
+the shared modules external:
+
+```ts
+// the app's vite.config.ts — builds ui-src/index.tsx to ui/index.js (+ ui/style.css)
+import { MDK_APP_SHARED_MODULES } from '@tetherto/mdk-ui-foundation/app-shared-modules'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [react()],
+  define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+  build: {
+    outDir: 'ui',
+    lib: { entry: 'ui-src/index.tsx', formats: ['es'], fileName: () => 'index.js', cssFileName: 'style' },
+    rollupOptions: { external: [...MDK_APP_SHARED_MODULES] },
+  },
+})
+```
+
+The entry default-exports `defineMdkApp({ id, displayName, routes, panels })` from `@tetherto/mdk-react-adapter`.
+Inside an app, `useMdkApp().apiUrl('/status')` gives the URL of the app's own route under the name it was installed
+as.
+
 ## Troubleshooting
 
 - **OAuth redirect lands at `localhost:3030` but the dashboard bounces back
@@ -161,7 +204,7 @@ file and reverse steps 2 and 3.
   Inspect `Authorization: Bearer …` headers on the network tab — if every
   request is 401, the backend isn't recognising the token (check the
   backend's auth-cache TTL and its allowed-users list).
-- **OAuth redirect lands at a wrong URL**: the redirect your identity plugin
+- **OAuth redirect lands at a wrong URL**: the redirect your identity app
   sends the token to doesn't match the FE port. The expected value is
   `http://localhost:3030` and the FE defaults to port 3030 — keep them aligned.
 - **CORS errors**: the backend has no CORS plugin; you must use the Vite
@@ -181,16 +224,16 @@ way to make the dashboard hard to maintain.
 
 - **Components render data; nothing else.** No `useQuery`, no `fetch`,
   no unit conversions, no `useMemo` that shapes telemetry inside JSX.
-- **Hooks (`@tetherto/mdk-react-adapter`)** own the fetch + shape +
-  format pipeline. They return chart-ready / table-ready payloads
+- **App hooks (`src/hooks/`)** own the fetch + shape + format pipeline
+  for your Gateway routes: `useQuery` from `@tetherto/mdk-react-adapter`,
+  with `select` returning chart-ready / table-ready payloads
   (e.g. `ChartCardData`).
-- **All API + state interaction lives in `@tetherto/mdk-ui-foundation`** —
-  query factories, query keys, query-param builders, Zustand stores,
-  type contracts.
+- **Shared state lives in `@tetherto/mdk-ui-foundation`** — Zustand
+  stores, auth, the query client, type contracts.
 - **Pages are thin glue** — read hooks, pass output to components.
 
 If you see a tag string (`t-miner`, `t-powermeter`) or an aggregate
 field (`power_w_sum_aggr`, `site_power_w`) outside the data layer —
-or a page building `ChartCardData` by hand — stop and refactor. Use
-`<LineChartCard>` + the adapter chart hooks
-(`useHashrateChartData`, `useSiteConsumptionChartData`) instead.
+or a page building `ChartCardData` inline in its JSX — stop and refactor.
+Map the route's response to `ChartCardData` in the query's `select` and pass
+it to `<LineChartCard>`.

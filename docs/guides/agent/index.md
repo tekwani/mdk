@@ -10,15 +10,15 @@ docs@tether_slug: guides/agent
 fleet tools over MCP, and gates writes behind human approval. [What the agent is and how it fits the stack][agent-concept]
 covers the concepts; these guides cover running it.
 
-The agent never rides on another stack's own Gateway. A model (`:11500`), an MCP tool server (`:3008` in the
-[full-site example][full-site-example]), and the agent's own Gateway (`:3847`) are three separate processes
+The agent never rides on another stack's own Gateway. A model (`:11500`), an MCP tool server (`:3101` in the
+[MVP site example][mvp-site-example]), and the agent's own Gateway (`:3847`) are three separate processes
 
 > [!NOTE]
-> Full-site's own Gateway (`:3007`) has no `/agent` routes at all.
+> The MVP site's own Gateway (`:3000`) has no `/agent` routes at all.
 
 ```text
   model  ──►  agent gateway  ──►  MCP tool server  ──►  kernel + workers
-   :11500        :3847              :3008                  (the fleet)
+   :11500        :3847              :3101                  (the fleet)
                    ▲
                    └── UI shell :3030, proxying /agent
 ```
@@ -30,9 +30,8 @@ the tool server is up gets no tools and answers from the model alone, with no er
 
 | Goal | Guide |
 | --- | --- |
-| Run the agent as a standalone CLI, for local development or evaluation | [Run the agent as a standalone CLI][run-standalone] |
+| Run the agent as a standalone CLI, for local development | [Run the agent as a standalone CLI][run-standalone] |
 | Deploy the agent behind the Gateway as a chat API for an operator UI | [Deploy the agent behind the Gateway][gateway-deployment] |
-| Score a battery run against a fleet and compare models | [Evaluate the agent][agent-evaluation] |
 
 Exposing a plugin's own routes to the agent as tools is a detail of [building Gateway plugins][gateway-plugins], not its own
 deployment path. See [Expose data to the agent][expose-data] there.
@@ -63,11 +62,8 @@ deployment path. See [Expose data to the agent][expose-data] there.
 [gateway-plugins]: ../gateway/plugins.md
 <!-- docs@tether.io: gateway-plugins → guides/gateway/plugins -->
 
-[full-site-example]: ../../../examples/full-site/README.md
-<!-- docs@tether.io: full-site-example → https://github.com/tetherto/mdk/blob/main/examples/full-site/README.md -->
-
-[agent-evaluation]: ../../../backend/core/agent/docs/EVALUATION.md
-<!-- docs@tether.io: agent-evaluation → https://github.com/tetherto/mdk/blob/main/backend/core/agent/docs/EVALUATION.md -->
+[mvp-site-example]: ../../../examples/mvp-site/README.md
+<!-- docs@tether.io: mvp-site-example → https://github.com/tetherto/mdk/blob/main/examples/mvp-site/README.md -->
 
 [gateway-concept]: ../../../backend/core/gateway/README.md
 <!-- docs@tether.io: gateway-concept → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md -->

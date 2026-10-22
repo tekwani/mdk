@@ -1,7 +1,6 @@
 import { format } from 'date-fns/format'
 import { toZonedTime } from 'date-fns-tz'
 import _isDate from 'lodash/isDate'
-import { useTimezone } from '@tetherto/mdk-react-adapter'
 import { DATE, LABEL } from './constants'
 
 export type DataLabelProps = Partial<{
@@ -18,10 +17,19 @@ export type DataLabelProps = Partial<{
    * @default "PERIOD"
    */
   label: string
+  /**
+   * IANA timezone the dates are shown in (e.g. `'UTC'`). Defaults to the
+   * browser's timezone; pass `useTimezone().timezone` to follow the user's
+   * selected one.
+   */
+  timezone: string
 }>
+
+const browserTimezone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone
 
 /**
  * Read-only period label (`PERIOD: start - end`) with timezone-aware dates.
+ * Pure: the timezone comes in as a prop.
  *
  * @example
  * ```tsx
@@ -31,9 +39,12 @@ export type DataLabelProps = Partial<{
  * @domain generic
  * @tier agent-ready
  */
-export const DataLabel = ({ startDate, endDate, label = LABEL.DEFAULT }: DataLabelProps) => {
-  const { timezone } = useTimezone()
-
+export const DataLabel = ({
+  startDate,
+  endDate,
+  label = LABEL.DEFAULT,
+  timezone = browserTimezone(),
+}: DataLabelProps) => {
   const formatDate = (date?: Date | null): string => {
     if (!_isDate(date) || Number.isNaN(date?.getTime?.())) return DATE.FALLBACK
 

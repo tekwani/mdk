@@ -6,7 +6,7 @@ import type { StatusReport } from '../../src/lib/status.js';
 const collectStatusMock = vi.hoisted(() => vi.fn());
 vi.mock('../../src/lib/status.js', () => ({ collectStatus: collectStatusMock }));
 
-const { registerGet, registerDescribe, registerLogs, registerStatus } = await import(
+const { registerStatus } = await import(
   '../../src/commands/inspect.js'
 );
 
@@ -14,9 +14,6 @@ function buildProgram(): Command {
   const program = new Command();
   program.exitOverride();
   program.option('-o, --output <fmt>', '', 'table');
-  registerGet(program);
-  registerDescribe(program);
-  registerLogs(program);
   registerStatus(program);
   return program;
 }
@@ -45,26 +42,13 @@ function healthyReport(overrides: Partial<StatusReport> = {}): StatusReport {
         totalDevices: 1,
         items: [{ name: 'a', declared: true, registered: true, state: 'READY', health: 'OK', devices: 1 }],
       },
+      apps: { declared: 1, running: 1, items: [{ name: 'ops', package: '@your-org/mdk-app-ops', version: '1.2.3', mount: '/apps/ops', running: true, pid: 4242 }] },
     },
     health: 'healthy',
     ok: true,
     ...overrides,
   };
 }
-
-describe('mdk get / describe / logs (stubs)', () => {
-  it('write a not-implemented notice to stderr', async () => {
-    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const program = buildProgram();
-    await program.parseAsync(['node', 'mdk', 'get', 'workers']);
-    await program.parseAsync(['node', 'mdk', 'describe', 'worker', 'a']);
-    await program.parseAsync(['node', 'mdk', 'logs', 'gateway']);
-    const out = stderr.mock.calls.join('');
-    expect(out).toContain('mdk get workers: not implemented yet');
-    expect(out).toContain('mdk describe worker a: not implemented yet');
-    expect(out).toContain('mdk logs gateway: not implemented yet');
-  });
-});
 
 describe('mdk status', () => {
   it('rejects an unknown --output format with exit code 2', async () => {
@@ -94,6 +78,8 @@ describe('mdk status', () => {
     const out = stdout.mock.calls.join('');
     expect(out).toContain('MDK status');
     expect(out).toContain('my-stack');
+    expect(out).toContain('1/1 running');
+    expect(out).toMatch(/ops\s+yes\s+4242\s+1\.2\.3\s+\/apps\/ops\s+@your-org\/mdk-app-ops/);
     expect(out).toContain('Health: healthy');
     expect(process.exitCode).toBe(0);
   });
@@ -150,6 +136,7 @@ describe('mdk status', () => {
               { name: 'b', declared: true, registered: false, state: null, health: null, devices: 0 },
             ],
           },
+          apps: { declared: 1, running: 0, items: [{ name: 'ops', package: 'ops', version: null, mount: '/apps/ops', running: false, pid: null }] },
         },
       }),
     );
@@ -158,6 +145,7 @@ describe('mdk status', () => {
     await program.parseAsync(['node', 'mdk', 'status']);
     expect(process.exitCode).toBe(5);
     expect(stdout.mock.calls.join('')).toContain('unreachable (ERR_MDK_STATUS_TIMEOUT)');
+    expect(stdout.mock.calls.join('')).toMatch(/ops\s+no\s+-\s+-\s+\/apps\/ops\s+ops/);
   });
 
   it('defaults --output to "table" when no default is configured on the option', async () => {
@@ -188,6 +176,7 @@ describe('mdk status', () => {
               { name: 'extra', declared: false, registered: true, state: 'READY', health: 'OK', devices: 1 },
             ],
           },
+          apps: { declared: 0, running: 0, items: [] },
         },
       }),
     );

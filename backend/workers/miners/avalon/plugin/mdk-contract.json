@@ -33,7 +33,8 @@
         "handler": "src/commands/set-power-mode.js",
         "params": [
           { "name": "mode", "type": "string" }
-        ]
+        ],
+        "verify": { "telemetry": "power_mode", "param": "mode", "withinMs": 300000 }
       },
       {
         "name": "setLED",

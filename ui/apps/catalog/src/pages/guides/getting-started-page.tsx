@@ -11,7 +11,7 @@ const CODE_INSTALL = `npm install \\
 const CODE_PROVIDER = `// main.tsx
 import { MdkProvider } from '@tetherto/mdk-react-adapter'
 import '@tetherto/mdk-react-devkit/styles.css'
-// Only needed if you use mining-domain (foundation) components.
+// Only needed if you use mining-domain components.
 // Skip it for a core-primitives-only app to ship ~70 KB less CSS.
 import '@tetherto/mdk-react-devkit/styles-domain.css'
 
@@ -21,20 +21,35 @@ ReactDOM.createRoot(rootElement).render(
   </MdkProvider>,
 )`
 
-const CODE_HOOKS = `import { useActions, useAuth, useDevices } from '@tetherto/mdk-react-adapter'
+const CODE_HOOKS = `import { useAuth, useDevices } from '@tetherto/mdk-react-adapter'
 
 const Toolbar = () => {
   const { permissions } = useAuth()
   const { selectedDevices } = useDevices()
-  const { setAddPendingSubmissionAction } = useActions()
   // ...
 }`
 
-const CODE_STORE_DIRECT = `import { actionsStore, devicesStore } from '@tetherto/mdk-ui-foundation'
+const CODE_DATA = `// src/hooks/use-site-overview.ts — your Gateway plugin serves /site/overview
+import { useMdkContext, useQuery } from '@tetherto/mdk-react-adapter'
 
-// Outside React (utilities, sagas, etc.) you can read/write directly:
+export const useSiteOverview = () => {
+  const { apiBaseUrl } = useMdkContext()
+  return useQuery({
+    queryKey: ['site', 'overview'],
+    queryFn: () => fetch(\`\${apiBaseUrl}/site/overview\`).then((r) => r.json()),
+    refetchInterval: 10_000,
+  })
+}
+
+// src/pages/Site.tsx — the page hands the result to a devkit component as props
+const { data } = useSiteOverview()
+return <HeaderMinersBox total={data?.miners.total} online={data?.miners.online} />`
+
+const CODE_STORE_DIRECT = `import { devicesStore, timezoneStore } from '@tetherto/mdk-ui-foundation'
+
+// Outside React (utilities, event handlers, tests) you can read/write directly:
 devicesStore.getState().setSelectedDevices([])
-actionsStore.getState().setAddPendingSubmissionAction({ /* … */ })`
+timezoneStore.getState().setTimezone('UTC')`
 
 const CODE_THEMING = `/* app.css — imported AFTER @tetherto/mdk-react-devkit/styles.css */
 :root {
@@ -61,19 +76,19 @@ export const GettingStartedPage = (): JSX.Element => {
       >
         <ul>
           <li>
-            <code>@tetherto/mdk-ui-foundation</code> — headless state (Zustand vanilla stores), a TanStack
-            QueryClient factory, telemetry primitives and the command state machine. No React.
+            <code>@tetherto/mdk-ui-foundation</code> — headless state (Zustand vanilla stores), the
+            TanStack QueryClient factory and auth providers. No React.
           </li>
           <li>
             <code>@tetherto/mdk-react-adapter</code> — React bindings:
             <code> &lt;MdkProvider&gt;</code>, store hooks (<code>useAuth</code>,{' '}
-            <code>useDevices</code>, <code>useNotifications</code>, <code>useTimezone</code>,{' '}
-            <code>useActions</code>) and re-exports of <code>useQuery</code> /{' '}
+            <code>useDevices</code>, <code>useNotifications</code>,{' '}
+            <code>useTimezone</code>) and re-exports of <code>useQuery</code> /{' '}
             <code>useMutation</code>.
           </li>
           <li>
-            <code>@tetherto/mdk-react-devkit</code> — the React UI library: <code>./core</code>{' '}
-            primitives and <code>./foundation</code> mining-domain components, hooks and styles.
+            <code>@tetherto/mdk-react-devkit</code> — the React UI library: <code>./primitives</code>{' '}
+            (generic components) and <code>./domain</code> (mining-domain components and styles).
           </li>
         </ul>
       </DemoBlock>
@@ -86,10 +101,19 @@ export const GettingStartedPage = (): JSX.Element => {
 
       <DemoBlock
         title="Wrap your app in MdkProvider"
-        description="MdkProvider sets up the TanStack QueryClient and the API base URL context. It is required for the foundation hooks/components to work."
+        description="MdkProvider sets up the TanStack QueryClient and the API base URL context. It is required for the adapter hooks and the domain components to work."
       >
         <pre>
           <code>{CODE_PROVIDER}</code>
+        </pre>
+      </DemoBlock>
+
+      <DemoBlock
+        title="Read your data from your Gateway routes"
+        description="MDK ships no data hooks for specific endpoints. Wrap each route your Gateway plugin serves in a small useQuery hook in your app, shape it in select if needed, and pass the result to components as props."
+      >
+        <pre>
+          <code>{CODE_DATA}</code>
         </pre>
       </DemoBlock>
 

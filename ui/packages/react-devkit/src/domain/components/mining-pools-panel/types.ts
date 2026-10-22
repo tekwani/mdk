@@ -2,8 +2,8 @@ import type { PoolDetailItem } from '../pool-details-card'
 
 /**
  * Display contract for one row of the `<MiningPoolsPanel />` table.
- * Adapter hooks (e.g. `usePoolRows`) shape their output to fit this
- * type; consumers can also build rows by hand for fixtures or demos.
+ * Map your pools data into this shape before passing it in; fixtures and
+ * demos can build rows by hand.
  *
  * @category cards
  */

@@ -4,9 +4,8 @@ Dashboard panel listing the site's mining pools — one row per
 `minerpool-<poolType>-shelf-<index>` — with 24h BTC revenue, hashrate,
 and an optional "Show details" popover.
 
-Pair with `usePoolRows` from `@tetherto/mdk-react-adapter`; the hook
-fans out the underlying `minerpoolStatsQuery` and returns rows
-pre-shaped for this component.
+Map your pools route's response to `MiningPoolRow`s (see the data
+contract below) and pass them in.
 
 <!-- BEGIN GENERATED: props — do not edit; npm run generate:usage-proptables (source: component JSDoc/types via registry.json) -->
 ## Props
@@ -36,13 +35,11 @@ pre-shaped for this component.
 ## Minimal example
 
 ```tsx
-import { MiningPoolsPanel } from "@tetherto/mdk-react-devkit";
-import { usePoolRows } from "@tetherto/mdk-react-adapter";
+import { MiningPoolsPanel, type MiningPoolRow } from "@tetherto/mdk-react-devkit";
 
-export const PoolsSection = () => {
-  const { rows, isLoading } = usePoolRows();
-  return <MiningPoolsPanel rows={rows} isLoading={isLoading} />;
-};
+export const PoolsSection = ({ rows, isLoading }: { rows: MiningPoolRow[]; isLoading: boolean }) => (
+  <MiningPoolsPanel rows={rows} isLoading={isLoading} />
+);
 ```
 
 ## Data contract

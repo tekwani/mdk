@@ -1,8 +1,8 @@
 {
   "name": "@tetherto/mdk-ui-agent",
   "type": "module",
-  "version": "0.11.0",
-  "private": true,
+  "version": "0.12.0",
+  "private": false,
   "description": "Injectable operator Co-pilot chat UI for the MDK agent gateway plugin. Streams the six-event agent contract over SSE and renders it as a docked panel or a full-page route.",
   "sideEffects": [
     "*.css",
@@ -47,9 +47,9 @@
     "dev": "concurrently -n ts,scss -c cyan,magenta \"npm run dev:ts\" \"npm run dev:scss\"",
     "dev:ts": "tsc --watch -p tsconfig.build.json",
     "dev:scss": "vite build --watch",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "eslint . --fix",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxlint --fix",
     "test": "vitest run --config vitest.config.js",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --config vitest.config.js --coverage",

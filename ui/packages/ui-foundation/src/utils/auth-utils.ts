@@ -1,5 +1,3 @@
-import { USER_ROLE } from '../constants/permissions.constants'
-import { getRolesFromAuthToken } from './token-utils'
 
 /**
  * Authentication configuration
@@ -124,34 +122,4 @@ export const checkPermission = (
   }
 
   return false
-}
-/**
- * Get redirect URL based on user's primary role
- *
- * @param authToken - User's authentication token
- * @returns Redirect URL path
- *
- * @example
- * ```ts
- * getSignInRedirectUrl('token:roles:reporting_tool_manager') // '/reporting-tool'
- * getSignInRedirectUrl('token:roles:admin') // '/'
- * getSignInRedirectUrl(null) // '/'
- * ```
- */
-export const getSignInRedirectUrl = (authToken: string | null | undefined): string => {
-  // Default redirect
-  if (!authToken?.trim()) {
-    return '/'
-  }
-
-  const roles = getRolesFromAuthToken(authToken)
-  const primaryRole = roles?.[0]
-
-  // Route based on primary role
-  switch (primaryRole) {
-    case USER_ROLE.REPORTING_TOOL_MANAGER:
-      return '/reporting-tool'
-    default:
-      return '/'
-  }
 }

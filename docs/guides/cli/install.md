@@ -77,7 +77,8 @@ A selection of commands you can run today:
 | Group             | Commands                                |
 | ----------------- | ----------------------------------------|
 | Onboarding        | `mdk onboard`                           |
-| Scaffold          | `mdk create worker\|plugin\|dashboard`  |
+| Scaffold          | `mdk create worker\|app\|dashboard`     |
+| Add & validate    | `mdk add app\|worker <source>`, `mdk validate app\|worker <name>` |
 | Run & manage      | `mdk run [target]`, `mdk status`        |
 | Agent enablement  | `mdk skill add`                         |
 | Meta              | `mdk version`                           |

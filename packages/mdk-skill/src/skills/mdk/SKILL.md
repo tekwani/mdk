@@ -45,9 +45,11 @@ need more than one skill in order.
 | -------------------------------- | ------------------------------------ | ----------------------- |
 | Integrate a new device (miner, power meter, sensor, container) | `mdk-worker-plugin` | [`references/protocol.md`](./references/protocol.md) |
 | Add / change a Gateway aggregation HTTP endpoint only | `mdk-gateway-plugin` | Worker `mdk-contract.json` |
+| Scaffold a new MDK App package ready to publish | `mdk-create-app` | [`mdk-create-app/SKILL.md`](../mdk-create-app/SKILL.md) |
 | Build a UI page/widget for an **existing** `/api/...` route | `mdk-ui-component` | [`mdk-ui-component/references/ui-registry.json`](../mdk-ui-component/references/ui-registry.json) |
-| Deploy / run / register plugins in `mdk.yaml` | `mdk-deployment` | project `mdk.yaml` |
+| Deploy / run / register apps in `mdk.yaml` | `mdk-deployment` | project `mdk.yaml` |
 | Size a site from a description (Workers, host tier, envelope) | `mdk-site-sizing` | [`mdk-site-sizing/references/envelope.json`](../mdk-site-sizing/references/envelope.json) |
+| Security-audit packages before an npm publish | `mdk-publish-security` | [`mdk-publish-security/references/vuln-classes.md`](../mdk-publish-security/references/vuln-classes.md) |
 
 ### Composite prompts (use multiple skills, in order)
 
@@ -57,8 +59,8 @@ Prompts like **"create a UI to show \<metric\> for a \<device\>"** are
 | Step | Skill                            | What you do                           |
 | ---- | -------------------------------- | ------------------------------------- |
 | 1    | *(discovery)* | Resolve each `mdk.yaml` → `spec.workers[].package` to its `mdk-contract.json` at the package root (or legacy `plugin/mdk-contract.json`); confirm the telemetry channel, unit, and brand/fingerprint exist |
-| 2    | `mdk-gateway-plugin` | If no Gateway route returns that shaped metric, `mdk create plugin <name>` (scaffolds + registers under `mdk.yaml` → `gateway.plugins`) then write the controller + `mdk-plugin.json` |
-| 3    | `mdk-deployment`                 | Restart Gateway/Worker as needed       |
+| 2    | `mdk-gateway-plugin` | If no Gateway route returns that shaped metric, `mdk create app <name>` (scaffolds + registers under `mdk.yaml` → `spec.apps`; manifest rules in `mdk-create-app`) then write the controller + `plugin/mdk-plugin.json` |
+| 3    | `mdk-deployment`                 | Restart with `mdk run` (or `mdk run app <name>`) as needed |
 | 4    | `mdk-ui-component` | Hook (`useQuery`) → presentational panel → thin page → `routes.ts`; props from [`ui-registry.json`](../mdk-ui-component/references/ui-registry.json) only |
 | 5    | `mdk-deployment`                 | Verify with `curl` + running dashboard |
 
@@ -92,6 +94,7 @@ User: "show / UI / dashboard for <metric> on <device family>"
 | "Integrate a new Modbus meter"                         | `mdk-worker-plugin`                      |
 | "Start Kernel + Worker + Gateway"                      | `mdk-deployment`                         |
 | "Size this site / how many Workers for N miners"       | `mdk-site-sizing`                        |
+| "Audit the packages before we publish"                 | `mdk-publish-security`                   |
 
 ## Non-negotiable invariants
 

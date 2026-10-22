@@ -5,6 +5,38 @@
     {
       "source": "external",
       "family": "miner",
+      "brand": "Antminer",
+      "provider": "bitmain",
+      "models": [],
+      "package": "antminer-mdk-worker",
+      "contract": "https://raw.githubusercontent.com/bitmain-official/antminer-mdk-worker/4fd776b4a048a1bc8284ec2eceed82b4631f960c/mdk-contract.json",
+      "link": "https://github.com/bitmain-official/antminer-mdk-worker",
+      "usage": "https://github.com/bitmain-official/antminer-mdk-worker/blob/4fd776b4a048a1bc8284ec2eceed82b4631f960c/mdk-contract.json",
+      "usageLabel": "mdk-contract.json",
+      "conformant": true,
+      "confirmed": true
+    },
+    {
+      "source": "external",
+      "family": "miner",
+      "brand": "SealMiner",
+      "provider": "bitdeer",
+      "models": [
+        "A2",
+        "A3",
+        "A4"
+      ],
+      "package": "sealminer-mdk-worker",
+      "contract": "https://raw.githubusercontent.com/sealminer/sealminer-mdk-worker/63211a12245482cffb2d09f8cbeaa4c6411e51a3/mdk-contract.json",
+      "link": "https://github.com/sealminer/sealminer-mdk-worker",
+      "usage": "https://github.com/sealminer/sealminer-mdk-worker/blob/63211a12245482cffb2d09f8cbeaa4c6411e51a3/mdk-contract.json",
+      "usageLabel": "mdk-contract.json",
+      "conformant": true,
+      "confirmed": true
+    },
+    {
+      "source": "external",
+      "family": "miner",
       "brand": "Whatsminer",
       "provider": "microbt",
       "models": [],
@@ -12,6 +44,54 @@
       "contract": "https://raw.githubusercontent.com/whatsminer/whatsminer-mdk-worker/a47fa82020454f9bfa9963ccaaa319b7948e8aa2/mdk-contract.json",
       "link": "https://github.com/whatsminer/whatsminer-mdk-worker",
       "usage": "https://github.com/whatsminer/whatsminer-mdk-worker/blob/a47fa82020454f9bfa9963ccaaa319b7948e8aa2/mdk-contract.json",
+      "usageLabel": "mdk-contract.json",
+      "conformant": true,
+      "confirmed": true
+    },
+    {
+      "source": "external",
+      "family": "minerpool",
+      "brand": "EMCD",
+      "provider": "emcd",
+      "models": [
+        "EMCD-BTC"
+      ],
+      "package": "emcd-mdk-worker",
+      "contract": "https://raw.githubusercontent.com/emcdio/emcd-mdk-worker/3ad188e1fef8fa080ce5096d7421e9b3a7052515/mdk-contract.json",
+      "link": "https://github.com/emcdio/emcd-mdk-worker",
+      "usage": "https://github.com/emcdio/emcd-mdk-worker/blob/3ad188e1fef8fa080ce5096d7421e9b3a7052515/mdk-contract.json",
+      "usageLabel": "mdk-contract.json",
+      "conformant": true,
+      "confirmed": true
+    },
+    {
+      "source": "external",
+      "family": "minerpool",
+      "brand": "Foundry USA Pool",
+      "provider": "foundry",
+      "models": [
+        "FOUNDRY-BTC"
+      ],
+      "package": "foundry-mdk-worker",
+      "contract": "https://raw.githubusercontent.com/foundryservices/foundry-mdk-worker/310172ebe1cb4ef60cd14f39d9467f2c8e2bc534/mdk-contract.json",
+      "link": "https://github.com/foundryservices/foundry-mdk-worker",
+      "usage": "https://github.com/foundryservices/foundry-mdk-worker/blob/310172ebe1cb4ef60cd14f39d9467f2c8e2bc534/mdk-contract.json",
+      "usageLabel": "mdk-contract.json",
+      "conformant": true,
+      "confirmed": true
+    },
+    {
+      "source": "external",
+      "family": "minerpool",
+      "brand": "SpiderPool",
+      "provider": "spiderpool",
+      "models": [
+        "SPIDERPOOL-BTC"
+      ],
+      "package": "spiderpool-mdk-worker",
+      "contract": "https://raw.githubusercontent.com/SpiderPool-New/spiderpool-mdk-worker/345f4a2b46ff59135eb4dad1803f0653c3d88911/mdk-contract.json",
+      "link": "https://github.com/SpiderPool-New/spiderpool-mdk-worker",
+      "usage": "https://github.com/SpiderPool-New/spiderpool-mdk-worker/blob/345f4a2b46ff59135eb4dad1803f0653c3d88911/mdk-contract.json",
       "usageLabel": "mdk-contract.json",
       "conformant": true,
       "confirmed": true
@@ -48,25 +128,6 @@
       "contract": "backend/workers/containers/bitdeer/plugin/mdk-contract.json",
       "link": "backend/workers/containers/bitdeer/README.md",
       "usage": null,
-      "usageLabel": "USAGE.md",
-      "conformant": true,
-      "confirmed": true
-    },
-    {
-      "source": "in-repo",
-      "family": "miner",
-      "brand": "Antminer",
-      "provider": "bitmain",
-      "models": [
-        "S19XP",
-        "S19XPH",
-        "S21",
-        "S21PRO"
-      ],
-      "package": "backend/workers/miners/antminer",
-      "contract": "backend/workers/miners/antminer/plugin/mdk-contract.json",
-      "link": "backend/workers/miners/antminer/README.md",
-      "usage": "backend/workers/miners/antminer/USAGE.md",
       "usageLabel": "USAGE.md",
       "conformant": true,
       "confirmed": true

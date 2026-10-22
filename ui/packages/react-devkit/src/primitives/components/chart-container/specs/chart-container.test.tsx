@@ -466,6 +466,21 @@ describe('ChartContainer', () => {
     })
   })
 
+  describe('empty message', () => {
+    it('renders an element passed as emptyMessage', () => {
+      render(
+        <ChartContainer
+          {...defaultProps}
+          empty
+          emptyMessage={<p data-testid="custom-empty">Nothing in this range</p>}
+        />,
+      )
+
+      expect(screen.getByTestId('custom-empty')).toHaveTextContent('Nothing in this range')
+      expect(screen.queryByTestId('chart-content')).not.toBeInTheDocument()
+    })
+  })
+
   describe('loading state', () => {
     it('renders loader when loading is true', () => {
       render(<ChartContainer {...defaultProps} loading />)
@@ -477,6 +492,16 @@ describe('ChartContainer', () => {
       render(<ChartContainer {...defaultProps} loading={false} />)
 
       expect(screen.queryByTestId('loader')).not.toBeInTheDocument()
+    })
+
+    it('renders a custom loader in place of the default one', () => {
+      render(
+        <ChartContainer {...defaultProps} loading loader={<span data-testid="custom-loader" />} />,
+      )
+
+      expect(screen.getByTestId('custom-loader')).toBeInTheDocument()
+      expect(screen.queryByTestId('loader')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('chart-content')).not.toBeInTheDocument()
     })
 
     it('hides footer-area while loading', () => {

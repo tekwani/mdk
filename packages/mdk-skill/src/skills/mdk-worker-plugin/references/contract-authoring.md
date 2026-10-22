@@ -6,8 +6,7 @@ shape is [`mdk-contract.schema.json`](../../../../../../backend/core/mdk-worker/
 [`../scripts/validate-contract.mjs`](../scripts/validate-contract.mjs); this file covers the semantics the schema
 can't express. Real contracts to imitate:
 [`packages/cli/templates/worker/mdk-contract.json`](../../../../../cli/templates/worker/mdk-contract.json) (minimal scaffold / skill
-template), [`backend/workers/samples/demo-worker/mdk-contract.json`](../../../../../../backend/workers/samples/demo-worker/mdk-contract.json) (sample
-with SQLite history), [`backend/workers/miners/antminer/plugin/mdk-contract.json`](../../../../../../backend/workers/miners/antminer/plugin/mdk-contract.json)
+template), [`backend/workers/miners/avalon/plugin/mdk-contract.json`](../../../../../../backend/workers/miners/avalon/plugin/mdk-contract.json)
 (full-featured; older `plugin/` layout),
 [`backend/workers/temperature/seneca/plugin/mdk-contract.json`](../../../../../../backend/workers/temperature/seneca/plugin/mdk-contract.json) (read-only
 sensor; older `plugin/` layout).

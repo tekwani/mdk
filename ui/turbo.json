@@ -25,7 +25,7 @@
     },
     "build:registry": {
       "dependsOn": ["build:ts", "^build:stores", "^build:hooks"],
-      "outputs": ["dist/registry.json", "dist/blueprints.json"]
+      "outputs": ["dist/registry.json"]
     },
     "check:agent-ready": {
       "cache": false

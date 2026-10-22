@@ -4,11 +4,10 @@ import { GAUGE_CENTER_X, GAUGE_CENTER_Y, GAUGE_SEGMENT_FALLBACK_COLOR } from '..
 import {
   buildArcSegmentPath,
   clampToUnitRange,
-  hexToRgb,
   polarToCartesian,
   resolveSegmentColors,
-  rgbToHex,
 } from '../utils'
+import { hexToRgb } from '../../../utils/color'
 
 describe('polarToCartesian', () => {
   it('returns the gauge center when radius is zero', () => {
@@ -141,65 +140,6 @@ describe('clampToUnitRange', () => {
   it('handles positive and negative infinity', () => {
     expect(clampToUnitRange(Number.POSITIVE_INFINITY)).toBe(1)
     expect(clampToUnitRange(Number.NEGATIVE_INFINITY)).toBe(0)
-  })
-})
-
-describe('hexToRgb', () => {
-  it.each([
-    ['#ff0000', { r: 255, g: 0, b: 0 }],
-    ['#00ff00', { r: 0, g: 255, b: 0 }],
-    ['#0000ff', { r: 0, g: 0, b: 255 }],
-    ['#000000', { r: 0, g: 0, b: 0 }],
-    ['#ffffff', { r: 255, g: 255, b: 255 }],
-    ['#aabbcc', { r: 170, g: 187, b: 204 }],
-  ])('parses 6-digit hex %s', (hex, expected) => {
-    expect(hexToRgb(hex)).toEqual(expected)
-  })
-
-  it('parses hex without a leading "#"', () => {
-    expect(hexToRgb('ff8800')).toEqual({ r: 255, g: 136, b: 0 })
-  })
-
-  it('expands 3-digit shorthand to 6-digit hex', () => {
-    expect(hexToRgb('#f00')).toEqual({ r: 255, g: 0, b: 0 })
-    expect(hexToRgb('#abc')).toEqual({ r: 170, g: 187, b: 204 })
-    expect(hexToRgb('fff')).toEqual({ r: 255, g: 255, b: 255 })
-  })
-
-  it('is case-insensitive', () => {
-    expect(hexToRgb('#FFAA00')).toEqual(hexToRgb('#ffaa00'))
-  })
-
-  it('returns black for invalid hex lengths', () => {
-    expect(hexToRgb('#ab')).toEqual({ r: 0, g: 0, b: 0 })
-    expect(hexToRgb('#abcd')).toEqual({ r: 0, g: 0, b: 0 })
-    expect(hexToRgb('#ff0000ee')).toEqual({ r: 0, g: 0, b: 0 })
-  })
-
-  it('returns black for invalid hex characters', () => {
-    expect(hexToRgb('#gggggg')).toEqual({ r: 0, g: 0, b: 0 })
-  })
-})
-
-describe('rgbToHex', () => {
-  it.each([
-    [{ r: 255, g: 0, b: 0 }, '#ff0000'],
-    [{ r: 0, g: 255, b: 0 }, '#00ff00'],
-    [{ r: 0, g: 0, b: 255 }, '#0000ff'],
-    [{ r: 0, g: 0, b: 0 }, '#000000'],
-    [{ r: 255, g: 255, b: 255 }, '#ffffff'],
-    [{ r: 170, g: 187, b: 204 }, '#aabbcc'],
-  ])('serialises %j as %s', (input, expected) => {
-    expect(rgbToHex(input)).toBe(expected)
-  })
-
-  it('zero-pads small channel values to keep 6 hex characters', () => {
-    expect(rgbToHex({ r: 1, g: 2, b: 3 })).toBe('#010203')
-  })
-
-  it('round-trips through hexToRgb', () => {
-    const original = '#3a7bff'
-    expect(rgbToHex(hexToRgb(original))).toBe(original)
   })
 })
 

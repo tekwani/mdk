@@ -5,6 +5,7 @@ const { setTimeout: sleep } = require('timers/promises')
 
 const test = require('brittle')
 const createTestnet = require('hyperdht/testnet')
+const DHT = require('hyperdht')
 
 const sdk = require('../../..')
 const { createRawMdkClient } = require('../../../../client')
@@ -82,13 +83,18 @@ const workerFactory = ({
 }
 
 const createClient = async ({
+  kernel,
   bootstrap,
   key
 }) => {
+  // The Kernel is fail-closed: the test client dials with a key it admitted.
+  const keyPair = DHT.keyPair()
+  kernel.allowKey(keyPair.publicKey)
   const mdkClient = createRawMdkClient({
     hrpc: {
       bootstrap,
-      key
+      key,
+      keyPair
     }
   })
 
@@ -200,6 +206,7 @@ const getTestHarness = async ({ t }) => {
   })
 
   const mdkClient = await createClient({
+    kernel,
     bootstrap,
     key: kernel.getPublicKey()
   })

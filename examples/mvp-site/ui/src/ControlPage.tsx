@@ -19,6 +19,7 @@ import {
 } from "@tetherto/mdk-react-devkit/primitives";
 
 import type { Miner, PoolInput } from "./types";
+import { statusBadge } from "./useMinerRows";
 
 const MINER_TABLE_COLUMNS: DataTableColumnDef<Miner, unknown>[] = [
   { accessorKey: "deviceId", header: "Device ID" },
@@ -28,7 +29,7 @@ const MINER_TABLE_COLUMNS: DataTableColumnDef<Miner, unknown>[] = [
     header: "Status",
     cell: ({ getValue }) => {
       const v = getValue<string>();
-      return <Badge status={v === "online" ? "success" : "error"} text={v} />;
+      return <Badge status={statusBadge(v)} text={v} />;
     },
   },
   { accessorKey: "powerMode", header: "Power mode", cell: ({ getValue }) => (getValue<string | null>() ?? "—") },

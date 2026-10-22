@@ -2,12 +2,10 @@
 
 Read this before modifying anything. This template is a **bare backbone** —
 auth + the app frame + a Home landing page, with no example feature pages.
-Feature pages are added on demand (the reference pages like Dashboard and
-Alerts ship under `_managed/pages/`, ready to copy into `src/pages/`). The
-composition rules below are
-the *reason* those pages stay small (a ≈ 70-line Dashboard, no business
-logic) — break them and you'll end up with a wad of mid-tier code that
-duplicates what already lives in the MDK packages.
+You add feature pages yourself. The composition rules below are what keep
+those pages small (data from your Gateway routes in, devkit components out,
+no business logic) — break them and you'll end up with a wad of mid-tier code
+that duplicates what already lives in the MDK packages.
 
 ## Composition rules
 
@@ -29,63 +27,67 @@ The template imports from three MDK packages and three only:
 ┌─────────────────────────────────────────────────────────┐
 │ @tetherto/mdk-react-adapter                             │
 │   React hooks — useAuthToken, useTokenPolling,          │
-│   useHashrateChartData, useConsumptionChartData,        │
-│   usePowerModeTimelineData, useActiveIncidents,         │
-│   useDashboardTimeRange, useTimezone, useAuth.          │
+│   useTimezone, useAuth, plus useQuery / useMutation     │
+│   re-exported from TanStack Query.                      │
 └────────────┬────────────────────────────────────────────┘
              │ imports
              ▼
 ┌─────────────────────────────────────────────────────────┐
 │ @tetherto/mdk-ui-foundation                                   │
-│   API contracts, query factories, mappers, Zustand      │
-│   stores. No React.                                     │
+│   Auth, query client, mappers, Zustand stores.          │
+│   No React.                                             │
 └─────────────────────────────────────────────────────────┘
 ```
 
 **The template owns**: route configuration, app shell layout (sidebar /
-topbar), the SignIn / Home / NotFound pages, env-var reading. Feature pages land
-in [`src/pages/`](./src/pages/) and follow the same rules.
+topbar), the SignIn / Home / NotFound pages, env-var reading, and the data
+hooks for its own Gateway routes. Feature pages land in
+[`src/pages/`](./src/pages/) and follow the same rules.
 
-**The template does NOT own**: HTTP calls, auth flow logic, data-shape
-transformations, chart components, store state. Anything in those
+**The template does NOT own**: auth flow logic, chart components, store
+state. Anything in those
 categories must come from the MDK packages — if a needed piece doesn't
 exist, **add it to the appropriate package**, not the template.
 
 ## The pattern every page should follow
 
-Every page follows the same layered data flow, whether it is your own or a
-copied reference page: a foundation query factory owns the endpoint + fetch,
-an adapter hook binds it with TanStack Query and shapes the payload, and the
-page stays thin — reading the hook and handing its output straight to a
+Every page follows the same one-direction data flow: your Gateway plugin serves
+a route, a small hook in the app reads it with `useQuery` and shapes the
+response in `select`, and the page hands the result straight to a
 presentational component.
 
 | Layer | Responsibility |
 | ----- | -------------- |
-| Foundation (`packages/ui-foundation/src/query/`) | Query factories own the endpoint URL + fetch. |
-| Adapter (`packages/react-adapter/src/hooks/`) | Hooks bind factories with TanStack Query and return a shaped payload. |
+| Gateway plugin route | Serves the data (e.g. the mvp-site `site` plugin's `/site/overview`). |
+| App hook (`src/hooks/`) | `useQuery` against the route; `select` returns the component's prop shape. |
 | Page (`src/pages/`) | Thin glue — reads the hook, hands its output to a component. No `fetch`, no shaping. |
-| Component (`src/components/`) | Props in, markup out. |
+| Component (`@tetherto/mdk-react-devkit`) | Props in, markup out. |
 
-The rule: **data flows one direction and each layer has a single job.** The
-page never calls `fetch`, never shapes data, never touches a store. Need a new
-endpoint? Add the factory in `ui-foundation` and a hook in `react-adapter`,
-and keep the page thin.
+```ts
+// src/hooks/use-site-overview.ts
+import { useMdkContext, useQuery } from '@tetherto/mdk-react-adapter'
 
-## Data hooks ↔ chart components
+export const useSiteOverview = () => {
+  const { apiBaseUrl } = useMdkContext()
+  return useQuery({
+    queryKey: ['site', 'overview'],
+    queryFn: () => fetch(`${apiBaseUrl}/site/overview`).then((r) => r.json()),
+    refetchInterval: 10_000,
+  })
+}
+```
 
-| Hook                          | Returns                       | Pairs with                |
-| ----------------------------- | ----------------------------- | ------------------------- |
-| `useHashrateChartData`        | `ChartCardData`               | `<LineChartCard>`         |
-| `useSiteConsumptionChartData` | `ChartCardData`               | `<LineChartCard>`         |
-| `usePowerModeTimelineData`    | `PowerModeTimelineEntry[]`    | `<PowerModeTimelineChart>`|
-| `useActiveIncidents`          | `IncidentRow[]`               | `<ActiveIncidentsCard>`   |
-| `usePoolRows`                 | `MiningPoolRow[]`             | `<MiningPoolsPanel>`      |
+## Payloads ↔ components
 
-Each hook fans out the TanStack `useQuery` calls against the Gateway
-backend and returns presentation-ready data. The dashboard chart hooks
-emit a shared `ChartCardData` payload (datasets + min/max/avg footer +
-formatters) consumed verbatim by `<LineChartCard>`. **MDK UI Shell never
-reshapes data inline** — that's the hook's job.
+| Shape your hook returns       | Pairs with                 |
+| ----------------------------- | -------------------------- |
+| `ChartCardData`               | `<LineChartCard>`          |
+| `PowerModeTimelineEntry[]`    | `<PowerModeTimelineChart>` |
+| `IncidentRow[]`               | `<ActiveIncidentsCard>`    |
+| `MiningPoolRow[]`             | `<MiningPoolsPanel>`       |
+
+Build these shapes in the hook's `select`. **Pages never reshape data
+inline.**
 
 ## Auth flow
 
@@ -132,34 +134,47 @@ To add a second OAuth provider (e.g. Microsoft):
 
 | Don't                                                  | Do instead                                                   |
 | ------------------------------------------------------ | ------------------------------------------------------------ |
-| Call `fetch('/auth/...')` from a component             | Use one of the data hooks; add a new one if missing.         |
+| Call `fetch(...)` inline in a component                | Wrap the Gateway route in a hook under `src/hooks/` (see above). |
 | Define a Zustand store inside the template             | Use `authStore` / `devicesStore` / etc. from `ui-foundation`.      |
 | Import `@tanstack/react-query` directly                | Use the re-exports from `@tetherto/mdk-react-adapter`.       |
 | Hard-code a base URL                                   | Read from `import.meta.env.VITE_*` via [`src/constants/env`](./src/constants/env.ts).  |
-| Transform a chart response inline in [`Dashboard.tsx`](./_managed/pages/Dashboard.tsx)   | Put the transform in the hook's `select`; if reusable, in [`ui-foundation/utils`](../../ui/packages/ui-foundation/src/utils/index.ts). |
+| Transform a chart response inline in the page's JSX    | Put the transform in the query's `select`; if reusable, in [`ui-foundation/utils`](../../ui/packages/ui-foundation/src/utils/index.ts). |
 | Import Ant Design / MUI / Bootstrap                    | Use `@tetherto/mdk-react-devkit` primitives + foundation.    |
 | Add a route directly to [`router.tsx`](./src/router.tsx)                   | Append a one-line entry to [`routes.ts`](./src/routes.ts).                      |
 
+The one route in [`router.tsx`](./src/router.tsx) that is not from `routes.ts` is the catch-all `app/:appName/*` for
+installed apps (below). It is a single route for every app, not a pattern to copy for your own pages.
+
+## Installed apps
+
+Apps installed on the stack (`spec.apps` in `mdk.yaml`) add their own pages and panels at runtime, so a page you write
+never imports an app. `mdk run dashboard` hands the apps to
+[`vite/mdk-installed-apps.ts`](./vite/mdk-installed-apps.ts), which serves each app's built UI and lists the apps at
+`/app-ui.json`.
+
+| Piece | Where |
+| --- | --- |
+| All apps' pages, under `/app/<name>/…` | The catch-all route in [`router.tsx`](./src/router.tsx) → [`src/apps/InstalledAppPage.tsx`](./src/apps/InstalledAppPage.tsx) |
+| Sidebar entries for app pages | `appPageSidebarItems` in [`src/apps/paths.ts`](./src/apps/paths.ts), used by [`App.tsx`](./src/App.tsx) |
+| Panels on a shell page | `<AppPanels slot={MDK_APP_PANEL_SLOT.HOME} />` ([`src/apps/AppPanels.tsx`](./src/apps/AppPanels.tsx)), fed by `useInstalledAppPanels` |
+| React and the MDK packages shared with apps | The import map from [`vite/mdk-shared-modules.ts`](./vite/mdk-shared-modules.ts) |
+
+To show apps' panels on another page you own, render `<AppPanels slot="<your-slot>" />` there. Apps opt in by declaring
+a panel with that `slot`.
+
 ## Extending: add a new chart card
 
-(Assumes a chart page exists — e.g. the managed Dashboard, copied into `src/pages/`.)
+(Assumes a chart page exists under `src/pages/`.)
 
 1. Pick / add a chart component in
    [`packages/react-devkit/src/domain/components/dashboard/`](../../ui/packages/react-devkit/src/domain/components/dashboard/index.ts).
-2. Add a data hook in
-   `packages/react-adapter/src/hooks/use-<thing>-chart-data.ts`. The hook
-   uses `tailLogQuery(client, { ... })` with the right `aggrFields` and a
-   `select` projection that returns the chart-ready shape.
-3. In your page (e.g. [`pages/Dashboard.tsx`](./_managed/pages/Dashboard.tsx)), call the hook and pass its
-   `data` straight to the chart component. **No transformation between the
-   two.**
+2. Expose the data from a route in your Gateway plugin (the
+   [mvp-site](../mvp-site/README.md) `site` plugin serves `/site/overview` and
+   `/site/history` this way).
+3. In your page, read that route with `useQuery` from
+   `@tetherto/mdk-react-adapter`, with a `select` projection that returns the
+   chart-ready shape, and pass its `data` straight to the chart component.
+   **No transformation between the two.**
 
 If your transform looks like "more than two lines or used by ≥ 2 hooks",
 lift it into [`packages/ui-foundation/src/utils/`](../../ui/packages/ui-foundation/src/utils/index.ts) as a pure function.
-
-## Blueprint reference
-
-The [`mdk-ui-shell-dashboard` blueprint](../../ui/packages/react-devkit/blueprints/mdk-ui-shell-dashboard.md)
-is the recipe form of this template. Use it to feed an LLM that's
-bootstrapping a similar dashboard — it's the same composition rules in a
-shorter form.

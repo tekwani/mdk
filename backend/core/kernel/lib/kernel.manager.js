@@ -39,10 +39,16 @@ const ActionApproverFacility = require('@tetherto/svc-facs-action-approver')
  *   TelemetryCollector, Scheduler, HealthMonitor
  *
  * Transports:
- *   HRPCListener (@hyperswarm/rpc)
+ *   HRPCListener (@hyperswarm/rpc). Fail-closed: only allowlisted caller keys
+ *   (conf.kernel.hrpc.whitelist, or allowKey() at runtime) are admitted; an
+ *   empty allowlist admits nobody unless conf.kernel.hrpc.allowAll is true.
  *
  * Discovery:
- *   DHTListener (Hyperswarm topic)
+ *   DHTListener (Hyperswarm topic). Fail-closed: only Worker RPC keys on
+ *   conf.kernel.discovery.workerKeys (or allowWorkerKey() at runtime) register
+ *   from the topic; an empty list admits nobody unless
+ *   conf.kernel.discovery.allowAnyWorker is true. registerWorker() and local
+ *   discovery hand keys in directly and skip the topic allowlist.
  */
 class KernelManager extends EventEmitter {
   constructor (conf, ctx) {
@@ -137,6 +143,46 @@ class KernelManager extends EventEmitter {
   }
 
   /**
+   * The public key this Kernel dials workers with. Workers must allow it
+   * (WorkerRuntime `allowedKeys`) to accept the Kernel's requests. Available
+   * after start(); null when HRPC is disabled.
+   * @returns {Buffer|null}
+   */
+  getClientPublicKey () {
+    return this.hrpcListener ? this.hrpcListener.getClientPublicKey() : null
+  }
+
+  /**
+   * Admit an HRPC caller (Gateway, MCP server, CLI client) at runtime.
+   * Admission is fail-closed: callers not on the allowlist are rejected.
+   *
+   * @param {string|Buffer} key - caller DHT public key (hex or Buffer)
+   * @param {string[]} [roles] - any of 'read' | 'write' | 'admin'; default full access
+   * @returns {string} the normalized hex key
+   */
+  allowKey (key, roles) {
+    if (!this.hrpcListener) throw new Error('ERR_KERNEL_NO_HRPC: call init() first, or HRPC is disabled')
+    const hex = this.hrpcListener.allowKey(key, roles)
+    // In-process hosts mirror write-capable callers onto their workers'
+    // allowlists (a Gateway also calls workers directly).
+    this.emit('caller-allowed', { key: hex, roles: this.hrpcListener.getCallerRoles(hex) })
+    return hex
+  }
+
+  /** Hex keys currently admitted with at least `minRole` ('read' | 'write' | 'admin'). */
+  listAllowedKeys (minRole = 'read') {
+    return this.hrpcListener ? this.hrpcListener.listAllowedKeys(minRole) : []
+  }
+
+  /** Remove an HRPC caller; later requests from it are rejected. */
+  revokeKey (key) {
+    if (!this.hrpcListener) return false
+    const had = this.hrpcListener.revokeKey(key)
+    if (had) this.emit('caller-revoked', { key: Buffer.isBuffer(key) ? key.toString('hex') : String(key).toLowerCase() })
+    return had
+  }
+
+  /**
    * Directly register a worker by its RPC public key.
    * Use this when the kernel and worker are in the same process
    * (skips DHT discovery, connects via RPC key directly).
@@ -148,6 +194,19 @@ class KernelManager extends EventEmitter {
     if (!this.dhtListener) throw new Error('ERR_KERNEL_NO_DISCOVERY: kernel has no discovery configured')
     const keyHex = Buffer.isBuffer(rpcKey) ? rpcKey.toString('hex') : rpcKey
     return this.dhtListener._onWorkerKeyReceived(keyHex)
+  }
+
+  /**
+   * Admit a Worker RPC key on the discovery topic at runtime. Topic discovery
+   * is fail-closed: a Worker announcing a key that is not allowed is ignored.
+   * Not needed for registerWorker() or local discovery.
+   *
+   * @param {string|Buffer} rpcKey - Worker's RPC public key (hex string or Buffer)
+   * @returns {string} the normalized hex key
+   */
+  allowWorkerKey (rpcKey) {
+    if (!this.dhtListener) throw new Error('ERR_KERNEL_NO_DISCOVERY: kernel has no discovery configured')
+    return this.dhtListener.allowWorkerKey(rpcKey)
   }
 
   // ─── Facility Management (same pattern as ThingManager) ─────────
@@ -216,22 +275,24 @@ class KernelManager extends EventEmitter {
       capabilityStore: this.stores.capabilities
     })
 
+    this.telemetryCollector = new TelemetryCollector({
+      registry: this.registry,
+      workerChannel: this.workerChannel
+    })
+
     this.stateMachine = new CommandStateMachine({
       wal: this.stores.commandWal,
       workerChannel: this.workerChannel,
       registry: this.registry,
-      maxRetries: orkConf.commandMaxRetries || 3,
-      timeoutMs: orkConf.commandTimeoutMs || 30000
+      telemetryCollector: this.telemetryCollector,
+      timeoutMs: orkConf.commandTimeoutMs || 30000,
+      resultTtlMs: orkConf.commandResultTtlMs,
+      verifyIntervalMs: orkConf.commandVerifyIntervalMs
     })
 
     this.dispatcher = new CommandDispatcher({
       registry: this.registry,
       stateMachine: this.stateMachine
-    })
-
-    this.telemetryCollector = new TelemetryCollector({
-      registry: this.registry,
-      workerChannel: this.workerChannel
     })
 
     this.healthMonitor = new HealthMonitor({
@@ -281,6 +342,7 @@ class KernelManager extends EventEmitter {
         registry: this.registry,
         actionManager: this.actionManager,
         whitelist: (orkConf.hrpc && orkConf.hrpc.whitelist) || [],
+        allowAll: !!(orkConf.hrpc && orkConf.hrpc.allowAll === true),
         bootstrap: (orkConf.hrpc && orkConf.hrpc.bootstrap) || null,
         store: this.store_s0
       })
@@ -292,6 +354,8 @@ class KernelManager extends EventEmitter {
     if (orkConf.discovery && (orkConf.discovery.topic || orkConf.discovery.mode === 'local')) {
       this.dhtListener = new DHTListener({
         topic: orkConf.discovery.topic,
+        workerKeys: orkConf.discovery.workerKeys,
+        allowAnyWorker: orkConf.discovery.allowAnyWorker === true,
         registry: this.registry,
         workerChannel: this.workerChannel
       })

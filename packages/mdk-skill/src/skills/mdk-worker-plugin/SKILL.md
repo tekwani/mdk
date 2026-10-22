@@ -144,7 +144,7 @@ Load [`references/local-testing.md`](./references/local-testing.md) for the full
 3. **Standalone protocol check** — host the package on `WorkerRuntimeV2` with a
    tiny caller and drive real envelopes through `handleRequest`.
 4. **Site integration** — add the Worker to a site stack (e.g.
-   [`examples/full-site/start.js`](../../../../../examples/full-site/start.js))
+   [`examples/mvp-site/deploy/run-process.js`](../../../../../examples/mvp-site/deploy/run-process.js))
    and confirm a real Kernel registers it end-to-end.
 
 ### 8. Boot into a site

@@ -24,9 +24,6 @@ export const SEVERITY_LEVELS = {
   [SEVERITY.HIGH]: 1,
   [SEVERITY.CRITICAL]: 2,
 } as const
-
-export const SEVERITY_KEY = 'severity'
-
 // Type exports
 export type AlertSeverity = (typeof ALERT_SEVERITY_TYPES)[keyof typeof ALERT_SEVERITY_TYPES]
 export type SeverityKey = keyof typeof SEVERITY

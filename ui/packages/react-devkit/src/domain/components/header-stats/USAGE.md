@@ -4,9 +4,8 @@ Dashboard header stat boxes: `HeaderStatsBar` (container) plus four
 slot-fillers — `HeaderMinersBox`, `HeaderHashrateBox`,
 `HeaderConsumptionBox`, `HeaderEfficiencyBox`. Each box is a pure
 presentational component: pass numeric props, get the formatted display.
-No internal data fetching — pair with `useSiteHashrate`,
-`useSiteConsumption`, `useSiteEfficiency`, `useSiteMinerCounts` from
-`@tetherto/mdk-react-adapter`.
+No internal data fetching — the page reads its site summary route and
+passes the numbers in.
 
 <!-- BEGIN GENERATED: props — do not edit; npm run generate:usage-proptables (source: component JSDoc/types via registry.json) -->
 ## Props
@@ -77,35 +76,22 @@ import {
   HeaderEfficiencyBox,
 } from '@tetherto/mdk-react-devkit'
 
-import {
-  useSiteConsumption,
-  useSiteEfficiency,
-  useSiteHashrate,
-  useSiteMinerCounts,
-} from '@tetherto/mdk-react-adapter'
-
-const Header = () => {
-  const counts = useSiteMinerCounts()
-  const hashrate = useSiteHashrate({ timeline: '5m' })
-  const consumption = useSiteConsumption({ timeline: '5m' })
-  const efficiency = useSiteEfficiency({ timeline: '5m' })
-
-  return (
-    <AppHeader>
-      <HeaderStatsBar>
-        <HeaderMinersBox
-          total={counts.data?.total}
-          online={counts.data?.online}
-          error={counts.data?.error}
-          offline={counts.data?.offline}
-        />
-        <HeaderHashrateBox appPhs={hashrate.valuePhs} />
-        <HeaderConsumptionBox valueMw={consumption.valueMw} />
-        <HeaderEfficiencyBox valueWthS={efficiency.valueWthS} />
-      </HeaderStatsBar>
-    </AppHeader>
-  )
-}
+// `summary` comes from your own site summary route (e.g. read with `useQuery`).
+const Header = ({ summary }: { summary?: SiteSummary }) => (
+  <AppHeader>
+    <HeaderStatsBar>
+      <HeaderMinersBox
+        total={summary?.miners.total}
+        online={summary?.miners.online}
+        error={summary?.miners.error}
+        offline={summary?.miners.offline}
+      />
+      <HeaderHashrateBox appPhs={summary?.hashratePhs} />
+      <HeaderConsumptionBox valueMw={summary?.powerMw} />
+      <HeaderEfficiencyBox valueWthS={summary?.efficiencyWthS} />
+    </HeaderStatsBar>
+  </AppHeader>
+)
 ```
 
 ## Notes

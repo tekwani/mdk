@@ -8,38 +8,24 @@ real `mdk` developer CLI, one command at a time, without churning the wiring.
 
 The `mdk` command-line tool. Today it is a **scaffold**:
 
-- The **entire command surface** (names, arguments, options, help text) is
-  already wired up with Commander.js — that wiring is the source of truth.
 - **`mdk onboard` is fully implemented**: a guided, colorful wizard that detects
   the environment, asks setup questions (pre-filled defaults), writes `mdk.yaml`,
   and prints the commands to run the stack.
-- **Every other command is a no-op stub** ([`src/lib/stub.ts`](./src/lib/stub.ts)). Your job is to
-  replace `stub(...)` calls with real behavior.
-
-## Golden rule
-
-**Implement behavior by replacing the `stub(...)` call inside a command's
-`.action(...)`. Do not change the command's name, arguments, options, or help
-unless the command surface is intentionally redesigned.** The wiring is the
-contract; keep it stable so commands can be filled in independently and in
-parallel.
 
 ## Project layout
 
-```
+```text
 src/
   index.ts            # entry point (shebang); parses argv, maps errors -> exit 1
   program.ts          # builds the Commander tree; registers every command group
   commands/           # one file per command group (A–G in the HLD)
     onboard.ts        # Group A — implemented reference for style & UX
-    create.ts         # Group B — create worker | plugin | dashboard
+    create.ts         # Group B — create worker | app | dashboard
     run.ts            # Group C — run
-    inspect.ts        # Group C — status (implemented); get | describe | logs (stub)
-    discover.ts       # Group D — discover (stub)
-    agent.ts          # Group F — skill add | mcp register (stub)
-    meta.ts           # Group G — manifest (stub) | version (implemented)
+    inspect.ts        # Group C — status
+    agent.ts          # Group F — skill add
+    meta.ts           # Group G — version
   lib/
-    stub.ts           # the placeholder every unimplemented action calls
     pkg.ts            # reads package.json (name, version)
     detect.ts         # environment detection used by onboard
     spec.ts           # builds + loads the mdk.yaml stack spec
@@ -47,7 +33,7 @@ src/
     runtime.ts        # boots kernel/gateway/workers; owns the .mdk state paths
     status.ts         # read-only status: env + spec + probes kernel/gateway/workers
     worker-scaffold.ts# create worker: template copy + mdk.yaml registration
-    plugin-scaffold.ts# create plugin: template copy + mdk.yaml registration
+    app-scaffold.ts   # create app: template copy + mdk.yaml registration
     dashboard.ts      # create dashboard: UI shell template -> apps/dashboard
     fetch-template.ts # degit wrapper for fetching a GitHub subtree
     npm.ts            # `npm install` helpers (workspace-aware)
@@ -63,7 +49,7 @@ Each `commands/*.ts` file exports `register<Name>(program)` functions that
 
 - **Node.js >= 24, TypeScript, ESM.** [`tsconfig.json`](./tsconfig.json) uses `NodeNext` module
   resolution, so **relative imports must include the `.js` extension** (e.g.
-  `import { stub } from '../lib/stub.js'`), even though the source is `.ts`.
+  `import { pkg } from '../lib/pkg.js'`), even though the source is `.ts`.
 - **Commander.js** for the command tree, parsing, and help.
 - **`@clack/prompts`** for interactive wizard steps (see [`onboard.ts`](./src/commands/onboard.ts)).
 - **`picocolors`** for color; go through [`src/lib/theme.ts`](./src/lib/theme.ts) for a consistent
@@ -96,7 +82,7 @@ and add tests for anything you implement.
 
 - **stdout is for machine-facing data; stderr is for humans.** Data that a user
   might pipe (`get`, `describe`, `manifest`, ...) goes to stdout; status notices,
-  prompts, and errors go to stderr. [`stub.ts`](./src/lib/stub.ts) already follows this.
+  prompts, and errors go to stderr.
 - **Respect `-o, --output <table|json|yaml>`** for any command that emits data.
   Default is `table`; `json`/`yaml` output must be clean and parseable.
 - **Exit codes are semantic:** `0` success, non-zero on failure. Unexpected
@@ -141,7 +127,7 @@ and add tests for anything you implement.
 
 ## Definition of done for a command
 
-1. `stub(...)` replaced with the real action; wiring untouched (unless HLD changed).
+1. Command wiring matches the HLD.
 2. Output obeys the stdout/stderr split and `--output` format.
 3. Sensible exit codes; interactivity guarded; color via [`theme.ts`](./src/lib/theme.ts).
 4. `npm run build` passes with no new type/lint errors.

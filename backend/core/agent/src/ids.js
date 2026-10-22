@@ -1,4 +1,5 @@
 import { AXIS } from './tools.js'
+import { unwrapToolText } from './mcp.js'
 
 /**
  * Reading the fleet's device ids, and deciding whether an id in an answer was relayed or made up.
@@ -31,7 +32,7 @@ export async function fleetIds (mcp) {
     const { text } = await mcp.callTool('list_devices', { family, state: 'all' })
     let payload
     try {
-      payload = JSON.parse(text)
+      payload = JSON.parse(unwrapToolText(text))
     } catch {
       // A family we could not read is a family whose ids we do not hold.
       complete = false

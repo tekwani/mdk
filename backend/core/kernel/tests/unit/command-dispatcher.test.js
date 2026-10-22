@@ -277,6 +277,70 @@ test('dispatcher - getStatus returns the state machine entry shape', async (t) =
   t.is(status.command, 'reboot')
   t.is(status.deviceId, 'wm001')
   t.is(status.scope, 'device')
+  t.is(status.verification, null, 'no verification while in flight')
+})
+
+test('dispatcher - getStatus reports the verification of a settled command', async (t) => {
+  const verification = { state: 'VERIFIED', telemetry: 'power_mode', expected: 'low', observed: 'low', at: 300 }
+  const { dispatcher } = createDispatcher({
+    stateEntries: { 'cmd-1': { state: 'SUCCESS', command: 'setPowerMode', deviceId: 'wm001', result: {}, verification, createdAt: 100, updatedAt: 300 } }
+  })
+  const status = await dispatcher.getStatus('cmd-1')
+  t.is(status.status, 'SUCCESS')
+  t.alike(status.verification, verification)
+})
+
+const VERIFIED_SET_POWER = {
+  commands: [{
+    name: 'setPowerMode',
+    params: [{ name: 'mode', type: 'string' }],
+    verify: { telemetry: 'power_mode', param: 'mode', withinMs: 90000 }
+  }]
+}
+
+test('dispatcher - a declared verify becomes the expected device state', async (t) => {
+  const cases = [
+    [{ mode: 'low' }, 'named param'],
+    [{ value: 'low' }, 'positional { value } from the approval path'],
+    [{ args: ['low'] }, 'positional { args } from the approval path']
+  ]
+  for (const [params, label] of cases) {
+    const { dispatcher, enqueuedCommands } = createDispatcher({
+      devices: { wm001: { workerId: 'w1', channel: {} } },
+      capabilities: VERIFIED_SET_POWER
+    })
+    await dispatcher.dispatch(makeEnvelope('wm001', 'setPowerMode', params))
+    t.alike(enqueuedCommands[0].verify, { telemetry: 'power_mode', expected: 'low', withinMs: 90000 }, label)
+  }
+})
+
+test('dispatcher - verify withinMs defaults to 60s', async (t) => {
+  const { dispatcher, enqueuedCommands } = createDispatcher({
+    devices: { wm001: { workerId: 'w1', channel: {} } },
+    capabilities: { commands: [{ name: 'setPowerMode', params: [{ name: 'mode', type: 'string' }], verify: { telemetry: 'power_mode', param: 'mode' } }] }
+  })
+  await dispatcher.dispatch(makeEnvelope('wm001', 'setPowerMode', { mode: 'low' }))
+  t.is(enqueuedCommands[0].verify.withinMs, 60000)
+})
+
+test('dispatcher - no verify without a declaration or a requested value', async (t) => {
+  const { dispatcher, enqueuedCommands } = createDispatcher({
+    devices: { wm001: { workerId: 'w1', channel: {} } },
+    capabilities: { commands: [...VERIFIED_SET_POWER.commands, { name: 'reboot', params: [] }] }
+  })
+  await dispatcher.dispatch(makeEnvelope('wm001', 'reboot'))
+  await dispatcher.dispatch(makeEnvelope('wm001', 'setPowerMode', {}))
+  t.is(enqueuedCommands[0].verify, null, 'command without verify')
+  t.is(enqueuedCommands[1].verify, null, 'verify param not sent')
+})
+
+test('dispatcher - worker-scope commands are not verified', async (t) => {
+  const { dispatcher, enqueuedCommands } = createDispatcher({
+    workers: { 'wrk-1': { workerId: 'wrk-1', channel: {} } },
+    workerCapabilities: VERIFIED_SET_POWER
+  })
+  await dispatcher.dispatch(makeEnvelope(null, 'setPowerMode', { mode: 'low' }, { scope: 'worker', workerId: 'wrk-1' }))
+  t.is(enqueuedCommands[0].verify, null)
 })
 
 test('dispatcher - getStatus rejects missing commandId', async (t) => {
@@ -316,4 +380,27 @@ test('dispatcher - cancel rejects missing commandId', async (t) => {
   const result = await dispatcher.cancel()
   t.is(result.status, 'REJECTED')
   t.is(result.error, 'ERR_COMMAND_ID_REQUIRED')
+})
+
+test('dispatcher - inherited property names are not capabilities', async (t) => {
+  const { dispatcher } = createDispatcher({
+    devices: { wm001: { workerId: 'w1', channel: {} } },
+    capabilities: { commands: { reboot: {} } }
+  })
+  for (const name of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    const result = await dispatcher.dispatch(makeEnvelope('wm001', name))
+    t.is(result.status, 'REJECTED', `${name} rejected`)
+  }
+  const ok = await dispatcher.dispatch(makeEnvelope('wm001', 'reboot'))
+  t.is(ok.status, 'QUEUED')
+})
+
+test('dispatcher - requesterId comes from the authenticated caller when given', async (t) => {
+  const { dispatcher, enqueuedCommands } = createDispatcher({
+    devices: { wm001: { workerId: 'w1', channel: {} } }
+  })
+  await dispatcher.dispatch(makeEnvelope('wm001', 'reboot'), { requesterId: 'cafe' })
+  await dispatcher.dispatch(makeEnvelope('wm001', 'reboot'))
+  t.is(enqueuedCommands[0].requesterId, 'cafe')
+  t.is(enqueuedCommands[1].requesterId, 'test:client:1', 'in-process falls back to sender')
 })

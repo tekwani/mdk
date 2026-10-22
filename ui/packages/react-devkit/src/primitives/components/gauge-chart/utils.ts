@@ -1,13 +1,6 @@
-import {
-  GAUGE_CENTER_X,
-  GAUGE_CENTER_Y,
-  GAUGE_SEGMENT_FALLBACK_COLOR,
-  HEX_DIGITS_REGEX,
-  LEADING_HASH_REGEX,
-  LONG_HEX_LENGTH,
-  SHORT_HEX_LENGTH,
-} from './constants'
-import type { CartesianPoint, RgbColor } from './types'
+import { GAUGE_CENTER_X, GAUGE_CENTER_Y, GAUGE_SEGMENT_FALLBACK_COLOR } from './constants'
+import { hexToRgb, rgbToHex } from '../../utils/color'
+import type { CartesianPoint } from './types'
 import _size from 'lodash/size'
 
 export const polarToCartesian = (radius: number, angleRadians: number): CartesianPoint => ({
@@ -91,36 +84,6 @@ export const clampToUnitRange = (value: number): number => {
   if (Number.isNaN(value)) return 0
 
   return Math.max(0, Math.min(1, value))
-}
-
-export const hexToRgb = (hex: string): RgbColor => {
-  const normalized = hex.trim().replace(LEADING_HASH_REGEX, '')
-  const normalizedSize = _size(normalized)
-  const isShortHex = normalizedSize === SHORT_HEX_LENGTH
-  const isLongHex = normalizedSize === LONG_HEX_LENGTH
-
-  if (!(isShortHex || isLongHex) || !HEX_DIGITS_REGEX.test(normalized)) {
-    return { r: 0, g: 0, b: 0 }
-  }
-
-  const expanded = isShortHex
-    ? normalized
-        .split('')
-        .map((char) => char + char)
-        .join('')
-    : normalized
-  const numericValue = Number.parseInt(expanded, 16)
-
-  return {
-    r: (numericValue >> 16) & 255,
-    g: (numericValue >> 8) & 255,
-    b: numericValue & 255,
-  }
-}
-
-export const rgbToHex = ({ r, g, b }: RgbColor): string => {
-  const hex = ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')
-  return `#${hex}`
 }
 
 export const resolveSegmentColors = (palette: string[], segmentCount: number): string[] => {

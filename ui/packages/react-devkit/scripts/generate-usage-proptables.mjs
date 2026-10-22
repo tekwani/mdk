@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Writes a generated `## Props` section into each agent-ready component's
  * USAGE.md, between BEGIN/END GENERATED markers, from `dist/registry.json`

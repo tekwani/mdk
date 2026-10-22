@@ -1,26 +1,15 @@
-import { timezoneStore } from '@tetherto/mdk-ui-foundation'
 import { render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { DATE, LABEL } from '../constants'
 import { DataLabel } from '../index'
 
 describe('dataLabel', () => {
-  const originalTimezone = timezoneStore.getState().timezone
-
-  beforeEach(() => {
-    timezoneStore.getState().setTimezone('UTC')
-  })
-
-  afterEach(() => {
-    timezoneStore.getState().setTimezone(originalTimezone)
-  })
-
   it('renders default PERIOD label with formatted date range in UTC', () => {
     const start = new Date('2025-01-06T12:00:00.000Z')
     const end = new Date('2025-03-15T12:00:00.000Z')
 
-    render(<DataLabel startDate={start} endDate={end} />)
+    render(<DataLabel timezone="UTC" startDate={start} endDate={end} />)
 
     expect(screen.getByText(`${LABEL.DEFAULT}:`)).toBeInTheDocument()
     expect(screen.getByText('06/01/25')).toBeInTheDocument()
@@ -29,14 +18,14 @@ describe('dataLabel', () => {
   })
 
   it('renders fallback for missing or invalid dates', () => {
-    render(<DataLabel startDate={null} endDate={null} />)
+    render(<DataLabel timezone="UTC" startDate={null} endDate={null} />)
 
     const fallbacks = screen.getAllByText(DATE.FALLBACK)
     expect(fallbacks).toHaveLength(2)
   })
 
   it('renders fallback for invalid Date values', () => {
-    render(<DataLabel startDate={new Date(Number.NaN)} endDate={undefined} />)
+    render(<DataLabel timezone="UTC" startDate={new Date(Number.NaN)} endDate={undefined} />)
 
     const fallbacks = screen.getAllByText(DATE.FALLBACK)
     expect(fallbacks).toHaveLength(2)
@@ -69,12 +58,12 @@ describe('dataLabel', () => {
     expect(container.querySelector('.mdk-data-label__separator')).toBeInTheDocument()
   })
 
-  it('formats dates using the active timezone store value', () => {
-    timezoneStore.getState().setTimezone('America/New_York')
-    const start = new Date('2025-07-04T06:00:00.000Z')
+  it('formats dates in the timezone it is given', () => {
+    // 02:00 UTC on 4 July is still 3 July in New York.
+    const start = new Date('2025-07-04T02:00:00.000Z')
 
-    render(<DataLabel startDate={start} endDate={start} />)
+    render(<DataLabel timezone="America/New_York" startDate={start} endDate={start} />)
 
-    expect(screen.getAllByText('04/07/25')).toHaveLength(2)
+    expect(screen.getAllByText('03/07/25')).toHaveLength(2)
   })
 })

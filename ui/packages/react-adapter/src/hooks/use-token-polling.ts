@@ -41,7 +41,7 @@ export type UseTokenPollingOptions = {
  * `site-hashrate`, `site-monitor`). A `/auth/token` route ships in
  * `@tetherto/mdk-plugin-auth`, but see
  * [the bundled auth plugin](https://github.com/tetherto/mdk/blob/main/backend/core/plugins/README.md#the-bundled-auth-plugin)
- * for why it throws rather than runs. Bring your own
+ * for why it throws rather than runs. Add your own
  * [Gateway plugin](https://docs.tether.io/mdk/guides/gateway/plugins) for
  * this route instead.
  *

@@ -1,9 +1,8 @@
 # `DashboardDateRangePicker`
 
 Dashboard wrapper around the core `DateRangePicker`. It speaks
-`{ start, end }` epoch-millisecond timestamps so it drops straight into
-`useDashboardDateRange` from `@tetherto/mdk-react-adapter` without any
-intermediate `Date <-> number` plumbing in the page.
+`{ start, end }` epoch-millisecond timestamps, so a page can pass the range
+straight to its history queries without any `Date <-> number` plumbing.
 
 <!-- BEGIN GENERATED: props — do not edit; npm run generate:usage-proptables (source: component JSDoc/types via registry.json) -->
 ## Props
@@ -27,15 +26,12 @@ intermediate `Date <-> number` plumbing in the page.
 ## Example
 
 ```tsx
-import { useDashboardDateRange } from "@tetherto/mdk-react-adapter"
+import { useState } from "react"
 import { DashboardDateRangePicker } from "@tetherto/mdk-react-devkit"
 
-const { start, end, setRange } = useDashboardDateRange()
+const [range, setRange] = useState({ start: Date.now() - DAY_MS, end: Date.now() })
 
-<DashboardDateRangePicker
-  value={{ start, end }}
-  onChange={({ start, end }) => setRange(start, end)}
-/>
+<DashboardDateRangePicker value={range} onChange={setRange} />
 ```
 
 ## Notes

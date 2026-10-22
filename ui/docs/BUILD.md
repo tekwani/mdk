@@ -87,7 +87,7 @@ Defines the task graph used by every workspace:
     "build:stores":                { "dependsOn": ["build:ts"],    "outputs": ["dist/stores.json"] },
     "build:hooks":                 { "dependsOn": ["build:ts"],    "outputs": ["dist/hooks.json"] },
     "build:registry":              { "dependsOn": ["build:ts", "^build:stores", "^build:hooks"],
-                                     "outputs": ["dist/registry.json", "dist/blueprints.json"] },
+                                     "outputs": ["dist/registry.json"] },
     "dev":                         { "cache": false, "persistent": true },
     "lint":                        { "dependsOn": ["^build"] },
     "typecheck":                   { "dependsOn": ["^build"] },
@@ -189,15 +189,15 @@ All root scripts proxy to Turborepo, which fans out across workspaces.
 | `npm run watch:ts`     | Watch only TypeScript across workspaces                 |
 | `npm run watch:scss`   | Watch only SCSS across workspaces                       |
 | `npm run preview:catalog` | Preview the catalog app's production build           |
-| `npm run lint`         | ESLint across workspaces                                |
-| `npm run lint:fix`     | ESLint with `--fix`                                     |
-| `npm run format`       | ESLint `--fix` (same config; we use ESLint stylistic)   |
+| `npm run lint`         | oxlint across workspaces                                |
+| `npm run lint:fix`     | oxlint with `--fix`                                     |
+| `npm run format`       | oxlint `--fix` (Prettier formats on commit)             |
 | `npm run typecheck`    | `tsc --noEmit` across workspaces                        |
 | `npm run test`         | Vitest once across workspaces                           |
 | `npm run test:watch`   | Vitest in watch mode                                    |
 | `npm run test:coverage`| Vitest with coverage (writes to `coverage/`)            |
 | `npm run check`        | `turbo check` (lint + format + typecheck)               |
-| `npm run fullcheck`    | `build` + `lint` + `typecheck` + `format` + `check:agent-ready` + coverage (see [`AGENT_FIRST.md`](./AGENT_FIRST.md#gate-1-checkagent-ready)) |
+| `npm run fullcheck`    | `build` + `lint` + `typecheck` + `format` + `check:agent-ready` + `check:api-surface` + coverage (see [`AGENT_FIRST.md`](./AGENT_FIRST.md#gate-1-checkagent-ready)) |
 | `npm run size`         | Bundle-size report via [`scripts/bundle-size.mjs`](../scripts/bundle-size.mjs)        |
 | `npm run size:consumer`| Tree-shake check — simulates a consumer bundle to catch accidental side-effect imports ([`scripts/treeshake-check.mjs`](../scripts/treeshake-check.mjs)) |
 | `npm run size:check`   | Full size audit: `build` + `size` + `size:consumer`     |

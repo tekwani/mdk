@@ -14,7 +14,7 @@ import { parse as parseYaml } from 'yaml';
  *                     packages link via relative `file:` deps so `npm install`
  *                     works inside the project directory)
  *   workers/<name>/   worker plugins   (mdk create worker)
- *   plugins/<name>/   gateway plugins  (mdk create plugin)
+ *   apps/<name>/      apps             (mdk create app)
  *   apps/dashboard/   the UI dashboard (mdk create dashboard)
  *   .mdk/             runtime state written by `mdk run` (gitignored)
  */
@@ -22,7 +22,6 @@ import { parse as parseYaml } from 'yaml';
 /** Component directories, relative to the project root. */
 export const DIRS = {
   workers: 'workers',
-  plugins: 'plugins',
   apps: 'apps',
   /** Canonical dashboard location — a stable path, unlike the app's package name. */
   dashboard: join('apps', 'dashboard'),
@@ -33,7 +32,7 @@ export const DIRS = {
  * pre-existing manifests that still declare them (`isWorkspaceMember`); new
  * projects never write a `workspaces` key — local scaffolds use `file:` deps.
  */
-export const WORKSPACES = [`${DIRS.workers}/*`, `${DIRS.plugins}/*`];
+export const WORKSPACES = [`${DIRS.workers}/*`, 'plugins/*'];
 
 export type FileAction = 'created' | 'updated' | 'present';
 
@@ -214,7 +213,13 @@ export function ensureProjectGitignore(targetDir: string): FileAction {
     return 'created';
   }
   const current = readFileSync(path, 'utf8');
-  if (current.includes(GITIGNORE_HEADER) || current.includes('.mdk/')) return 'present';
+  if (current.includes(GITIGNORE_HEADER) || current.includes('.mdk/')) {
+    // `.env` holds secret plugin-setup answers, so it must be ignored even when
+    // an older or hand-edited MDK block left it out.
+    if (/^\/?\.env\s*$/m.test(current)) return 'present';
+    appendFileSync(path, `${current.endsWith('\n') ? '' : '\n'}.env\n`, 'utf8');
+    return 'updated';
+  }
   appendFileSync(path, `${current.endsWith('\n') ? '' : '\n'}\n${GITIGNORE_BLOCK}`, 'utf8');
   return 'updated';
 }
@@ -233,8 +238,8 @@ function runSection({ workerNames }: ReadmeOptions): string {
     : ['mdk run worker <name>'];
   return [
     '```bash',
-    'npm install   # once, links workers/ and plugins/',
-    'mdk run       # boots Kernel + Gateway + workers together',
+    'npm install   # once, links workers/ and apps/',
+    'mdk run       # boots Kernel, workers, apps and Gateway together',
     '```',
     '',
     'Or run each component in its own terminal:',
@@ -274,22 +279,22 @@ export function ensureProjectReadme(targetDir: string, opts: ReadmeOptions): Fil
   const content = `# ${opts.stackName}
 
 An MDK stack — a Kernel, a Gateway and its Workers — described declaratively in
-\`mdk.yaml\`. Edit that file to change ports, gateway plugins, workers or the
+\`mdk.yaml\`. Edit that file to change ports, apps, workers or the
 devices each worker manages.
 
 ## Layout
 
 \`\`\`
-mdk.yaml           the stack spec: ports, gateway plugins, workers, devices
+mdk.yaml           the stack spec: ports, apps, workers, devices
 workers/<name>/    worker plugins — device contract, handlers and a mock device
-plugins/<name>/    gateway plugins — HTTP aggregation endpoints
+apps/<name>/       apps — HTTP aggregation endpoints served through the Gateway
 apps/dashboard/    the UI dashboard (Vite app)
 .mdk/              runtime state written by \`mdk run\` — disposable, gitignored
 \`\`\`
 
-Workers, plugins and bundled monorepo catalog packages are linked with relative
+Workers, apps and bundled monorepo catalog packages are linked with relative
 \`file:\` dependencies (no \`workspaces\` key). One \`npm install\` at the project
-root wires them up so the Gateway can resolve its plugins. Component directories
+root wires them up so \`mdk run\` can resolve them. Component directories
 appear as you add components.
 
 ## Run it
@@ -300,6 +305,7 @@ ${runSection(opts)}
 
 \`\`\`bash
 mdk create worker <name>      # scaffolds workers/<name> and registers it in mdk.yaml
+mdk create app <name>         # scaffolds apps/<name> and registers it in mdk.yaml
 mdk create dashboard          # scaffolds apps/dashboard
 \`\`\`
 

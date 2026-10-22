@@ -17,7 +17,7 @@ export const ExportButtonPage = (): JSX.Element => {
 
       <DemoBlock
         title="Default — CSV and JSON"
-        description="In a real page, wire this to useDashboardExport from @tetherto/mdk-react-adapter."
+        description="In a real page, the handler serialises the data the page is showing and downloads it."
       >
         <ExportButton
           onExport={(format) =>
@@ -26,6 +26,18 @@ export const ExportButtonPage = (): JSX.Element => {
               description: `onExport handler received "${format}".`,
             })
           }
+        />
+      </DemoBlock>
+
+      <DemoBlock
+        title="Async export"
+        description="Return a promise from onExport and the button shows a spinner, disabled, until it settles. A rejection clears the spinner; report the failure inside the handler."
+      >
+        <ExportButton
+          onExport={async (format) => {
+            await new Promise((resolve) => setTimeout(resolve, 1000))
+            showToast(`Exported as ${format.toUpperCase()}`, { variant: 'success' })
+          }}
         />
       </DemoBlock>
 

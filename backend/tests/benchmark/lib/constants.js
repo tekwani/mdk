@@ -14,7 +14,6 @@ const path = require('path')
 // models (`TYPES`) and auth default (`extraCliOptions.password.default`),
 // read here instead of duplicated in the benchmark config.
 const WORKER_PACKAGES = {
-  'mdk-worker-antminer': 'startAntminerWorker',
   'mdk-worker-avalon': 'startAvalonWorker'
 }
 
@@ -42,29 +41,6 @@ const WORKER_REGISTRY = Object.fromEntries(
 // policy to fire at all, and there's no sensible default that isn't itself
 // a deliberate choice, unlike the cadence/timeout knobs that rule protects.
 const ALERT_INDUCTION = {
-  // max_pcb_temp_warning/critical compare snap.stats.temperature_c.raw_temps[].pcb
-  // against the threshold, but that field is an array (board.temp_pcb) in
-  // antminer.js's own translation, not a scalar — array >= number is always
-  // false, so no threshold can ever trip those two. max_outlet_temp_warning
-  // reads .temp[].pcbOutlet instead, which really is a scalar — correct in
-  // principle, but currently unobservable end to end for an unrelated
-  // reason: the Worker's own periodic snap collection (SnapsService →
-  // deviceCall → runtime device-context lookup) reliably fails with
-  // ERR_DEVICE_UNAVAILABLE for this family specifically (confirmed
-  // reproducible over 3 consecutive 60s cycles), even though on-demand
-  // pullTelemetry(id, 'metrics') for the same device works fine — so no
-  // snap, and therefore no alert, is ever produced regardless of which
-  // alert or threshold is configured here. Avalon doesn't show
-  // this; it's specific to the antminer worker package's own device-context
-  // binding, not this harness or the alerts machinery, and out of scope to
-  // fix here. Expect rulesCount: 1 but devicesWithAlerts staying 0 for this
-  // family until that's fixed upstream.
-  'mdk-worker-antminer': {
-    devicePrefix: 'am',
-    alerts: {
-      max_outlet_temp_warning: { params: { temp: -1000 } }
-    }
-  },
   // chips_temp_critical reads snap.stats.temperature_c.chips[].avg, sourced
   // from data.estats.avg_chip_temperature in avalon.miner.js — the avalon
   // mock never populates `estats` at all, so `chips` comes back `[]` and
@@ -80,8 +56,8 @@ const ALERT_INDUCTION = {
   }
 }
 
-const DEFAULT_WORKER_TYPE = 'mdk-worker-antminer'
-const DEFAULT_MODEL = 's21'
+const DEFAULT_WORKER_TYPE = 'mdk-worker-avalon'
+const DEFAULT_MODEL = 'a1346'
 
 // This harness only ever runs mocks on loopback, differentiated by port —
 // every device shares the same host, so duplicate-IP checks must stay off.
@@ -149,7 +125,7 @@ const WORKER_LOG_CACHE_WARMUP_MS = WORKER_CONF_DEFAULTS.collectSnapsItvMs + WORK
 // applied and the value the report cites are always the same one.
 const MINER_DEVICE_TIMEOUT_MS = 10000
 
-// The one Gateway plugin every profile run loads — generic across any
+// The one app every profile run mounts — generic across any
 // device family (fans out mdkClient.listWorkers()/pullTelemetry, see its
 // controller), so it never needs to vary per config.workers entry.
 const GATEWAY_PLUGIN_DIR = path.join(__dirname, '..', 'plugin', 'fleet-summary')

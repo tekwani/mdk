@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
+import { examples } from '../lib/help.js';
 import { resolve } from 'node:path';
-import { stub } from '../lib/stub.js';
 import { installSkill, type SkillClient } from '../lib/skill.js';
 
 const SKILL_CLIENTS = new Set<SkillClient>(['cursor', 'claude', 'all']);
@@ -9,13 +9,16 @@ const SKILL_CLIENTS = new Set<SkillClient>(['cursor', 'claude', 'all']);
 export function registerSkill(program: Command): void {
   const skill = program
     .command('skill')
-    .description('Coding-agent skill management');
+    .usage('<command> [options]')
+    .summary('Install the MDK coding-agent skills')
+    .description('Manage the MDK Developer Skill suite for coding agents (Cursor, Claude).');
 
   skill
     .command('add')
-    .description('Install the MDK Developer Skill suite into the project')
+    .description('Install the MDK Developer Skill suite into the project, for Cursor, Claude or both.')
     .option('--client <client>', 'Target client: cursor | claude | all', 'all')
-    .option('--dir <path>', 'Target project directory', '.')
+    .option('--dir <path>', 'Project directory', '.')
+    .addHelpText('after', examples('mdk skill add', 'mdk skill add --client cursor'))
     .action((opts: { client: string; dir: string }) => {
       const client = opts.client as SkillClient;
       if (!SKILL_CLIENTS.has(client)) {
@@ -32,17 +35,7 @@ export function registerSkill(program: Command): void {
       }
       if (result.message) process.stdout.write(`${result.message}\n`);
       if (result.detail) process.stdout.write(`${result.detail}\n`);
+      if (result.warning) process.stderr.write(`warning: ${result.warning}\n`);
       process.stderr.write('MDK Developer Skill installed.\n');
     });
-}
-
-export function registerMcp(program: Command): void {
-  const mcp = program
-    .command('mcp')
-    .description('MCP registration for coding-agent clients (stub)');
-
-  mcp
-    .command('register')
-    .description('Register the MCP endpoint in the client config (stub)')
-    .action(() => stub('mcp register'));
 }

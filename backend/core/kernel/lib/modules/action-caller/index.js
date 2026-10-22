@@ -4,6 +4,7 @@ const async = require('async')
 const mingo = require('mingo')
 const { ACTIONS, MESSAGE_TYPES, COMMAND_SCOPES } = require('../../protocol/actions')
 const { build } = require('../../protocol/envelope')
+const { validateWriteCallsResponse } = require('../../protocol/schemas')
 const { WORKER_WRITE_ACTION_TYPES } = require('./constants')
 const { hasWritePermission } = require('../../permissions')
 const { isPlainObject } = require('@bitfinex/lib-js-util-base')
@@ -95,10 +96,18 @@ class ActionCaller {
 
         const response = await this._workerChannel.send(worker.channel, envelope)
         const res = this._unwrapPayload(response, ACTIONS.WRITE_CALLS_RESPONSE)
+        const check = validateWriteCallsResponse(res)
+        if (!check.valid) throw new Error(check.error)
 
-        if (res.calls && res.calls.length) {
-          targets[worker.workerId] = { reqVotes: res.reqVotes, calls: res.calls }
+        // A Worker answers for its own devices only: calls naming another
+        // Worker's devices (or, for a rack action, any id but the one asked
+        // about) are dropped, so an approved write cannot be redirected.
+        const calls = this._ownedCalls(worker.workerId, action, res.calls, rackActionId)
+        if (calls.length) {
+          targets[worker.workerId] = { reqVotes: res.reqVotes, calls }
           requiredPerms.add(baseType)
+        } else if (res.calls.length) {
+          targets[worker.workerId] = { reqVotes: 1, calls: [], error: 'ERR_WRITE_CALLS_NOT_OWNED' }
         }
       } catch (err) {
         debug(`getWriteCalls failed for ${worker.workerId}: ${err.message}`)
@@ -107,6 +116,32 @@ class ActionCaller {
     })
 
     return { targets, requiredPerms: Array.from(requiredPerms) }
+  }
+
+  /**
+   * Keep the calls `workerId` may answer for, copied to `{ id, tags }` so a
+   * Worker cannot pre-set result fields. Duplicate ids are dropped.
+   */
+  _ownedCalls (workerId, action, calls, rackActionId) {
+    const rackAction = this.rackActions.has(action)
+    const seen = new Set()
+    const owned = []
+    for (const call of calls) {
+      if (seen.has(call.id)) continue
+      const ok = rackAction ? call.id === rackActionId : this._ownsDevice(workerId, call.id)
+      if (!ok) {
+        debug(`dropping write call ${call.id} from ${workerId}: not owned`)
+        continue
+      }
+      seen.add(call.id)
+      owned.push({ id: call.id, tags: Array.isArray(call.tags) ? call.tags.filter(t => typeof t === 'string') : [] })
+    }
+    return owned
+  }
+
+  _ownsDevice (workerId, deviceId) {
+    const entry = this._registry.resolveWorkerForDevice(deviceId)
+    return !!entry && entry.workerId === workerId
   }
 
   _validateRackAction (action, params) {
@@ -173,12 +208,17 @@ class ActionCaller {
    * @param {Object<string, { calls: Array<{id: string, tags: string[]}>, error?: string }>} targets
    */
   async callTargets (action, params, targets) {
+    if (!isPlainObject(targets)) throw new Error('ERR_TARGETS_INVALID')
+    const rackAction = this.rackActions.has(action)
     const calls = Object.entries(targets).map(
-      ([workerId, entry]) => entry.calls.map(call => ({ workerId, call }))
+      ([workerId, entry]) => (entry && Array.isArray(entry.calls) ? entry.calls : []).map(call => ({ workerId, call }))
     ).flat(1)
 
     await async.eachLimit(calls, this._callTargetsLimit, async ({ workerId, call }) => {
       try {
+        // Re-checked at execution: the device may have moved to another
+        // Worker since the action was staged.
+        if (!rackAction && !this._ownsDevice(workerId, call.id)) throw new Error('ERR_DEVICE_NOT_OWNED')
         const commandId = await this._callTarget(workerId, call.id, action, params)
         call.commandId = commandId
       } catch (err) {

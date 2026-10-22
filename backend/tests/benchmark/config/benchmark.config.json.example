@@ -18,23 +18,13 @@
 
   "workers": [
     {
-      "type": "mdk-worker-antminer",
-      "model": "s21",
+      "type": "mdk-worker-avalon",
+      "model": "a1346",
       "simulateMocks": true,
       "ceiling": { 
         "startDeviceCount": 10, 
         "stepDeviceCount": 10, 
         "maxDeviceCount": 10 
-      }
-    },
-    {
-      "type": "mdk-worker-antminer",
-      "model": "s19xp",
-      "simulateMocks": true,
-      "ceiling": { 
-        "startDeviceCount": 5, 
-        "stepDeviceCount": 5, 
-        "maxDeviceCount": 5 
       }
     }
   ]

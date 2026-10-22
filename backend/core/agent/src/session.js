@@ -44,11 +44,18 @@ export class Session {
    * would otherwise never reach the store. The turn generators settle history in a `finally` of
    * their own for the same reason, so what gets written is never a question with no answer.
    */
-  async * send (text) {
+  async * send (text, { signal } = {}) {
     this.messages.push({ role: 'user', content: text })
+    // The model call in flight stops when `signal` aborts or the consumer stops reading, not
+    // only the iteration: a turn still deciding what to say yields nothing to stop at.
+    const turn = new AbortController()
+    const stop = () => turn.abort()
+    signal?.addEventListener('abort', stop, { once: true })
     try {
-      yield * (this.tools.length && this.mcp ? this.toolTurn() : this.chatTurn())
+      yield * (this.tools.length && this.mcp ? this.toolTurn(turn.signal) : this.chatTurn(turn.signal))
     } finally {
+      signal?.removeEventListener('abort', stop)
+      turn.abort()
       await this.persist()
     }
   }
@@ -77,8 +84,9 @@ export class Session {
     }
   }
 
-  async * toolTurn () {
+  async * toolTurn (abortSignal) {
     const loop = runToolLoop({
+      abortSignal,
       model: this.provider.model(),
       system: this.system,
       messages: this.messages,
@@ -120,9 +128,9 @@ export class Session {
     }
   }
 
-  async * chatTurn () {
+  async * chatTurn (abortSignal) {
     const timeoutMs = this.limits.requestTimeoutMs ?? REQUEST_TIMEOUT_MS
-    const signal = deadline(timeoutMs)
+    const signal = deadline(timeoutMs, abortSignal)
     const result = streamText({
       model: this.provider.model(),
       system: this.system,
@@ -151,11 +159,13 @@ export class Session {
         }
       } catch (err) {
         errored = true
+        if (abortSignal?.aborted) return // the caller stopped the turn: nobody is waiting for an error
         yield { type: EVENT.ERROR, error: describeCallError(err, timeoutMs) }
         return
       }
       if (signal?.aborted) {
         errored = true
+        if (abortSignal?.aborted) return
         yield { type: EVENT.ERROR, error: describeCallError(signal.reason, timeoutMs) }
         return
       }

@@ -48,7 +48,7 @@ export type SignInGoogleButtonProps = Omit<ButtonProps, 'onClick' | 'children'> 
 
 /**
  * One-click Google OAuth sign-in trigger. Defaults to a full-page redirect
- * to `${oauthBaseUrl}/oauth/google`, mirroring the reference app's production flow.
+ * to `${oauthBaseUrl}/oauth/google`, the Gateway's Google sign-in route.
  *
  * @category auth
  * @kernelCapability authentication

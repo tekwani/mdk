@@ -43,6 +43,13 @@ test('pullState - STATE_PULL targeted at the device', async (t) => {
   t.alike(env.payload, {})
 })
 
+test('getCommandStatus - COMMAND_STATUS carries the commandId, not a device', async (t) => {
+  const env = await sent(t, (c) => c.getCommandStatus('cmd-1'))
+  t.is(env.action, ACTIONS.COMMAND_STATUS)
+  t.is(env.deviceId, null)
+  t.alike(env.payload, { commandId: 'cmd-1' })
+})
+
 test('terminateWorker - WORKER_TERMINATE carries workerId in payload', async (t) => {
   const env = await sent(t, (c) => c.terminateWorker('w1'))
   t.is(env.action, ACTIONS.WORKER_TERMINATE)

@@ -2,7 +2,7 @@
 
 const { templates } = require('../../../../../core/mdk')
 const { isTransformerPM } = require('./utils')
-const { groupBy } = require('../../../../../core/lib-stats/utils')
+const { groupBy } = require('../../../../../core/mdk').libStats
 
 const { conf, specs: baseSpecs } = templates.stats
 

@@ -400,7 +400,7 @@ test('loadPlugin - carries annotations and agent metadata through verbatim', (t)
   t.pass()
 })
 
-test('loadPlugin - leaves annotations and agent undefined when not declared', (t) => {
+test('loadPlugin - leaves agent undefined and defaults annotations to a write when not declared', (t) => {
   const dir = path.join(FIXTURES_DIR, 'no-agent-meta')
   writeFixture(dir, {
     'mcp-plugin.json': {
@@ -413,7 +413,7 @@ test('loadPlugin - leaves annotations and agent undefined when not declared', (t
 
   const plugin = loadPlugin(dir)
   t.is(plugin.tools[0].agent, undefined, 'should not invent an agent block')
-  t.is(plugin.tools[0].annotations, undefined, 'should not invent annotations')
+  t.alike(plugin.tools[0].annotations, { readOnlyHint: false }, 'an undeclared tool should fail safe to readOnlyHint: false')
   t.pass()
 })
 

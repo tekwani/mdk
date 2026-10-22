@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanupTmpDirs, makeTmpDir } from '../helpers.js';
@@ -45,7 +45,10 @@ vi.mock('../../src/lib/spec.js', async (importOriginal) => {
 });
 
 const { collectStatus } = await import('../../src/lib/status.js');
-const { kernelKeyFile } = await import('../../src/lib/runtime.js');
+const { kernelKeyFile, trustedKeysDir } = await import('../../src/lib/runtime.js');
+const { appChildFile, runLockFile } = await import('../../src/lib/run-lock.js');
+// The unpatched loader, for the one test that checks the real client.
+const realRequire = (await vi.importActual<typeof import('node:module')>('node:module')).createRequire(import.meta.url);
 
 afterEach(() => {
   cleanupTmpDirs();
@@ -92,8 +95,9 @@ describe('collectStatus', () => {
         'spec:',
         '  gateway:',
         '    port: 3847',
-        '    plugins:',
-        '      - package: not-installed-anywhere',
+        '  apps:',
+        '    - name: x',
+        '      package: not-installed-anywhere',
         '  workers:',
         '    - name: a',
         '      package: ./workers/missing',
@@ -131,6 +135,30 @@ describe('collectStatus', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('fetch failed')));
     const report = await collectStatus(dir);
     expect(report.environment.dependencies.missing).toEqual([]);
+  });
+
+  it('resolves a package subpath the way `mdk run` does, though the subdirectory has no package.json', async () => {
+    const dir = makeTmpDir();
+    mkdirSync(join(dir, 'node_modules', '@your-org', 'apps', 'ops'), { recursive: true });
+    writeFileSync(join(dir, 'node_modules', '@your-org', 'apps', 'package.json'), '{"name":"@your-org/apps","version":"1.0.0"}');
+    writeSpec(
+      dir,
+      [
+        'kind: Stack',
+        'apiVersion: mdk/v1',
+        'spec:',
+        '  gateway:',
+        '    port: 3847',
+        '  apps:',
+        '    - name: ops',
+        '      package: "@your-org/apps/ops"',
+        '    - name: gone',
+        '      package: "@your-org/apps/gone"',
+      ].join('\n'),
+    );
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('fetch failed')));
+    const report = await collectStatus(dir);
+    expect(report.environment.dependencies.missing).toEqual(['@your-org/apps/gone']);
   });
 
   it('probes the gateway as up on a 2xx response, and down (no error) on ECONNREFUSED', async () => {
@@ -211,6 +239,10 @@ describe('collectStatus', () => {
     });
 
     const report = await collectStatus(dir);
+    const [config] = createMdkClientMock.mock.calls[0] as unknown as [{ kernelKey: string; kernelKeyPair: { publicKey: Buffer } }];
+    expect(config.kernelKey).toBe('deadbeef');
+    // The Kernel is fail-closed: the probe dials with a CLI key it publishes for the Kernel to admit.
+    expect(readFileSync(join(trustedKeysDir(dir), 'cli.pub'), 'utf8')).toBe(config.kernelKeyPair.publicKey.toString('hex'));
     expect(report.stack.kernel.state).toBe('up');
     expect(report.stack.workers.declared).toBe(2);
     expect(report.stack.workers.registered).toBe(2);
@@ -316,6 +348,64 @@ describe('collectStatus', () => {
     expect(report.ok).toBe(true);
   });
 
+  it('reports each declared app as running while a live process holds its run lock, else degraded', async () => {
+    const dir = makeTmpDir();
+    writeSpec(
+      dir,
+      [
+        'kind: Stack',
+        'apiVersion: mdk/v1',
+        'spec:',
+        '  gateway:',
+        '    port: 3847',
+        '  apps:',
+        '    - name: ops',
+        '      package: ./apps/ops',
+        '    - name: fleet',
+        '      package: ./apps/fleet',
+      ].join('\n'),
+    );
+    mkdirSync(join(dir, 'apps', 'ops'), { recursive: true });
+    writeFileSync(join(dir, 'apps', 'ops', 'package.json'), JSON.stringify({ name: 'ops', version: '1.4.0' }));
+    mkdirSync(join(dir, 'apps', 'fleet'), { recursive: true });
+    mkdirSync(join(dir, '.mdk'), { recursive: true });
+    writeFileSync(kernelKeyFile(dir), 'deadbeef', 'utf8');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+    mockClient.connect.mockResolvedValue(undefined);
+    mockClient.getStatus.mockResolvedValue({ workers: [], totalDevices: 0 });
+
+    const lockFile = runLockFile(dir, { kind: 'app', name: 'ops' });
+    mkdirSync(join(lockFile, '..'), { recursive: true });
+    writeFileSync(lockFile, String(process.ppid));
+
+    let report = await collectStatus(dir);
+    expect(report.stack.gateway.state, 'a 404 from / still means the Gateway is serving').toBe('up');
+    expect(report.stack.apps).toEqual({
+      declared: 2,
+      running: 1,
+      items: [
+        { name: 'ops', package: './apps/ops', version: '1.4.0', mount: '/apps/ops', running: true, pid: process.ppid },
+        { name: 'fleet', package: './apps/fleet', version: null, mount: '/apps/fleet', running: false, pid: null },
+      ],
+    });
+    expect(report.health).toBe('degraded');
+
+    writeFileSync(runLockFile(dir, { kind: 'app', name: 'fleet' }), String(process.ppid));
+    report = await collectStatus(dir);
+    expect(report.stack.apps.running).toBe(2);
+    expect(report.health).toBe('healthy');
+
+    // Under `mdk run` the lock names the supervisor; the child file names the runtime.
+    writeFileSync(appChildFile(dir, 'ops'), String(process.pid));
+    report = await collectStatus(dir);
+    expect(report.stack.apps.items[0], 'the runtime pid, not the supervisor').toMatchObject({ running: true, pid: process.pid });
+
+    writeFileSync(appChildFile(dir, 'ops'), '999999999');
+    report = await collectStatus(dir);
+    expect(report.stack.apps.items[0], 'a crashed runtime waiting to restart is not running').toMatchObject({ running: false, pid: null });
+    expect(report.health).toBe('degraded');
+  });
+
   it('treats a DEAD/SICK or non-READY worker as not serving (degraded)', async () => {
     const dir = makeTmpDir();
     writeSpec(
@@ -342,5 +432,44 @@ describe('collectStatus', () => {
 
     const report = await collectStatus(dir);
     expect(report.health).toBe('degraded');
+  });
+
+  it.each(['STARTING', 'STOPPED'])('treats a worker the Kernel has in state %s as not serving', async (state) => {
+    const dir = makeTmpDir();
+    writeSpec(dir, 'kind: Stack\napiVersion: mdk/v1\nspec:\n  gateway:\n    port: 3847\n  workers:\n    - name: a\n      package: ./workers/a\n');
+    mkdirSync(join(dir, '.mdk'), { recursive: true });
+    writeFileSync(kernelKeyFile(dir), 'deadbeef', 'utf8');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    mockClient.connect.mockResolvedValue(undefined);
+    mockClient.getStatus.mockResolvedValue({
+      workers: [{ workerId: 'a', state, healthState: 'OK', deviceCount: 1 }],
+      totalDevices: 1,
+    });
+    expect((await collectStatus(dir)).health).toBe('degraded');
+  });
+
+  it('hands the real @tetherto/mdk-client a config it accepts (the Kernel key is not dropped)', async () => {
+    const dir = makeTmpDir();
+    writeSpec(dir, 'kind: Stack\napiVersion: mdk/v1\nspec:\n  gateway:\n    port: 3847\n');
+    mkdirSync(join(dir, '.mdk'), { recursive: true });
+    writeFileSync(kernelKeyFile(dir), 'ab'.repeat(32), 'utf8');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('fetch failed')));
+    mockClient.connect.mockResolvedValue(undefined);
+    mockClient.getStatus.mockResolvedValue({ workers: [], totalDevices: 0 });
+    await collectStatus(dir);
+    const [config] = createMdkClientMock.mock.calls[0] as unknown as [Record<string, unknown>];
+
+    // The real client fails straight away with the bare code only when it found no key
+    // in its config; with one it starts connecting (and fails later, with a reason, offline).
+    const { createMdkClient } = realRequire('@tetherto/mdk-client') as {
+      createMdkClient(config: unknown): { connect(): Promise<void>; close(): Promise<void> };
+    };
+    const client = createMdkClient(config);
+    const outcome = await Promise.race([
+      client.connect().then(() => 'connected', (err: Error) => err.message),
+      new Promise<string>((resolve) => setTimeout(() => resolve('pending'), 200)),
+    ]);
+    await client.close().catch(() => {});
+    expect(outcome).not.toBe('ERR_MDK_CLIENT_UNAVAILABLE');
   });
 });

@@ -124,3 +124,10 @@ test('auto client - explicit connect() warms up, close() allows reconnect', asyn
   await mdkClient.listWorkers()
   t.is(transport.attempts, 2, 'call after close reconnects')
 })
+
+test('auto client - inherited Object.prototype members are not dispatched as methods', async (t) => {
+  const mdkClient = createMdkClient({}, { transport: flakyTransport(0) })
+  for (const prop of ['constructor', 'toString', 'hasOwnProperty', '__proto__', 'valueOf']) {
+    await t.exception(() => mdkClient[prop](), /ERR_MDK_CLIENT_NO_SUCH_METHOD/, prop)
+  }
+})

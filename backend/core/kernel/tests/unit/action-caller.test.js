@@ -105,7 +105,7 @@ test('action caller - getWriteCalls skips workers without a channel', async (t) 
 
 test('action caller - getWriteCalls contacts ready workers with write permission', async (t) => {
   const { caller, sent } = createCaller({
-    workers: [{ workerId: 'miner-worker', deviceFamily: 'miner', channel: { id: 'ch-1' } }]
+    workers: [{ workerId: 'miner-worker', deviceFamily: 'miner', channel: { id: 'ch-1' }, deviceIds: ['dev-1'] }]
   })
 
   const result = await caller.getWriteCalls(
@@ -123,7 +123,7 @@ test('action caller - getWriteCalls contacts ready workers with write permission
 test('action caller - getWriteCalls resolves write calls from ready workers', async (t) => {
   const channel = { id: 'ch-1' }
   const { caller, sent } = createCaller({
-    workers: [{ workerId: 'miner-worker', deviceFamily: 'miner', channel }]
+    workers: [{ workerId: 'miner-worker', deviceFamily: 'miner', channel, deviceIds: ['dev-1'] }]
   })
 
   const result = await caller.getWriteCalls(
@@ -272,4 +272,93 @@ test('action caller - formats rack action command params with action metadata', 
     user: 'user@example.com'
   })
   t.is(targets['rack-1'].calls[0].commandId, 'cmd-1')
+})
+
+test('action caller - getWriteCalls keeps only calls for devices the responding worker owns', async (t) => {
+  const { caller } = createCaller({
+    workers: [
+      { workerId: 'evil', deviceFamily: 'miner', channel: { id: 'ch-evil' }, deviceIds: ['evil-1'] },
+      { workerId: 'victim', deviceFamily: 'container', channel: null, deviceIds: ['victim-1'] }
+    ],
+    response: {
+      payload: {
+        reqVotes: 1,
+        calls: [
+          { id: 'evil-1', tags: ['t'], commandId: 'forged' },
+          { id: 'evil-1', tags: [] },
+          { id: 'victim-1', tags: [] },
+          { id: 'unknown', tags: [] }
+        ]
+      }
+    }
+  })
+
+  const { targets } = await caller.getWriteCalls({}, 'reboot', [], ['miner:w'])
+  t.alike(targets.evil.calls, [{ id: 'evil-1', tags: ['t'] }], 'foreign, unknown and duplicate ids dropped; extra fields stripped')
+
+  const onlyForeign = createCaller({
+    workers: [
+      { workerId: 'evil', deviceFamily: 'miner', channel: { id: 'ch-evil' }, deviceIds: [] },
+      { workerId: 'victim', deviceFamily: 'container', deviceIds: ['victim-1'] }
+    ],
+    response: { payload: { reqVotes: 1, calls: [{ id: 'victim-1', tags: [] }] } }
+  })
+  const res = await onlyForeign.caller.getWriteCalls({}, 'reboot', [], ['miner:w'])
+  t.alike(res.targets.evil.calls, [])
+  t.is(res.targets.evil.error, 'ERR_WRITE_CALLS_NOT_OWNED')
+  t.alike(res.requiredPerms, [])
+})
+
+test('action caller - getWriteCalls keeps only the requested rack id for rack actions', async (t) => {
+  const { caller } = createCaller({
+    workers: [{ workerId: 'rack-1', deviceFamily: 'thing', channel: { id: 'ch-1' } }],
+    response: { payload: { reqVotes: 1, calls: [{ id: 'other-thing', tags: [] }, { id: 'thing-1', tags: [] }] } }
+  })
+
+  const { targets } = await caller.getWriteCalls({}, WORKER_WRITE_ACTION_TYPES.UPDATE_THING, [{ workerId: 'rack-1', id: 'thing-1' }], ['thing:w'])
+  t.alike(targets['rack-1'].calls, [{ id: 'thing-1', tags: [] }])
+})
+
+test('action caller - getWriteCalls rejects malformed write.calls responses', async (t) => {
+  const bad = [
+    { reqVotes: 0, calls: [{ id: 'dev-1' }] },
+    { reqVotes: 1.5, calls: [{ id: 'dev-1' }] },
+    { reqVotes: 1e9, calls: [{ id: 'dev-1' }] },
+    { reqVotes: '2', calls: [{ id: 'dev-1' }] },
+    { reqVotes: 1, calls: 'dev-1' },
+    { reqVotes: 1, calls: [{ id: 42 }] },
+    { reqVotes: 1, calls: [null] },
+    { reqVotes: 1, calls: [{ id: 'dev-1', tags: 'x' }] },
+    { reqVotes: 1, calls: new Array(10001).fill({ id: 'dev-1' }) }
+  ]
+  for (const payload of bad) {
+    const { caller } = createCaller({
+      workers: [{ workerId: 'w', deviceFamily: 'miner', channel: { id: 'ch' }, deviceIds: ['dev-1'] }],
+      response: { payload }
+    })
+    const { targets, requiredPerms } = await caller.getWriteCalls({}, 'reboot', [], ['miner:w'])
+    t.alike(targets.w.calls, [], `rejected: ${JSON.stringify(payload).slice(0, 60)}`)
+    t.ok(/^ERR_PAYLOAD_/.test(targets.w.error))
+    t.is(targets.w.reqVotes, 1)
+    t.alike(requiredPerms, [])
+  }
+})
+
+test('action caller - callTargets re-checks device ownership before dispatch', async (t) => {
+  const { caller, dispatched } = createCaller({
+    workers: [
+      { workerId: 'w1', deviceFamily: 'miner', channel: { id: 'ch-1' }, deviceIds: ['dev-1'] },
+      { workerId: 'w2', deviceFamily: 'miner', channel: { id: 'ch-2' }, deviceIds: ['dev-2'] }
+    ]
+  })
+
+  const targets = { w1: { calls: [{ id: 'dev-1', tags: [] }, { id: 'dev-2', tags: [] }] } }
+  await caller.callTargets('reboot', [], targets)
+
+  t.is(dispatched.length, 1)
+  t.is(dispatched[0].deviceId, 'dev-1')
+  t.is(targets.w1.calls[1].error, 'ERR_DEVICE_NOT_OWNED')
+  t.absent(targets.w1.calls[1].commandId)
+
+  await t.exception(() => caller.callTargets('reboot', [], null), /ERR_TARGETS_INVALID/)
 })

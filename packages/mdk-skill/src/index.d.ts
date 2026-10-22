@@ -7,9 +7,18 @@ export interface InstalledEntry {
   removed: string[];
 }
 
+export interface SkippedEntry {
+  client: string;
+  skill: string;
+  dir: string;
+  reason: string;
+}
+
 export interface InstallResult {
   skills: string[];
   installed: InstalledEntry[];
+  /** Existing skill dirs left untouched: symlinks, or not marked `metadata.suite: mdk-developer-skill`. */
+  skipped: SkippedEntry[];
 }
 
 export interface InstallOptions {
@@ -19,6 +28,8 @@ export interface InstallOptions {
   target?: string;
   /** Assemble the suite first if `dist/skills/` is empty. Defaults to `true`. */
   assembleIfMissing?: boolean;
+  /** Called once per skipped skill dir. Defaults to `console.warn`. */
+  onWarn?: (message: string) => void;
 }
 
 export interface AssembleResult {
@@ -39,6 +50,8 @@ export declare function assemble(): AssembleResult;
 
 /**
  * Install the assembled skills into a project's client skills directories.
- * Stale MDK-shipped skills are swept; user-authored skills are left untouched.
+ * Throws if a client dir segment under the target is a symlink; skips (and
+ * warns about) existing same-named skill dirs that are not suite skills. Stale
+ * MDK-shipped skills are swept; user-authored skills are left untouched.
  */
 export declare function installSkills(options?: InstallOptions): InstallResult;

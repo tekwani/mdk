@@ -1,25 +1,34 @@
-import type { Command } from 'commander';
+import { Option, type Command } from 'commander';
+import { resolve } from 'node:path';
+import { examples } from '../lib/help.js';
 import { StackSpecError, loadStackSpec } from '../lib/spec.js';
 import type { StackSpec } from '../lib/spec.js';
 import {
   assertGatewayPortFree,
   declaredMockPorts,
+  runApp,
   runGateway,
   runKernel,
   runMcp,
   runWorker,
+  superviseApp,
   type GatewayHandle,
 } from '../lib/runtime.js';
 import { findDashboardDir, runDashboard } from '../lib/dashboard.js';
+import { describeDashboardApps } from '../lib/dashboard-apps.js';
 import { installShutdown, type Stoppable } from '../lib/shutdown.js';
+import { acquireRunLocks, type RunComponent } from '../lib/run-lock.js';
 import { theme } from '../lib/theme.js';
 
-type RunTarget = 'all' | 'kernel' | 'gateway' | 'mcp' | 'worker' | 'dashboard';
-const TARGETS: RunTarget[] = ['all', 'kernel', 'gateway', 'mcp', 'worker', 'dashboard'];
+type RunTarget = 'all' | 'kernel' | 'gateway' | 'mcp' | 'worker' | 'app' | 'dashboard';
+const TARGETS: RunTarget[] = ['all', 'kernel', 'gateway', 'mcp', 'worker', 'app', 'dashboard'];
+/** Targets that take a `[name]`; the rest refuse one rather than ignore it. */
+const NAMED_TARGETS: RunTarget[] = ['worker', 'app'];
 
 interface RunOptions {
   dir: string;
   detach?: boolean;
+  allowWrite?: boolean;
 }
 
 function die(message: string): never {
@@ -41,7 +50,8 @@ function loadSpecOrDie(dir: string): StackSpec {
  * Boots Kernel + Workers + Gateway together in this process (target `all`).
  * Workers boot before the gateway so they register with the in-process Kernel
  * before the gateway resolves its client; the gateway boots last since it
- * `chdir`s into its own state root.
+ * `chdir`s into its own state root. Each app runs as a supervised child
+ * process, started before the gateway.
  */
 async function runAll(dir: string, spec: StackSpec): Promise<Stoppable[]> {
   // Checked up front: the gateway boots last, and booting a Kernel and every
@@ -61,13 +71,20 @@ async function runAll(dir: string, spec: StackSpec): Promise<Stoppable[]> {
     workers.push({ label: `worker ${w.name}`, stop: () => handle.stop() });
   }
 
+  const apps: Stoppable[] = [];
+  for (const a of spec.spec.apps) {
+    const handle = await superviseApp(dir, a, kernel);
+    apps.push({ label: `app ${a.name}`, stop: () => handle.stop() });
+  }
+
   const gateway = await runGateway(dir, spec, kernel);
   process.stderr.write(`\n${theme.ok('Stack running.')} ${theme.muted('Press Ctrl+C to stop.')}\n`);
 
-  // Reverse boot order: stop serving requests, then the workers behind them,
-  // then the Kernel they were registered with.
+  // Reverse boot order: stop serving requests, then the apps and workers behind
+  // them, then the Kernel they were registered with.
   return [
     { label: 'gateway', stop: () => stopGateway(gateway) },
+    ...apps,
     ...workers,
     { label: 'kernel', stop: () => kernel.stop() },
   ];
@@ -84,13 +101,41 @@ function stopGateway(gateway: GatewayHandle): Promise<void> {
   });
 }
 
+/**
+ * The components a target runs in this process. The Gateway and the MCP server
+ * are not listed: their port check already refuses a second copy.
+ */
+function lockedComponents(target: RunTarget, name: string | undefined, spec: StackSpec): RunComponent[] {
+  switch (target) {
+    case 'all':
+      return [
+        { kind: 'kernel' },
+        ...spec.spec.workers.map((w): RunComponent => ({ kind: 'worker', name: w.name })),
+        ...spec.spec.apps.map((a): RunComponent => ({ kind: 'app', name: a.name })),
+      ];
+    case 'kernel':
+      return [{ kind: 'kernel' }];
+    case 'worker':
+    case 'app': {
+      // Only a declared name: an unknown one is refused below, before it can
+      // name a lock file.
+      const declared = target === 'worker' ? spec.spec.workers : spec.spec.apps;
+      return declared.some((c) => c.name === name) ? [{ kind: target, name }] : [];
+    }
+    default:
+      return [];
+  }
+}
+
 async function runTarget(
   target: RunTarget,
   name: string | undefined,
   dir: string,
   spec: StackSpec,
+  opts: { allowWrite?: boolean } = {},
 ): Promise<Stoppable[]> {
   try {
+    acquireRunLocks(dir, lockedComponents(target, name, spec));
     switch (target) {
       case 'all':
         return await runAll(dir, spec);
@@ -108,7 +153,7 @@ async function runTarget(
       }
 
       case 'mcp': {
-        const mcp = await runMcp(dir, spec);
+        const mcp = await runMcp(dir, spec, undefined, { allowWrite: opts.allowWrite });
         process.stderr.write(`\n${theme.ok('MCP server running.')} ${theme.muted('Press Ctrl+C to stop.')}\n`);
         return [{ label: 'mcp', stop: () => mcp.stop() }];
       }
@@ -125,14 +170,32 @@ async function runTarget(
         return [{ label: `worker ${worker.name}`, stop: () => handle.stop() }];
       }
 
+      case 'app': {
+        if (!name) die('`mdk run app` requires an app <name> (see spec.apps in mdk.yaml).');
+        const app = spec.spec.apps.find((a) => a.name === name);
+        if (!app) {
+          const known = spec.spec.apps.map((a) => a.name).join(', ') || '(none)';
+          die(`No app named "${name}" in mdk.yaml. Known apps: ${known}.`);
+        }
+        const handle = await runApp(dir, app);
+        process.stderr.write(`\n${theme.ok('App running.')} ${theme.muted('Press Ctrl+C to stop.')}\n`);
+        return [{ label: `app ${app.name}`, stop: () => handle.stop() }];
+      }
+
       case 'dashboard': {
         const dashboardDir = findDashboardDir(dir);
         if (!dashboardDir) {
           die(
-            `No dashboard app found under ${dir}. Scaffold one first: ${theme.cmd('mdk create dashboard')}`,
+            `No dashboard app found under ${resolve(dir)}. Scaffold one first: ${theme.cmd('mdk create dashboard')}`,
           );
         }
-        const handle = await runDashboard(dashboardDir);
+        // Installed apps are found here, from mdk.yaml, and handed to the
+        // dashboard: it serves their UIs itself, so no Gateway is involved.
+        const apps = describeDashboardApps(dir, spec.spec.apps ?? []);
+        if (apps.length) {
+          process.stderr.write(`${theme.muted('Apps:')} ${apps.map((a) => `${a.displayName} (${a.name})`).join(', ')}\n`);
+        }
+        const handle = await runDashboard(dashboardDir, apps);
         process.stderr.write(
           `\n${theme.ok('Dashboard running.')} ${theme.muted('Press Ctrl+C to stop.')}\n`,
         );
@@ -147,12 +210,21 @@ async function runTarget(
 // Group C — Run & manage
 export function registerRun(program: Command): void {
   program
-    .command('run [target] [name]')
+    .command('run')
+    .argument('[target]', `What to start: ${TARGETS.join(' | ')} (default: all)`)
+    .argument('[name]', 'The worker or app to start (worker and app targets only)')
+    .summary('Start the stack, or one component of it')
     .description(
-      'Start the stack from mdk.yaml. target: all | kernel | gateway | mcp | worker <name> | dashboard',
+      'Start the Kernel, workers, app runtimes and Gateway from mdk.yaml (target all), or one component. ' +
+        'mcp and dashboard are never part of all; start them on their own. Runs in the foreground; Ctrl+C stops it.',
     )
     .option('-d, --dir <path>', 'Project directory containing mdk.yaml', '.')
-    .option('--detach', 'Run in the background (not implemented yet)', false)
+    .addOption(new Option('--detach', 'Run in the background (not implemented yet)').default(false).hideHelp())
+    .option('--allow-write', 'mcp: expose write tools (hidden by default; or set spec.mcp.allowWrite)', false)
+    .addHelpText(
+      'after',
+      examples('mdk run', 'mdk run kernel', 'mdk run worker rig', 'mdk run app ops-center', 'mdk run gateway --dir ./my-stack'),
+    )
     .action(async (target: string | undefined, name: string | undefined, opts: RunOptions) => {
       if (opts.detach) {
         die('`--detach` is not implemented yet. Run in the foreground (omit --detach).');
@@ -162,14 +234,17 @@ export function registerRun(program: Command): void {
         die(`Unknown target "${target}". Use one of: ${TARGETS.join(' | ')}.`);
       }
 
+      const resolvedTarget = (target as RunTarget | undefined) ?? 'all';
+      if (name !== undefined && !NAMED_TARGETS.includes(resolvedTarget)) {
+        die(`\`mdk run ${resolvedTarget}\` takes no name (got "${name}"); only worker and app do.`);
+      }
+
       const spec = loadSpecOrDie(opts.dir);
 
       // No explicit target: boot everything together. Components can always be
       // run separately instead — `mdk run kernel` / `gateway` / `worker <name>`
       // — that choice is just which command(s) you type, not a spec setting.
-      const resolved = (target as RunTarget | undefined) ?? 'all';
-
-      const running = await runTarget(resolved, name, opts.dir, spec);
+      const running = await runTarget(resolvedTarget, name, opts.dir, spec, { allowWrite: opts.allowWrite });
 
       // Registered only once everything is up: a boot that fails exits on its
       // own, and until then the default signal behavior is the right one.

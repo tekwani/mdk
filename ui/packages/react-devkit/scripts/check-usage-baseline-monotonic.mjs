@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Baseline monotonicity gate for `usage-proptable-baseline.json`.
  *

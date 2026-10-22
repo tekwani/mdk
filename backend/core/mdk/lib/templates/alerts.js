@@ -53,7 +53,7 @@ function isConfigWorkerNameInPoolUsername (minerPools, confPools) {
 }
 
 function areMinerPoolsUrlsCorrectlySetup (minerPools, confPools) {
-  return minerPools?.length && confPools?.length
+  return confPools.every((pool, i) => minerPools[i]?.url === pool.url)
 }
 
 const DEFAULT = {}

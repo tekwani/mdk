@@ -28,13 +28,65 @@ Deployment-specific requirements:
 <details>
 <summary>Run against a mock</summary>
 
-To support development, this repo ships a runnable example that boots a mock A1346, starts a Kernel and Gateway, and starts the Worker (`startAvalonWorker`) against it:
+The Avalon Worker ships a mock A1346 that answers the CGMiner API with canned data. Run the mock in one terminal and the
+Worker in a second, both from the repository root.
 
-```bash
-node examples/backend/miners/avalon/index.js
+1. Start the mock on the CGMiner port:
+
+   ```bash
+   npm run mock a1346 4028
+   ```
+
+2. Save this script as `avalon-dev.js` in the repository root. It is the boot call from Connect a miner, pointed at
+   `127.0.0.1`:
+
+   ```js
+   'use strict'
+
+   const os = require('os')
+   const path = require('path')
+   const { getKernel } = require('@tetherto/mdk-core')
+   const { startAvalonWorker } = require('@tetherto/mdk-worker-avalon')
+
+   const main = async () => {
+     const kernel = await getKernel()
+
+     const worker = await startAvalonWorker({
+       workerId: 'avalon-dev',
+       model: 'a1346',
+       storeDir: path.join(os.tmpdir(), 'mdk-dev', 'avalon'),
+       allowedKeys: [kernel.getClientPublicKey()],
+       seedDevices: [{
+         info: { container: 'dev', serialNum: 'AV-DEV-001' },
+         opts: { address: '127.0.0.1', port: 4028, password: 'admin' }
+       }]
+     })
+     await kernel.registerWorker(worker.runtime.getPublicKey())
+
+     console.log('Kernel HRPC key:', kernel.getPublicKey().toString('hex'))
+     console.log('Device:', worker.services.provisioning.listDeviceIds()[0])
+     console.log('Ctrl+C to stop.')
+   }
+
+   main().catch((err) => { console.error(err); process.exit(1) })
+   ```
+
+3. Run the script in a second terminal:
+
+   ```bash
+   node avalon-dev.js
+   ```
+
+Expected output, with your own key and device ID:
+
+```text
+Kernel HRPC key: e9c1f37dc46f5a6a08fcd6d75a697477491e82b9282d9f2d72bee2ab584d0c70
+Device: 17aad636-6ebb-4cb0-8865-c7a200625dfe
+Ctrl+C to stop.
 ```
 
-It prints the Kernel HRPC key and the registered device ID, then stays running until Ctrl+C. For details on the boot options and mock, see [USAGE.md][avalon-usage].
+The Kernel then pulls live telemetry (hashrate, power, temperature) from the mock through the Worker. The mock's
+options are in [USAGE.md][avalon-usage].
 
 </details>
 
@@ -65,6 +117,7 @@ const worker = await startAvalonWorker({
   workerId: 'avalon-rack-1',
   model: 'a1346',
   storeDir: './store/avalon-rack-1',
+  allowedKeys: [kernel.getClientPublicKey()],
   seedDevices: [{
     info: { container: 'site-1', serialNum: 'AV-001' },
     opts: { address: '192.168.1.30', port: 4028, password: 'admin' }
@@ -72,6 +125,9 @@ const worker = await startAvalonWorker({
 })
 await kernel.registerWorker(worker.runtime.getPublicKey())
 ```
+
+`allowedKeys` lists the RPC callers the Worker accepts. The Worker refuses to start without it
+(`ERR_WORKER_ALLOWED_KEYS_REQUIRED`), so pass the Kernel's client key.
 
 > [!WARNING]
 > Make sure each miner's IP is reachable from the machine or container running the Worker before registering. Commands act on physical hardware — prioritize thermal safety.
@@ -108,9 +164,10 @@ For the full `seedDevices`/`registerThing` option reference and the mock `create
 
 ## Troubleshooting
 
-The development example on this page is [`examples/backend/miners/avalon/index.js`](../../../examples/backend/miners/avalon/index.js). A working run prints `Kernel HRPC key:` and `Device:`, then stays running until Ctrl+C.
+A working development run of `avalon-dev.js` prints `Kernel HRPC key:` and `Device:`, then stays running until Ctrl+C.
 
-If the example does not print both values, or if its mock port is already in use, follow [miner troubleshooting][miner-troubleshooting].
+If the script does not print both values, or if `npm run mock` reports port `4028` already in use, follow
+[miner troubleshooting][miner-troubleshooting].
 
 ## Next steps
 

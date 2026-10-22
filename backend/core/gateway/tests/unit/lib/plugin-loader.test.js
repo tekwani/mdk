@@ -4,8 +4,11 @@ const test = require('brittle')
 const path = require('path')
 const os = require('os')
 const fs = require('fs')
+const crypto = require('crypto')
 const { loadPlugin } = require('../../../workers/lib/plugin-loader')
-const { buildFastifyRoutes, errorResponse } = require('../../../workers/lib/plugin-adapter')
+const { EventEmitter } = require('events')
+const { Readable, Writable } = require('stream')
+const { buildFastifyRoutes, errorResponse, resolveAppTimeout } = require('../../../workers/lib/plugin-adapter')
 
 const FIXTURES_DIR = path.join(os.tmpdir(), 'mdk-plugin-loader-test-' + Date.now())
 
@@ -16,6 +19,15 @@ function writeFixture (dir, files) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true })
     fs.writeFileSync(filePath, typeof content === 'string' ? content : JSON.stringify(content, null, 2))
   }
+}
+
+// `[app, client]` for buildFastifyRoutes: the plugin as app "p" mounted at "/",
+// with a runtime client that answers from the plugin's own handlers.
+function asApp (plugin, dir) {
+  const keyFile = path.join(dir, 'runtime.key')
+  fs.writeFileSync(keyFile, 'ab'.repeat(32))
+  const handlers = new Map(plugin.routes.map(r => [r.id, r._handler]))
+  return [{ name: 'p', mount: '/', keyFile, routes: plugin.routes }, { invoke: async (key, routeId, req, { identity } = {}) => handlers.get(routeId)({ ...req, _info: identity || {} }) }]
 }
 
 // ==================== loadPlugin ====================
@@ -156,6 +168,34 @@ test('loadPlugin - throws ERR_PLUGIN_HANDLER_NOT_FOUND when file missing', (t) =
   t.pass()
 })
 
+test('loadPlugin - a handler that exists but cannot load is ERR_PLUGIN_HANDLER_LOAD_FAILED with the real cause', (t) => {
+  const cases = [
+    ['missing-dep', '\'use strict\'\nrequire(\'not-installed-anywhere\')\nmodule.exports = async () => ({})', /ERR_PLUGIN_HANDLER_LOAD_FAILED: .*route "x" handler "\.\/h\.js": Cannot find module 'not-installed-anywhere'/],
+    ['throws-on-load', '\'use strict\'\nthrow new Error(\'boom at load\')', /ERR_PLUGIN_HANDLER_LOAD_FAILED: .*route "x" handler "\.\/h\.js": boom at load/]
+  ]
+  for (const [name, source, re] of cases) {
+    const dir = path.join(FIXTURES_DIR, name)
+    writeFixture(dir, { 'mdk-plugin.json': { name: '@test/p', version: '1.0.0', routes: [{ id: 'x', method: 'GET', path: '/x', handler: './h.js' }] }, 'h.js': source })
+    t.exception(() => loadPlugin(dir), re, name)
+  }
+})
+
+test('loadPlugin - a route path must start with "/" and a method + path may appear once', (t) => {
+  const route = (id, method, p) => ({ id, method, path: p, handler: './h.js' })
+  const cases = [
+    ['no-slash', [route('a', 'GET', 'api/x')], /ERR_PLUGIN_MANIFEST_INVALID: .*route "a" path "api\/x" must start with "\/"/],
+    ['dup-path', [route('a', 'GET', '/x/{id}'), route('b', 'GET', '/x/:id')], /ERR_PLUGIN_ROUTE_DUPLICATE_PATH: .*route "b" repeats GET \/x\/:id/]
+  ]
+  for (const [name, routes, re] of cases) {
+    const dir = path.join(FIXTURES_DIR, name)
+    writeFixture(dir, { 'mdk-plugin.json': { name: '@test/p', version: '1.0.0', routes }, 'h.js': 'module.exports = async () => ({})' })
+    t.exception(() => loadPlugin(dir), re, name)
+  }
+  const dir = path.join(FIXTURES_DIR, 'same-path-other-method')
+  writeFixture(dir, { 'mdk-plugin.json': { name: '@test/p', version: '1.0.0', routes: [route('a', 'GET', '/x'), route('b', 'POST', '/x')] }, 'h.js': 'module.exports = async () => ({})' })
+  t.is(loadPlugin(dir).routes.length, 2, 'the same path under another method is fine')
+})
+
 test('loadPlugin - throws ERR_PLUGIN_HANDLER_NOT_FUNCTION when handler is not a function', (t) => {
   const dir = path.join(FIXTURES_DIR, 'not-a-fn')
   writeFixture(dir, {
@@ -211,7 +251,7 @@ test('buildFastifyRoutes - returns Fastify-compatible route objects', (t) => {
 
   const plugin = loadPlugin(dir)
   const mockCtx = { noAuth: true, conf: {}, lru_30s: { get: () => undefined, set: () => {} }, queuedRequests: new Map() }
-  const routes = buildFastifyRoutes(plugin, mockCtx)
+  const routes = buildFastifyRoutes(...asApp(plugin, dir), mockCtx)
 
   t.is(routes.length, 2, 'should return two routes')
   t.is(routes[0].method, 'GET', 'first route method')
@@ -235,12 +275,13 @@ test('buildFastifyRoutes - handler calls controller and sends 200', async (t) =>
   const plugin = loadPlugin(dir)
   const sent = []
   const mockRep = {
+    raw: new EventEmitter(),
     status (code) { sent.push(code); return this },
     send (data) { sent.push(data); return this }
   }
   const mockCtx = { noAuth: true, conf: {}, lru_30s: { get: () => undefined, set: () => {} }, queuedRequests: new Map() }
 
-  const routes = buildFastifyRoutes(plugin, mockCtx)
+  const routes = buildFastifyRoutes(...asApp(plugin, dir), mockCtx)
   const mockReq = { params: {}, query: { x: '42' }, body: {}, headers: {}, _info: {} }
   await routes[0].handler(mockReq, mockRep)
 
@@ -249,7 +290,7 @@ test('buildFastifyRoutes - handler calls controller and sends 200', async (t) =>
   t.pass()
 })
 
-test('buildFastifyRoutes - no onRequest when auth is false', (t) => {
+test('buildFastifyRoutes - no auth hook when auth is false', (t) => {
   const dir = path.join(FIXTURES_DIR, 'no-auth')
   writeFixture(dir, {
     'mdk-plugin.json': {
@@ -262,13 +303,13 @@ test('buildFastifyRoutes - no onRequest when auth is false', (t) => {
 
   const plugin = loadPlugin(dir)
   const mockCtx = { noAuth: true, conf: {}, lru_30s: { get: () => undefined, set: () => {} }, queuedRequests: new Map() }
-  const routes = buildFastifyRoutes(plugin, mockCtx)
+  const routes = buildFastifyRoutes(...asApp(plugin, dir), mockCtx)
 
-  t.absent(routes[0].onRequest, 'should not have onRequest when auth is false')
+  t.absent(routes[0].preParsing, 'should not have an auth hook when auth is false')
   t.pass()
 })
 
-test('buildFastifyRoutes - no onRequest even when auth is true (auth flags are ignored)', (t) => {
+test('buildFastifyRoutes - auth: true routes get a preParsing hook that answers 401 without a verifier', async (t) => {
   const dir = path.join(FIXTURES_DIR, 'with-auth')
   writeFixture(dir, {
     'mdk-plugin.json': {
@@ -281,10 +322,40 @@ test('buildFastifyRoutes - no onRequest even when auth is true (auth flags are i
 
   const plugin = loadPlugin(dir)
   const mockCtx = { conf: {}, lru_30s: { get: () => undefined, set: () => {} }, queuedRequests: new Map() }
-  const routes = buildFastifyRoutes(plugin, mockCtx)
+  const routes = buildFastifyRoutes(...asApp(plugin, dir), mockCtx)
 
-  t.absent(routes[0].onRequest, 'adapter never attaches onRequest')
-  t.pass()
+  t.is(typeof routes[0].preParsing, 'function', 'auth route is guarded')
+  await t.exception(() => routes[0].preParsing({ headers: {} }), /ERR_AUTH_UNAUTHORIZED/, 'closed when no verifier is configured')
+})
+
+test('buildFastifyRoutes - a verifier identity becomes the controller\'s _info', async (t) => {
+  const dir = path.join(FIXTURES_DIR, 'with-auth-verifier')
+  writeFixture(dir, {
+    'mdk-plugin.json': {
+      name: '@test/p',
+      version: '1.0.0',
+      routes: [{ id: 'test.whoami', method: 'GET', path: '/whoami', handler: './controllers/whoami.js', auth: true, permissions: ['x:r'] }]
+    },
+    'controllers/whoami.js': '\'use strict\'\nmodule.exports = async function (req) { return { user: req._info.user } }'
+  })
+
+  const seen = []
+  const authVerifier = async (request, route) => {
+    seen.push(route)
+    return request.headers.authorization === 'Bearer good' ? { user: { userId: 'op-a' } } : false
+  }
+  const plugin = loadPlugin(dir)
+  const [route] = buildFastifyRoutes(...asApp(plugin, dir), { conf: {}, queuedRequests: new Map() }, { authVerifier })
+
+  await t.exception(() => route.preParsing({ headers: { authorization: 'Bearer bad' } }), /ERR_AUTH_UNAUTHORIZED/, 'false from the verifier is a 401')
+
+  const req = { params: {}, query: {}, body: {}, headers: { authorization: 'Bearer good' } }
+  await route.preParsing(req)
+  const sent = []
+  await route.handler(req, { raw: new EventEmitter(), status (c) { sent.push(c); return this }, send (d) { sent.push(d); return this } })
+  t.alike(sent, [200, { user: { userId: 'op-a' } }], 'controller sees the verified identity')
+  t.is(seen[0].id, 'test.whoami', 'verifier is told which route')
+  t.alike(seen[0].permissions, ['x:r'], 'and the permissions the manifest declares')
 })
 
 test('buildFastifyRoutes - cache uses route id + extracted field values as key', async (t) => {
@@ -318,76 +389,171 @@ test('buildFastifyRoutes - cache uses route id + extracted field values as key',
   }
 
   const plugin = loadPlugin(dir)
-  const mockRep = { status () { return this }, send () { return this } }
-  const routes = buildFastifyRoutes(plugin, mockCtx)
+  const mockRep = { raw: new EventEmitter(), status () { return this }, send () { return this } }
+  const routes = buildFastifyRoutes(...asApp(plugin, dir), mockCtx)
 
   const mockReq = { params: {}, query: { start: 100, end: 200 }, body: {}, headers: {}, _info: {} }
   await routes[0].handler(mockReq, mockRep)
 
-  const expectedKey = 'test.cached:100:200'
+  const expectedKey = JSON.stringify(['p', 'test.cached', 100, 200])
   t.ok(cache.has(expectedKey), 'should cache with route id + extracted fields as key')
   t.pass()
 })
 
-test('buildFastifyRoutes - overwriteCache needs an Authorization header and the value true', async (t) => {
+test('buildFastifyRoutes - overwriteCache needs a verified identity holding cache:overwrite', async (t) => {
   const dir = path.join(FIXTURES_DIR, 'overwrite')
   writeFixture(dir, {
     'mdk-plugin.json': {
       name: '@test/p',
       version: '1.0.0',
-      routes: [{ id: 'test.overwrite', method: 'GET', path: '/test/overwrite', handler: './controllers/fresh.js', cache: ['query.k'] }]
+      routes: [{ id: 'test.overwrite', method: 'GET', path: '/test/overwrite', handler: './controllers/fresh.js', auth: true, cache: ['query.k'] }]
     },
     'controllers/fresh.js': '\'use strict\'\nmodule.exports = async function () { return { fresh: true } }'
   })
 
-  const cache = new Map([['test.overwrite:a', { fresh: false }]])
+  // An auth: true route caches per identity: the key ends with a hash of it.
+  const idKey = (info) => 'id:' + crypto.createHash('sha256').update(JSON.stringify(info)).digest('hex')
+  const readerKey = JSON.stringify(['p', 'test.overwrite', 'a', idKey({ perms: ['x:r'] })])
+  const key = JSON.stringify(['p', 'test.overwrite', 'a', idKey({ perms: ['cache:overwrite'] })])
+  const stale = () => { cache.set(key, { fresh: false }); cache.set(readerKey, { fresh: false }) }
+  const cache = new Map()
   const mockCtx = {
     conf: { cacheTiming: {} },
     lru_30s: { get (k) { return cache.get(k) }, set (k, v) { cache.set(k, v) } },
     queuedRequests: new Map()
   }
-  const mockRep = { status () { return this }, send () { return this } }
-  const [route] = buildFastifyRoutes(loadPlugin(dir), mockCtx)
-  const call = (overwriteCache, headers) => route.handler({ params: {}, query: { k: 'a', overwriteCache }, body: {}, headers, _info: {} }, mockRep)
+  const authVerifier = async (req) => ({
+    'Bearer reader': { perms: ['x:r'] },
+    'Bearer admin': { perms: ['cache:overwrite'] }
+  })[req.headers.authorization] || false
+  const mockRep = { raw: new EventEmitter(), status () { return this }, send () { return this } }
+  const [route] = buildFastifyRoutes(...asApp(loadPlugin(dir), dir), mockCtx, { authVerifier })
+  const call = async (overwriteCache, headers) => {
+    const req = { params: {}, query: { k: 'a', overwriteCache }, body: {}, headers }
+    await route.preParsing(req)
+    await route.handler(req, mockRep)
+  }
 
-  await call(true, {})
-  t.is(cache.get('test.overwrite:a').fresh, false, 'ignored without an Authorization header')
+  stale()
+  await call('true', { authorization: 'Bearer reader' })
+  t.is(cache.get(readerKey).fresh, false, 'an Authorization header alone does not bypass the cache')
 
-  await call('false', { authorization: 'Bearer x' })
-  t.is(cache.get('test.overwrite:a').fresh, false, 'the string false does not bypass the cache')
+  await call('false', { authorization: 'Bearer admin' })
+  t.is(cache.get(key).fresh, false, 'the string false does not bypass the cache')
 
-  await call('true', { authorization: 'Bearer x' })
-  t.is(cache.get('test.overwrite:a').fresh, true, 'refreshed with an Authorization header')
+  await call('true', { authorization: 'Bearer admin' })
+  t.is(cache.get(key).fresh, true, 'refreshed for an identity holding cache:overwrite')
+
+  stale()
+  const [open] = buildFastifyRoutes(...asApp(loadPlugin(dir), dir), mockCtx)
+  await open.handler({ params: {}, query: { k: 'a', overwriteCache: 'true' }, body: {}, headers: { authorization: 'Bearer admin' }, _info: { perms: ['cache:overwrite'] } }, mockRep)
+  t.is(cache.get(key).fresh, false, 'an _info the verifier did not set is not trusted')
 })
 
-function makeRawRes () {
-  return {
-    headersSent: false,
-    writableEnded: false,
-    chunks: [],
-    head: null,
-    writeHead (status, headers) { this.headersSent = true; this.head = { status, headers } },
-    write (chunk) { this.headersSent = true; this.chunks.push(chunk); return true },
-    end (chunk) { if (chunk) this.chunks.push(chunk); this.writableEnded = true },
-    on () {},
-    once () {},
-    removeListener () {}
-  }
-}
-
-test('buildFastifyRoutes - stream route hijacks and hands the handler the raw reply', async (t) => {
-  const dir = path.join(FIXTURES_DIR, 'stream')
+test('loadPlugin - http.requestBody maps to a Fastify body schema', (t) => {
+  const body = { type: 'object', required: ['action'], properties: { action: { type: 'string' } } }
+  const dir = path.join(FIXTURES_DIR, 'request-body')
   writeFixture(dir, {
     'mdk-plugin.json': {
       name: '@test/p',
       version: '1.0.0',
-      routes: [{ id: 'test.stream', method: 'POST', path: '/stream', handler: './controllers/stream.js', auth: false, stream: true }]
+      routes: [
+        {
+          id: 'test.required',
+          handler: './controllers/c.js',
+          http: {
+            method: 'POST',
+            path: '/a/{id}',
+            parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+            requestBody: { required: true, content: { 'application/json': { schema: body } } }
+          }
+        },
+        {
+          id: 'test.optional',
+          handler: './controllers/c.js',
+          http: { method: 'POST', path: '/b', requestBody: { content: { 'application/json': { schema: body } } } }
+        }
+      ]
     },
-    'controllers/stream.js': '\'use strict\'\nmodule.exports = async function (req, res) { res.writeHead(200, { \'content-type\': \'text/event-stream\' }); res.write(\'event: token\\ndata: {"q":"\' + req.query.x + \'"}\\n\\n\'); res.end() }'
+    'controllers/c.js': '\'use strict\'\nmodule.exports = async function () { return {} }'
   })
 
-  const plugin = loadPlugin(dir)
-  const routes = buildFastifyRoutes(plugin, { conf: {}, queuedRequests: new Map() })
+  const [required, optional] = loadPlugin(dir).routes
+  t.alike(required.schema.body, body, 'a required body is validated as declared')
+  t.ok(required.schema.params, 'parameters are still mapped alongside the body')
+  t.alike(optional.schema.body, { anyOf: [body, { type: 'null' }] }, 'an optional body may be omitted, but not malformed')
+})
+
+test('loadPlugin - rejects a handler outside the plugin dir', (t) => {
+  for (const [name, handler] of [['up', '../outside.js'], ['abs', path.join(os.tmpdir(), 'outside.js')], ['nested-up', './controllers/../../outside.js']]) {
+    const dir = path.join(FIXTURES_DIR, 'escape-' + name)
+    writeFixture(dir, {
+      'mdk-plugin.json': { name: '@test/p', version: '1.0.0', routes: [{ id: 'r', method: 'GET', path: '/r', handler }] }
+    })
+    t.exception(() => loadPlugin(dir), /ERR_PLUGIN_HANDLER_OUTSIDE_PLUGIN/, `${handler} is refused`)
+  }
+})
+
+test('loadPlugin - rejects a route path without a leading slash', (t) => {
+  const dir = path.join(FIXTURES_DIR, 'path-no-slash')
+  writeFixture(dir, {
+    'mdk-plugin.json': { name: '@test/p', version: '1.0.0', routes: [{ id: 'r', method: 'GET', path: 'health', handler: './c.js' }] },
+    'c.js': '\'use strict\'\nmodule.exports = async function () { return {} }'
+  })
+  t.exception(() => loadPlugin(dir), /ERR_PLUGIN_MANIFEST_INVALID.*path "health" must start with "\/"/)
+})
+
+test('buildFastifyRoutes - a route at "/" answers at the mount itself', (t) => {
+  const dir = path.join(FIXTURES_DIR, 'root-route')
+  writeFixture(dir, {
+    'mdk-plugin.json': { name: '@test/p', version: '1.0.0', routes: [{ id: 'r', method: 'GET', path: '/', handler: './c.js' }] },
+    'c.js': '\'use strict\'\nmodule.exports = async function () { return {} }'
+  })
+  const [app, client] = asApp(loadPlugin(dir), dir)
+  const ctx = { conf: {} }
+  t.is(buildFastifyRoutes({ ...app, mount: undefined }, client, ctx)[0].url, '/apps/p')
+  t.is(buildFastifyRoutes(app, client, ctx)[0].url, '/', 'mounted at the root it stays "/"')
+})
+
+test('resolveAppTimeout - defaults, accepts digit strings, and fails the boot on anything else', (t) => {
+  t.is(resolveAppTimeout({}), 60000)
+  t.is(resolveAppTimeout({ appTimeoutMs: 2500 }), 2500)
+  t.is(resolveAppTimeout({ appTimeoutMs: '2500' }), 2500)
+  for (const bad of ['60s', -1, 0, 1.5, true]) {
+    t.exception(() => resolveAppTimeout({ appTimeoutMs: bad }), /ERR_GATEWAY_APP_TIMEOUT_INVALID/, String(bad))
+  }
+})
+
+test('loadPlugin - rejects a non-boolean auth flag', (t) => {
+  const dir = path.join(FIXTURES_DIR, 'auth-string')
+  writeFixture(dir, {
+    'mdk-plugin.json': { name: '@test/p', version: '1.0.0', routes: [{ id: 'r', method: 'GET', path: '/r', handler: './c.js', auth: 'true' }] },
+    'c.js': '\'use strict\'\nmodule.exports = async function () { return {} }'
+  })
+  t.exception(() => loadPlugin(dir), /ERR_PLUGIN_MANIFEST_INVALID.*auth/)
+})
+
+function makeRawRes () {
+  const raw = new Writable({ write (chunk, encoding, cb) { raw.chunks.push(chunk.toString()); cb() } })
+  Object.assign(raw, { chunks: [], head: null, headersSent: false })
+  raw.writeHead = (status, headers) => { raw.headersSent = true; raw.head = { status, headers } }
+  return raw
+}
+
+function streamApp (stream) {
+  const dir = path.join(FIXTURES_DIR, 'stream')
+  fs.mkdirSync(dir, { recursive: true })
+  const plugin = { routes: [{ id: 'test.stream', method: 'POST', path: '/stream', stream: true }] }
+  const [app] = asApp(plugin, dir)
+  return buildFastifyRoutes(app, { stream }, { conf: {}, queuedRequests: new Map() })
+}
+
+test('buildFastifyRoutes - stream route hijacks and pipes the runtime stream into the raw reply', async (t) => {
+  const routes = streamApp(async (key, routeId, req) => ({
+    statusCode: 200,
+    headers: { 'content-type': 'text/event-stream' },
+    stream: Readable.from([`event: token\ndata: {"q":"${req.query.x}"}\n\n`])
+  }))
 
   const raw = makeRawRes()
   let hijacked = false
@@ -402,18 +568,7 @@ test('buildFastifyRoutes - stream route hijacks and hands the handler the raw re
 })
 
 test('buildFastifyRoutes - stream route maps a pre-headers throw to a JSON error', async (t) => {
-  const dir = path.join(FIXTURES_DIR, 'stream-throw')
-  writeFixture(dir, {
-    'mdk-plugin.json': {
-      name: '@test/p',
-      version: '1.0.0',
-      routes: [{ id: 'test.stream', method: 'POST', path: '/stream', handler: './controllers/stream.js', auth: false, stream: true }]
-    },
-    'controllers/stream.js': '\'use strict\'\nmodule.exports = async function () { throw Object.assign(new Error(\'ERR_AGENT_SESSION_NOT_FOUND\'), { statusCode: 404 }) }'
-  })
-
-  const plugin = loadPlugin(dir)
-  const routes = buildFastifyRoutes(plugin, { conf: {}, queuedRequests: new Map() })
+  const routes = streamApp(async () => { throw Object.assign(new Error('ERR_AGENT_SESSION_NOT_FOUND'), { statusCode: 404 }) })
 
   const raw = makeRawRes()
   await routes[0].handler({ params: {}, query: {}, body: {}, headers: {}, _info: {} }, { raw, hijack () {} })
@@ -424,25 +579,20 @@ test('buildFastifyRoutes - stream route maps a pre-headers throw to a JSON error
   t.pass()
 })
 
-test('buildFastifyRoutes - stream route ends the socket on a mid-stream throw', async (t) => {
-  const dir = path.join(FIXTURES_DIR, 'stream-mid-throw')
-  writeFixture(dir, {
-    'mdk-plugin.json': {
-      name: '@test/p',
-      version: '1.0.0',
-      routes: [{ id: 'test.stream', method: 'POST', path: '/stream', handler: './controllers/stream.js', auth: false, stream: true }]
-    },
-    'controllers/stream.js': '\'use strict\'\nmodule.exports = async function (req, res) { res.write(\'event: token\\n\\n\'); throw new Error(\'boom\') }'
+test('buildFastifyRoutes - stream route tears the socket down on a mid-stream failure', async (t) => {
+  const routes = streamApp(async () => {
+    const stream = new Readable({ read () {} })
+    stream.push('event: token\n\n')
+    setImmediate(() => stream.destroy(new Error('boom')))
+    return { statusCode: 200, headers: {}, stream }
   })
 
-  const plugin = loadPlugin(dir)
-  const routes = buildFastifyRoutes(plugin, { conf: {}, queuedRequests: new Map() })
-
   const raw = makeRawRes()
+  raw.on('error', () => {})
   await routes[0].handler({ params: {}, query: {}, body: {}, headers: {}, _info: {} }, { raw, hijack () {} })
 
   t.is(raw.chunks.length, 1, 'no error body after headers were sent')
-  t.ok(raw.writableEnded, 'socket was ended, not left hanging')
+  t.ok(raw.destroyed, 'socket was torn down, not left hanging')
   t.pass()
 })
 
@@ -455,5 +605,56 @@ test('errorResponse - forwards ERR_* and Fastify 4xx messages, masks and logs th
   t.alike(errorResponse(Object.assign(new Error('body/q must be string'), { statusCode: 400, code: 'FST_ERR_VALIDATION' }), log), { statusCode: 400, error: 'Bad Request', message: 'body/q must be string' })
   t.alike(errorResponse(new Error('ENOENT: /srv/secret.json'), log), { statusCode: 400, error: 'Bad Request', message: 'Bad Request' })
   t.alike(errorResponse(Object.assign(new Error('pool exhausted'), { statusCode: 503 }), log), { statusCode: 503, error: 'Service Unavailable', message: 'Service Unavailable' })
-  t.alike(logged, ['ENOENT: /srv/secret.json', 'pool exhausted'], 'only masked errors are logged')
+  t.alike(errorResponse(Object.assign(new Error('Bad Request'), { statusCode: 400, remote: true }), log), { statusCode: 400, error: 'Bad Request', message: 'Bad Request' })
+  t.alike(logged, ['ENOENT: /srv/secret.json', 'pool exhausted'], 'only masked errors are logged, not ones an app runtime already handled')
+})
+
+test('buildFastifyRoutes - forwards with the verified identity and a timeout (60s, or common.json appTimeoutMs)', async (t) => {
+  const dir = path.join(FIXTURES_DIR, 'forward-opts')
+  writeFixture(dir, {
+    'mdk-plugin.json': { name: '@test/p', version: '1.0.0', routes: [{ id: 't.r', method: 'GET', path: '/r', handler: './c.js' }] },
+    'c.js': '\'use strict\'\nmodule.exports = async function () { return {} }'
+  })
+  const [app] = asApp(loadPlugin(dir), dir)
+  const calls = []
+  const client = { invoke: async (key, routeId, req, opts) => { calls.push({ routeId, req, opts }); return {} } }
+  const rep = { raw: new EventEmitter(), status () { return this }, send () { return this } }
+  const req = { params: { a: 1 }, query: {}, body: null, headers: {} }
+
+  await buildFastifyRoutes(app, client, { conf: {} })[0].handler(req, rep)
+  await buildFastifyRoutes(app, client, { conf: { appTimeoutMs: 1234 } })[0].handler({ ...req, _info: { user: 'op' } }, rep)
+  t.alike(calls.map(({ opts: { identity, timeoutMs } }) => ({ identity, timeoutMs })), [{ identity: {}, timeoutMs: 60000 }, { identity: { user: 'op' }, timeoutMs: 1234 }])
+  t.ok(calls.every((c) => c.opts.signal instanceof AbortSignal), 'every uncached call carries an abort signal')
+  t.alike(calls[0].req, { params: { a: 1 }, query: {}, body: null, headers: {} }, 'the runtime gets params, query, body and headers')
+})
+
+test('buildFastifyRoutes - credentials stay at the Gateway; a client that leaves aborts its call', async (t) => {
+  const dir = path.join(FIXTURES_DIR, 'forward-strip')
+  writeFixture(dir, {
+    'mdk-plugin.json': { name: '@test/p', version: '1.0.0', routes: [{ id: 't.r', method: 'GET', path: '/r', handler: './c.js' }] },
+    'c.js': '\'use strict\'\nmodule.exports = async function () { return {} }'
+  })
+  const [app] = asApp(loadPlugin(dir), dir)
+  let release
+  let called
+  const invoked = new Promise((resolve) => { called = resolve })
+  const client = {
+    invoke: (key, routeId, req, opts) => {
+      called({ req, opts })
+      return new Promise((resolve) => { release = resolve })
+    }
+  }
+  const raw = new EventEmitter()
+  const rep = { raw, status () { return this }, send () { return this } }
+  const headers = { authorization: 'Bearer secret', 'proxy-authorization': 'Basic x', cookie: 's=1', 'x-trace': 't' }
+  const pending = buildFastifyRoutes(app, client, { conf: {} })[0].handler({ params: {}, query: {}, body: null, headers }, rep)
+  const seen = await invoked
+
+  t.alike(seen.req.headers, { 'x-trace': 't' }, 'authorization, proxy-authorization and cookie are not forwarded')
+  t.is(headers.authorization, 'Bearer secret', 'the Gateway request itself is untouched')
+  t.absent(seen.opts.signal.aborted)
+  raw.emit('close')
+  t.ok(seen.opts.signal.aborted, 'the call is aborted once the client is gone')
+  release({})
+  await pending
 })

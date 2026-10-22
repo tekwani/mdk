@@ -27,6 +27,9 @@ const WRITE_ACTIONS = [
  *   storeDir    (required) persistent store directory
  *   kernelTopic    Kernel discovery topic (hex); omit to register by key
  *   bootstrap   DHT bootstrap override for hermetic tests
+ *   allowedKeys RPC caller keys the worker accepts (the Kernel's
+ *               kernel.getClientPublicKey()); required unless allowAll
+ *   allowAll    admit every RPC caller (development only)
  *   conf        { thing: { alerts, powermeter, ...intervals }, allowDuplicateIPs }
  *   seedDevices registerThing payloads applied once when the store is empty
  */
@@ -59,6 +62,8 @@ async function startAbbWorker (opts) {
     workerId: opts.workerId,
     kernelTopic: opts.kernelTopic || null,
     bootstrap: opts.bootstrap || null,
+    allowedKeys: opts.allowedKeys || [],
+    allowAll: opts.allowAll === true,
     store,
     services,
     allowEmptyDevices: true,

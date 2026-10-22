@@ -73,10 +73,6 @@ const CATEGORY_DESCRIPTIONS: Record<string, { description: string; path: string 
     description: 'Site-wide alerts monitoring view',
     path: '/alerts-view',
   },
-  'Pool Manager': {
-    description: 'Pool management dashboard and miner explorer',
-    path: '/pool-manager-dashboard',
-  },
   Settings: {
     description: 'Application settings and configuration',
     path: '/settings',

@@ -16,7 +16,6 @@ import {
   withErrorBoundary,
 } from '@primitives'
 
-import { ChartWrapper } from '../chart-wrapper'
 
 import type {
   LineChartCardData,
@@ -207,23 +206,16 @@ const LineChartCardInner = ({
         onToggleDataset={handleLegendToggleByIndex}
       >
         {detailLegendNode && <div className="mdk-line-chart-card__legends">{detailLegendNode}</div>}
-        <ChartWrapper
+        <LineChart
+          chartRef={chartRef}
           data={lineChartData}
-          isLoading={isLoading}
-          showNoDataPlaceholder={false}
-          minHeight={200}
-        >
-          <LineChart
-            chartRef={chartRef}
-            data={lineChartData}
-            yTicksFormatter={chartData?.yTicksFormatter}
-            priceFormatter={chartData?.priceFormatter}
-            skipRound={chartData?.skipRound}
-            timeline={timeline}
-            shouldResetZoom={shouldResetZoom}
-            {...chartProps}
-          />
-        </ChartWrapper>
+          yTicksFormatter={chartData?.yTicksFormatter}
+          priceFormatter={chartData?.priceFormatter}
+          skipRound={chartData?.skipRound}
+          timeline={timeline}
+          shouldResetZoom={shouldResetZoom}
+          {...chartProps}
+        />
       </ChartContainer>
     </div>
   )

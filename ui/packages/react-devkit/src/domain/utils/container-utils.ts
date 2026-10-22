@@ -8,52 +8,17 @@ import _toUpper from 'lodash/toUpper'
 import {
   COMPLETE_CONTAINER_TYPE,
   CONTAINER_MODEL,
-  CONTAINER_SETTINGS_MODEL,
   CONTAINER_TYPE,
   CONTAINER_TYPE_NAME_MAP,
   MAINTENANCE_CONTAINER,
 } from '../constants/container-constants'
-import { CONTAINERS_MINER_TYPE, MINER_TYPE } from '../constants/device-constants'
-import type { ContainerPosInfo, Device } from '../types/device'
-import {
-  getContainerSpecificStats,
-  getCoolingSystem,
-  isContainer,
-  separateByHyphenRegExp,
-  separateByTwoHyphensRegExp,
-} from './device-utils'
-import { CONTAINER_STATUS } from './status-utils'
-
-export const isContainerOffline = (snap: { stats?: { status?: string } } | undefined): boolean =>
-  snap?.stats?.status === CONTAINER_STATUS.OFFLINE
-
-export const isBitdeer = (type: string | undefined): boolean =>
+import { separateByHyphenRegExp, separateByTwoHyphensRegExp } from './device-utils'
+const isBitdeer = (type: string | undefined): boolean =>
   _includes(_toLower(type), CONTAINER_TYPE.BITDEER) ||
   _includes(_toLower(type), CONTAINER_MODEL.BITDEER)
-
-export const isAntspaceHydro = (type: string): boolean =>
-  _includes(_toLower(type), CONTAINER_TYPE.ANTSPACE_HYDRO) ||
-  _includes(_toLower(type), CONTAINER_MODEL.ANTSPACE_HYDRO) ||
-  _includes(_toLower(type), CONTAINER_MODEL.BITMAIN_HYDRO)
-
-export const isMicroBT = (type: string | undefined): boolean =>
+const isMicroBT = (type: string | undefined): boolean =>
   _includes(_toLower(type), CONTAINER_TYPE.MICROBT) ||
   _includes(_toLower(type), CONTAINER_MODEL.MICROBT)
-
-export const isMicroBTAlpha = (type: string): boolean =>
-  _includes(_toLower(type), COMPLETE_CONTAINER_TYPE.MICROBT_ALPHA)
-
-export const isAntspaceImmersion = (type: string): boolean =>
-  _includes(_toLower(type), CONTAINER_TYPE.ANTSPACE_IMMERSION) ||
-  _includes(_toLower(type), CONTAINER_MODEL.ANTSPACE_IMMERSION) ||
-  _includes(_toLower(type), CONTAINER_MODEL.BITMAIN_IMMERSION) ||
-  _includes(_toLower(type), CONTAINER_MODEL.BITMAIN_IMM)
-
-export const isBitmainImmersion = (type: string): boolean =>
-  _includes(_toLower(type), CONTAINER_MODEL.BITMAIN_IMMERSION) ||
-  _includes(_toLower(type), CONTAINER_MODEL.BITMAIN_IMM) ||
-  _includes(_toLower(type), CONTAINER_MODEL.IMMERSION_CONTAINER)
-
 export const getContainerName = (container: string | undefined, type?: string): string => {
   if (_isEmpty(container)) {
     return ''
@@ -103,115 +68,4 @@ export const getContainerName = (container: string | undefined, type?: string): 
   }
 
   return _capitalize(container)
-}
-
-/**
- * Maps a container type to its corresponding settings model
- * Used for fetching container settings from the API
- * @param {string} containerType - The container type (e.g., 'bd', 'mbt', 'as-hk3', etc.)
- * @returns {string|null} - The settings model ('bd', 'mbt', 'hydro', 'immersion') or null
- */
-export const getContainerSettingsModel = (containerType: string): string | null => {
-  if (!containerType) return null
-
-  if (isBitdeer(containerType)) {
-    return CONTAINER_SETTINGS_MODEL.BITDEER
-  }
-  if (isMicroBT(containerType)) {
-    return CONTAINER_SETTINGS_MODEL.MICROBT
-  }
-  if (isAntspaceHydro(containerType)) {
-    return CONTAINER_SETTINGS_MODEL.HYDRO
-  }
-  if (isBitmainImmersion(containerType) || isAntspaceImmersion(containerType)) {
-    return CONTAINER_SETTINGS_MODEL.IMMERSION
-  }
-
-  return null
-}
-
-export const isAvalonContainer = (type: string | undefined): boolean =>
-  isContainer(type) && _includes(type || '', CONTAINERS_MINER_TYPE.A1346)
-
-export const isWhatsminerContainer = (type: string | undefined): boolean =>
-  isContainer(type) &&
-  (_includes(type || '', CONTAINERS_MINER_TYPE.M56) ||
-    _includes(type || '', CONTAINERS_MINER_TYPE.M30) ||
-    isMicroBT(type || ''))
-
-export const isAntminerContainer = (type: string | undefined): boolean =>
-  isContainer(type) &&
-  (_includes(type || '', CONTAINERS_MINER_TYPE.S19XP) ||
-    isAntspaceImmersion(type || '') ||
-    isAntspaceHydro(type || ''))
-
-export const getMinerTypeFromContainerType = (type: string): string | undefined => {
-  if (isAvalonContainer(type)) {
-    return MINER_TYPE.AVALON
-  }
-  if (isWhatsminerContainer(type)) {
-    return MINER_TYPE.WHATSMINER
-  }
-  if (isAntminerContainer(type)) {
-    return MINER_TYPE.ANTMINER
-  }
-  return undefined
-}
-
-export const getDeviceContainerPosText = (containerPosInfo: Partial<ContainerPosInfo>): string => {
-  const { containerInfo, pdu, socket, pos } = containerPosInfo || {}
-  if ((!pdu || !socket) && !pos) {
-    return `${getContainerName(containerInfo?.container)}`
-  }
-  const destination = pos || `${pdu}_${socket}`
-  return `${getContainerName(containerInfo?.container)} ${destination}`
-}
-
-export const getNumberSelected = (
-  selectedSockets: Record<string, any>,
-): {
-  nContainers: number
-  nSockets: number
-} => {
-  const containers = Object.keys(selectedSockets)
-
-  const nSockets = containers.reduce((acc, container) => {
-    const sockets = selectedSockets[container]?.sockets
-
-    const socketCount = sockets ? Object.keys(sockets).length : 0
-
-    return acc + socketCount
-  }, 0)
-
-  return {
-    nContainers: containers.length,
-    nSockets,
-  }
-}
-
-export const isContainerControlNotSupported = (container: string): boolean =>
-  isAntspaceHydro(container) || isAntspaceImmersion(container)
-
-export const getAntspaceContainerControlsBoxData = (data: Device = {} as Device) => {
-  const { id } = data
-
-  return {
-    id,
-    pidModeEnabled: getContainerSpecificStats(data)?.pid_mode,
-    runningModeEnabled: getContainerSpecificStats(data)?.running_mode,
-  }
-}
-
-export const getBitdeerContainerControlsBoxData = (data: Device = {} as Device) => {
-  const { id } = data
-  const { exhaust_fan_enabled, oil_pump = [] } = getCoolingSystem(data)
-
-  const pumpArray = Array.isArray(oil_pump) ? oil_pump : []
-
-  return {
-    id,
-    exhaustFanEnabled: exhaust_fan_enabled,
-    tank1Enabled: pumpArray[0]?.tank,
-    tank2Enabled: pumpArray[1]?.tank,
-  }
 }

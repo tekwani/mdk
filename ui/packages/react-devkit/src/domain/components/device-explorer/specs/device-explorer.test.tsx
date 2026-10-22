@@ -4,16 +4,13 @@ import { DeviceExplorer } from '../device-explorer'
 
 describe('deviceExplorer', () => {
   const defaultProps = {
-    deviceType: 'container' as const,
     data: [],
     filterOptions: [],
     searchOptions: [],
     searchTags: [],
     onFiltersChange: vi.fn(),
     onSearchTagsChange: vi.fn(),
-    onDeviceTypeChange: vi.fn(),
     getFormattedDate: vi.fn((date: Date) => date.toISOString()),
-    renderAction: vi.fn(() => null),
   }
 
   it('should render device explorer root', () => {
@@ -31,11 +28,10 @@ describe('deviceExplorer', () => {
     expect(container.querySelector('.mdk-device-explorer__table')).toBeInTheDocument()
   })
 
-  it('should render device type tabs', () => {
+  it('should not render device type tabs', () => {
     render(<DeviceExplorer {...defaultProps} />)
-    expect(screen.getByText('Containers')).toBeInTheDocument()
-    expect(screen.getByText('Miners')).toBeInTheDocument()
-    expect(screen.getByText('Cabinets')).toBeInTheDocument()
+    expect(screen.queryByText('Containers')).not.toBeInTheDocument()
+    expect(screen.queryByText('Cabinets')).not.toBeInTheDocument()
   })
 
   it('should apply custom className', () => {
@@ -44,12 +40,15 @@ describe('deviceExplorer', () => {
     expect(root).toHaveClass('custom-class')
   })
 
-  it('should render with initial deviceType and pass onDeviceTypeChange to toolbar', () => {
-    const onDeviceTypeChange = vi.fn()
-    render(<DeviceExplorer {...defaultProps} onDeviceTypeChange={onDeviceTypeChange} />)
-    expect(screen.getByText('Containers')).toBeInTheDocument()
-    expect(screen.getByText('Miners')).toBeInTheDocument()
-    expect(screen.getByText('Cabinets')).toBeInTheDocument()
+  it('should forward columns to the table', () => {
+    render(
+      <DeviceExplorer
+        {...defaultProps}
+        data={[{ id: 'dev-1', type: 'miner-demo-m1', last: {} }]}
+        columns={[{ id: 'custom', header: 'Custom Column', cell: () => 'value' }]}
+      />,
+    )
+    expect(screen.getByText('Custom Column')).toBeInTheDocument()
   })
 
   it('should work with provided filters', () => {

@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-mvp-site",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "MDK MVP Site",
   "private": true,
   "engines": {
@@ -19,15 +19,22 @@
     "test": "npm run test:unit"
   },
   "dependencies": {
-    "@tetherto/mdk-core": "^0.11.0",
-    "@tetherto/mdk-worker": "^0.11.0",
-    "@tetherto/mdk-worker-ocean": "^0.11.0",
-    "@tetherto/mdk-worker-satec": "^0.11.0",
-    "mdk-crypto-lib": "file:../../backend/lib/mdk-crypto-lib",
-    "whatsminer-mdk-worker": "git+https://github.com/whatsminer/whatsminer-mdk-worker.git"
+    "@tetherto/mdk": "file:lib/mdk-compat",
+    "@tetherto/mdk-app-runtime": "^0.12.0",
+    "@tetherto/mdk-core": "^0.12.0",
+    "@tetherto/mdk-worker": "^0.12.0",
+    "@tetherto/mdk-worker-ocean": "^0.12.0",
+    "@tetherto/mdk-worker-satec": "^0.12.0",
+    "mdk-crypto-lib": "file:lib/mdk-crypto-lib",
+    "spiderpool-mdk-worker": "git+https://github.com/SpiderPool-New/spiderpool-mdk-worker.git#345f4a2b46ff59135eb4dad1803f0653c3d88911",
+    "emcd-mdk-worker": "git+https://github.com/emcdio/emcd-mdk-worker.git#3ad188e1fef8fa080ce5096d7421e9b3a7052515",
+    "whatsminer-mdk-worker": "git+https://github.com/whatsminer/whatsminer-mdk-worker.git#a47fa82020454f9bfa9963ccaaa319b7948e8aa2",
+    "antminer-mdk-worker": "git+https://github.com/bitmain-official/antminer-mdk-worker.git#4fd776b4a048a1bc8284ec2eceed82b4631f960c",
+    "foundry-mdk-worker": "git+https://github.com/foundryservices/foundry-mdk-worker.git#310172ebe1cb4ef60cd14f39d9467f2c8e2bc534",
+    "sealminer-mdk-worker": "git+https://github.com/sealminer/sealminer-mdk-worker.git#63211a12245482cffb2d09f8cbeaa4c6411e51a3"
   },
   "overrides": {
-    "crypto-js": "file:../../backend/lib/mdk-crypto-lib"
+    "crypto-js": "file:lib/mdk-crypto-lib"
   },
   "devDependencies": {
     "brittle": "3.18.0",

@@ -1,0 +1,7 @@
+id: io.tether.echo
+version: 0.1.0
+displayName: Echo
+permissions: []
+config:
+  greeting: hello
+  limit: 5

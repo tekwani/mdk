@@ -61,19 +61,23 @@ function validateCommand (capabilities, command, params) {
   return { valid: true }
 }
 
-function findWorkerBase (startDirs) {
-  if (process.env.MDK_WORKER_BASE) return process.env.MDK_WORKER_BASE
-  for (const start of startDirs) {
-    let dir = start
-    for (;;) {
-      const candidate = path.join(dir, 'backend', 'core', 'mdk-worker')
-      if (fs.existsSync(path.join(candidate, 'lib', 'contract-loader.js'))) return candidate
-      const parent = path.dirname(dir)
-      if (parent === dir) break
-      dir = parent
+// Monorepo fallback for a checkout without node_modules links: walk up from
+// this script's own dir (never the worker dir, which may be untrusted) and stop
+// at the repo root (the first dir holding .git). The candidate must really be
+// @tetherto/mdk-worker.
+function findMonorepoWorkerBase () {
+  let dir = SCRIPT_DIR
+  for (;;) {
+    const candidate = path.join(dir, 'backend', 'core', 'mdk-worker')
+    if (fs.existsSync(path.join(candidate, 'lib', 'contract-loader.js'))) {
+      try {
+        if (JSON.parse(fs.readFileSync(path.join(candidate, 'package.json'), 'utf8')).name === '@tetherto/mdk-worker') return candidate
+      } catch {}
     }
+    const parent = path.dirname(dir)
+    if (parent === dir || fs.existsSync(path.join(dir, '.git'))) return null
+    dir = parent
   }
-  return null
 }
 
 function parseArgs (argv) {
@@ -105,18 +109,29 @@ const requireFromScript = createRequire(path.join(SCRIPT_DIR, 'noop.js'))
 
 let loadContract
 let createInstance
-const base = findWorkerBase([workerDir, SCRIPT_DIR])
-if (base) {
+// Resolution order: explicit MDK_WORKER_BASE, then the worker's declared
+// @tetherto/mdk-worker dependency, then a monorepo checkout around this script.
+function useBase (base) {
   loadContract = requireFromScript(path.join(base, 'lib', 'contract-loader.js')).loadContract
   createInstance = requireFromScript(path.join(base, 'lib', 'instance-loader.js')).createInstance
+}
+if (process.env.MDK_WORKER_BASE) {
+  useBase(path.resolve(process.env.MDK_WORKER_BASE))
 } else {
+  let mdkWorker = null
   try {
-    const mdkWorker = requireFromWorker('@tetherto/mdk-worker')
+    mdkWorker = requireFromWorker('@tetherto/mdk-worker')
+  } catch {}
+  if (mdkWorker) {
     loadContract = mdkWorker.loadContract
     createInstance = mdkWorker.createInstance
-  } catch {
-    console.error('ERR_SMOKE_NO_WORKER_BASE: cannot locate backend/core/mdk-worker (set MDK_WORKER_BASE or install @tetherto/mdk-worker)')
-    process.exit(1)
+  } else {
+    const base = findMonorepoWorkerBase()
+    if (!base) {
+      console.error('ERR_SMOKE_NO_WORKER_BASE: cannot resolve @tetherto/mdk-worker from the worker dir (run npm install there, or set MDK_WORKER_BASE)')
+      process.exit(1)
+    }
+    useBase(base)
   }
 }
 

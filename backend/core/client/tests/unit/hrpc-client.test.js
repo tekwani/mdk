@@ -38,7 +38,7 @@ function createMockModules () {
 }
 
 async function startListener (t) {
-  const listener = new HRPCListener({ ...createMockModules(), whitelist: [] })
+  const listener = new HRPCListener({ ...createMockModules(), allowAll: true })
   const { publicKey } = await listener.start()
   t.teardown(() => listener.stop())
   return { listener, publicKey }
@@ -108,7 +108,7 @@ test('hrpc client - action.push round-trips through the RPC listener', async (t)
         return { id: 77, data: { id: 77 }, errors: [] }
       }
     },
-    whitelist: []
+    allowAll: true
   })
   const { publicKey } = await listener.start()
   t.teardown(() => listener.stop())
@@ -171,4 +171,84 @@ test('hrpc client - kernelKeyPair pins the caller key the Kernel allowlist sees'
 
   const res = await mdkClient.listWorkers()
   t.is(res.workers.length, 1, 'admitted by an allowlist that names only that keypair')
+})
+
+test('hrpc client - every request carries the default 30s timeout, overridable per client and per call', async (t) => {
+  const { HRPCClient, DEFAULT_TIMEOUT_MS } = require('../../lib/hrpc-client')
+  t.is(DEFAULT_TIMEOUT_MS, 30000)
+  const seen = []
+  const rpc = { request: async (key, method, buf, opts) => { seen.push(opts); return Buffer.from('{}') } }
+
+  const client = createRawMdkClient({ hrpc: { key: 'ab'.repeat(32), rpc } })
+  await client.connect()
+  await client.listWorkers()
+  await client.sendCommand('d1', 'reboot', {}, { timeout: 500 })
+  t.alike(seen, [{ timeout: 30000 }, { timeout: 500 }])
+
+  const custom = createRawMdkClient({ hrpc: { key: 'ab'.repeat(32), rpc, timeout: 2000 } })
+  await custom.connect()
+  await custom.pullState('d1')
+  t.alike(seen[2], { timeout: 2000 })
+
+  t.exception(() => new HRPCClient({ key: 'ab'.repeat(32), timeout: 0 }), /ERR_MDK_CLIENT_TIMEOUT_INVALID/)
+  t.exception(() => new HRPCClient({ key: 'ab'.repeat(32), timeout: 'soon' }), /ERR_MDK_CLIENT_TIMEOUT_INVALID/)
+})
+
+test('hrpc client - a hung peer rejects with ERR_MDK_REQUEST_TIMEOUT', async (t) => {
+  const rpc = { request: () => new Promise(() => {}) }
+  const client = createRawMdkClient({ hrpc: { key: 'ab'.repeat(32), rpc, timeout: 50 } })
+  await client.connect()
+  try {
+    await client.listWorkers()
+    t.fail('should have timed out')
+  } catch (err) {
+    t.is(err.message, 'ERR_MDK_REQUEST_TIMEOUT')
+    t.is(err.code, 'ERR_MDK_REQUEST_TIMEOUT')
+  }
+})
+
+test('hrpc client - createMdkClient passes opts.timeout to the transport', async (t) => {
+  const { publicKey } = await startListener(t)
+  const mdkClient = createMdkClient({ kernelKey: publicKey.toString('hex') }, { timeout: 1 })
+  t.teardown(() => mdkClient.close())
+  // 1 ms cannot cover a DHT round trip, so the configured bound is what fires.
+  await t.exception(() => mdkClient.listWorkers(), /ERR_MDK_REQUEST_TIMEOUT/)
+})
+
+test('hrpc client - worker clients dial a Worker with the parent kernelKeyPair', async (t) => {
+  const HyperswarmRPC = require('@hyperswarm/rpc')
+  const { serialize, deserialize, buildResponse } = require('../../../kernel/lib/protocol/envelope')
+  const { ACTIONS } = require('../../../kernel/lib/protocol/actions')
+
+  const keyPair = DHT.keyPair(crypto.randomBytes(32))
+  const callerKey = keyPair.publicKey.toString('hex')
+
+  // A stand-in Worker RPC server whose firewall admits only the caller key.
+  const workerRpc = new HyperswarmRPC()
+  const seenKeys = []
+  const server = workerRpc.createServer({
+    firewall: (remotePublicKey) => {
+      seenKeys.push(remotePublicKey.toString('hex'))
+      return remotePublicKey.toString('hex') !== callerKey
+    }
+  })
+  server.respond('mdk', async (buf) => {
+    const env = deserialize(buf)
+    return serialize(buildResponse(env, ACTIONS.COMMAND_RESULT, { status: 'SUCCESS' }, 'w1'))
+  })
+  await server.listen()
+  t.teardown(async () => { await server.close(); await workerRpc.destroy() })
+
+  const mods = createMockModules()
+  mods.registry.listWorkers = () => [{ workerId: 'w1', state: 'READY', deviceIds: ['d1'], rpcKey: server.publicKey.toString('hex') }]
+  const listener = new HRPCListener({ ...mods, whitelist: [callerKey] })
+  const { publicKey } = await listener.start()
+  t.teardown(() => listener.stop())
+
+  const mdkClient = createMdkClient({ kernelKey: publicKey.toString('hex'), kernelKeyPair: () => keyPair })
+  t.teardown(() => mdkClient.close())
+
+  const res = await mdkClient.sendWorkerCommand('w1', 'd1', 'reboot', {})
+  t.is(res.payload.status, 'SUCCESS', 'admitted by a Worker firewall that names only the kernelKeyPair')
+  t.ok(seenKeys.length > 0 && seenKeys.every((k) => k === callerKey), 'the Worker only ever saw the parent key')
 })

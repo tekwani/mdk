@@ -4,11 +4,26 @@ const utilsStore = require('@tetherto/hp-svc-facs-store/utils')
 const gLibUtilBase = require('@bitfinex/lib-js-util-base')
 const { getLogsCountForTimeRange, getLogMaxHeight, aggregateLogs, applyFilters, projection } = require('../utils')
 
+// Hard ceiling on rows a single read may return; conf.logMaxLimit lowers or
+// raises it per worker.
+const DEFAULT_MAX_LOG_LIMIT = 10000
+const LOG_KEY_RE = /^[A-Za-z0-9_-]{1,64}$/
+const LOG_TAG_RE = /^[A-Za-z0-9_.:-]{1,160}$/
+// Per-device snapshot log written by SnapsService (`thing-5m-<deviceId>`).
+const DEVICE_LOG_KEY = 'thing-5m'
+
 /**
  * Reads time logs written by LogsService: tailLog(key, tag) walks rotated
  * bees until the requested range/limit is filled; getHistoricalLogs serves
  * the `alerts` / `info` history logs, resolving device metadata through the
  * injected getDeviceInfo(deviceId).
+ *
+ * Every caller-supplied paging value is validated: `offset` is an integer in
+ * 0..logMaxHeight, `limit` an integer capped at conf.logMaxLimit (default
+ * 10000), `start`/`end` finite timestamps. tailLog only opens the per-device
+ * snapshot log (`thing-5m`, tag = the device id) and `stat-*` aggregate
+ * logs, plus any key listed in conf.tailLogKeys; when the request is scoped
+ * to a device (thingId) the tag must belong to that device.
  */
 class LogHistoryService {
   constructor ({ logs, getDeviceInfo, statTimeframes, conf, tailLogHook = async () => {} }) {
@@ -18,6 +33,35 @@ class LogHistoryService {
     this.statTimeframes = statTimeframes || []
     this.conf = conf || {}
     this.tailLogHook = tailLogHook
+  }
+
+  _maxLimit () {
+    const n = this.conf.logMaxLimit
+    return Number.isInteger(n) && n > 0 ? n : DEFAULT_MAX_LOG_LIMIT
+  }
+
+  // Normalises the paging fields of a caller request; throws ERR_LOG_* on
+  // anything outside the accepted shape.
+  _sanitizeRange (req) {
+    const out = { ...req }
+    const maxHeight = getLogMaxHeight(this.conf.logKeepCount)
+    if (req.offset !== undefined && req.offset !== null) {
+      const offset = Number(req.offset)
+      if (!Number.isInteger(offset) || offset < 0 || offset > maxHeight) throw new Error('ERR_LOG_OFFSET_INVALID')
+      out.offset = offset
+    }
+    if (req.limit !== undefined && req.limit !== null) {
+      const limit = Number(req.limit)
+      if (!Number.isInteger(limit) || limit < 0) throw new Error('ERR_LOG_LIMIT_INVALID')
+      out.limit = Math.min(limit, this._maxLimit())
+    }
+    for (const k of ['start', 'end']) {
+      if (req[k] === undefined || req[k] === null) continue
+      const v = Number(req[k])
+      if (!Number.isFinite(v) || v < 0) throw new Error(`ERR_LOG_${k.toUpperCase()}_INVALID`)
+      out[k] = v
+    }
+    return out
   }
 
   async _getLogs (req, logKey, errorMsg, transformFn) {
@@ -67,6 +111,7 @@ class LogHistoryService {
   }
 
   async getHistoricalLogs (req) {
+    req = this._sanitizeRange(req)
     const logType = req.logType
     if (!logType) {
       throw new Error('ERR_INFO_HISTORY_LOG_TYPE_INVALID')
@@ -113,7 +158,37 @@ class LogHistoryService {
 
   _getDefaultTaillogLimit (req) {
     const { limit, start, end } = req
-    return limit || (start || end ? undefined : 100)
+    // A pure time-range read still stops at the hard ceiling.
+    return limit || (start || end ? this._maxLimit() : 100)
+  }
+
+  // Which logs a tailLog request may open. Keys and tags are interpolated
+  // into a bee name, so they are charset-restricted first; then the key must
+  // be the per-device snapshot log or a stat log, and a device-scoped request
+  // (thingId) may only read that device's own logs.
+  _checkTailLogScope (req) {
+    const { key, tag, thingId } = req
+    if (typeof key !== 'string' || !LOG_KEY_RE.test(key)) throw new Error('ERR_LOG_KEY_INVALID')
+    if (typeof tag !== 'string' || !LOG_TAG_RE.test(tag)) throw new Error('ERR_LOG_TAG_INVALID')
+
+    const extraKeys = Array.isArray(this.conf.tailLogKeys) ? this.conf.tailLogKeys : []
+    const isDeviceLog = key === DEVICE_LOG_KEY
+    if (!isDeviceLog && !key.startsWith('stat-') && !extraKeys.includes(key)) {
+      throw new Error('ERR_LOG_KEY_INVALID')
+    }
+
+    if (isDeviceLog) {
+      // tag === thingId here when the request is device-scoped (tailLog
+      // derives it); otherwise it must still name a provisioned device.
+      if (!this.getDeviceInfo(tag)) throw new Error('ERR_LOG_TAG_FORBIDDEN')
+      return
+    }
+
+    if (thingId) {
+      const dev = this.getDeviceInfo(thingId)
+      const tags = (dev && Array.isArray(dev.tags)) ? dev.tags : []
+      if (!tags.includes(tag)) throw new Error('ERR_LOG_TAG_FORBIDDEN')
+    }
   }
 
   async _getTailLogWithOffset (req, offset) {
@@ -155,11 +230,20 @@ class LogHistoryService {
     if (!req.key) {
       throw new Error('ERR_LOG_KEY_NOTFOUND')
     }
-    const offset = req.offset || 0
+
+    // The per-device snapshot log is addressed by the device, never by a
+    // caller-chosen tag.
+    if (req.key === DEVICE_LOG_KEY && req.thingId) {
+      req = { ...req, tag: req.thingId }
+    }
 
     if (!req.tag) {
       throw new Error('ERR_LOG_TAG_INVALID')
     }
+
+    this._checkTailLogScope(req)
+    req = this._sanitizeRange(req)
+    const offset = req.offset || 0
 
     const res = await this._getTailLogWithOffset(req, offset)
 

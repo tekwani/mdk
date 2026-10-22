@@ -24,16 +24,16 @@ const GITHUB_BLOB = 'https://github.com/tetherto/mdk/blob/main/'
 
 const MANIFESTS = [
   ':(glob)backend/core/*/package.json',
-  ':(glob)backend/plugins/*/package.json',
+  ':(glob)backend/apps/*/package.json',
   ':(glob)backend/workers/**/package.json',
   ':(glob)ui/packages/*/package.json',
   ':(glob)packages/*/package.json'
 ]
-const EXCLUDED = ['backend/workers/samples/', 'backend/plugins/demo/']
+const EXCLUDED = ['backend/workers/samples/', 'backend/apps/demo/']
 const CONTRACTS = ['mdk-contract.json', 'plugin/mdk-contract.json']
 const GROUPS = [
   ['backend/core/', 'Core'],
-  ['backend/plugins/', 'Extensions'],
+  ['backend/apps/', 'Extensions'],
   ['backend/workers/', 'Extensions'],
   ['ui/packages/', 'UI'],
   ['packages/', 'Tools']
@@ -164,9 +164,10 @@ ${links.join('\n\n')}
 }
 
 function main () {
-  const manifests = execFileSync('git', ['ls-files', '--', ...MANIFESTS], { cwd: REPO_ROOT, encoding: 'utf8' })
+  // Tracked plus untracked-but-not-ignored, minus anything deleted from the working tree.
+  const manifests = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', ...MANIFESTS], { cwd: REPO_ROOT, encoding: 'utf8' })
     .split('\n')
-    .filter(Boolean)
+    .filter((file) => file && fs.existsSync(path.join(REPO_ROOT, file)))
   const { entries, errors } = buildCatalog(REPO_ROOT, manifests)
 
   if (errors.length) {

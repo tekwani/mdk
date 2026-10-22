@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 /**
  * Enforces the USAGE.md contract: a component's `USAGE.md` is summary + notes +
  * examples only. Prop tables are generated from the TypeScript types (the

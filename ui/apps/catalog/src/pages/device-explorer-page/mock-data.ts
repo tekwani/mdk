@@ -9,7 +9,6 @@
 import { UNITS } from '@tetherto/mdk-react-devkit/primitives'
 
 const SITE = 'Demo Site'
-const DEMO_USER = 'operator1@example.com'
 const NOW = Date.UTC(2026, 0, 1)
 
 const pad = (n: number, width = 3) => String(n).padStart(width, '0')
@@ -21,12 +20,6 @@ const mac = (n: number): string => {
 }
 
 const ip = (n: number): string => `192.168.1.${n}`
-
-const demoComment = (n: number) => ({
-  ts: NOW - n * 60_000,
-  comment: `Demo comment ${n}`,
-  user: DEMO_USER,
-})
 
 type MinerStatus = 'online' | 'offline' | 'error' | 'maintenance'
 
@@ -103,91 +96,6 @@ const makeMiner = (n: number, status: MinerStatus) => {
   }
 }
 
-const CONTAINER_TYPES = [
-  'container-demo-a',
-  'container-demo-b',
-  'container-demo-c',
-  'container-demo-d',
-] as const
-
-type ContainerStatus = 'running' | 'stopped' | 'offline' | 'error'
-
-const makeContainer = (n: number, type: string, status: ContainerStatus) => {
-  const id = `container-${pad(n)}`
-  const code = `DEMO-C${pad(n)}`
-  const containerKey = `demo-container-${n}`
-
-  return {
-    id,
-    type,
-    code,
-    tags: ['t-container', type, `container-${containerKey}`],
-    info: {
-      site: SITE,
-      container: containerKey,
-      serialNum: `SN-C${pad(n)}`,
-      macAddress: mac(100 + n),
-      subnet: '192.168.1.0/24',
-      createdAt: NOW - 30 * 24 * 60 * 60 * 1000,
-      updatedAt: NOW,
-    },
-    rack: `${type}-shelf-0`,
-    address: ip(100 + n),
-    port: 6000 + n,
-    comments: n === 1 ? [demoComment(1)] : [],
-    last: {
-      alerts: null,
-      err: status === 'error' ? 'demo_error' : null,
-      snap: {
-        stats: {
-          status,
-          power_w: status === 'running' ? 1_200_000 + n * 10_000 : 0,
-          ambient_temp_c: 28 + n,
-          humidity_percent: 55 + n,
-        },
-      },
-    },
-    isRaw: true,
-  }
-}
-
-const makeCabinet = (n: number) => ({
-  id: `lv-${pad(n)}`,
-  type: 'cabinet-lv',
-  code: `DEMO-CAB${pad(n)}`,
-  tags: ['t-cabinet', 'cabinet-lv', `id-lv-${pad(n)}`],
-  info: {
-    site: SITE,
-    container: `demo-cabinet-${n}`,
-    serialNum: `SN-CAB${pad(n)}`,
-  },
-  rootTempSensor: {
-    id: `tempsensor-${pad(n)}`,
-    type: 'tempsensor',
-    last: { snap: { stats: { temp_c: 45 + n } } },
-  },
-  powerMeters: [
-    {
-      id: `pm-${pad(n)}-a`,
-      type: 'powermeter',
-      last: { snap: { stats: { power_w: 500_000 + n * 25_000 } } },
-    },
-    {
-      id: `pm-${pad(n)}-b`,
-      type: 'powermeter',
-      last: { snap: { stats: { power_w: 300_000 + n * 15_000 } } },
-    },
-  ],
-  last: { alerts: null, err: null, snap: { stats: { status: 'running' } } },
-})
-
 const MINER_STATUSES: MinerStatus[] = ['online', 'offline', 'error', 'maintenance']
-const CONTAINER_STATUSES: ContainerStatus[] = ['running', 'stopped', 'offline', 'error']
 
 export const minersData = MINER_STATUSES.map((status, i) => makeMiner(i + 1, status))
-
-export const containerData = CONTAINER_TYPES.map((type, i) =>
-  makeContainer(i + 1, type, CONTAINER_STATUSES[i] ?? 'running'),
-)
-
-export const cabinetData = [1, 2].map(makeCabinet)

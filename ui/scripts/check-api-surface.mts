@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 
 /**
  * Public API-surface gate for the packages a consumer wires their backend into.

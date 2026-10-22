@@ -63,9 +63,8 @@ scripts, and Gateway extensions. Your starting point depends on which you're bui
 
 > [!NOTE]
 > The React adapter and the Node.js client do not mirror each other one-to-one. Some Kernel operations — such as
-> the write-action flow — have both a React hook and a Node.js `mdk-client` equivalent. Others, like telemetry,
-> are exposed through the React adapter as higher-level domain hooks (for example `useMiners`, `useSiteHashrate`)
-> with no direct `mdk-client` counterpart. If you are building UI, start with the [React adapter](../ui/packages/react-adapter/README.md); if you are
+> the write-action flow — are methods on the Node.js `mdk-client`, which a Gateway plugin calls and exposes as
+> HTTP routes; a UI reads those routes with `useQuery` from the React adapter. If you are building UI, start with the [React adapter](../ui/packages/react-adapter/README.md); if you are
 > building backend, start with [`mdk-client`](../backend/core/client/README.md) — do not expect a symmetric API between the two.
 
 **Start here (all engineers)**
@@ -78,7 +77,7 @@ scripts, and Gateway extensions. Your starting point depends on which you're bui
 | Worker runtime contracts (telemetry, commands, health, errors) | `backend/workers/<family>/<provider>/mdk-contract.json` + `USAGE.md` + `examples/` |
 | Build a Worker and author its contract | [`guides/workers/build-a-worker.md`](guides/workers/build-a-worker.md) |
 | Workers (lifecycle, install pattern) | [`../backend/workers/docs/install-pattern.md`](../backend/workers/docs/install-pattern.md) |
-| Runnable site examples | [`examples/mvp-site/`](../examples/mvp-site/README.md) (the Starter site: minimal, PM2-supervised), [`examples/full-site/`](../examples/full-site/README.md) (full 11-worker fleet) |
+| Runnable site examples | [`examples/mvp-site/`](../examples/mvp-site/README.md) (the Starter site: minimal, PM2-supervised) |
 
 **React / UI developer** — building browser-based operator UIs on top of MDK
 
@@ -88,8 +87,7 @@ scripts, and Gateway extensions. Your starting point depends on which you're bui
 | Scaffold a dashboard against a running stack | `mdk create dashboard` — [`../packages/cli/README.md`](../packages/cli/README.md) |
 | UI toolkit overview | [`../ui/README.md`](../ui/README.md) |
 | React adapter: stores, hooks, and the `<MdkProvider>` | [`../ui/packages/react-adapter/README.md`](../ui/packages/react-adapter/README.md) |
-| Pre-built UI components and blueprints | [`../ui/packages/react-devkit/README.md`](../ui/packages/react-devkit/README.md) |
-| Build the Pool Manager UI | [`ui/packages/react-devkit/blueprints/pool-manager.md`](../ui/packages/react-devkit/blueprints/pool-manager.md) |
+| Pre-built UI components | [`../ui/packages/react-devkit/README.md`](../ui/packages/react-devkit/README.md) |
 | UI session and auth options | [`guides/security/`](guides/security/index.md#step-6-wire-the-ui-session) |
 
 **Backend / Node.js developer** — building Gateway plugins, backend services, or integrating new hardware

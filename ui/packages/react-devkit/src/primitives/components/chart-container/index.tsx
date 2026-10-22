@@ -71,13 +71,16 @@ export type ChartContainerProps = {
   rangeSelector?: RangeSelectorProps
   /** Shows a centered `<Loader>` overlay */
   loading?: boolean
+  /** Replaces the default `<Loader>` in the loading overlay */
+  loader?: ReactNode
   /** Hides the chart and shows `emptyMessage` */
   empty?: boolean
   /**
-   * Message shown when `empty` is true
+   * Message shown when `empty` is true: a string, or any element (an
+   * `EmptyState`, say)
    * @default 'No data available'
    */
-  emptyMessage?: string
+  emptyMessage?: ReactNode
   /** Built-in footer showing Min / Avg / Max values */
   minMaxAvg?: MinMaxAvgValues
   /** Time range label shown in the footer */
@@ -127,6 +130,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       highlightedValue,
       rangeSelector,
       loading,
+      loader,
       empty,
       emptyMessage = 'No data available',
       minMaxAvg,
@@ -216,9 +220,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     const chartArea = (
       <div className="mdk-chart-container__chart-area">
         {loading && (
-          <div className="mdk-chart-container__loading-overlay">
-            <Loader />
-          </div>
+          <div className="mdk-chart-container__loading-overlay">{loader ?? <Loader />}</div>
         )}
         {empty && !loading && <div className="mdk-chart-container__empty">{emptyMessage}</div>}
         {isContentVisible && children}

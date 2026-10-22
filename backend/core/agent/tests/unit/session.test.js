@@ -95,6 +95,53 @@ test('a plain chat turn that times out says so, rather than answering nothing', 
   t.is(session.messages.length, 0, 'and the unanswered question left no trace')
 })
 
+// A consumer that stops reading (a gateway request whose client went away) must stop the model
+// call too: returning the generator only ends the iteration, and the SDK keeps reading the
+// provider's stream behind it until the answer is complete. A tool turn buffers the model's
+// output before it yields anything, so the caller's signal has to reach the call directly.
+const endlessModel = (calls) => new MockLanguageModelV3({
+  doStream: async ({ abortSignal }) => {
+    calls.push(abortSignal)
+    let i = 0
+    return {
+      stream: new ReadableStream({
+        async pull (controller) {
+          if (i === 0) controller.enqueue({ type: 'text-start', id: '0' })
+          controller.enqueue({ type: 'text-delta', id: '0', delta: `tok${i++} ` })
+          await new Promise((resolve) => setTimeout(resolve, 5))
+        }
+      })
+    }
+  }
+})
+
+test('returning a plain chat turn aborts the model call in flight', async (t) => {
+  const calls = []
+  const session = new Session({ provider: providerWith(endlessModel(calls)) })
+  const turn = session.send('a long answer, please')
+  await turn.next()
+  t.absent(calls[0].aborted, 'the model call is running')
+  await turn.return()
+  t.ok(calls[0].aborted, 'and is aborted once the consumer stops reading')
+})
+
+for (const [kind, extra] of [['plain chat', {}], ['tool', { tools: TOOLS, mcp: MCP, limits: { maxSteps: 1 } }]]) {
+  test(`the caller's signal aborts a ${kind} turn that has yielded nothing yet`, async (t) => {
+    const calls = []
+    const session = new Session({ provider: providerWith(endlessModel(calls)), ...extra })
+    const ac = new AbortController()
+    const turn = session.send('a long answer, please', { signal: ac.signal })
+    const pending = turn.next()
+    while (!calls.length) await new Promise((resolve) => setTimeout(resolve, 5))
+    ac.abort()
+    t.ok(calls[0].aborted, 'the model call is aborted')
+    const rest = [await pending]
+    for (let r = await turn.next(); !r.done; r = await turn.next()) rest.push(r)
+    t.absent(rest.some((r) => r.value?.type === EVENT.ERROR), 'the turn ends without an error nobody waits for')
+    t.is(session.messages.length, 0, 'and leaves no trace')
+  })
+}
+
 test('a successful tool turn records the exchange', async (t) => {
   // The call, then the answer: a figure stated without asking a tool for it is refused now, so
   // the turn this test is named after has to actually make one.

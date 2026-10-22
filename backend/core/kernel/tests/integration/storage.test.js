@@ -147,6 +147,7 @@ test('wal - getPending filters out terminal states', async (t) => {
   await wal.append('cmd-2', { state: COMMAND_STATES.EXECUTING, deviceId: 'wm002', command: 'reboot', params: {}, retries: 2, createdAt: Date.now() })
   await wal.append('cmd-3', { state: COMMAND_STATES.SUCCESS, deviceId: 'wm003', command: 'reboot', params: {}, retries: 0, createdAt: Date.now() })
   await wal.append('cmd-4', { state: COMMAND_STATES.FAILED, deviceId: 'wm004', command: 'reboot', params: {}, retries: 0, createdAt: Date.now() })
+  await wal.append('cmd-5', { state: COMMAND_STATES.TIMEOUT, deviceId: 'wm005', command: 'reboot', params: {}, createdAt: Date.now() })
 
   const pending = await wal.getPending()
   t.is(pending.length, 2, 'only non-terminal entries returned')
@@ -156,6 +157,7 @@ test('wal - getPending filters out terminal states', async (t) => {
   t.ok(states.includes('EXECUTING'))
   t.absent(states.includes('SUCCESS'))
   t.absent(states.includes('FAILED'))
+  t.absent(states.includes('TIMEOUT'))
 })
 
 test('wal - crash recovery scenario: EXECUTING survives restart', async (t) => {
@@ -182,15 +184,15 @@ test('wal - crash recovery scenario: EXECUTING survives restart', async (t) => {
   t.is(entries[0].entry.state, 'EXECUTING', 'state preserved')
   t.is(entries[0].entry.retries, 2, 'retries preserved')
 
-  // Command State Machine would now transition EXECUTING → TIMEOUT → re-queue
+  // Command State Machine would now settle it TIMEOUT (unconfirmed), never re-queue it
   const entry = entries[0].entry
-  entry.state = COMMAND_STATES.QUEUED
-  entry.retries -= 1
+  entry.state = COMMAND_STATES.TIMEOUT
+  entry.error = 'ERR_COMMAND_UNCONFIRMED'
   await wal2.append('cmd-crashed', entry)
 
   const recovered = await wal2.get('cmd-crashed')
-  t.is(recovered.state, 'QUEUED', 'transitioned to QUEUED for retry')
-  t.is(recovered.retries, 1, 'retries decremented')
+  t.is(recovered.state, 'TIMEOUT', 'settled as TIMEOUT')
+  t.is(recovered.error, 'ERR_COMMAND_UNCONFIRMED')
 })
 
 test('wal - overwrite entry on state transition', async (t) => {

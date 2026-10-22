@@ -24,8 +24,8 @@
 
 The **MDK** UI is a comprehensive toolkit providing:
 
-- **150–200+ production-tested components** (generic UI primitives + mining-domain components)
-- **70+ custom React hooks** for common patterns
+- **About 160 production-tested components**: 69 generic UI primitives plus mining-domain components, all props-driven
+- **Store, auth and utility hooks**; MDK ships no endpoint-specific data hooks, so apps wrap their own Gateway routes with `useQuery`
 - **Headless state management** built on Zustand vanilla stores, consumed through framework-specific adapters
 - **TanStack Query** integration scaffolding (`@tetherto/mdk-react-adapter` wires up `QueryClientProvider`)
 - **Modern tech stack**: React 19, Radix UI, React Hook Form, Zod, SCSS design tokens with `@layer mdk`
@@ -51,25 +51,12 @@ The monorepo ships **runtime packages** (what React apps depend on), **assets**,
 Framework-agnostic headless package. Pure TypeScript, no React.
 
 - Zustand vanilla stores: `authStore`, `devicesStore`, `notificationStore`,
-  `timezoneStore`, `actionsStore`
+  `timezoneStore`
 - TanStack `QueryClient` factory (`createMdkQueryClient`)
-- `queryKeys`: centralized key factories for all read endpoints,
-  including Op Center reads (site, racks, PDU layout, global data,
-  `thingConfig`), Pool Manager, and `thing` comment mutations
-- Query factories and pool factories: `{ queryKey, queryFn }` objects
-  for mining read endpoints
-- Query parameter builders: Op Center, alert, dashboard, and pool
-  builders (`buildExplorerListThingsParams`, `buildContainerDetailParams`,
-  `buildContainerWidgetsListParams`, etc.)
-- Container tab utilities: `CONTAINER_TAB_MATRIX`, `resolveContainerModelFamily`,
-  `getSupportedContainerTabs`
-- `flattenKernelEnvelope`: null-safe per-Kernel envelope flattener
-- Telemetry primitives (subscription manager, stale detection, ring
-  buffer)
-- Command lifecycle state machine
-- Shared API types (including Op Center: `ListRacksParams`,
-  `PduLayoutParams`, `GlobalDataParams`, `ThingConfigParams`,
-  `ThingCommentBody`)
+- The client's base URL and auth-aware fetcher (`getApiBaseUrl`, `getFetcher`)
+- Auth providers: `noAuth`, `bearerTokenAuth`, `gatewayRedirectAuth`
+- Device type / tag helpers (`isMiner`, `isContainer`, `appendIdToTag`, …)
+- Shared API types (telemetry rows, layouts, auth)
 
 ### `@tetherto/mdk-react-adapter` ([`packages/react-adapter`](./packages/react-adapter/README.md))
 
@@ -77,8 +64,7 @@ React bindings for the headless core.
 
 - `<MdkProvider>`: wraps `QueryClientProvider` and exposes the resolved
   API base URL.
-- Store hooks: `useAuth`, `useDevices`, `useNotifications`, `useTimezone`,
-  `useActions`.
+- Store hooks: `useAuth`, `useDevices`, `useNotifications`, `useTimezone`.
 - Re-exports of `useQuery` / `useMutation` / `useQueryClient` from
   `@tanstack/react-query` for convenience.
 
@@ -89,8 +75,8 @@ The React UI library:
 - [`src/primitives/`](./packages/react-devkit/src/primitives/): generic UI primitives built on Radix UI (Button, Dialog,
   Switch, Table, Charts, …). BEM class names, SCSS design tokens, CSS
   custom property theming.
-- [`src/domain/`](./packages/react-devkit/src/domain/): mining-domain components, hooks and a TanStack
-  Query API stub.
+- [`src/domain/`](./packages/react-devkit/src/domain/): mining-domain components, with their constants, types and
+  utils.
 
 ### `@tetherto/mdk-fonts` ([`packages/fonts`](./packages/fonts/README.md))
 
@@ -105,7 +91,7 @@ Adapter Hooks, and Theming pages alongside per-component demos.
 ### Tooling — build and explore
 
 The machine-readable manifests each package emits under `dist/`
-(`registry.json`, `hooks.json`, `stores.json`, `blueprints.json`) are the
+(`registry.json`, `hooks.json`, `stores.json`) are the
 discovery surface for humans and agents alike. See [`AGENTS.md`](AGENTS.md).
 
 📖 **See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the dependency
@@ -140,7 +126,7 @@ npm run typecheck        # type-check all packages
 npm run lint             # lint all packages
 npm run lint:fix         # lint + auto-fix
 npm run test             # full test suite
-npm run fullcheck        # build + lint + typecheck + format + check:agent-ready + coverage + docs
+npm run fullcheck        # build + lint + typecheck + format + check:agent-ready + check:api-surface + test:coverage
 ```
 
 ### Use the toolkit in your app
@@ -157,8 +143,7 @@ npm run dev                         # http://localhost:3030
 
 You can also copy [`examples/mdk-ui-shell-template/`](../examples/mdk-ui-shell-template/README.md)
 directly and run it in place — it is a real Vite app, not a scaffold-only
-tree. Its README covers adding pages (including the reference Dashboard,
-Alerts, Pool Manager, Site Overview, and Explorer pages under `_managed/`).
+tree. Its README covers adding pages.
 
 That template needs a local
 [`mdk-gateway`](../backend/core/gateway/README.md)
@@ -265,7 +250,7 @@ For details:
 
 - **[AGENTS.md](AGENTS.md)**: agent contract overview and quick recipe.
 - **[Agent-first](docs/AGENT_FIRST.md)**: plain-language tour, deeper architecture reference
-(manifests, blueprints, registry), and the
+(manifests and registry), and the
   end-to-end shell setup
 
 ### Package documentation

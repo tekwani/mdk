@@ -7,11 +7,11 @@ import _split from 'lodash/split'
 
 import { SimpleTooltip } from '@primitives'
 
-import type { Alert } from '../../types/alerts'
+import type { AlertRecord } from '../../types/alerts'
 import { useTimezoneFormatter } from '@tetherto/mdk-react-adapter'
-import { getAlertsDescription } from '../../utils/alerts-utils'
+import { getAlertsDescription } from '../alerts/alerts-utils'
 
-export type AlarmInfoItem = Alert
+export type AlarmInfoItem = AlertRecord
 
 export type AlarmInfoProps = {
   title: string

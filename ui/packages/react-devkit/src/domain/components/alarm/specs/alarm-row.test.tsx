@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { onLogClicked } from '@domain/utils/alerts-utils'
+import { onLogClicked } from '@domain/components/alerts/alerts-utils'
 import type { TimelineItemData } from '../alarm-row/alarm-row'
 import { AlarmRow } from '../alarm-row/alarm-row'
 
@@ -12,7 +12,7 @@ vi.mock('@domain/constants/alerts', () => ({
   },
 }))
 
-vi.mock('@domain/utils/alerts-utils', () => ({
+vi.mock('@domain/components/alerts/alerts-utils', () => ({
   onLogClicked: vi.fn(),
 }))
 

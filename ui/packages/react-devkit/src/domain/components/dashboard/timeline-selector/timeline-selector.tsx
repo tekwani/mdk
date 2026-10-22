@@ -1,6 +1,7 @@
 import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@primitives'
-import type { TimelineOption } from '@tetherto/mdk-ui-foundation/presets/mining'
-import { getTimelineOptions } from '@tetherto/mdk-ui-foundation/presets/mining'
+
+import type { TimelineOption } from '../../line-chart-card/types'
+import { getTimelineOptions } from './timeline-options'
 import type { JSX } from 'react'
 
 export type TimelineSelectorProps = {
@@ -25,8 +26,8 @@ export type TimelineSelectorProps = {
 
 /**
  * Dropdown for picking the dashboard time range. Wraps `core/Select` and the
- * canonical option list from `getTimelineOptions`. Pair with the
- * `useDashboardTimeRange` hook in `@tetherto/mdk-react-adapter`.
+ * canonical option list from `getTimelineOptions`. Controlled: the page owns
+ * the selected timeline and passes it to its queries.
  *
  * @category dashboard
  * @kernelCapability hashrate-monitoring
@@ -34,10 +35,8 @@ export type TimelineSelectorProps = {
  *
  * @example
  * ```tsx
- * const { timeline, setTimeline, options } = useDashboardTimeRange()
- * return (
- *   <TimelineSelector value={timeline} onChange={setTimeline} options={options} />
- * )
+ * const [timeline, setTimeline] = useState('5m')
+ * return <TimelineSelector value={timeline} onChange={setTimeline} />
  * ```
  * @tier agent-ready
  */

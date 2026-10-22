@@ -2,7 +2,7 @@ import { cn, Dialog, DialogContent, DialogTrigger, SkeletonBlock } from '@primit
 import { forwardRef } from 'react'
 
 import { PoolDetailsCard } from '../pool-details-card'
-import { formatBtcRevenue, formatHashrate } from './format'
+import { formatBtcRevenue, formatPoolHashrate } from './format'
 import type { MiningPoolRow, MiningPoolsPanelProps } from './types'
 
 const COLUMN_HEADERS = ['Pool', 'Revenue 24hrs', 'Hash rate'] as const
@@ -43,7 +43,7 @@ const PoolRowView = ({
         {formatBtcRevenue(row.revenue24hBtc)}
       </span>
       <span role="cell" className="mdk-mining-pools-panel__cell">
-        {formatHashrate(row.hashratePhs)}
+        {formatPoolHashrate(row.hashratePhs)}
       </span>
       <span
         role="cell"
@@ -70,8 +70,7 @@ const PoolRowView = ({
  * with revenue, hash rate, and an optional "Show details" action.
  *
  * Pure presentation: the row data + click handler come from props,
- * shaped upstream by `usePoolRows` (or any caller producing
- * {@link MiningPoolRow}s).
+ * shaped upstream by the caller into {@link MiningPoolRow}s.
  *
  * @category cards
  * @kernelCapability pool-monitoring

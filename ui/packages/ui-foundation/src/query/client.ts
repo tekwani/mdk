@@ -2,15 +2,15 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/query-core'
 
 import { type AuthProvider, bearerTokenAuth, isSessionExpiredError } from '../auth/provider'
 import { createBearerFetcher } from './mdk-fetch'
-import { DEFAULT_API_BASE_URL, type EndpointMap, type Fetcher } from './runtime'
+import { DEFAULT_API_BASE_URL } from './runtime'
 
 const readViteEnv = (key: string): string | undefined => {
   try {
     // `import.meta` is a syntactic form. We read it via a runtime indirection
     // so this file remains importable from CommonJS Node tooling that doesn't
     // know about it. Static analysers can't see through the indirection,
-    // hence the `// eslint-disable-next-line` below.
-    // eslint-disable-next-line no-new-func
+    // hence the `// oxlint-disable-next-line` below.
+    // oxlint-disable-next-line no-new-func
     const reader = new Function('return import.meta') as () => {
       env?: Record<string, string | undefined>
     }
@@ -22,7 +22,10 @@ const readViteEnv = (key: string): string | undefined => {
 
 const readNodeEnv = (key: string): string | undefined => {
   try {
-    return typeof process !== 'undefined' ? process.env?.[key] : undefined
+    // Read off `globalThis` rather than the `process` global: this is browser
+    // code, so it does not pull in `@types/node` just for this one lookup.
+    const { process } = globalThis as { process?: { env?: Record<string, string | undefined> } }
+    return process?.env?.[key]
   } catch {
     return undefined
   }
@@ -124,26 +127,10 @@ export type CreateMdkQueryClientOptions = {
    * `authStore`, cleared on a 401 — which is what this function did inline
    * before the seam existed.
    *
-   * The provider also supplies the default transport's credentials, so passing
-   * one is enough to change the auth scheme; `fetcher` only needs overriding to
-   * change the transport itself.
+   * The provider also supplies the transport's credentials: the client's
+   * fetcher sends its token as a bearer header.
    */
   auth?: AuthProvider
-  /**
-   * Transport for every query and mutation. Defaults to a bearer fetcher reading
-   * the token from `auth`.
-   *
-   * This is the seam for "bring your own backend": pass a `Fetcher` that talks
-   * to your API (custom auth scheme, throttling, a different protocol) or one
-   * that serves fixtures from memory for a server-less demo.
-   */
-  fetcher?: Fetcher
-  /**
-   * Request paths, as `:name` templates. Defaults to the bundled mining Gateway
-   * map (`API_ENDPOINTS`). Pass your own to point the same factories and hooks
-   * at a different API's URL space.
-   */
-  endpoints?: EndpointMap
   /**
    * Fired after the session is cleared because the backend reported it ended
    * (by default, HTTP 401 on any query or mutation; `auth.isSessionEnded`
@@ -161,20 +148,14 @@ export type CreateMdkQueryClientOptions = {
 }
 
 /**
- * Build a TanStack `QueryClient` carrying the data-source runtime.
+ * Build the TanStack `QueryClient` an MDK app talks to its Gateway with.
  *
- * The runtime (`baseUrl`, `fetcher`, `endpoints`) is stashed on
- * `defaultOptions.{queries,mutations}.meta`, where every query factory reads it
- * back via `getMdkRuntime` / `getFetcher` / `getEndpoints`. That is what makes
- * the data source swappable: the factories and the ~77 adapter hooks above them
- * are unchanged, and only what is handed to this function differs.
+ * The Gateway base URL and an auth-aware fetcher are stashed on
+ * `defaultOptions.{queries,mutations}.meta`, readable via `getApiBaseUrl` /
+ * `getFetcher`. A session the Gateway ends (401) is cleared on the spot.
  *
  * ```ts
- * // mining Gateway (the default — both options may be omitted)
- * createMdkQueryClient({ apiBaseUrl })
- *
- * // someone else's API
- * createMdkQueryClient({ apiBaseUrl, endpoints: MY_ENDPOINTS, fetcher: myFetcher })
+ * createMdkQueryClient({ apiBaseUrl, auth: gatewayRedirectAuth({ oauthBaseUrl }) })
  * ```
  *
  * @category query
@@ -183,17 +164,12 @@ export const createMdkQueryClient = (options: CreateMdkQueryClientOptions = {}):
   const baseUrl = resolveApiBaseUrl(options.apiBaseUrl)
   const auth = options.auth ?? bearerTokenAuth()
 
-  /* Credentials come from the provider, so a custom auth scheme needs no custom
-   * transport. Built per client rather than reusing the `mdkFetch` singleton,
-   * which is hardwired to the `authStore` singleton — two clients with different
+  /* Built per client rather than reusing the `mdkFetch` singleton, which is
+   * hardwired to the `authStore` singleton — two clients with different
    * providers would otherwise send the same token. */
-  const fetcher = options.fetcher ?? createBearerFetcher({ getToken: auth.getToken })
+  const fetcher = createBearerFetcher({ getToken: auth.getToken })
 
-  const runtimeMeta = {
-    apiBaseUrl: baseUrl,
-    fetcher,
-    ...(options.endpoints ? { endpoints: options.endpoints } : {}),
-  }
+  const runtimeMeta = { apiBaseUrl: baseUrl, fetcher }
 
   const isSessionEnded = auth.isSessionEnded ?? isSessionExpiredError
 

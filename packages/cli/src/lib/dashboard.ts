@@ -6,6 +6,10 @@ import { parse as parseYaml } from 'yaml';
 import { fetchTemplate } from './fetch-template.js';
 import { installDeps, npmBin } from './npm.js';
 import { DIRS } from './project.js';
+import { isInside, NAME_RE } from './names.js';
+import { checkoutRoot } from './checkout.js';
+import { pkg as cliPkg } from './pkg.js';
+import { DASHBOARD_APPS_ENV, type DashboardApp } from './dashboard-apps.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -16,11 +20,24 @@ const TEMPLATE_DIR_NAME = 'mdk-ui-shell-template';
 const CLI_ROOT = resolve(__dirname, '..', '..');
 
 /**
+ * Default ref for the GitHub template: this CLI's own release tag, so a given
+ * CLI version always scaffolds (and `npm install`s) the template it shipped
+ * with rather than whatever is on a mutable branch.
+ */
+export function defaultTemplateRef(): string {
+  return `v${cliPkg.version}`;
+}
+
+/** Branch, tag or SHA — the characters a git ref in a URL path can safely use. */
+const REF_RE = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+
+/**
  * Builds the GitHub tree URL for the UI shell template at a given ref. Standalone
  * (published) installs scaffold from here since the heavy Vite app is not bundled
  * into the CLI package.
  */
-export function shellTemplateUrl(ref = 'main'): string {
+export function shellTemplateUrl(ref = defaultTemplateRef()): string {
+  if (!REF_RE.test(ref) || ref.includes('..')) throw new Error(`Invalid git ref "${ref}".`);
   return `https://github.com/tetherto/mdk/tree/${ref}/examples/${TEMPLATE_DIR_NAME}`;
 }
 
@@ -40,7 +57,7 @@ export interface DashboardOptions {
    * descriptive, stack-derived name.
    */
   subdir?: string;
-  /** Branch/tag to fetch from GitHub when not inside the monorepo (default: `main`). */
+  /** Branch/tag to fetch from GitHub when not inside the monorepo (default: `v<cli version>`). */
   ref?: string;
   /** Overwrite the target directory if it already exists (default: false). */
   force?: boolean;
@@ -68,21 +85,16 @@ export interface DashboardResult {
 const MDK_DEP_SCOPE = '@tetherto/';
 
 /**
- * Locates the runnable UI shell template inside the monorepo by walking up from
- * the CLI's own location to a `examples/mdk-ui-shell-template`. Returns the
+ * Locates the runnable UI shell template inside the monorepo the CLI runs from
+ * (`<root>/packages/cli` → `<root>/examples/mdk-ui-shell-template`). Returns the
  * template dir (and monorepo root) when the CLI is run from the monorepo, else
  * null (published/standalone — scaffold from GitHub instead).
  */
 function findLocalTemplate(): { templateDir: string; monorepoRoot: string } | null {
-  let dir = CLI_ROOT;
-  while (dir !== dirname(dir)) {
-    const templateDir = join(dir, 'examples', TEMPLATE_DIR_NAME);
-    if (existsSync(join(templateDir, 'package.json'))) {
-      return { templateDir, monorepoRoot: dir };
-    }
-    dir = dirname(dir);
-  }
-  return null;
+  const root = checkoutRoot(CLI_ROOT);
+  if (!root) return null;
+  const templateDir = join(root, 'examples', TEMPLATE_DIR_NAME);
+  return existsSync(join(templateDir, 'package.json')) ? { templateDir, monorepoRoot: root } : null;
 }
 
 /** The published range to pin standalone MDK deps to (`^<cliVersion>`, else `latest`). */
@@ -125,10 +137,22 @@ function isCopyExcluded(src: string): boolean {
  * template subtree from GitHub. Either way it finalizes the copy for its target:
  * sets the app name, rewrites the template's monorepo-local `file:` MDK deps
  * (→ absolute local links in the monorepo, → a published range standalone),
- * injects the display name, and strips the on-demand `_managed/` demo pages.
+ * and injects the display name.
  */
 export async function createDashboard(opts: DashboardOptions): Promise<DashboardResult> {
+  if (!NAME_RE.test(opts.name)) {
+    return {
+      ok: false,
+      message: `Invalid dashboard name "${opts.name}". Use lowercase letters, digits, '.', '_' or '-'.`,
+    };
+  }
+  // The target is removed recursively under --force, so it must be a directory
+  // strictly inside `<parentDir>/apps` — never `apps` itself or anything above.
+  const appsRoot = resolve(opts.parentDir, DIRS.apps);
   const appPath = resolve(opts.parentDir, opts.subdir ?? DIRS.dashboard);
+  if (appPath === appsRoot || !isInside(appsRoot, appPath)) {
+    return { ok: false, message: `Refusing to scaffold outside ${appsRoot}: ${appPath}` };
+  }
   if (existsSync(appPath) && !opts.force) {
     return { ok: false, message: `${appPath} already exists (use --force to overwrite).` };
   }
@@ -173,7 +197,7 @@ export async function createDashboard(opts: DashboardOptions): Promise<Dashboard
 
 /**
  * Finalize the freshly copied tree for the new runnable-template conventions:
- *  - remove a stale `package-lock.json` and the on-demand `_managed/` demo pages.
+ *  - remove a stale `package-lock.json`.
  *  - copy `.env.example` → `.env` so the app loads its config out of the box.
  *  - set package.json `name` + rewrite the template's `file:` MDK deps for the
  *    target context (absolute local links in the monorepo; a published range
@@ -189,7 +213,6 @@ function finalizeShell(
     gatewayUrl,
   }: { templateDir: string; isMonorepo: boolean; gatewayUrl?: string | null },
 ): void {
-  rmSync(join(dir, '_managed'), { recursive: true, force: true });
   rmSync(join(dir, 'package-lock.json'), { force: true });
 
   // Activate the env file: Vite loads `.env`, not `.env.example`. Copied rather
@@ -278,7 +301,12 @@ function setDisplayName(dir: string, appName: string): void {
   const envPath = join(dir, 'src', 'constants', 'env.ts');
   if (!existsSync(envPath)) return;
   const content = readFileSync(envPath, 'utf8');
-  const next = content.replace(/(export const APP_NAME\s*=\s*)(['"]).*?\2/, `$1'${appName}'`);
+  // A replacer function (not a `$`-pattern string) and a JSON-encoded literal,
+  // so nothing in the name is interpreted by `replace` or as TypeScript.
+  const next = content.replace(
+    /(export const APP_NAME\s*=\s*)(['"]).*?\2/,
+    (_match, prefix: string) => `${prefix}${JSON.stringify(appName)}`,
+  );
   if (next !== content) writeFileSync(envPath, next, 'utf8');
 }
 
@@ -328,15 +356,20 @@ export interface DashboardHandle {
  * dashboard is a separate Vite/React app with its own dependency tree (kept out
  * of the project's npm workspaces precisely so its React is never hoisted
  * alongside anyone else's, see `project.ts`), so it can only run as its own
- * process. The returned promise resolves once the process has actually spawned
+ * process. `apps` (see `describeDashboardApps`) reaches it in the
+ * `MDK_DASHBOARD_APPS` environment variable, so it can load their UIs. The
+ * returned promise resolves once the process has actually spawned
  * (Node's `'spawn'` event) and rejects if it never could (e.g. `npm` missing).
  */
-export function runDashboard(dir: string): Promise<DashboardHandle> {
+export function runDashboard(dir: string, apps: DashboardApp[] = []): Promise<DashboardHandle> {
   return new Promise((resolveHandle, reject) => {
+    // Fixed argv only: win32 needs a shell to run `npm.cmd` (see npm.ts).
     const child = spawn(npmBin(), ['run', 'dev'], {
       cwd: dir,
       stdio: 'inherit',
-      env: process.env,
+      // The installed apps travel to the dev server, which serves their UIs.
+      env: { ...process.env, [DASHBOARD_APPS_ENV]: JSON.stringify(apps) },
+      shell: process.platform === 'win32',
     });
 
     child.once('error', (error: NodeJS.ErrnoException) => {

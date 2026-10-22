@@ -25,8 +25,7 @@ export type HeaderConsumptionBoxProps = {
 
 /**
  * Single-row consumption cell for the dashboard's header strip. The `1.663`
- * style numeric is rendered in orange (the warning token) to match
- * the reference app's visual treatment.
+ * style numeric is rendered in orange (the warning token).
  *
  * @category dashboard
  * @kernelCapability power-monitoring

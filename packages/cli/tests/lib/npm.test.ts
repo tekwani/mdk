@@ -74,6 +74,46 @@ describe('installDeps', () => {
   });
 });
 
+describe('win32 spawning', () => {
+  it('runs npm.cmd through a shell on win32 only, quoting specs, and refuses anything a shell would interpret', () => {
+    const original = process.platform;
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, 'package.json'), '{}', 'utf8');
+    spawnSyncMock.mockReturnValue({ status: 0 });
+    try {
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+      installDeps(dir);
+      expect(spawnSyncMock).toHaveBeenLastCalledWith('npm.cmd', ['install'], expect.objectContaining({ shell: true }));
+      expect(installPackages(dir, ['ok-pkg', 'x & calc']).message).toMatch(/not a valid npm package or GitHub spec/);
+      expect(spawnSyncMock).toHaveBeenCalledTimes(1);
+      installPackages(dir, ['@your-org/rig@^1.2.0', 'github:me/app#v0.2.0']);
+      expect(spawnSyncMock).toHaveBeenLastCalledWith(
+        'npm.cmd',
+        ['install', '"@your-org/rig@^1.2.0"', '"github:me/app#v0.2.0"'],
+        expect.objectContaining({ shell: true }),
+      );
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+      installPackages(dir, ['@scope/pkg']);
+      expect(spawnSyncMock).toHaveBeenLastCalledWith('npm', ['install', '@scope/pkg'], expect.objectContaining({ shell: false }));
+    } finally {
+      Object.defineProperty(process, 'platform', { value: original });
+    }
+  });
+});
+
+describe('installPackages specs', () => {
+  it('takes every spec `mdk add` produces, and nothing a shell would read', () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, 'package.json'), '{}', 'utf8');
+    spawnSyncMock.mockReturnValue({ status: 0 });
+    const specs = ['left-pad', '@your-org/rig@1.2.3', '@your-org/rig@^1', 'pkg@latest', 'pkg@>=1.0.0<2', 'github:me/my-app', 'github:me/my-app#release/1.x'];
+    expect(installPackages(dir, specs)).toEqual({ ok: true });
+    for (const bad of ['x;rm -rf /', 'pkg@1 2', 'github:../x', 'github:me/app#$(id)', 'pkg@"1"', 'pkg@%PATH%', 'pkg\nnext']) {
+      expect(installPackages(dir, [bad]).ok, bad).toBe(false);
+    }
+  });
+});
+
 describe('installPackages', () => {
   it('skips when run is false or the package list is empty', () => {
     expect(installPackages(makeTmpDir(), ['a'], false).skipped).toBe(true);

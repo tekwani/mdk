@@ -20,7 +20,7 @@ characteristics. It communicates with the others only through its declared inter
 - [`CommandStateMachine`][command-state-machine]: tracks every command's execution lifecycle in a write-ahead log
 - [`TelemetryCollector`][telemetry-collector]: a proxy that routes telemetry queries to the Worker that owns the data, persisting none of it
 - [`Scheduler`][scheduler-module]: the system metronome that fires the recurring telemetry, health, and state jobs
-- [`HealthMonitor`][health-monitor]: pings every registered Worker on a cadence and marks dead ones unroutable
+- [`HealthMonitor`][health-monitor]: pings every ready Worker process over HRPC on a cadence and marks dead ones unroutable; it never contacts a device
 - [`ActionManager`][action-manager]: handles the write action approval lifecycle at the Kernel layer
 - [`ActionCaller`][action-caller]: resolves an approved action into the per-Worker write calls that carry it out
 

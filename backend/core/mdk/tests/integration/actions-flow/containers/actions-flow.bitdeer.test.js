@@ -41,6 +41,7 @@ const makeFixture = ({ name, model, mockType }, index) => {
         model,
         storeDir,
         bootstrap,
+        allowedKeys: [kernel.getClientPublicKey()],
         mqttPort: brokerPort,
         seedDevices: [{
           info: { serialNum: 'BD-E2E-001', container: 'e2e-container' },

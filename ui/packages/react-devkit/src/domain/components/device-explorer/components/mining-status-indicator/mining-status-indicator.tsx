@@ -8,8 +8,8 @@ import {
   SleepStatusIcon,
 } from '@primitives'
 import type { UnknownRecord } from '@primitives'
-import { getAlertsString } from '../../../../utils/alerts-utils'
-import type { Alert } from '../../types'
+import { getAlertsString } from '../../../alerts/alerts-utils'
+import type { AlertRecord } from '../../types'
 import _isObject from 'lodash/isObject'
 import { StatusLabel } from '../status-label/status-label'
 import { MinerStatuses } from '../../../../constants/device-constants'
@@ -60,7 +60,7 @@ export type MinerStats = {
 
 export type MinerStatusIndicatorProps = {
   stats?: MinerStats | UnknownRecord
-  alerts?: Alert[]
+  alerts?: AlertRecord[]
   hideTooltip?: boolean
   getFormattedDate: (date: Date) => string
 }
@@ -71,10 +71,10 @@ export const MinerStatusIndicator = ({
   hideTooltip = false,
   getFormattedDate,
 }: MinerStatusIndicatorProps): JSX.Element => {
-  // Convert unknown[] to Alert[] if needed
-  const alertsTyped: Alert[] = Array.isArray(alerts)
+  // Convert unknown[] to AlertRecord[] if needed
+  const alertsTyped: AlertRecord[] = Array.isArray(alerts)
     ? alerts.filter(
-        (alert): alert is Alert =>
+        (alert): alert is AlertRecord =>
           _isObject(alert) &&
           alert !== null &&
           'severity' in alert &&

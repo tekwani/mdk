@@ -1,6 +1,5 @@
-import type { AuthProvider, EndpointMap, Fetcher } from '@tetherto/mdk-ui-foundation'
-import { createMdkQueryClient } from '@tetherto/mdk-ui-foundation'
-import { gatewayRedirectAuth } from '@tetherto/mdk-ui-foundation/presets/mining'
+import type { AuthProvider } from '@tetherto/mdk-ui-foundation'
+import { createMdkQueryClient, gatewayRedirectAuth } from '@tetherto/mdk-ui-foundation'
 import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createContext, type FC, type ReactNode, useContext, useMemo, useRef } from 'react'
@@ -14,9 +13,8 @@ export type MdkContextValue = {
 const MdkContext = createContext<MdkContextValue | null>(null)
 
 /**
- * Fallback for auth-aware hooks rendered outside an `MdkProvider` — the bundled
- * mining Gateway flow, which is what those hooks did unconditionally before the
- * provider seam existed. Built once at module scope: construction has no side
+ * Fallback for auth-aware hooks rendered outside an `MdkProvider` — the
+ * Gateway's redirect flow. Built once at module scope: construction has no side
  * effects, it only closes over `authStore`.
  *
  * Its `signIn` throws, because a redirect target cannot be guessed. Anything that
@@ -25,22 +23,18 @@ const MdkContext = createContext<MdkContextValue | null>(null)
 const DEFAULT_AUTH: AuthProvider = gatewayRedirectAuth()
 
 export type MdkProviderProps = {
-  /** Optional API base URL override (top of HLD §5 resolution chain). */
+  /**
+   * Gateway base URL. Defaults to `VITE_MDK_API_URL`, then
+   * `http://localhost:3000`; pass `''` for relative URLs behind a proxy.
+   */
   apiBaseUrl?: string
   /**
    * How the session works: token source, sign-in, refresh, sign-out. Defaults to
-   * `gatewayRedirectAuth()` — the bundled mining Gateway flow, minus a redirect
-   * target. Pass `gatewayRedirectAuth({ oauthBaseUrl })` to enable sign-in, or
-   * `noAuth()` for an open API or a fixture-backed demo.
+   * `gatewayRedirectAuth()` minus a redirect target. Pass
+   * `gatewayRedirectAuth({ oauthBaseUrl })` to enable sign-in, or `noAuth()` for
+   * a Gateway running without an auth plugin.
    */
   auth?: AuthProvider
-  /**
-   * Request paths, as `:name` templates. Defaults to the bundled mining Gateway
-   * map. Pass your own to point the same hooks at a different API's URL space.
-   */
-  endpoints?: EndpointMap
-  /** Transport override. Defaults to a bearer fetcher reading from `auth`. */
-  fetcher?: Fetcher
   /**
    * Fired after the session is cleared because the backend reported it ended.
    * Typically navigates to the host app's sign-in route. Forwarded to
@@ -49,10 +43,9 @@ export type MdkProviderProps = {
   onSessionExpired?: () => void
   /**
    * Pre-built TanStack QueryClient. Defaults to one produced by
-   * `createMdkQueryClient` from `apiBaseUrl` / `auth` / `endpoints` / `fetcher`.
-   * When supplied, those are ignored for client construction — it already
-   * carries its own runtime — but `auth` is still published on the context for
-   * the hooks that read it.
+   * `createMdkQueryClient` from `apiBaseUrl` / `auth`. When supplied, those are
+   * ignored for client construction — it already carries its own runtime — but
+   * `auth` is still published on the context for the hooks that read it.
    */
   queryClient?: QueryClient
   children: ReactNode
@@ -76,8 +69,6 @@ export type MdkProviderProps = {
 export const MdkProvider: FC<MdkProviderProps> = ({
   apiBaseUrl,
   auth,
-  endpoints,
-  fetcher,
   onSessionExpired,
   queryClient,
   children,
@@ -90,15 +81,13 @@ export const MdkProvider: FC<MdkProviderProps> = ({
       ?? createMdkQueryClient({
         apiBaseUrl,
         auth: resolvedAuth,
-        endpoints,
-        fetcher,
         onSessionExpired,
       }),
     // `onSessionExpired` is deliberately not a dependency: a host passing an
     // inline arrow would otherwise rebuild the QueryClient every render and drop
     // the whole cache. The client reads it through the closure it was built
     // with, so a new identity is picked up the next time the client rebuilds.
-    [queryClient, apiBaseUrl, resolvedAuth, endpoints, fetcher],
+    [queryClient, apiBaseUrl, resolvedAuth],
   )
 
   /* Adopt a session the environment is offering — an OAuth redirect token —

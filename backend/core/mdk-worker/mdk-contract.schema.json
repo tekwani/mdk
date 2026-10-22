@@ -85,12 +85,22 @@
                     "required": { "type": "boolean", "description": "Whether the command handler requires this parameter." },
                     "enum": {
                       "type": "array",
-                      "description": "Allowed values. WorkerRuntime publishes this constraint but the command handler must enforce it.",
+                      "description": "Allowed values. WorkerRuntime rejects a command whose value is not listed (ERR_PARAM_ENUM) before the handler runs.",
                       "items": {}
                     },
                     "min": { "type": "number", "description": "Allowed minimum value (for numbers)." },
                     "max": { "type": "number", "description": "Allowed maximum value (for numbers)." }
                   }
+                }
+              },
+              "verify": {
+                "type": "object",
+                "description": "Device-state readback after the command settles. Kernel pulls the `telemetry` metric until it equals the request's `param` value (verification VERIFIED) or `withinMs` passes (UNVERIFIED).",
+                "required": ["telemetry", "param"],
+                "properties": {
+                  "telemetry": { "type": "string", "description": "Name of a telemetry entry that reports the state this command sets." },
+                  "param": { "type": "string", "description": "Name of the command param holding the requested value." },
+                  "withinMs": { "type": "number", "minimum": 1, "description": "How long to keep reading back before UNVERIFIED. Default 60000." }
                 }
               }
             }

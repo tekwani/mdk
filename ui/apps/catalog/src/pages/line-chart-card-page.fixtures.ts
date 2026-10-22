@@ -2,18 +2,13 @@
  * Synthetic chart payloads for the LineChartCard demo.
  *
  * IMPORTANT — these constants illustrate the `LineChartCardData`
- * shape the component consumes. In production, you wouldn't hand-build
- * them — you'd source them from an adapter hook:
- *
- *   - `useHashrateChartData({ timeline, start, end })`
- *   - `useSiteConsumptionChartData({ timeline, start, end })`
- *
- * Both return a `ChartCardData` payload (datasets + formatters +
- * footer stats) ready to pass straight into `<LineChartCard data=… />`.
+ * shape the component consumes. In an app you'd build them from your
+ * own history route's response, in the query's `select`, and pass the
+ * result straight into `<LineChartCard data=… />`.
  *
  * The `RAW_DATA_EXAMPLE` + `rawDataAdapter` pair demonstrate the
- * escape hatch — the `dataAdapter` prop — for one-off raw payloads
- * that don't have a dedicated hook yet. The aggregate field name
+ * other option — the `dataAdapter` prop — which hands the raw payload
+ * to the card along with a function that converts it. The aggregate field name
  * (`hashrate_mhs_1m_sum_aggr`) is intentionally inline here because
  * the whole point of the demo section is to show how to convert that
  * shape to chart-ready points.
@@ -130,8 +125,7 @@ export const FOOTER_STATS_DATA: LineChartCardData = {
 }
 
 // Raw backend shape — paired with `rawDataAdapter` to demonstrate the
-// `dataAdapter` escape hatch. Real consumers should reach for an
-// adapter hook (`useHashrateChartData`) instead.
+// `dataAdapter` prop.
 export const RAW_DATA_EXAMPLE = [
   { ts: now - 23 * HOUR, hashrate_mhs_1m_sum_aggr: 72_500_000 },
   { ts: now - 20 * HOUR, hashrate_mhs_1m_sum_aggr: 74_200_000 },

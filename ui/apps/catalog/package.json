@@ -1,14 +1,14 @@
 {
   "name": "@tetherto/mdk-catalog-ui",
   "type": "module",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "scripts": {
     "build": "vite build",
     "clean": "rimraf dist node_modules .turbo",
     "dev": "vite",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

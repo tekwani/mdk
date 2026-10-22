@@ -4,7 +4,8 @@ const test = require('brittle')
 const {
   isCurrentMonth,
   convertMsToSeconds,
-  getTimeRanges
+  getTimeRanges,
+  MAX_TIME_RANGES
 } = require('../../lib/services/pool-utils/time')
 const { HOUR_MS, HOURS_24_MS } = require('../../lib/services/pool-utils/constants')
 
@@ -38,4 +39,12 @@ test('isCurrentMonth matches calendar month', (t) => {
   const y = new Date().getFullYear()
   t.ok(isCurrentMonth(`${m}-${y}`))
   t.ok(!isCurrentMonth(`${m === 1 ? 12 : m - 1}-${y}`))
+})
+
+test('getTimeRanges rejects non-numeric and oversized spans', (t) => {
+  t.exception(() => getTimeRanges('a', 10, true), /ERR_TIME_RANGE_INVALID/)
+  t.exception(() => getTimeRanges(0, Infinity, true), /ERR_TIME_RANGE_INVALID/)
+  const HOUR = 60 * 60 * 1000
+  t.exception(() => getTimeRanges(0, (MAX_TIME_RANGES + 2) * HOUR, true), /ERR_TIME_RANGE_TOO_LARGE/)
+  t.ok(getTimeRanges(0, (MAX_TIME_RANGES + 2) * HOUR, false).length > 0, 'same span is fine daily')
 })

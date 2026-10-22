@@ -175,7 +175,7 @@ npm run fullcheck
 # "🤖 Agent-readiness contract (UI)" job in the root .github/workflows/ci.yml.
 ```
 
-The check loads [`dist/registry.json`](./dist/registry.json) and [`dist/blueprints.json`](./dist/blueprints.json), applies the
+The check loads [`dist/registry.json`](./dist/registry.json), applies the
 rules above, and compares against
 [`scripts/agent-ready-baseline.json`](scripts/agent-ready-baseline.json):
 
@@ -217,12 +217,10 @@ Every rule emitted by `check:agent-ready` and the one-line fix:
 | `agent-ready-missing-usage`             | Create `USAGE.md` next to the component (summary + props table + minimal example + notes)    |
 | `agent-ready-missing-example`           | Add `<name>.example.tsx` next to the component (mock data only; imports must use `@tetherto/mdk-react-devkit`). |
 | `agent-ready-missing-kernel-capability` | Add at least one `@kernelCapability <id>` tag so agents can find the component by capability |
-| `blueprint:<id>: component <X> ...`     | The blueprint references a component that's missing from the registry or not `agent-ready`. Fix or remove. |
-| `blueprint:<id>: hook <X> ...`          | The blueprint references a hook that doesn't exist in the registry. Fix or remove.          |
 
 ## Navigating by intent
 
-Once a component is `agent-ready`, an LLM can find it via three layered
+Once a component is `agent-ready`, an LLM can find it via two layered
 surfaces, none of which require model calls:
 
 ### 1. O(1) lookup indexes ([`dist/registry.json`](./dist/registry.json) → `indexes`)
@@ -243,51 +241,18 @@ The registry ships indexes alongside the flat arrays:
 The other indexes return arrays of names; agents combine them with the
 `byName` lookup.
 
-### 2. Blueprints ([`dist/blueprints.json`](./dist/blueprints.json))
-
-Curated recipes mapping a user intent to a concrete starting set. Authored
-under [`blueprints/`](blueprints/README.md) and machine-indexed at build time.
-
-| Blueprint                     | Use when…                                                       |
-| ----------------------------- | --------------------------------------------------------------- |
-| `mining-operations-dashboard` | "Show me my miners" / "live operator dashboard".                |
-| `reporting`                   | "Monthly report" / "CSV export" / "historical numbers".         |
-| `device-management`           | "Manage miners" / "drill into one device".                      |
-| `custom-feature`              | The user's domain is out-of-scope (weather, inventory, social). |
-
-### 3. Navigating the manifests
+### 2. Navigating the manifests
 
 The deterministic decision flow agents follow — every step is a plain read of
 a `dist/*.json` file:
 
 ```mermaid
 flowchart TD
-  intent["User intent (free text)"] --> step1["blueprints.json — scan `intent` fields"]
-  step1 --> step2{"Matching blueprint?"}
-  step2 -- yes --> useBp["Read its markdown `body`, then each listed\ncomponent's registry entry + usageDoc"]
-  step2 -- no --> step3["registry.json — intersect `indexes`\n(byDomain / byKernelCapability / byCategory)"]
+  intent["User intent (free text)"] --> step3["registry.json — intersect `indexes`\n(byDomain / byKernelCapability / byCategory)"]
   step3 --> step4["Read the entry's `usageDoc` + `examples`"]
   step4 --> scaffold["Write src/pages/&lt;Name&gt;.tsx + routes.ts entry"]
-  useBp --> scaffold
-  scaffold --> verify["tsc --noEmit + eslint &lt;generated-file&gt;"]
+  scaffold --> verify["tsc --noEmit + oxlint &lt;generated-file&gt;"]
 ```
-
-Worked examples — three intents, three paths through the manifests:
-
-- **"Build me a full mining operating system."**
-  `blueprints.json` → the `mining-operations-dashboard` entry → follow the
-  components it lists, reading each one's registry entry and `usageDoc`, then
-  write the page and typecheck it.
-
-- **"Add a reporting tool to my app."**
-  The `reporting` blueprint → same flow. `StatsExport`, `LineChartCard`,
-  and `HistoricalAlerts` are the canonical set.
-
-- **"Add weather functionality."**
-  The `custom-feature` blueprint → MDK does not ship weather components.
-  It enumerates the core primitives (`Card`, `LineChart`, `DataTable`, …) to
-  compose against and explicitly tells the agent not to fork mining
-  components for an unrelated domain.
 
 ## Pointers
 

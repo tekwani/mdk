@@ -106,24 +106,6 @@ export const CONTAINER_TAB = {
   PARAMETERS: 'parameters',
   POWER_ADJUSTMENT: 'power-adjustment',
 } as const
-
-/**
- * Display labels for the container detail tabs, mirroring the reference app's
- * `containerTabsHelper` (`PDU` renders as "PDU Layout", the rest are
- * capitalised keys).
- */
-export const CONTAINER_TAB_LABEL = {
-  [CONTAINER_TAB.PDU]: 'PDU Layout',
-  [CONTAINER_TAB.HOME]: 'Home',
-  [CONTAINER_TAB.ALARM]: 'Alarm',
-  [CONTAINER_TAB.CHARTS]: 'Charts',
-  [CONTAINER_TAB.HEATMAP]: 'Heatmap',
-  [CONTAINER_TAB.CONTROLS]: 'Controls',
-  [CONTAINER_TAB.SETTINGS]: 'Settings',
-  [CONTAINER_TAB.PARAMETERS]: 'Parameters',
-  [CONTAINER_TAB.POWER_ADJUSTMENT]: 'Power Adjustment',
-} as const
-
 export type ContainerTabKey = keyof typeof CONTAINER_TAB
 export type ContainerTypeKey = keyof typeof CONTAINER_TYPE
 export type ThresholdTypeKey = keyof typeof THRESHOLD_TYPE

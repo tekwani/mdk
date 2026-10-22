@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SEVERITY, SEVERITY_COLORS, SEVERITY_KEY, SEVERITY_LEVELS } from '../alerts'
+import { SEVERITY, SEVERITY_COLORS, SEVERITY_LEVELS } from '../alerts'
 
 describe('alerts constants', () => {
   it('should have severity levels defined', () => {
@@ -19,9 +19,5 @@ describe('alerts constants', () => {
     expect(SEVERITY_LEVELS[SEVERITY.HIGH]).toBe(1)
     expect(SEVERITY_LEVELS[SEVERITY.CRITICAL]).toBe(2)
     expect(SEVERITY_LEVELS[SEVERITY.CRITICAL]).toBeGreaterThan(SEVERITY_LEVELS[SEVERITY.HIGH])
-  })
-
-  it('should have severity key constant', () => {
-    expect(SEVERITY_KEY).toBe('severity')
   })
 })

@@ -1,6 +1,16 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { parse as parseYaml } from 'yaml';
+
+// The shipped worker catalog is empty, so seeding a known device shape is
+// exercised against a fixture entry.
+vi.mock('../../src/lib/catalog.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/lib/catalog.js')>()),
+  findCatalogWorker: (pkg: string) =>
+    pkg === '@test/mdk-worker-seeded' ? { value: pkg, label: 'seeded', hint: 'h', mock: true } : undefined,
+}));
+
 import {
   MOCK_PORT_BASE,
   STACK_FILE,
@@ -53,20 +63,20 @@ describe('deviceId / deviceSerial', () => {
 });
 
 describe('buildStackSpec', () => {
-  it('builds a minimal spec with no workers or gateway plugins', () => {
+  it('builds a minimal spec with no workers or apps', () => {
     const spec = buildStackSpec({
       stackName: 'my-stack',
       gatewayPort: 3847,
       kernelPort: 3848,
       workerBasePort: 3850,
       workerPackages: [],
-      gatewayPackages: [],
+      appPackages: [],
     });
     expect(spec.apiVersion).toBe('mdk/v1');
     expect(spec.kind).toBe('Stack');
     expect(spec.metadata.name).toBe('my-stack');
     expect(spec.spec.workers).toEqual([]);
-    expect(spec.spec.gateway.plugins).toEqual([]);
+    expect(spec.spec.apps).toEqual([]);
   });
 
   it('seeds a bundled worker (known device shape) with a mock device', () => {
@@ -75,16 +85,16 @@ describe('buildStackSpec', () => {
       gatewayPort: 3847,
       kernelPort: 3848,
       workerBasePort: 3850,
-      workerPackages: ['@tetherto/mdk-worker-demo'],
-      gatewayPackages: [],
+      workerPackages: ['@test/mdk-worker-seeded'],
+      appPackages: [],
     });
     const worker = spec.spec.workers[0];
-    expect(worker.name).toBe('demo-a');
-    expect(worker.package).toBe('@tetherto/mdk-worker-demo');
+    expect(worker.name).toBe('seeded-a');
+    expect(worker.package).toBe('@test/mdk-worker-seeded');
     expect(worker.port).toBe(3850);
     const config = worker.config as { mock: boolean; devices: Array<{ id: string; opts: Record<string, unknown> }> };
     expect(config.mock).toBe(true);
-    expect(config.devices[0].id).toBe(deviceId('demo-a'));
+    expect(config.devices[0].id).toBe(deviceId('seeded-a'));
     expect(config.devices[0].opts.port).toBe(MOCK_PORT_BASE);
   });
 
@@ -95,7 +105,7 @@ describe('buildStackSpec', () => {
       kernelPort: 3848,
       workerBasePort: 3850,
       workerPackages: ['@org/mdk-worker-modbus'],
-      gatewayPackages: [],
+      appPackages: [],
     });
     expect(spec.spec.workers[0].config).toEqual({ pollIntervalMs: 2000 });
   });
@@ -107,7 +117,7 @@ describe('buildStackSpec', () => {
       kernelPort: 3848,
       workerBasePort: 3850,
       workerPackages: ['@tetherto/mdk-worker-antminer', '@tetherto/mdk-worker-antminer'],
-      gatewayPackages: [],
+      appPackages: [],
     });
     expect(spec.spec.workers[0].port).toBe(3850);
     expect(spec.spec.workers[1].port).toBe(3852);
@@ -120,7 +130,7 @@ describe('buildStackSpec', () => {
       kernelPort: 3848,
       workerBasePort: 3850,
       workerPackages: [],
-      gatewayPackages: [],
+      appPackages: [],
       gatewayConfig: { staticRootPath: './ui' },
     });
     expect(spec.spec.gateway.config).toEqual({ staticRootPath: './ui' });
@@ -133,7 +143,7 @@ describe('buildStackSpec', () => {
       kernelPort: 3848,
       workerBasePort: 3850,
       workerPackages: [],
-      gatewayPackages: ['@tetherto/mdk-plugin-auth', '@tetherto/mdk-plugin-agent'],
+      appPackages: ['@tetherto/mdk-plugin-auth', '@tetherto/mdk-app-agent'],
       pluginConfigs: {
         '@tetherto/mdk-plugin-auth': {
           auth: { superAdmin: 'root@example.com' },
@@ -141,29 +151,32 @@ describe('buildStackSpec', () => {
         },
       },
     });
-    expect(spec.spec.gateway.plugins[0]).toEqual({
+    expect(spec.spec.apps[0]).toEqual({
+      name: 'auth',
       package: '@tetherto/mdk-plugin-auth',
       config: {
         auth: { superAdmin: 'root@example.com' },
         google: { clientId: 'id', clientSecret: 'secret' },
       },
     });
-    expect(spec.spec.gateway.plugins[1].config).toEqual({});
+    expect(spec.spec.apps[1].config).toEqual({});
+    expect(spec.spec.apps[1].mount, 'the agent is served at the root, where the UI calls /agent/...').toBe('/');
+    expect('mount' in spec.spec.apps[0], 'an app without a catalog mount keeps the /apps/<name> default').toBe(false);
     expect(spec.spec.gateway.config).toEqual({});
   });
 
-  it('adds gateway plugin config for known plugin kinds', () => {
+  it('adds app config for known plugin kinds', () => {
     const spec = buildStackSpec({
       stackName: 'my-stack',
       gatewayPort: 3847,
       kernelPort: 3848,
       workerBasePort: 3850,
       workerPackages: [],
-      gatewayPackages: ['@tetherto/mdk-plugin-summary', '@tetherto/mdk-plugin-alerts', '@org/mdk-plugin-other'],
+      appPackages: ['@tetherto/mdk-plugin-summary', '@tetherto/mdk-plugin-alerts', '@org/mdk-plugin-other'],
     });
-    expect(spec.spec.gateway.plugins[0].config).toEqual({ refreshIntervalMs: 5000 });
-    expect(spec.spec.gateway.plugins[1].config).toEqual({ evaluateIntervalMs: 10000 });
-    expect(spec.spec.gateway.plugins[2].config).toEqual({});
+    expect(spec.spec.apps[0].config).toEqual({ refreshIntervalMs: 5000 });
+    expect(spec.spec.apps[1].config).toEqual({ evaluateIntervalMs: 10000 });
+    expect(spec.spec.apps[2].config).toEqual({});
   });
 });
 
@@ -176,6 +189,41 @@ describe('loadStackSpec', () => {
     const dir = makeTmpDir();
     expect(() => loadStackSpec(dir)).toThrow(StackSpecError);
     expect(() => loadStackSpec(dir)).toThrow(/No mdk\.yaml found/);
+  });
+
+  it('resolves ${VAR} in a worker env from the process environment, and ignores non-string values', () => {
+    process.env.MDK_TEST_TOKEN = 's3cret';
+    delete process.env.MDK_TEST_UNSET;
+    try {
+      const dir = makeTmpDir();
+      writeSpec(
+        dir,
+        [
+          'kind: Stack',
+          'apiVersion: mdk/v1',
+          'spec:',
+          '  gateway:',
+          '    port: 3847',
+          '  workers:',
+          '    - name: a',
+          '      package: ./workers/a',
+          '      env:',
+          '        TOKEN: ${MDK_TEST_TOKEN}',
+          '        MISSING: ${MDK_TEST_UNSET}',
+          '        PLAIN: literal',
+          '        COUNT: 5',
+        ].join('\n'),
+      );
+      // The secret stays out of mdk.yaml; an unset variable is left as written so the
+      // problem is visible in the worker, not silently blank.
+      expect(loadStackSpec(dir).spec.workers[0]?.env).toEqual({
+        TOKEN: 's3cret',
+        MISSING: '${MDK_TEST_UNSET}',
+        PLAIN: 'literal',
+      });
+    } finally {
+      delete process.env.MDK_TEST_TOKEN;
+    }
   });
 
   it('throws on invalid YAML', () => {
@@ -315,7 +363,24 @@ describe('loadStackSpec', () => {
     expect(() => loadStackSpec(dir)).toThrow(/spec\.mcp.*must be a mapping/);
   });
 
-  it('throws when a gateway plugin has no package', () => {
+  it.each([
+    [['    plugins: []'], /spec\.gateway\.plugins. is not supported\. Apps are declared under .spec\.apps/],
+    [['  apps: {}'], /spec\.apps. must be a list/],
+    [['  apps:', '    - name: Bad_Name', '      package: ./a'], /apps\[0\]\.name/],
+    [['  apps:', '    - name: a', '      package: ./a', '    - name: a', '      package: ./b'], /duplicate app name "a"/],
+    [['  apps:', '    - name: a'], /apps\[0\]\.package/],
+    [['  apps:', '    - name: a', '      package: ./a', '      config: [1]'], /apps\[0\]\.config. must be a mapping/],
+    [['  apps:', '    - name: a', '      package: ./a', '      mount: 1'], /apps\[0\]\.mount. must be a path/],
+    [['  apps:', '    - name: a', '      package: ./a', '      mount: agent'], /apps\[0\]\.mount. must be a path/],
+    [['  apps:', '    - name: a', '      package: ./a', '      mount: /x/:id'], /apps\[0\]\.mount. must be a path/],
+    [['  apps:', '    - name: a', '      package: ./a', '      mount: /x/../y'], /apps\[0\]\.mount. must be a path/],
+  ])('rejects spec.gateway.plugins and invalid spec.apps: %j', (lines, error) => {
+    const dir = makeTmpDir();
+    writeSpec(dir, ['kind: Stack', 'apiVersion: mdk/v1', 'spec:', '  gateway:', '    port: 3847', ...lines].join('\n'));
+    expect(() => loadStackSpec(dir)).toThrow(error);
+  });
+
+  it('answers a spec.gateway.plugins list with the spec.apps entries to paste', () => {
     const dir = makeTmpDir();
     writeSpec(
       dir,
@@ -326,10 +391,25 @@ describe('loadStackSpec', () => {
         '  gateway:',
         '    port: 3847',
         '    plugins:',
-        '      - config: {}',
+        '      - package: "@tetherto/mdk-plugin-demo"',
+        '      - package: "@your-org/mdk-app-ops"',
+        '        config: { region: eu }',
       ].join('\n'),
     );
-    expect(() => loadStackSpec(dir)).toThrow(/plugins\[0\]\.package.*non-empty string/);
+    let message = '';
+    try {
+      loadStackSpec(dir);
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    const snippet = message.split('\n\n')[1]!.split('\n').map((line) => line.slice(4)).join('\n');
+    expect(parseYaml(snippet)).toEqual({
+      apps: [
+        { name: 'demo', package: '@tetherto/mdk-plugin-demo' },
+        { name: 'ops', package: '@your-org/mdk-app-ops', config: { region: 'eu' } },
+      ],
+    });
+    expect(message).toContain('mdk validate app');
   });
 
   it('throws when a worker has no name or no package', () => {
@@ -420,8 +500,10 @@ describe('loadStackSpec', () => {
         'spec:',
         '  gateway:',
         '    port: 3847',
-        '    plugins:',
-        '      - package: "@tetherto/mdk-plugin-summary"',
+        '  apps:',
+        '    - name: summary',
+        '      package: "@tetherto/mdk-plugin-summary"',
+        '      mount: /',
         '  workers:',
         '    - name: a',
         '      package: ./workers/a',
@@ -434,7 +516,9 @@ describe('loadStackSpec', () => {
     const spec = loadStackSpec(dir);
     expect(spec.metadata.name).toBe('mdk-stack');
     expect(spec.spec.kernel.port).toBe(0);
-    expect(spec.spec.gateway.plugins).toHaveLength(1);
+    expect(spec.spec.apps).toEqual([
+      { name: 'summary', package: '@tetherto/mdk-plugin-summary', config: {}, mount: '/' },
+    ]);
     expect(spec.spec.workers[0].port).toBe(0);
   });
 
@@ -457,5 +541,55 @@ describe('loadStackSpec', () => {
     const spec = loadStackSpec(dir);
     expect(spec.metadata.name).toBe('named-stack');
     expect(spec.spec.kernel.port).toBe(3848);
+  });
+});
+
+describe('loadStackSpec security', () => {
+  const base = 'apiVersion: mdk/v1\nkind: Stack\nspec:\n  gateway:\n    port: 3847\n';
+
+  it('rejects a worker name that is not a single safe path segment', () => {
+    for (const bad of ['../../etc', 'a/b', '.hidden', 'Upper']) {
+      const dir = makeTmpDir();
+      writeSpec(dir, `${base}  workers:\n    - name: ${JSON.stringify(bad)}\n      package: ./w\n`);
+      expect(() => loadStackSpec(dir)).toThrow(/spec\.workers\[0\]\.name.*is invalid/);
+    }
+  });
+
+  it('resolves ${VAR} in gateway and app config from the environment, then the project .env', () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, '.env'), "MDK_AUTH_SECRET='from-file'\nMDK_SHADOWED=file\n", 'utf8');
+    vi.stubEnv('MDK_SHADOWED', 'process');
+    writeSpec(
+      dir,
+      'apiVersion: mdk/v1\nkind: Stack\nspec:\n  gateway:\n    port: 3847\n' +
+        '    config: { common: "${MDK_SHADOWED}" }\n' +
+        '  apps:\n    - name: p\n      package: p\n      config: { google: { secret: "${MDK_AUTH_SECRET}", list: ["${MDK_UNSET_X}"] } }\n',
+    );
+    const spec = loadStackSpec(dir);
+    expect(spec.spec.gateway.config).toEqual({ common: 'process' });
+    expect(spec.spec.apps[0].config).toEqual({
+      google: { secret: 'from-file', list: ['${MDK_UNSET_X}'] },
+    });
+    vi.unstubAllEnvs();
+  });
+
+  it('reads spec.mcp security options and validates their types', () => {
+    const dir = makeTmpDir();
+    writeFileSync(join(dir, '.env'), 'MDK_MCP_TOKEN=abc\n', 'utf8');
+    writeSpec(
+      dir,
+      `${base}  mcp:\n    allowWrite: true\n    allowTools: [a.b]\n    token: "\${MDK_MCP_TOKEN}"\n    identity: { user: agent }\n`,
+    );
+    expect(loadStackSpec(dir).spec.mcp).toEqual({
+      allowWrite: true,
+      allowTools: ['a.b'],
+      token: 'abc',
+      identity: { user: 'agent' },
+    });
+
+    writeSpec(dir, `${base}  mcp:\n    allowWrite: "yes"\n`);
+    expect(() => loadStackSpec(dir)).toThrow(/spec\.mcp\.allowWrite/);
+    writeSpec(dir, `${base}  mcp:\n    allowTools: [1]\n`);
+    expect(() => loadStackSpec(dir)).toThrow(/spec\.mcp\.allowTools/);
   });
 });

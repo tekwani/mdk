@@ -3,7 +3,7 @@
 const debug = require('debug')('mdk:stats')
 const async = require('async')
 const utilsStore = require('@tetherto/hp-svc-facs-store/utils')
-const gLibStats = require('../../../lib-stats')
+const gLibStats = require('../stats')
 
 const STAT_RTD = 'stat-rtd'
 
@@ -149,7 +149,9 @@ class StatsService {
   async buildStatsForKey (logKey, fireTime) {
     const now = Math.floor(fireTime.getTime() / 1000) * 1000
 
-    const tagSpecs = {}
+    // Null prototype: a stored tag named `__proto__` or `constructor` must not
+    // resolve to a built-in and break the build for every device.
+    const tagSpecs = Object.create(null)
     const thgIdsAll = this.listDeviceIds()
     if (!this.lib) return
 
@@ -159,8 +161,9 @@ class StatsService {
       const meta = this.getDeviceMeta(thgId)
       if (!meta) return
 
-      const tags = meta.tags || []
+      const tags = Array.isArray(meta.tags) ? meta.tags : []
       tags.forEach(tag => {
+        if (typeof tag !== 'string' || !tag) return
         if (skipTagPfxs.find(p => tag.startsWith(p))) {
           return
         }

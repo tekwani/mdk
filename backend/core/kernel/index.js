@@ -21,9 +21,19 @@ const KernelManager = require('./lib/kernel.manager')
  * @param {object}  [opts.listeners]
  * @param {object|boolean} [opts.listeners.hrpc] - HRPC config or false to disable
  * @param {object}  [opts.auth]
- * @param {string[]} [opts.auth.whitelist]       - HRPC firewall allowlist (hex pubkeys)
+ * @param {Array<string|{key: string, roles: string[]}>} [opts.auth.whitelist] - HRPC caller allowlist. A hex
+ *                                                pubkey gets full access; `{ key, roles }` limits it to
+ *                                                'read' | 'write' | 'admin'. Empty (default) admits nobody;
+ *                                                add callers at runtime with kernel.allowKey().
+ * @param {boolean} [opts.auth.allowAll]         - Admit every DHT peer (development only; logs a warning)
  * @param {object}  [opts.discovery]
  * @param {string}  [opts.discovery.topic]       - DHT topic hex string
+ * @param {string[]} [opts.discovery.workerKeys] - Worker RPC keys accepted from the topic. Empty (default)
+ *                                                admits nobody; add Workers at runtime with
+ *                                                kernel.allowWorkerKey(), or skip the topic with
+ *                                                kernel.registerWorker().
+ * @param {boolean} [opts.discovery.allowAnyWorker] - Admit every Worker that announces on the topic
+ *                                                (development only; logs a warning)
  * @param {object}  [opts.cadences]
  * @param {number}  [opts.cadences.telemetryPullMs]
  * @param {number}  [opts.cadences.healthPingMs]
@@ -45,6 +55,10 @@ function createKernel (opts = {}) {
   if (!hrpcDisabled && opts.auth && opts.auth.whitelist) {
     if (!conf.kernel.hrpc) conf.kernel.hrpc = {}
     conf.kernel.hrpc.whitelist = opts.auth.whitelist
+  }
+  if (!hrpcDisabled && opts.auth && opts.auth.allowAll === true) {
+    if (!conf.kernel.hrpc) conf.kernel.hrpc = {}
+    conf.kernel.hrpc.allowAll = true
   }
 
   if (opts.discovery) conf.kernel.discovery = opts.discovery

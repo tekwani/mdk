@@ -111,7 +111,8 @@ Repeat one table per process (Kernel, each Worker, Gateway, MCP).
 
 ### Storage breakdown
 
-Per-Worker-store disk size and growth (Kernel/Gateway/alerts/logs storage isn't broken out per worker, so it's out of scope here). Growth/day is a real delta — size at profile start vs. now — divided by the run's own elapsed time; label **indicative** unless the soak is at least 24 h. Projections are linear extrapolations of that rate, not a model of Hyperbee/Corestore's actual (non-linear) growth curve — do not extrapolate a short soak to 12 months and treat it as a commitment.
+Per-Worker-store disk size and growth (Kernel/Gateway/alerts/logs storage isn't broken out per worker, so it's out of scope here; the
+[retention table][retention] says what bounds each store). Growth/day is a real delta — size at profile start vs. now — divided by the run's own elapsed time; label **indicative** unless the soak is at least 24 h. Projections are linear extrapolations of that rate, not a model of Hyperbee/Corestore's actual (non-linear) growth curve — do not extrapolate a short soak to 12 months and treat it as a commitment.
 
 | Store | Size now (MiB) | Growth / day (MiB) | Projected 6 mo (GiB) | Projected 12 mo (GiB) |
 | --- | --- | --- | --- | --- |
@@ -289,6 +290,9 @@ Use the same checklist for every profile so results stay comparable.
 14. Note failures, timeouts, config drift, and which single variable changed vs the previous profile
 
 ## Links
+
+[retention]: ../../concepts/the-storage-model.md#retention
+<!-- docs@tether.io: retention → concepts/the-storage-model#retention -->
 
 [benchmark-harness]: benchmark-your-site.md
 <!-- docs@tether.io: benchmark-harness → guides/deployment/benchmark-your-site -->

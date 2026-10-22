@@ -1,5 +1,4 @@
 import _isString from 'lodash/isString'
-import _includes from 'lodash/includes'
 import _get from 'lodash/get'
 import _compact from 'lodash/compact'
 
@@ -61,6 +60,8 @@ export type LabeledCardProps = Partial<{
   children: ReactNode
   /** Returns a link `href`/`target` for the label when provided */
   getNavigateOptions: (label: string) => LabeledCardNavigateOptions
+  /** Tooltip shown when hovering the label, e.g. to explain what a count includes */
+  labelTooltip: ReactNode
 }>
 
 const BASE_CLASS = 'mdk-labeled-card'
@@ -86,6 +87,7 @@ export const LabeledCard = forwardRef<HTMLDivElement, LabeledCardProps>((props, 
     isFullHeight,
     isScrollable,
     getNavigateOptions,
+    labelTooltip,
   } = props
 
   const labelText = _isString(label) ? label : ''
@@ -106,17 +108,13 @@ export const LabeledCard = forwardRef<HTMLDivElement, LabeledCardProps>((props, 
     className,
   )
 
-  const hasErrorTooltip = _isString(label) && _includes(label, 'Miners with error')
-
   const titleElement = <div className={`${BASE_CLASS}__title`}>{label}</div>
 
-  const titleWithTooltip = hasErrorTooltip ? (
+  const titleWithTooltip = labelTooltip ? (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>{titleElement}</TooltipTrigger>
-        <TooltipContent>
-          This does not include minor errors not affecting the miner's hash rate
-        </TooltipContent>
+        <TooltipContent>{labelTooltip}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   ) : (

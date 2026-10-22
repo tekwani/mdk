@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -42,6 +42,16 @@ describe('readSetupQuestions', () => {
     expect(readSetupQuestions(dir)).toEqual([]);
     writeManifest(dir, { name: 'p', routes: [] });
     expect(readSetupQuestions(dir)).toEqual([]);
+  });
+
+  it("prefers the app's plugin/mdk-plugin.json over a root manifest", () => {
+    const dir = makeTmpDir();
+    writeManifest(dir, { setup: 'ignored' });
+    mkdirSync(join(dir, 'plugin'));
+    writeManifest(join(dir, 'plugin'), { setup: [{ key: 'a', prompt: 'A?' }] });
+    expect(readSetupQuestions(dir)).toEqual([
+      { key: 'a', prompt: 'A?', type: 'string', required: false, default: undefined },
+    ]);
   });
 
   it('normalizes questions: type defaults to string, required to false', () => {
@@ -230,13 +240,13 @@ describe('applySetupAnswersToStackFile', () => {
   const PLUGINS_SPEC = [
     'kind: Stack',
     'spec:',
-    '  gateway:',
-    '    port: 3847',
-    '    plugins:',
-    '      - package: "@x/auth"',
-    '        config: {}',
-    '      - package: "@x/alerts"',
-    '        config: {}',
+    '  apps:',
+    '    - name: auth',
+    '      package: "@x/auth"',
+    '      config: {}',
+    '    - name: alerts',
+    '      package: "@x/alerts"',
+    '      config: {}',
   ];
 
   it('returns false when mdk.yaml is absent', () => {
@@ -249,7 +259,7 @@ describe('applySetupAnswersToStackFile', () => {
     expect(applySetupAnswersToStackFile(dir, '@x/auth', { 'a.b': 1 })).toBe(false);
   });
 
-  it('returns false when the plugin has no entry in spec.gateway.plugins', () => {
+  it('returns false when the plugin has no entry in spec.apps', () => {
     const dir = makeTmpDir();
     writeStackFile(dir, PLUGINS_SPEC);
     expect(applySetupAnswersToStackFile(dir, '@x/unknown', { 'a.b': 1 })).toBe(false);
@@ -260,10 +270,9 @@ describe('applySetupAnswersToStackFile', () => {
     writeStackFile(dir, [
       'kind: Stack',
       'spec:',
-      '  gateway:',
-      '    plugins:',
-      '      - package: "@x/auth"',
-      '        config: notamap',
+      '  apps:',
+      '    - package: "@x/auth"',
+      '      config: notamap',
     ]);
     expect(applySetupAnswersToStackFile(dir, '@x/auth', { 'a.b': 1 })).toBe(false);
   });
@@ -277,12 +286,12 @@ describe('applySetupAnswersToStackFile', () => {
       }),
     ).toBe(true);
     const spec = parse(readFileSync(join(dir, 'mdk.yaml'), 'utf8')) as {
-      spec: { gateway: { plugins: Array<{ config: Record<string, unknown> }> } };
+      spec: { apps: Array<{ config: Record<string, unknown> }> };
     };
-    expect(spec.spec.gateway.plugins[0].config).toEqual({
+    expect(spec.spec.apps[0].config).toEqual({
       auth: { roles: { operator: ['agent:chat', 'actions:w'] } },
     });
-    expect(spec.spec.gateway.plugins[1].config).toEqual({});
+    expect(spec.spec.apps[1].config).toEqual({});
     expect(readFileSync(join(dir, 'mdk.yaml'), 'utf8')).not.toContain('[object');
   });
 
@@ -298,11 +307,42 @@ describe('applySetupAnswersToStackFile', () => {
     const yaml = readFileSync(join(dir, 'mdk.yaml'), 'utf8');
     expect(yaml).toContain('# stack spec');
     const spec = parse(yaml) as {
-      spec: { gateway: { plugins: Array<{ config: Record<string, unknown> }> } };
+      spec: { apps: Array<{ config: Record<string, unknown> }> };
     };
-    expect(spec.spec.gateway.plugins[1].config).toEqual({
+    expect(spec.spec.apps[1].config).toEqual({
       alerts: { webhook: 'https://hook', enabled: true },
     });
-    expect(spec.spec.gateway.plugins[0].config).toEqual({});
+    expect(spec.spec.apps[0].config).toEqual({});
+  });
+});
+
+describe('setup key safety and secrets', () => {
+  it('rejects prototype-polluting or empty key segments', async () => {
+    const { PluginSetupError } = await import('../../src/lib/plugin-setup.js');
+    for (const key of ['__proto__.polluted', 'a.constructor.prototype', 'a..b', 'prototype']) {
+      const dir = makeTmpDir();
+      writeManifest(dir, { setup: [{ key, prompt: 'p' }] });
+      expect(() => readSetupQuestions(dir)).toThrow(PluginSetupError);
+    }
+    expect(() => applySetupAnswers({}, { '__proto__.polluted': true })).toThrow(/Unsafe setup key/);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it('replaces secret answers with ${MDK_<PLUGIN>_<KEY>} and returns the values separately', async () => {
+    const { externalizeSecrets, secretEnvName } = await import('../../src/lib/plugin-setup.js');
+    expect(secretEnvName('@tetherto/mdk-plugin-auth', 'google.clientSecret')).toBe('MDK_AUTH_GOOGLE_CLIENTSECRET');
+    const result = externalizeSecrets(
+      '@tetherto/mdk-plugin-auth',
+      [
+        { key: 'google.clientId', prompt: 'id', type: 'string' },
+        { key: 'google.clientSecret', prompt: 's', type: 'secret' },
+        { key: 'other.secret', prompt: 'unanswered', type: 'secret' },
+      ],
+      { 'google.clientId': 'id', 'google.clientSecret': 'shhh' },
+    );
+    expect(result).toEqual({
+      answers: { 'google.clientId': 'id', 'google.clientSecret': '${MDK_AUTH_GOOGLE_CLIENTSECRET}' },
+      env: { MDK_AUTH_GOOGLE_CLIENTSECRET: 'shhh' },
+    });
   });
 });

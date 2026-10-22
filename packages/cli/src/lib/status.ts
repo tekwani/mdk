@@ -1,9 +1,10 @@
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { detectEnvironment } from './detect.js';
+import { join, resolve } from 'node:path';
+import { detectEnvironment, NODE_MIN_MAJOR } from './detect.js';
 import { StackSpecError, loadStackSpec, STACK_FILE, type StackSpec } from './spec.js';
-import { kernelKeyFile } from './runtime.js';
+import { kernelKeyFile, localDiscovery, mdkDir, resolvePackageDir, trustedKeysDir, type CallerKeyPair } from './runtime.js';
+import { appChildPid, isAlive, lockHolder } from './run-lock.js';
 
 const require = createRequire(import.meta.url);
 
@@ -11,6 +12,13 @@ const require = createRequire(import.meta.url);
  * Read-only state collection for `mdk status`. Nothing here starts, stops or
  * repairs anything: it inspects the environment, validates the spec, and probes
  * the running stack.
+ *
+ * The one write: the Kernel admits only known callers, so the Kernel probe dials
+ * with a persistent CLI identity it publishes to the trusted-keys dir.
+ *
+ * An app runtime accepts calls from the Gateway's key only, so it cannot be
+ * probed from here; an app counts as running while a live process holds its
+ * run lock (see run-lock.ts).
  *
  * Liveness is deliberately probe-based, never file-based. Both `.mdk/kernel.key`
  * and `.mdk/keys/*.key` survive a shutdown by design (the keys are stable across
@@ -37,7 +45,8 @@ interface MdkClient {
   getStatus(opts?: Record<string, unknown>): Promise<KernelStatus>;
 }
 interface MdkClientModule {
-  createMdkClient(opts: { hrpc: { key: string } }): MdkClient;
+  /** Reads the Kernel key from `config.kernelKey`; without one every call fails with ERR_MDK_CLIENT_UNAVAILABLE. */
+  createMdkClient(config: { kernelKey: string; kernelKeyPair?: CallerKeyPair }): MdkClient;
 }
 
 function mdkClientModule(): MdkClientModule {
@@ -74,6 +83,18 @@ export interface WorkerReport {
   devices: number;
 }
 
+export interface AppReport {
+  name: string;
+  package: string;
+  /** The installed package's version, or null when it is not installed. */
+  version: string | null;
+  /** Where the Gateway serves it. */
+  mount: string;
+  running: boolean;
+  /** The app's runtime process: the child `mdk run` supervises, or the `mdk run app <name>` process. */
+  pid: number | null;
+}
+
 export interface StackReport {
   kernel: { state: ComponentState; keyFile: string; key: string | null; error: string | null };
   gateway: { state: ComponentState; url: string | null; error: string | null };
@@ -82,6 +103,11 @@ export interface StackReport {
     registered: number;
     totalDevices: number;
     items: WorkerReport[];
+  };
+  apps: {
+    declared: number;
+    running: number;
+    items: AppReport[];
   };
 }
 
@@ -93,20 +119,14 @@ export interface StatusReport {
   ok: boolean;
 }
 
-const NODE_REQUIRED = '>=20';
+const NODE_REQUIRED = `>=${NODE_MIN_MAJOR}`;
 const GATEWAY_TIMEOUT_MS = 1500;
 const KERNEL_TIMEOUT_MS = 3000;
 
-/**
- * True when `pkg` can be resolved the way the runtime resolves it: a local path
- * relative to the project, or an installed package in the project's node_modules.
- */
+/** True when `pkg` resolves the way `mdk run` resolves it (subpaths and local paths included). */
 function isResolvable(projectDir: string, pkg: string): boolean {
-  if (pkg.startsWith('.') || pkg.startsWith('/')) {
-    return existsSync(resolve(projectDir, pkg));
-  }
   try {
-    require.resolve(`${pkg}/package.json`, { paths: [resolve(projectDir)] });
+    resolvePackageDir(projectDir, pkg);
     return true;
   } catch {
     return false;
@@ -116,19 +136,17 @@ function isResolvable(projectDir: string, pkg: string): boolean {
 /**
  * Probes the Gateway over HTTP.
  *
- * `/echo` is the httpd facility's own debug route, so it is the one path that is
- * there whatever the stack declares. It used to be `/auth/site`, from the
- * site-monitor plugin every Gateway registered unasked; now that a Gateway loads
- * only what `mdk.yaml` names, a healthy stack that never declared that plugin
- * would have reported its Gateway as down.
+ * A Gateway serves only the routes `mdk.yaml` declares and has no built-in route
+ * (no `/echo`), so no one path is there on every stack. Any answer below 500
+ * from `/`, a 404 included, means the Gateway is serving.
  */
 async function probeGateway(port: number): Promise<{ state: ComponentState; url: string; error: string | null }> {
   const url = `http://127.0.0.1:${port}`;
   try {
-    const res = await fetch(`${url}/echo?value=mdk-status`, {
+    const res = await fetch(`${url}/`, {
       signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
     });
-    if (!res.ok) return { state: 'down', url, error: `HTTP ${res.status}` };
+    if (res.status >= 500) return { state: 'down', url, error: `HTTP ${res.status}` };
     return { state: 'up', url, error: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -167,9 +185,21 @@ async function probeKernel(
     };
   }
 
-  const client = mdkClientModule().createMdkClient({ hrpc: { key } });
+  let client: MdkClient;
   try {
-    await client.connect();
+    const discovery = localDiscovery();
+    const kernelKeyPair = discovery.callerKeyPair(join(mdkDir(projectDir), 'cli', 'identity'));
+    discovery.publishTrustedKey(trustedKeysDir(projectDir), 'cli', kernelKeyPair.publicKey);
+    client = mdkClientModule().createMdkClient({ kernelKey: key, kernelKeyPair });
+  } catch (error) {
+    return {
+      kernel: { state: 'down', keyFile, key, error: error instanceof Error ? error.message : String(error) },
+      status: null,
+    };
+  }
+  try {
+    // A newly published key is admitted once the Kernel's trusted-keys watcher sees it.
+    await client.connect({ warmup: true });
     const status = await client.getStatus({ retries: 1, timeoutMs: KERNEL_TIMEOUT_MS });
     return { kernel: { state: 'up', keyFile, key, error: null }, status };
   } catch (error) {
@@ -226,6 +256,34 @@ function buildWorkers(spec: StackSpec | null, status: KernelStatus | null): Stac
   };
 }
 
+function installedVersion(dir: string, pkg: string): string | null {
+  try {
+    const manifest = JSON.parse(readFileSync(join(resolvePackageDir(dir, pkg), 'package.json'), 'utf8')) as {
+      version?: unknown;
+    };
+    return typeof manifest.version === 'string' ? manifest.version : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildApps(dir: string, spec: StackSpec | null): StackReport['apps'] {
+  const items = (spec?.spec.apps ?? []).map((a): AppReport => {
+    const holder = lockHolder(dir, { kind: 'app', name: a.name });
+    const child = holder === null ? undefined : appChildPid(dir, a.name);
+    const pid = child === undefined ? holder : isAlive(child) ? child : null;
+    return {
+      name: a.name,
+      package: a.package,
+      version: installedVersion(dir, a.package),
+      mount: a.mount ?? `/apps/${a.name}`,
+      running: pid !== null,
+      pid,
+    };
+  });
+  return { declared: items.length, running: items.filter((a) => a.running).length, items };
+}
+
 /** A worker counts as serving when the Kernel has it READY and not DEAD/SICK. */
 function workerServing(w: WorkerReport): boolean {
   if (!w.registered) return false;
@@ -254,7 +312,7 @@ export async function collectStatus(projectDir: string): Promise<StatusReport> {
   const packages = spec
     ? [
         ...spec.spec.workers.map((w) => w.package),
-        ...spec.spec.gateway.plugins.map((p) => p.package),
+        ...spec.spec.apps.map((a) => a.package),
       ]
     : [];
   const missing = packages.filter((p) => !isResolvable(dir, p));
@@ -286,14 +344,15 @@ export async function collectStatus(projectDir: string): Promise<StatusReport> {
   ]);
 
   const workers = buildWorkers(spec, status);
-  const stack: StackReport = { kernel, gateway, workers };
+  const apps = buildApps(dir, spec);
+  const stack: StackReport = { kernel, gateway, workers, apps };
 
   // Aggregate -------------------------------------------------------------
   const envOk = environment.node.ok && environment.spec.valid && environment.dependencies.ok;
   let health: Health;
   if (kernel.state === 'down') {
     health = 'down';
-  } else if (gateway.state === 'down' || !workers.items.every(workerServing)) {
+  } else if (gateway.state === 'down' || !workers.items.every(workerServing) || apps.running < apps.declared) {
     health = 'degraded';
   } else {
     health = 'healthy';

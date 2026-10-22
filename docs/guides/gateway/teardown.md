@@ -6,11 +6,11 @@ docs@tether_slug: guides/gateway/teardown
 
 ## Overview
 
-MDK registers graceful shutdown handlers automatically when you start services with `getKernel()`, a Worker boot function, or
-`startGateway()`. For most deployments, `SIGINT` (Ctrl+C) triggers a clean teardown with no extra code. This guide covers the three
-situations where you need to think about teardown explicitly:
+As a library, MDK leaves your process's signals alone: `getKernel()` and `startGateway()` install `SIGINT`/`SIGTERM` handlers
+only when you pass `handleSignals: true`, which a standalone process does so that Ctrl+C triggers a clean teardown with no
+extra code. This guide covers the three ways to tear down:
 
-- [Automatic teardown](#automatic-teardown-with-getkernel)
+- [Signal-driven teardown](#automatic-teardown-with-getkernel)
 - [Explicit teardown](#explicit-teardown-in-tests-or-scripted-runs)
 - [Custom signal handling](#custom-signal-handling-with-onshutdown)
 
@@ -25,17 +25,18 @@ situations where you need to think about teardown explicitly:
 
 ### Automatic teardown with `getKernel()`
 
-`getKernel()` registers `SIGINT`/`SIGTERM` handlers internally. A Gateway started with `opts.kernel` is chained into the cleanup
+`getKernel({ handleSignals: true })` registers `SIGINT`/`SIGTERM` handlers that drain the cleanup chain, stop the Kernel and
+exit the process. Without the option no handler is installed. A Gateway started with `opts.kernel` is chained into the cleanup
 sequence automatically. Workers are **not** auto-chained: a Worker's boot function has no `opts.kernel`, so push its `stop()` onto
 `kernel._cleanup` yourself if you want Kernel shutdown to cascade to it:
 
 ```js
 const { getKernel, startGateway } = require('@tetherto/mdk-core')
-const { startAntminerWorker } = require('@tetherto/mdk-worker-antminer')
+const { startAvalonWorker } = require('@tetherto/mdk-worker-avalon')
 
-const kernel = await getKernel()
+const kernel = await getKernel({ handleSignals: true })
 
-const { runtime, stop } = await startAntminerWorker({ workerId: 'antminer-rack-1', model: 's19xp', storeDir: './data/antminer' })
+const { runtime, stop } = await startAvalonWorker({ workerId: 'avalon-rack-1', model: 'a1346', storeDir: './data/avalon' })
 await kernel.registerWorker(runtime.getPublicKey())
 kernel._cleanup.push(stop) // cascade Worker shutdown from Kernel
 
@@ -53,7 +54,7 @@ lifecycle rules.
 
 ### Explicit teardown in tests or scripted runs
 
-Short-lived processes — integration tests, one-shot scripts — never receive `SIGINT`. Call `shutdown(kernel)` directly
+Short-lived processes — integration tests, one-shot scripts — and embedders that own their signals (the default) call `shutdown(kernel)` directly
 to drain the full cleanup chain. Pass the `kernel` object returned by `getKernel()`; passing a server object stops only the Gateway.
 
 ```js
@@ -94,7 +95,7 @@ See [`onShutdown` API reference][mdk-readme-onshutdown].
 
 ## What just happened
 
-1. **Automatic chain**: `getKernel()` and `startGateway({ kernel })` wire themselves into `kernel._cleanup` so a single signal stops
+1. **Automatic chain**: `getKernel({ handleSignals: true })` and `startGateway({ kernel })` wire themselves into `kernel._cleanup` so a single signal stops
    Kernel and Gateway in order; push a Worker's `stop()` onto `kernel._cleanup` yourself to fold it into the same chain.
 2. **Explicit drain**: `shutdown(kernel)` gives you the same ordered teardown on demand, without a signal.
 3. **Custom hooks**: `onShutdown(fn)` lets you attach cleanup logic outside the MDK object hierarchy.

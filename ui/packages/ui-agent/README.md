@@ -1,7 +1,7 @@
 # @tetherto/mdk-ui-agent
 
 The operator agent chat, as a drop-in for any MDK UI shell. Talks to the agent
-gateway plugin ([`@tetherto/mdk-plugin-agent`](../../../backend/plugins/agent/README.md)) over SSE and renders its six-event
+app ([`@tetherto/mdk-app-agent`](../../../backend/apps/agent/README.md)) through the Gateway over SSE and renders its six-event
 contract as a conversation.
 
 ## Install
@@ -21,9 +21,24 @@ import '@tetherto/mdk-ui-agent/styles.css'
 That is the whole integration. The shell template ships with both lines already
 in place; delete them to remove it.
 
-The backend half is a stack concern: add [`@tetherto/mdk-plugin-agent`](../../../backend/plugins/agent/README.md) to your
-`mdk.yaml`, and point it at an MCP server for the fleet tools. Without the plugin
-the panel opens and reports that the agent is not configured. See
+The backend half is a stack concern: add [`@tetherto/mdk-app-agent`](../../../backend/apps/agent/README.md) to your
+`mdk.yaml` under `spec.apps` with `mount: /`, and point it at an MCP server for the fleet tools:
+
+```yaml
+spec:
+  apps:
+    - name: agent
+      package: "@tetherto/mdk-app-agent"
+      mount: /
+      config:
+        agent: { provider: { kind: qvac, model: qwen3-4b, baseURL: http://127.0.0.1:11500/v1 }, mcp: { url: http://127.0.0.1:3101/mcp } }
+```
+
+> [!IMPORTANT]
+> The panel calls `/agent/sessions…` at the Gateway root. The Gateway serves an app under `/apps/<name>` unless its entry sets
+> `mount`, so without `mount: /` every call answers `404`. `mdk onboard` writes `mount: /` for this app.
+
+Without the app the panel opens and reports that the agent is not configured. See
 [Running it all locally](#running-it-all-locally) for the whole chain from an
 empty machine.
 
@@ -53,7 +68,7 @@ calls stay same-origin.
 
 All props are optional. Inside an `MdkProvider` the base URL and bearer token
 come from the provider's auth seam; outside one it falls back to relative URLs
-and no token — which is what a Gateway running without an auth plugin serves
+and no token — which is what a Gateway running without an identity layer serves
 anyway.
 
 Useful props: `title`, `status` (the line under the title), `toolLabels`,
@@ -129,7 +144,7 @@ transport itself misbehaves.
 
 | Code                          | Fires when                           | Fix                               |
 | ----------------------------- | ------------------------------------ | --------------------------------- |
-| `ERR_AGENT_UNAVAILABLE`       | `config.agent` is missing entirely, or the agent failed to construct (`503`) | An operator-facing failure — the Gateway wasn't configured or the agent couldn't start; check the plugin's own config |
+| `ERR_AGENT_UNAVAILABLE`       | `config.agent` is missing entirely, or the agent failed to construct (`503`) | An operator-facing failure — the Gateway wasn't configured or the agent couldn't start; check the app's own config |
 | `ERR_AGENT_SESSION_NOT_FOUND` | The session id doesn't exist — commonly because the Gateway restarted and its in-memory sessions were lost (`404`) | Start a new session; the transcript still reads back locally |
 | `ERR_AGENT_TURN_ACTIVE`       | A message or delete is sent to a session while its previous turn is still streaming or paused on an approval (`409`) | Wait for the current turn to finish, or decide its pending approval |
 | `ERR_AGENT_APPROVAL_NOT_FOUND` | An approval decision is sent for an id that doesn't exist for that session — already decided, or never existed (`404`) | Confirm the approval card is still the current one; a stale one is a decision arriving after the turn already moved on |
@@ -214,30 +229,30 @@ that size it does not reliably produce it.
 ### 2. The fleet and its tools
 
 ```bash
-cd examples/full-site
-npm run setup  # first time — NOT npm install
-npm start      # kernel + workers + its own gateway :3007 + MCP tools on :3008
+cd examples/mvp-site
+npm run setup         # first time — NOT npm install
+npm run setup:config  # first time — writes config/devices.json and config/site.deploy.json
+npm start             # kernel + workers + its own gateway :3000 + MCP tools on :3101, under PM2
 ```
 
 `npm install` alone leaves it unbootable. The repo is a root npm workspace, but
-`setup` also builds the UI toolkit ([`ui/`](../../README.md)) and installs [`examples/full-site/ui`](../../../examples/full-site/ui)
+`setup` also builds the UI toolkit ([`ui/`](../../README.md)) and installs [`examples/mvp-site/ui`](../../../examples/mvp-site/ui/package.json)
 — a plain root `npm install` does not do either of those; `setup` does all of
-that and takes a while. Its own preflight check refuses to start otherwise,
-naming what is missing.
+that and takes a while.
 
 This is the same MCP server the agent CLI uses, exposing `summarize_site`,
 `count_devices`, `list_devices`, `get_device`, `rank_devices` and `act_device`.
 
-**Its gateway is not the agent gateway.** `full-site` serves a UI of its own on
-`:3007` and carries no agent plugin; step 3 is a separate stack that reaches
-across to the tool server on `:3008`. Nothing in the repo boots both halves
+**Its gateway is not the agent gateway.** `mvp-site` serves a UI of its own on
+`:3000` and carries no agent app; step 3 is a separate stack that reaches
+across to the tool server on `:3101`. Nothing in the repo boots both halves
 together yet.
 
-### 3. A gateway carrying the agent plugin
+### 3. A gateway carrying the agent app
 
-Mount [`@tetherto/mdk-plugin-agent`](../../../backend/plugins/agent/README.md) behind its own Gateway, against the local model
-and MCP server this walkthrough already served. [Mounting the plugin](../../../docs/guides/agent/gateway-deployment.md#mount-the-plugin)
-shows the complete `mdk.yaml` and `mdk run all`.
+Mount [`@tetherto/mdk-app-agent`](../../../backend/apps/agent/README.md) at `/` behind its own Gateway, against the local model
+and MCP server this walkthrough already served. [Mounting the app](../../../docs/guides/agent/gateway-deployment.md#mount-the-app)
+shows the complete `mdk.yaml` and `mdk run`.
 
 ### 4. The UI
 
@@ -268,8 +283,8 @@ A tool chip on the fleet questions is the thing to look for. If they answer
 without one, MCP was not up when the session was created — reload the page to
 mint a new one.
 
-Against `full-site` the fleet is 30 miners in 2 containers, plus powermeters,
-sensors and pools, so "how many miners are there?" answers 30.
+Against `mvp-site` with the example `config/devices.json`, the fleet is 8 miners (5 Whatsminer, 3 Antminer), plus a
+powermeter and a pool, so "how many miners are there?" answers 8.
 
 Without the UI:
 

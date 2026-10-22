@@ -9,9 +9,8 @@ docs@tether_slug: guides/miners/run-whatsminer-worker
 Whatsminer support ships as the external
 [`whatsminer-mdk-worker`][whatsminer-mdk-worker] contract plugin — a plain `mdk-contract.json` plus handler files, with
 no `startWhatsminerWorker` export, no provisioning store, no alerts/stats templates, and no model validation. You host
-it yourself on [`WorkerRuntimeV2`][worker-runtime-v2] through a small adapter; this repo ships two working ones to
-copy from ([`examples/full-site/backend/whatsminer-adapter.js`][full-site-adapter],
-[`examples/mvp-site/backend/whatsminer-adapter.js`][mvp-site-adapter]).
+it yourself on [`WorkerRuntimeV2`][worker-runtime-v2] through a small adapter; this repo ships a working one to
+copy from ([`examples/mvp-site/backend/whatsminer-adapter.js`][mvp-site-adapter]).
 
 ## Prerequisites
 
@@ -41,7 +40,7 @@ boots one mock per seed device and points the adapter's devices at them — read
 device seeding all come from `config/devices.json`).
 
 There is no minimal single-file runnable example for Whatsminer anymore (the old repo-root example shipped against
-the retired in-repo package); the full-site and mvp-site example stacks are the reference implementation.
+the retired in-repo package); the mvp-site example stack is the reference implementation.
 `cd examples/mvp-site && npm run setup:example && npm
 start` boots the whole stack — Kernel, mocks, and the Whatsminer Worker included — against seed data in
 `config/devices.json`.
@@ -67,7 +66,7 @@ const PKG_DIR = path.dirname(require.resolve('whatsminer-mdk-worker/package.json
 
 async function startWhatsminerWorker (opts) {
   const devices = (opts.seedDevices || []).map((seed) => ({
-    deviceId: seed.id || seed.info?.serialNum,
+    deviceId: seed.info?.serialNum || seed.id,
     config: { ...seed.opts }
   }))
 
@@ -85,7 +84,7 @@ async function startWhatsminerWorker (opts) {
 module.exports = { startWhatsminerWorker }
 ```
 
-This is the adapter [`examples/full-site/backend/whatsminer-adapter.js`][full-site-adapter] ships, trimmed of its
+This is the adapter [`examples/mvp-site/backend/whatsminer-adapter.js`][mvp-site-adapter] ships, trimmed of its
 input validation and debug logging — copy the real file rather than this excerpt for a production deployment.
 
 #### 2.2 Register your miner
@@ -150,9 +149,6 @@ If the Worker does not come up, or a mock port is already in use, follow [miner 
 
 [worker-runtime-v2]: ../../../backend/core/mdk-worker/lib/worker-runtime-v2.js
 <!-- docs@tether.io: worker-runtime-v2 → https://github.com/tetherto/mdk/blob/main/backend/core/mdk-worker/lib/worker-runtime-v2.js -->
-
-[full-site-adapter]: ../../../examples/full-site/backend/whatsminer-adapter.js
-<!-- docs@tether.io: full-site-adapter → https://github.com/tetherto/mdk/blob/main/examples/full-site/backend/whatsminer-adapter.js -->
 
 [mvp-site-adapter]: ../../../examples/mvp-site/backend/whatsminer-adapter.js
 <!-- docs@tether.io: mvp-site-adapter → https://github.com/tetherto/mdk/blob/main/examples/mvp-site/backend/whatsminer-adapter.js -->
