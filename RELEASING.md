@@ -50,5 +50,5 @@ Copy this into the PR or release ticket for each release.
 
 ### Publish
 
-- [ ] Publish from the tagged commit: the packages marked `publishable` in the [package reference](./docs/reference/packages.md), in the order and with the commands in [PUBLISHING.md](./PUBLISHING.md)
+- [ ] Publish from the tagged commit: the packages marked `publishable` in the [package reference](./docs/reference/packages.md)
 - [ ] Confirm published packages show the correct version
