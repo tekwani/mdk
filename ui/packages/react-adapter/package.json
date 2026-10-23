@@ -38,7 +38,8 @@
     "dist",
     "src",
     "!src/**/*.test.*",
-    "!src/**/specs"
+    "!src/**/specs",
+    "!src/**/test-utils"
   ],
   "scripts": {
     "build": "npm run build:ts && npm run build:hooks",
