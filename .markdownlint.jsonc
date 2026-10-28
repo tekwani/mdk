@@ -1,0 +1,63 @@
+{
+  // markdownlint-cli ruleset. Rules are kept identical to the mdk-docs
+  // markdownlint ruleset so the two repos lint the same way.
+  //
+  // Which files get linted is set by the `lint:md` script in package.json (globs) and
+  // .markdownlintignore (exclusions). markdownlint-cli2 was replaced because its
+  // globby -> micromatch -> braces chain carries GHSA-vfj7-8cjw-p6xm, which has no
+  // patched release. markdownlint-cli finds files via tinyglobby, which doesn't use braces.
+
+  "default": true,
+
+  // Allow long lines — docs often have URLs and tables
+  "MD013": false,
+
+  // Blanks around headings — disabled; MDX content uses tight layouts
+  "MD022": false,
+
+  // Blanks around fences — disabled; tight code block spacing is intentional
+  "MD031": false,
+
+  // Blank line between adjacent blockquotes — disabled. This repo authors GFM
+  // alerts (`> [!NOTE]`) directly and adjacent callouts of different types are
+  // an intentional pattern. Both CommonMark and the docs port pipeline parse
+  // the blank line as separating two blockquotes, so there is no ambiguity to
+  // guard against here — enforcing it only adds inert separator markup, which
+  // reaches the published site as `{/* */}`.
+  "MD028": false,
+
+  // Blanks around lists — disabled; MDX content uses tight layouts
+  "MD032": false,
+
+  // Allow raw HTML (MDX components, badges, etc.)
+  "MD033": false,
+
+  // Spaces inside emphasis markers — disabled; MDX `{/* ... */}` comments
+  // contain `*` and trigger this rule as a false positive
+  "MD037": false,
+
+  // Allow bare URLs (common in docs)
+  "MD034": false,
+
+  // Emphasis for breadcrumbs/metadata (not headings) — intentional design pattern
+  "MD036": false,
+
+  // Table column style — allow compact tables
+  "MD060": false,
+
+  // Strong-emphasis style — pin to asterisk. Default "consistent" locks to
+  // whichever marker a file's first `**bold**`/`__bold__` happens to use, so
+  // a later mixed occurrence in the same file fails against whatever won
+  // that race. Docs and templates alike author `**bold**`.
+  "MD050": { "style": "asterisk" },
+
+  // Roadmap / long-form docs: multiple consecutive blanks; duplicate milestone headings
+  "MD012": false,
+  "MD024": false,
+
+  // Fumadocs injects title from frontmatter; body may repeat an H1 for layout
+  "MD025": false,
+
+  // Snippets are included partials; first line doesn't need to be H1
+  "MD041": false
+}

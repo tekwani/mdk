@@ -14,9 +14,18 @@ MDK Worker for ABB power meters. Reads 3-phase electrical measurements via Modbu
 
 ## Install
 
+> [!IMPORTANT]
+> `npm install @tetherto/mdk-worker-abb` returns `E404`. The device Workers are not published to npm yet; they are
+> workspace packages in the MDK monorepo. Clone it and install from the repository root instead.
+
 ```bash
-npm install @tetherto/mdk-worker-abb
+git clone https://github.com/tetherto/mdk.git
+cd mdk && npm install
 ```
+
+npm workspaces links `@tetherto/mdk-worker-abb` into `node_modules`, so the `require` in the usage example
+below resolves with no further step. See [the Worker install pattern](../../docs/install-pattern.md) for
+what every Worker package ships and how to run one.
 
 ## Usage
 

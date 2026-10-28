@@ -5,7 +5,6 @@ const path = require('path')
 const fs = require('fs')
 const debug = require('debug')('mdk:kernel')
 const StoreFacility = require('@tetherto/hp-svc-facs-store')
-const IntervalsFacility = require('@bitfinex/bfx-facs-interval')
 
 const { WorkerRegistry } = require('./modules/worker-registry')
 const { CommandDispatcher } = require('./modules/command-dispatcher')
@@ -60,7 +59,6 @@ class KernelManager extends EventEmitter {
 
     // Facilities
     this.store_s0 = null
-    this.interval_0 = null
     this.actionApprover_0 = null
 
     // Stores
@@ -127,7 +125,6 @@ class KernelManager extends EventEmitter {
 
     if (this._ownsFacilities) {
       if (this.actionApprover_0) await this._stopFacility(this.actionApprover_0)
-      if (this.interval_0) await this._stopFacility(this.interval_0)
       if (this.store_s0) await this._stopFacility(this.store_s0)
     }
 
@@ -214,7 +211,6 @@ class KernelManager extends EventEmitter {
   async _createFacilities (ctx) {
     if (ctx.facs) {
       this.store_s0 = ctx.facs.store_s0
-      this.interval_0 = ctx.facs.interval_0
       return
     }
 
@@ -222,9 +218,6 @@ class KernelManager extends EventEmitter {
 
     this.store_s0 = new StoreFacility(this, { storeDir }, ctx)
     await this._startFacility(this.store_s0)
-
-    this.interval_0 = new IntervalsFacility(this, {}, ctx)
-    await this._startFacility(this.interval_0)
 
     this.actionApprover_0 = new ActionApproverFacility(this, {}, this.ctx)
     await this._startFacility(this.actionApprover_0)

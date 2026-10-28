@@ -29,6 +29,7 @@ your-worker-host/
 - npm 11 [(< 12)][npm-version]
 - A completed [Worker plugin package][build-a-worker], including its bundled mock device
 - Comfort with plain async JS — no additional MDK framework knowledge is required beyond what building the package already covered
+- [Outbound UDP to the HyperDHT bootstrap nodes][network-requirements]
 
 <Steps>
 
@@ -76,25 +77,16 @@ exempt:
 
 ### Install MDK
 
-`@tetherto/mdk-worker` (the package that ships `WorkerRuntimeV2`) is **not yet published to the npm registry** — MDK is
-pre-1.0 and still distributed as this monorepo. Until it is, the working path from an external repo is a git
-dependency plus a deep `require()` into the checked-out repo, exactly mirroring how every in-repo Worker already
-resolves it (by relative path, not through `node_modules` package resolution):
+Install the packages this guide hosts and calls:
 
 ```bash
-npm install github:tetherto/mdk#main
+npm install @tetherto/mdk-worker @tetherto/mdk-core @tetherto/mdk-client
 ```
 
-This installs the whole monorepo under `node_modules/@tetherto/mdk` (its root `package.json` name). The monorepo is a
-real root npm workspace, but npm does not auto-install a git dependency's own transitive workspace tree — so run a
-single install inside the checked-out copy once after adding it:
-
-```bash
-(cd node_modules/@tetherto/mdk && npm install)
-```
-
-The same deep-path pattern also gets you `getKernel`, `startGateway`, and `waitForDiscovery` from
-`require('@tetherto/mdk/backend/core/mdk')`, used to [register with a live Kernel](#register-directly-with-a-live-kernel).
+`@tetherto/mdk-worker` ships `WorkerRuntimeV2`. `@tetherto/mdk-core` ships `getKernel`, `startGateway` and
+`waitForDiscovery`, used to [register with a live Kernel](#register-directly-with-a-live-kernel), and exposes the local
+discovery helpers at `@tetherto/mdk-core/lib/local-discovery`. `@tetherto/mdk-client` ships `createMdkClient` for the
+compatibility check.
 
 </Step>
 
@@ -108,7 +100,7 @@ The same deep-path pattern also gets you `getKernel`, `startGateway`, and `waitF
 "use strict";
 
 const path = require("path");
-const { WorkerRuntimeV2 } = require("@tetherto/mdk/backend/core/mdk-worker");
+const { WorkerRuntimeV2 } = require("@tetherto/mdk-worker");
 
 const WORKER_DIR = path.resolve(__dirname, "../your-worker-repo");
 
@@ -173,12 +165,12 @@ const {
   getKernel,
   waitForDiscovery,
   shutdown,
-} = require("@tetherto/mdk/backend/core/mdk");
-const { createMdkClient } = require("@tetherto/mdk/backend/core/client");
+} = require("@tetherto/mdk-core");
+const { createMdkClient } = require("@tetherto/mdk-client");
 const {
   callerKeyPair,
   trustKernel,
-} = require("@tetherto/mdk/backend/core/mdk/lib/local-discovery");
+} = require("@tetherto/mdk-core/lib/local-discovery");
 const { startVendorWorker } = require("./index");
 const vendorMock = require("../your-worker-repo/mock/server");
 
@@ -296,14 +288,14 @@ const {
   getKernel,
   waitForDiscovery,
   shutdown,
-} = require("@tetherto/mdk/backend/core/mdk");
+} = require("@tetherto/mdk-core");
 const {
   keysDir,
   publishWorkerKey,
   trustedKeysDir,
   trustKeysFromDir,
   waitForKernelKey,
-} = require("@tetherto/mdk/backend/core/mdk/lib/local-discovery");
+} = require("@tetherto/mdk-core/lib/local-discovery");
 const { startVendorWorker } = require("./index");
 
 const ROOT = path.join(os.tmpdir(), `vendor-worker-local-${process.pid}`);
@@ -392,7 +384,7 @@ const {
   getKernel,
   waitForDiscovery,
   shutdown,
-} = require("@tetherto/mdk/backend/core/mdk");
+} = require("@tetherto/mdk-core");
 const { startVendorWorker } = require("./index");
 
 const ROOT = path.join(os.tmpdir(), `vendor-worker-dht-${process.pid}`);
@@ -544,3 +536,6 @@ Understand the end-user experience of controlling and monitoring your device via
 
 [agent-guides]: ../agent/index.md
 <!-- docs@tether.io: agent-guides → guides/agent -->
+
+[network-requirements]: ../../reference/environment.md#requirements
+<!-- docs@tether.io: network-requirements → reference/environment#requirements -->

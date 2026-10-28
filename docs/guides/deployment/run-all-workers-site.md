@@ -11,7 +11,7 @@ This page directs you to the correct location for the prerequisites, run command
 
 Use this example when you want to run a demo for multiple configured Workers across device families - a miner, a mining pool, and a
 powermeter - each supervised as its own separate process. Each talks to mock hardware that speaks the real wire protocol. The site
-Gateway plugin surfaces all device data through a single `/site` HTTP API.
+app surfaces all device data through a single `/site` HTTP API.
 
 This example runs the [local topology][deployment-topologies] under PM2 supervision. Use this when:
 
@@ -19,7 +19,7 @@ This example runs the [local topology][deployment-topologies] under PM2 supervis
 - You need supervisor-managed restarts and logs, and want to restart or scale one service without restarting the others
 - You are testing PM2 orchestration before deploying to hardware, or want a production-like layout for Gateway and Workers
 - You want real driver code running its full connect, collect, and command paths (only the endpoints are localhost mocks instead of hardware)
-- You want the site Gateway plugin as a starting point for your own `/site` API
+- You want the site app as a starting point for your own `/site` API
 
 > [!NOTE]
 > You have a choice of [deployment topologies][deployment-topologies] from single-process to distributed microservices.
@@ -53,8 +53,8 @@ Follow the [Starter site example][site-backend-example]:
 [miner-how-to]: ../miners/index.md
 <!-- docs@tether.io: miner-how-to → guides/miners -->
 
-[plugins]: ../gateway/plugins.md
-<!-- docs@tether.io: plugins → guides/gateway/plugins -->
+[plugins]: ../gateway/apps.md
+<!-- docs@tether.io: plugins → guides/gateway/apps -->
 
 [site-backend-example]: ../../../examples/mvp-site/README.md
 <!-- docs@tether.io: site-backend-example → https://github.com/tetherto/mdk/tree/main/examples/mvp-site -->

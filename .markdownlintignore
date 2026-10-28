@@ -1,0 +1,7 @@
+# Build output and scaffold templates copied verbatim into end-user projects.
+# These are not authored docs, so linting them is noise rather than signal.
+# Keep in sync with the grep -Ev filter in docs/scripts/lint-md-pr.sh.
+**/node_modules/**
+**/dist/**
+**/templates/**
+**/worker-template/**

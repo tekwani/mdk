@@ -29,12 +29,11 @@ Also under [`backend/core/`](../../../../../../backend/core/README.md): `plugins
 | `@tetherto/mdk-worker-antspace` | [`backend/workers/containers/antspace`](../../../../../../backend/workers/containers/antspace/README.md) | HTTP JSON        |
 | `@tetherto/mdk-worker-bitdeer`  | [`backend/workers/containers/bitdeer`](../../../../../../backend/workers/containers/bitdeer/README.md) | MQTT               |
 | `@tetherto/mdk-worker-f2pool`   | [`backend/workers/minerpools/f2pool`](../../../../../../backend/workers/minerpools/f2pool/README.md) | Pool HTTP API        |
-| `@tetherto/mdk-worker-ocean`    | [`backend/workers/minerpools/ocean`](../../../../../../backend/workers/minerpools/ocean/README.md) | Pool HTTP API          |
 | `@tetherto/mdk-worker-mock` | [`backend/workers/mock`](../../../../../../backend/workers/mock/README.md) | Shared device-mock framework (BaseMock, category mocks, transports) |
 
-Whatsminer support is the external [`whatsminer-mdk-worker`](https://github.com/whatsminer/whatsminer-mdk-worker) contract plugin (CGMiner JSON over TCP, AES-encrypted), hosted directly on `WorkerRuntimeV2` via a thin per-deployment adapter (see `examples/mvp-site/backend/whatsminer-adapter.js`). Antminer support is likewise the external [`antminer-mdk-worker`](https://github.com/bitmain-official/antminer-mdk-worker) contract plugin (HTTP CGI, Digest auth), hosted the same way (see `examples/mvp-site/backend/antminer-adapter.js`).
+Whatsminer support is the external [`whatsminer-mdk-worker`](https://github.com/whatsminer/whatsminer-mdk-worker) contract plugin (CGMiner JSON over TCP, AES-encrypted), hosted directly on `WorkerRuntimeV2` via a thin per-deployment adapter (see `examples/mvp-site/backend/whatsminer-adapter.js`). Antminer support is likewise the external [`antminer-mdk-worker`](https://github.com/bitmain-official/antminer-mdk-worker) contract plugin (HTTP CGI, Digest auth), hosted the same way (see `examples/mvp-site/backend/antminer-adapter.js`). Ocean pool support is likewise the external [`ocean-mdk-worker`](https://github.com/OCEAN-xyz/mdk-wrk-minerpool-ocean) contract plugin (Ocean HTTP API, optional DATUM gateway), hosted the same way (see `examples/mvp-site/backend/ocean-adapter.js`).
 
-Generated Worker docs: [`backend/workers/docs/supported-hardware.md`](../../../../../../backend/workers/docs/supported-hardware.md) and
+Generated Worker docs: [`backend/workers/docs/supported-workers.md`](../../../../../../backend/workers/docs/supported-workers.md) and
 [`backend/workers/docs/catalogue.json`](../../../../../../backend/workers/docs/catalogue.json) (from
 [`backend/workers/scripts/generate-catalogue.js`](../../../../../../backend/workers/scripts/generate-catalogue.js)).
 

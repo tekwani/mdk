@@ -2,7 +2,7 @@
 
 Drives Canaan Avalon Bitcoin miners over the native TCP CGMiner API. Supports one model family today: A1346.
 
-This page documents what's specific to Avalon: the SDK surface: the manager class this package exports, how to run a mock device, and the shape of `registerThing` options. For the runtime contract — telemetry units, command shapes, error codes, alert thresholds — read [`mdk-contract.json`](plugin/mdk-contract.json) directly. For model coverage across all Workers, see the [generated catalogue](../../docs/supported-hardware.md).
+This page documents what's specific to Avalon: the SDK surface: the manager class this package exports, how to run a mock device, and the shape of `registerThing` options. For the runtime contract — telemetry units, command shapes, error codes, alert thresholds — read [`mdk-contract.json`](plugin/mdk-contract.json) directly. For model coverage across all Workers, see the [generated catalogue](../../docs/supported-workers.md).
 
 For the canonical install pattern that applies to every Worker in the monorepo, see [`backend/workers/docs/install-pattern.md`](../../docs/install-pattern.md). 
 

@@ -2,7 +2,7 @@
 
 const StoreFacility = require('@tetherto/hp-svc-facs-store')
 const HttpFacility = require('@bitfinex/bfx-facs-http')
-const SchedulerFacility = require('@bitfinex/bfx-facs-scheduler')
+const { scheduleJob } = require('./pool-utils/scheduler')
 const EventEmitter = require('events')
 const fs = require('fs')
 const path = require('path')
@@ -332,8 +332,12 @@ class PoolService extends EventEmitter {
     this.store_s1 = new StoreFacility(this, { storeDir: ctx.storeDir }, ctx)
     await this._startFacility(this.store_s1)
 
-    this.scheduler_0 = new SchedulerFacility(this, {}, ctx)
-    await this._startFacility(this.scheduler_0)
+    const jobs = new Map()
+    this.scheduler_0 = {
+      add: (key, fn, time) => jobs.set(key, scheduleJob(time, fn)),
+      del: (key) => { jobs.get(key)?.cancel(); jobs.delete(key) },
+      stop: (cb) => { jobs.forEach(job => job?.cancel()); jobs.clear(); cb() }
+    }
 
     this.http_0 = new HttpFacility(this, {
       baseUrl: this.getHttpUrl(),

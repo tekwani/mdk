@@ -139,7 +139,7 @@ docs@tether_slug: reference/packages
 ## Overview
 
 This page lists every package in the MDK monorepo. Core is the Kernel, the Gateway, and the runtimes around them. Extensions are the Workers and
-Gateway plugins that connect MDK to hardware, pools, and agents. UI is the browser toolkit, and Tools are what you develop with.
+apps that connect MDK to hardware, pools, and agents. UI is the browser toolkit, and Tools are what you develop with.
 
 Availability says how you get a package:
 
@@ -148,13 +148,13 @@ Availability says how you get a package:
 
 ${body}## Next steps
 
-- Check [which models each Worker supports][supported-hardware]
+- Check [which models each Worker supports][supported-workers]
 - Learn how to [connect your own hardware][build-a-worker] with a new Worker
 
 ## Links
 
-[supported-hardware]: supported-hardware.md
-<!-- docs@tether.io: supported-hardware → reference/supported-hardware -->
+[supported-workers]: supported-workers.md
+<!-- docs@tether.io: supported-workers → reference/supported-workers -->
 
 [build-a-worker]: ../guides/workers/build-a-worker.md
 <!-- docs@tether.io: build-a-worker → guides/workers/build-a-worker -->

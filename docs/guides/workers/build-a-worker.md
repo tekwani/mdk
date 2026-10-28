@@ -117,27 +117,21 @@ Handler files are loaded with `require()`, so set `"type": "commonjs"` or use `.
 (`"type": "module"` with `.js` handlers) is not a supported handler-loading path today. `brittle` and `standard` are
 the repository's test and lint tools; substitute your own tooling if you prefer.
 
-Your own contract-level tests (`loadContract`, `createInstance`, see Step 7) need `@tetherto/mdk-worker` too, but it
-is **not yet published to the npm registry**. Install it the same way [Test a Worker with MDK][test-a-worker]'s
-[Install MDK step][test-a-worker-install] does:
+Your own contract-level tests (`loadContract`, `createInstance`, see Step 7) need `@tetherto/mdk-worker` too. Install
+it from npm, the same way [Test a Worker with MDK][test-a-worker]'s [Install MDK step][test-a-worker-install] does:
 
 ```bash
-npm install github:tetherto/mdk#main
-(cd node_modules/@tetherto/mdk && npm install)
+npm install @tetherto/mdk-worker
 ```
 
-This adds `"@tetherto/mdk": "github:tetherto/mdk#main"` to your `dependencies` and installs the whole monorepo under
-`node_modules/@tetherto/mdk` (its own root `package.json` name); there is no package literally named
-`@tetherto/mdk-worker` in `node_modules`. Step 7's test file accounts for this: it requires
-`@tetherto/mdk/backend/core/mdk-worker`, the same deep path every in-repo Worker already uses. The host process that
-constructs `WorkerRuntimeV2` and brings its transport dependencies (`@hyperswarm/rpc`, `hyperswarm`, `hyperdht`) is a
-separate package, not this one.
+The host process that constructs `WorkerRuntimeV2` and brings its transport dependencies (`@hyperswarm/rpc`,
+`hyperswarm`, `hyperdht`) is a separate package, not this one.
 
 > [!NOTE]
-> The ambient `@tetherto/mdk-worker/device` import your handler files use (Step 2 onward) is unaffected by any of
-> this: `WorkerRuntimeV2` intercepts that exact string before Node resolves it, so it works whether or not
-> `@tetherto/mdk-worker` exists anywhere in `node_modules`. Only the plain `require("@tetherto/mdk-worker")` calls in
-> your own test/verification scripts need the deep path above.
+> The ambient `@tetherto/mdk-worker/device` import your handler files use (Step 2 onward) does not depend on that
+> install: `WorkerRuntimeV2` intercepts that exact string before Node resolves it, so it works whether or not
+> `@tetherto/mdk-worker` is present in `node_modules`. The install is what the plain `require('@tetherto/mdk-worker')`
+> calls in your own test and verification scripts resolve against.
 
 </Step>
 
@@ -557,7 +551,7 @@ yourself with [`loadContract`][mdk-worker-index], the same function `WorkerRunti
 ```js
 'use strict'
 
-const { loadContract } = require('@tetherto/mdk/backend/core/mdk-worker')
+const { loadContract } = require('@tetherto/mdk-worker')
 
 const loaded = loadContract(__dirname)
 console.log(loaded.publishedContract) // handler paths stripped, the shape Kernel receives
@@ -663,7 +657,7 @@ in the loop, so it needs nothing beyond what you've already written in Steps 1â€
 
 const path = require('path')
 const test = require('brittle')
-const { loadContract, createInstance } = require('@tetherto/mdk/backend/core/mdk-worker')
+const { loadContract, createInstance } = require('@tetherto/mdk-worker')
 const vendorMock = require('../../mock/server')
 
 const PKG_DIR = path.join(__dirname, '..', '..')

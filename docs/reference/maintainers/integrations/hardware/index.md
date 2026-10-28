@@ -1,15 +1,14 @@
-# Supported hardware
+# Supported Workers
 
-The hardware catalogue is generated from two sources: every `backend/workers/**/mdk-contract.json` (MDK-maintained Workers), plus every entry in [`backend/workers/external-workers.json`](../../../../../backend/workers/external-workers.json), fetched live from each manufacturer's own repository (manufacturer-maintained Workers). Both are validated against the vendored schema, which implements the `check:integrations-fresh` direction in [`../../ia.md`](../../ia.md#qa-gates).
+The Supported Workers catalogue is generated from two sources: every `backend/workers/**/mdk-contract.json` (MDK-maintained Workers), plus every entry in [`backend/workers/external-workers.json`](../../../../../backend/workers/external-workers.json), fetched live from each partner's own repository (partner-maintained Workers). Both are validated against the vendored schema, which implements the `check:integrations-fresh` direction in [`../../ia.md`](../../ia.md#qa-gates).
 
-- User-facing entrypoint: [`reference/supported-hardware.md`](../../../supported-hardware.md)
-- Generated full catalogue (co-located with the workers): [`backend/workers/docs/supported-hardware.md`](../../../../../backend/workers/docs/supported-hardware.md)
+- User-facing entrypoint: [`reference/supported-workers.md`](../../../supported-workers.md)
+- Generated full catalogue (co-located with the workers): [`backend/workers/docs/supported-workers.md`](../../../../../backend/workers/docs/supported-workers.md)
 - Generator: [`backend/workers/scripts/generate-catalogue.js`](../../../../../backend/workers/scripts/generate-catalogue.js)
 
-Detailed facts for a MDK-maintained integration live next to its Worker package, at `backend/workers/<family>/<vendor>/`: `mdk-contract.json` for the runtime contract, and `USAGE.md` + `examples/` for prose and runnables. A manufacturer-maintained Worker keeps that detail in its own repository instead, linked directly from its row in the generated catalogue; the [Whatsminer run guide](../../../../guides/miners/run-whatsminer-worker.md) documents the general pattern for hosting a manufacturer-maintained Worker, independent of which families currently have one.
+Detailed facts for a MDK-maintained integration live next to its Worker package, at `backend/workers/<family>/<vendor>/`: `mdk-contract.json` for the runtime contract, and `USAGE.md` + `examples/` for prose and runnables. A partner-maintained Worker keeps that detail in its own repository instead, linked directly from its row in the generated catalogue; the [Whatsminer run guide](../../../../guides/miners/run-whatsminer-worker.md) documents the general pattern for hosting a partner-maintained Worker, independent of which families currently have one.
 
-Which families currently have a manufacturer-maintained entry is generated data, not maintained here: see the catalogue linked above rather than this page for current coverage.
-
+Which families currently have a partner-maintained entry is generated data, not maintained here: see the catalogue linked above rather than this page for current coverage.
 Pool integrations live at [`../pools.md`](../pools.md); external services (none shipped yet) are covered in [`../index.md`](../index.md).
 
 ## How the Workers catalogue stays correct

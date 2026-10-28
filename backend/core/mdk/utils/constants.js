@@ -17,7 +17,6 @@ const LIB_TYPES = {
   SATEC: 'workers/power-meter/satec',
   SCHNEIDER: 'workers/power-meter/schneider',
   SENECA: 'workers/temperature',
-  OCEAN_POOL: 'workers/minerpools/ocean',
   F2_POOL: 'workers/minerpools/f2pool'
 }
 

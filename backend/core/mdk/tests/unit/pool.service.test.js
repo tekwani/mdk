@@ -1,6 +1,10 @@
 'use strict'
 
 const test = require('brittle')
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+const { scheduledJobs } = require('../../lib/services/pool-utils/scheduler')
 const PoolService = require('../../lib/services/pool.service')
 const { SCHEDULER_TIMES, BTC_SATS, HOUR_MS } = require('../../lib/services/pool-utils/constants')
 
@@ -415,6 +419,25 @@ test('init binds SIGINT/SIGTERM only when ctx.handleSignals is set', async (t) =
 test('getWrkExtData does not expose inherited members', async (t) => {
   const m = createManager()
   t.is(await m.getWrkExtData({ query: { key: 'constructor' } }), undefined)
+})
+
+test('scheduler_0 replaces a job by key and cancels the rest on stop', async (t) => {
+  const storeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pool-scheduler-'))
+  t.teardown(() => fs.rmSync(storeDir, { recursive: true, force: true }))
+  const m = createManager({}, { storeDir })
+  await m._createFacilities(m.ctx)
+  m._initialized = true
+  const jobs = () => scheduledJobs.size
+  m.scheduler_0.add('bad', () => {}, 'not a cron')
+  const before = jobs()
+
+  m.scheduler_0.add('1D', () => {}, '0 0 0 * * *')
+  m.scheduler_0.del('1D')
+  m.scheduler_0.add('1D', () => {}, { rule: '0 0 0 * * *', tz: 'Etc/UTC' })
+  t.is(jobs(), before + 1, 'del cancels the job it replaces')
+
+  await new Promise(resolve => m.stop(resolve))
+  t.is(jobs(), before, 'stop cancels the rest, skipping an unscheduled rule')
 })
 
 function createManager (conf = {}, ctx = {}) {

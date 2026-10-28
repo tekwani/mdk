@@ -1,23 +1,21 @@
+# Changelog archive 2026
 
-# v0.0.1
+## v0.0.1
 
 The first release labels used a pre-SemVer `V-0.0.x-beta` scheme. These were realigned to SemVer
 (0.0.2 -> v0.2.0, 0.0.3 -> v0.3.0); see CHANGELOG.md for the current entries.
-v0.0.1 remains as [originally released](../release-notes/0.0.1-release.md).
 
-# v0.2.0
-
-> Also, see the [v0.2.0 release notes](../release-notes/0.2.0-release.md).
+## v0.2.0
 
 MDK v0.2.0 is a major architectural overhaul release. The monorepo has been restructured into three fully federated domains (`backend/core`, `backend/workers`, `ui`), the Worker layer has been promoted to a first-class package with a formal protocol contract, the UI state layer has been rewritten around Zustand and React 19, and a new agent-first CLI and MCP endpoint land as net-new additions.
 
-## Breaking changes
+### Breaking changes
 
-### Node.js minimum version bumped to `>=24`
+#### Node.js minimum version bumped to `>=24`
 
 All packages now require Node.js 24+. The previous minimum was Node.js 20.
 
-### Monorepo directory layout restructured
+#### Monorepo directory layout restructured
 
 | 0.0.1 path | 0.2.0 path |
 |---|---|
@@ -34,7 +32,7 @@ All packages now require Node.js 24+. The previous minimum was Node.js 20.
 Workers are no longer nested inside `core/packages/`. They live in a standalone `backend/workers/` domain
 with their own install and test lifecycle.
 
-### `LIB_TYPES` path constants updated
+#### `LIB_TYPES` path constants updated
 
 Worker type identifiers changed:
 
@@ -45,11 +43,11 @@ Worker type identifiers changed:
 
 Worker-specific paths follow the new `'workers/<category>/<provider>'` pattern (e.g. `'workers/miners/antminer'`, `'workers/containers/bitdeer'`).
 
-### UI package manager switched from pnpm to npm
+#### UI package manager switched from pnpm to npm
 
 `pnpm-lock.yaml` has been replaced by `package-lock.json`. All `catalog:` dependency references have been removed and replaced with explicit version ranges. The workspace root package name changed from `@tetherto/mdk-core-ui` to `mdk-ui`.
 
-### UI package structure replaced
+#### UI package structure replaced
 
 The `packages/core` and `packages/foundation` packages have been removed and replaced by four new packages:
 
@@ -61,15 +59,15 @@ The `packages/core` and `packages/foundation` packages have been removed and rep
 | — | `@tetherto/mdk-react-adapter` (React bindings) |
 | — | `@tetherto/mdk-ui-cli` (`mdk-ui` CLI) |
 
-### State management migrated from Redux Toolkit to Zustand
+#### State management migrated from Redux Toolkit to Zustand
 
 Redux slices (`auth`, `notification`, `actions`, `devices`, `timezone`) have been removed and replaced by Zustand vanilla stores in `@tetherto/mdk-ui-core`.
 
-### React upgraded from 18 to 19
+#### React upgraded from 18 to 19
 
 All UI packages now target React 19.
 
-### Core MDK API replaced
+#### Core MDK API replaced
 
 `core/lib/mdk.js` (exporting `initType`, `startApi`, `initialize`) is replaced by `backend/core/mdk/index.js` with an explicit async API:
 
@@ -87,9 +85,9 @@ await startAppNode({ ork, port: 3000 })
 await waitForDiscovery(ork)
 ```
 
-## Added
+### Added
 
-### Federated root orchestrator
+#### Federated root orchestrator
 
 A new root `package.json` wires all three domains with unified scripts that fan out to each domain:
 
@@ -106,7 +104,7 @@ npm run link-check  # validate all markdown links
 
 Per-domain variants available as `:ui`, `:core`, `:workers` suffixes.
 
-### Backend: Orchestration Kernel (`backend/core/ork/`)
+#### Backend: Orchestration Kernel (`backend/core/ork/`)
 
 Full rewrite of the ORK as a structured `OrkManager` class with discrete internal modules:
 
@@ -127,7 +125,7 @@ Full rewrite of the ORK as a structured `OrkManager` class with discrete interna
 | `storage/stores` | Persistent registry between restarts |
 | `storage/wal` | Write-ahead log for command state |
 
-### Backend: new MDK API (`backend/core/mdk/index.js`)
+#### Backend: new MDK API (`backend/core/mdk/index.js`)
 
 | Export | Description |
 |---|---|
@@ -140,7 +138,7 @@ Full rewrite of the ORK as a structured `OrkManager` class with discrete interna
 | `DEFAULT_TOPIC_FILE` | Well-known path for the persisted DHT topic |
 | `DEFAULT_IPC_SOCK` | Well-known UNIX socket path for ORK ↔ app-node IPC |
 
-### Backend: services module (`backend/core/mdk/services.js`)
+#### Backend: services module (`backend/core/mdk/services.js`)
 
 `startServices(config)` supports two runtimes:
 
@@ -161,7 +159,7 @@ Config shape:
 }
 ```
 
-### Backend: MDK Worker adapter (`backend/workers/base/lib/mdk-worker-adapter.js`)
+#### Backend: MDK Worker adapter (`backend/workers/base/lib/mdk-worker-adapter.js`)
 
 New `MDKWorkerAdapter` class manages every Worker's Hyperswarm RPC server and DHT peer discovery:
 
@@ -170,7 +168,7 @@ New `MDKWorkerAdapter` class manages every Worker's Hyperswarm RPC server and DH
 - Manages persistent DHT/RPC keypairs in Hyperbee (`_getOrCreateSeed()`)
 - `start()` / `stop()` / `getPublicKey()` / `_joinDiscoveryTopic()`
 
-### Backend: Worker contract system (`mdk-contract.json`)
+#### Backend: Worker contract system (`mdk-contract.json`)
 
 Every Worker now ships a machine-readable `mdk-contract.json` declaring its full surface:
 
@@ -186,7 +184,7 @@ Every Worker now ships a machine-readable `mdk-contract.json` declaring its full
 
 A JSON Schema for validating contracts ships at `backend/workers/base/mdk-contract.schema.json`.
 
-### Backend: new Worker packages
+#### Backend: new Worker packages
 
 Workers promoted to `backend/workers/` with `base` templates for each category:
 
@@ -202,23 +200,23 @@ Each Worker ships: `mdk-contract.json`, `README.md`, `USAGE.md` (where applicabl
 
 New `base` templates added per category: `miners/base`, `containers/base`, `minerpools/base`, `power-meter/base`, `temperature/base`, and the universal `base/`.
 
-### Backend: `electricity` power meter (new)
+#### Backend: `electricity` power meter (new)
 
 New `power-meter/electricity` Worker for electricity utility data sources.
 
-### Backend: App-Node improvements
+#### Backend: App-Node improvements
 
 - Fleet aggregation: computes site-level hashrate, average temperature, and cross-rack efficiency
 - **MCP (Model Context Protocol) server endpoint** — AI agents can query fleet state and issue commands
 - `setup-config.sh` — one-shot config file bootstrapping for first-run deployments
 - Comprehensive test suite: unit tests for all handlers, routes, and lib utilities; integration tests for HTTP API and WebSocket
 
-### Backend: config bootstrapping
+#### Backend: config bootstrapping
 
 - `ensureConfigFromExamples(packageDir)` — auto-copies `.example` config files to runtime locations on first start
 - `findRepoRoot()` — resolves monorepo root from any nested package path
 
-### UI: `@tetherto/mdk-ui-core` (new package)
+#### UI: `@tetherto/mdk-ui-core` (new package)
 
 Framework-agnostic, pure TypeScript state layer:
 
@@ -226,7 +224,7 @@ Framework-agnostic, pure TypeScript state layer:
 - `TanStack QueryClient` factory with environment-aware base URL resolution
 - Entry points: `.` (main), `./store`, `./query`, `./types`, `./stores.json` (machine-readable registry)
 
-### UI: `@tetherto/mdk-react-adapter` (new package)
+#### UI: `@tetherto/mdk-react-adapter` (new package)
 
 React bindings for `mdk-ui-core`:
 
@@ -235,7 +233,7 @@ React bindings for `mdk-ui-core`:
 - Re-exports `useQuery` and `useMutation` from TanStack Query v5
 - Entry points: `.`, `./hooks`, `./provider`, `./hooks.json`
 
-### UI: `@tetherto/mdk-react-devkit` (new package)
+#### UI: `@tetherto/mdk-react-devkit` (new package)
 
 Full React component library replacing `packages/core` and `packages/foundation`:
 
@@ -249,7 +247,7 @@ Full React component library replacing `packages/core` and `packages/foundation`
 
 Entry points: `.`, `./core`, `./foundation`, `./domain`, `./feature`, `./registry.json`, `./blueprints.json`, `./styles.css`, `./tokens.scss`.
 
-### UI: `@tetherto/mdk-ui-cli` (`mdk-ui`) (new package)
+#### UI: `@tetherto/mdk-ui-cli` (`mdk-ui`) (new package)
 
 Agent-first CLI for the UI toolkit:
 
@@ -258,7 +256,7 @@ Agent-first CLI for the UI toolkit:
 - Commands: registry discovery, doc/example fetching, page scaffolding, typecheck helpers
 - Ships `dist/cli-manifest.json` for tooling discovery
 
-### UI: new scripts
+#### UI: new scripts
 
 | Script | What it does |
 |---|---|
@@ -267,7 +265,7 @@ Agent-first CLI for the UI toolkit:
 | `api:surface` | Generates the public API surface documentation |
 | `lint:scss` | Dedicated SCSS linting via Stylelint |
 
-### UI: new dev dependencies
+#### UI: new dev dependencies
 
 - `stylelint@^17.11.1` — CSS/SCSS linting
 - `typedoc@^0.28.19` — API documentation generation
@@ -275,12 +273,12 @@ Agent-first CLI for the UI toolkit:
 - `@tetherto/mdk-ui-cli@*` — MDK UI CLI tooling
 - `vite@^7.3.2`
 
-### UI: agent-first docs
+#### UI: agent-first docs
 
 - `ui/AGENTS.md` — contract overview and quick recipe for LLM consumers
 - `ui/docs/AGENT_FIRST.md` — manifests, blueprints, registry, and `mdk-ui-shell` end-to-end recipe
 
-### Documentation (`docs/`)
+#### Documentation (`docs/`)
 
 New root-level `docs/` directory with role-based navigation:
 
@@ -291,30 +289,30 @@ New root-level `docs/` directory with role-based navigation:
 | `docs/reference/` | `release-notes/`, `maintainers/` |
 | `backend/workers/docs/` | `architecture.md`, `install-pattern.md`, `agent-ready.md`, `supported-hardware.md`, `catalogue.json`, `workers-manifest.yaml`, `orchestrator.md` |
 
-### CI/CD
+#### CI/CD
 
 - Replaced separate `ui.yaml` + `core.yaml` workflows with a unified `ci.yml`
 - Added `link-check.yml` workflow
 - Added composite actions: `node-setup-cache` and `node-restore-cache` for faster CI installs
 - Moved `audit-ci.jsonc` to `.github/scripts/`
 
-### Repo-level additions
+#### Repo-level additions
 
 - Root `.gitignore`
 - `CHANGELOG.md` in project root
 - `linkinator.config.json` for markdown link validation (`npm run link-check`)
 - `.claude/settings.local.json`: Claude Code project settings
 
-## Changed
+### Changed
 
-### Backend
+#### Backend
 
 - `initialize()` path resolution updated for new monorepo nesting depth
 - Root `core/package.json` simplified — external runtime dependencies moved to individual sub-package
 manifests; only `standard@17.1.0` remains as a root dev dependency
 - Test and install lifecycle managed via `install-packages.sh` and `test-packages.sh` workspace shell scripts
 
-### UI
+#### UI
 
 - Package manager: pnpm → npm (engine constraint: `npm >=11.0.0`)
 - Node.js engine constraint: `node >=20.0.0` → `node >=24.0.0`
@@ -322,7 +320,7 @@ manifests; only `standard@17.1.0` remains as a root dev dependency
 - `turbo` upgraded from catalog pin to `^2.9.14`
 - `eslint` upgraded to `^9.39.2`; `@antfu/eslint-config` to `^6.7.3`
 
-## Removed
+### Removed
 
 - `core/` top-level directory (replaced by `backend/core/`)
 - `ui-client/` top-level directory (replaced by `ui/`)
@@ -337,8 +335,6 @@ manifests; only `standard@17.1.0` remains as a root dev dependency
 - `ui-client/packages/core` and `packages/foundation` (replaced by new package split)
 
 ## v0.3.0
-
-> For a high-level introduction, see the [v0.3.0 release notes](../release-notes/0.3.0-release.md).
 
 ### Overview
 
@@ -702,8 +698,6 @@ When `env === 'test'` and no explicit `tmpdir` is provided, the corestore direct
 
 ## v0.4.0
 
-> For a high-level introduction, see the [v0.4.0 release notes](../release-notes/0.4.0-release.md).
-
 ### Overview
 
 - Delivers the write path to complement 0.3.0's read-heavy plugin/discovery work
@@ -865,8 +859,6 @@ Unit test files under `backend/workers/base/tests/` and `backend/workers/miners/
 
 ## v0.5.0
 
-> For a high-level introduction, see the [v0.5.0 release notes](../release-notes/0.5.0-release.md).
-
 ### Overview
 
 - Completes the control-plane **rename**: **ORK → Kernel** and **App Node → Gateway**, across backend, UI, examples, and docs (breaking)
@@ -1026,8 +1018,6 @@ A large coverage push lifted each flagged backend package above the 80% per-pack
 Plus `@tetherto/mdk-client` typed request-wrapper tests, new Kernel suites (`kernel-manager`, `actions-stress`, key-file integration), and `@tetherto/mdk-react-devkit` branch-coverage additions.
 
 ## v0.6.0
-
-> For a high-level introduction, see the [v0.6.0 release notes](../release-notes/0.6.0-release.md).
 
 ### Overview
 
@@ -1247,8 +1237,6 @@ One advisory was added to the `audit-ci` allowlist (`.github/scripts/audit-ci.js
 - **One bad pool account no longer breaks the whole Ocean stats cycle.** Unknown or inactive accounts return an error body with no `result`; `fetchStats` now wraps each account's earnings/hashrate/balance reads, raises `ERR_ACCOUNT_DATA_MISSING` when earnings or hashrate are absent, logs `ERR_STATS_FETCH <username>`, and continues to the next account instead of failing the entire fetch.
 
 ## v0.7.0
-
-> For a high-level introduction, see the [v0.7.0 release notes](../release-notes/0.7.0-release.md).
 
 ### Overview
 
@@ -1692,8 +1680,6 @@ open PR at once rather than on the branch that introduced it.
 
 ## v0.8.0
 
-> For a high-level introduction, see the [v0.8.0 release notes](../release-notes/0.8.0-release.md).
-
 ### Overview
 
 - Ships **`@tetherto/mdk-ui-agent`**, the operator agent as a drop-in `<CoPilot />` for any MDK shell, with a headless
@@ -1982,8 +1968,6 @@ declare `"contract": "v2"` in `mcp-plugin.json`.
 
 ## v0.9.0
 
-> For a high-level introduction, see the [v0.9.0 release notes](../release-notes/0.9.0-release.md).
-
 ### Overview
 
 - Collapses the repository into **one root npm workspace** (UI aside): every publishable backend package, the standalone
@@ -2091,7 +2075,7 @@ tier, every plugin route served to any caller) and covers the steps and options 
   inside a flow of content
 - **Scaffolded plugins get a plugin-owned MDK client**: `templates/plugin/lib/client.js`
   builds it from the ambient Gateway context, so controllers import the module and never take `mdkClient` from a services bag
-- **A scaffold smoke test in CI**: `scaffold-checks.yml` scaffolds a plugin with
+- **A scaffold smoke test in CI**: [`scaffold-checks.yml`](../../../.github/workflows/scaffold-checks.yml) scaffolds a plugin with
   the CLI, boots it behind a real Gateway and asserts a 200, backed by `examples/backend/mdk-scaffold-e2e`
 - **`setup-config.sh` for the benchmark harness**, seeding a runnable config from the checked-in example
 
@@ -2129,8 +2113,6 @@ tier, every plugin route served to any caller) and covers the steps and options 
   thresholds it documents
 
 ## v0.10.0
-
-> For a high-level introduction, see the [v0.10.0 release notes](../release-notes/0.10.0-release.md).
 
 ### Overview
 
@@ -2260,8 +2242,6 @@ otherwise. Sample and demo packages are left out. It is generated by [`generate-
 
 ## v0.11.0
 
-> For a high-level introduction, see the [v0.11.0 release notes](../release-notes/0.11.0-release.md).
-
 ### Overview
 
 - Makes the **Kernel allowlist work for Gateway plugins**: every plugin's client now dials Kernel with the Gateway's persistent DHT
@@ -2299,7 +2279,7 @@ own `HOME` rather than its own `TMPDIR`](../../guides/miners/troubleshooting.md)
 [`createMdkClient(config)`](../../../backend/core/client/README.md) reads a new optional `config.kernelKeyPair`, either a DHT keypair
 `{ publicKey, secretKey }` or a function returning one, and dials Kernel with it so the allowlist can name the caller. Without it the
 caller key is random per process, as before. `createRawMdkClient({ hrpc })` takes the same value as `hrpc.keyPair`. A Gateway plugin's
-`config` has it folded in (see Fixed), and [`docs/guides/gateway/plugins.md`](../../guides/gateway/plugins.md) lists it with
+`config` has it folded in (see Fixed), and [`docs/guides/gateway/apps.md`](../../guides/gateway/apps.md) lists it with
 `kernelKey` and `kernelBootstrap`.
 
 #### Relaxed tool admission and charter provenance in `@tetherto/mdk-agent`
@@ -2353,8 +2333,6 @@ prompt) and `strictToolGating`, and `mdk-agent eval` passes the agent's values t
 
 ## v0.12.0
 
-> For a high-level introduction, see the [v0.12.0 release notes](../release-notes/0.12.0-release.md).
-
 v0.12.0 will be released in two parts. Firstly this early release to support the public release of
 npm packages. Further to that, a patch will be released providing documentation for v0.12.0.
 
@@ -2398,7 +2376,7 @@ The Gateway reads each app's route table and forwards every request to that runt
 `@tetherto/mdk-plugins` is removed with its bundled `auth`, `site-hashrate`, `site-monitor` and `telemetry` plugins, and so is
 `bundledPluginDir()` in `@tetherto/mdk-core`. A stack that needs those routes ships them in an app of its own. A Gateway with
 no runtime key for an app answers `503 ERR_APP_RUNTIME_UNAVAILABLE`. The agent app's default MCP URL moves from port `3008` to
-the Gateway port plus 100 (`3947`). The [Gateway apps guide](../../guides/gateway/plugins.md) covers the model.
+the Gateway port plus 100 (`3947`). The [Gateway apps guide](../../guides/gateway/apps.md) covers the model.
 
 #### Admission is fail-closed
 
@@ -2719,3 +2697,75 @@ Apps read their Gateway routes with `useQuery`.
 | `@tetherto/mdk-client`, `@tetherto/mdk-kernel`, `@tetherto/mdk-worker` | `hyperdht` pinned at 6.34.1 across the workspace                                            |
 | `@tetherto/mdk-react-devkit`                                           | Drops `react-selecto`                                                                       |
 | Root                                                                   | Overrides add `hyperdht` 6.34.1, `katex` 0.19.0 and `source-map-js` 1.2.2, and move `smol-toml` from 1.9.0 to 1.9.1 |
+
+
+## v0.12.1
+
+### Overview
+- Moves the **UI to zod 4**: `@tetherto/mdk-react-devkit` now peers on `zod` `^4.6.6`, `@hookform/resolvers` `^5.9.2` and
+  `react-hook-form` `^7.55.0`, with the same validator messages and exported signatures
+- Drops the **`@tetherto/mdk-fonts` package**: apps take JetBrains Mono from `@fontsource-variable/jetbrains-mono`, one variable
+  font file per script for every weight
+- Clears **four high-severity advisories** published after v0.12.0, in zod, happy-dom, undici and body-parser
+
+### Breaking changes
+
+#### `@tetherto/mdk-react-devkit` peers on zod 4
+
+zod 3 is affected by GHSA-mrhx-c7xc-m3w5 and has no patched release, so the devkit's form stack moves to zod 4.
+
+| Peer dependency       | v0.12.0   | v0.12.1   |
+| --------------------- | --------- | --------- |
+| `zod`                 | `^3.24.0` | `^4.6.6`  |
+| `@hookform/resolvers` | `^4.1.0`  | `^5.9.2`  |
+| `react-hook-form`     | `^7.54.0` | `^7.55.0` |
+
+The `validators` helpers and the `loginSchema`, `profileSchema` and `contactSchema` exports keep their signatures and messages.
+An app that builds its own zod schemas follows the zod 4 migration: `required_error`, `invalid_type_error` and `errorMap` become
+a single `error` option. Under `@hookform/resolvers` 5, a schema whose input and output types differ (for example a field with
+`.default()`) needs `useForm<z.input<typeof schema>, unknown, z.output<typeof schema>>`, or the default moved into
+`defaultValues`.
+
+#### `@tetherto/mdk-fonts` is removed
+
+Replace `import '@tetherto/mdk-fonts/jetbrains-mono.css'` with an `@font-face` for `'JetBrains Mono'` that points at
+`@fontsource-variable/jetbrains-mono`'s files, as [`ui/apps/catalog/src/fonts.css`](../../../ui/apps/catalog/src/fonts.css) and
+[`examples/mdk-ui-shell-template/src/fonts.css`](../../../examples/mdk-ui-shell-template/src/fonts.css) do. Declaring the face keeps the
+family name devkit's `--font-mono` asks for (Fontsource's own stylesheet registers `'JetBrains Mono Variable'`) and keeps
+`font-display: optional`. Without the font, devkit falls back to the system monospace stack.
+
+### Changed
+
+- **JetBrains Mono** loads as one variable woff2 per script covering weights 100 to 800. The Latin file is about 40 KB, where
+  the removed package shipped about 53 KB per static weight, and the Latin Extended file (about 15 KB, including ₿) is only
+  fetched when a page renders one of its characters. Weight 800 renders as a real weight instead of a synthesised bold. The
+  Fontsource subsets do not include box-drawing characters, arrows or geometric shapes such as ▲ ▼ ● ■, which now render in
+  the fallback monospace font
+- **The UI shell template** and the catalog declare the face in a local `src/fonts.css`; the `mvp-site` example drops the
+  unused `@tetherto/mdk-fonts` dependency
+
+### Removed
+
+- **`@tetherto/mdk-fonts`** (`ui/packages/fonts`), with its entries in the UI build and the package reference
+
+### Security
+
+| Advisory            | Package     | Resolution                                                                                         |
+| ------------------- | ----------- | -------------------------------------------------------------------------------------------------- |
+| GHSA-mrhx-c7xc-m3w5 | zod         | The UI moves to zod 4.6.6 or later; no 3.x release is patched                                      |
+| GHSA-834v-8h66-3h79 | happy-dom   | Test environment raised to `^21.0.4` in the UI packages                                            |
+| GHSA-xjj6-f33q-929c | undici      | UI lockfile at 7.30.1; the root override floor rises from `>=6.24.0` to `>=8.12.2` (resolves 8.12.3) |
+| GHSA-27r3-jxmh-p828 | body-parser | Root lockfile at 2.4.0                                                                             |
+
+body-parser 2.4.0 requires `qs` `^6.16.1`, so the root `qs` security override moves from 6.16.0 to 6.16.1.
+
+### Dependencies
+
+| Package                                                     | Change                                                                                                     |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `@tetherto/mdk-react-devkit`                                | `zod`, `@hookform/resolvers` and `react-hook-form` as in the table above (dev and peer); `happy-dom` `^20.0.0` → `^21.0.4` (dev) |
+| `@tetherto/mdk-react-adapter`, `@tetherto/mdk-ui-agent`     | `happy-dom` `^20.0.0` → `^21.0.4` (dev)                                                                    |
+| `ui/apps/catalog`                                           | Adds `@fontsource-variable/jetbrains-mono` `^5.3.0`, drops `@tetherto/mdk-fonts`, and takes the zod 4 form stack |
+| `examples/mdk-ui-shell-template`                            | Adds `@fontsource-variable/jetbrains-mono` `^5.3.0`, drops `@tetherto/mdk-fonts`                           |
+| `examples/mvp-site/ui`                                      | Drops `@tetherto/mdk-fonts`                                                                                |
+| Root                                                        | Overrides move `undici` to `>=8.12.2` and `qs` to 6.16.1                                                   |

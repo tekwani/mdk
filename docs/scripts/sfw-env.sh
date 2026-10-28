@@ -1,4 +1,4 @@
-# Socket Firewall (SFW) allowlist for mdk-prv's local tooling.
+# Socket Firewall (SFW) allowlist for MDK's local tooling.
 #
 # If your shell wraps npm/npx through `sfw` (a local security proxy — see the
 # `command -v sfw` block most shell profiles add), it blocks any outbound host not
@@ -23,7 +23,7 @@
 #   www.conventionalcommits.org  commit convention reference (ui/CLAUDE.md, ui/docs/CONTRIBUTING.md)
 #   semver.org                   semver spec reference
 #   www.f2pool.com               F2Pool worker docs (backend/workers/minerpools/f2pool)
-#   ocean.xyz                    Ocean pool worker docs (backend/workers/minerpools/ocean)
+#   ocean.xyz                    Ocean pool link (docs/reference/maintainers/integrations/pools.md)
 #   telemetry.vercel.com         Vercel telemetry endpoint (reached by linkinator or related tooling)
 #   turborepo.dev                hit by the turbo CLI itself (not a linkinator target)
 #   nodejs.org                   Node.js docs/download links referenced in the repo's Markdown
@@ -31,7 +31,7 @@
 #   qvac.tether.io               QVAC product page, linked from docs/guides/agent/run-standalone.md
 #
 # Source this file from your shell profile rather than duplicating the policy there:
-#   [ -f "/absolute/path/to/mdk/scripts/sfw-env.sh" ] && source "/absolute/path/to/mdk/scripts/sfw-env.sh"
+#   [ -f "/absolute/path/to/mdk/docs/scripts/sfw-env.sh" ] && source "/absolute/path/to/mdk/docs/scripts/sfw-env.sh"
 
 # Merge additively: if another repo's sfw-env.sh already set SFW_CUSTOM_REGISTRIES
 # in this shell, keep its entries rather than clobbering them.

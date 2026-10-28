@@ -4,6 +4,12 @@ Framework-agnostic headless foundation for the MDK toolkit. Pure TypeScript — 
 Consumed by framework adapters (`@tetherto/mdk-react-adapter`, future `@tetherto/mdk-vue-adapter`,
 etc.) which bind these primitives to the host framework.
 
+## Install
+
+```bash
+npm install @tetherto/mdk-ui-foundation
+```
+
 ## Surface
 
 ### State

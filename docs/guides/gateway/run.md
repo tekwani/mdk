@@ -19,6 +19,7 @@ a remote Kernel over HRPC (cross-host deployments), and as a standalone process 
 - npm 11 [(< 12)][npm-version]
 - Commands are run from the repository root
 - A Kernel instance running and reachable, or `kernelKey: false` to start without a Kernel connection (development only)
+- [Outbound UDP to the HyperDHT bootstrap nodes][network-requirements]
 
 <Steps>
 
@@ -137,15 +138,18 @@ npm start
 [gateway-readme]: ../../../backend/core/gateway/README.md
 <!-- docs@tether.io: gateway-readme → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md -->
 
-[plugins-how-to]: plugins.md
-<!-- docs@tether.io: plugins-how-to → guides/gateway/plugins -->
+[plugins-how-to]: apps.md
+<!-- docs@tether.io: plugins-how-to → guides/gateway/apps -->
 
 
-[plugins-auth]: plugins.md#auth-and-permissions
-<!-- docs@tether.io: plugins-auth → guides/gateway/plugins#auth-and-permissions -->
+[plugins-auth]: apps.md#auth-and-permissions
+<!-- docs@tether.io: plugins-auth → guides/gateway/apps#auth-and-permissions -->
 
 [deployment-topologies]: ../deployment/index.md
 <!-- docs@tether.io: deployment-topologies → guides/deployment -->
 
 [mdk-readme]: ../../../backend/core/mdk/README.md
 <!-- docs@tether.io: mdk-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mdk/README.md -->
+
+[network-requirements]: ../../reference/environment.md#requirements
+<!-- docs@tether.io: network-requirements → reference/environment#requirements -->

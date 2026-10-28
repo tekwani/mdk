@@ -1,10 +1,10 @@
 'use strict'
 
-// Generates the supported-hardware catalogue from worker contracts.
+// Generates the Supported Workers catalogue from Worker contracts.
 //
 // Source of truth: every backend/workers/**/mdk-contract.json (the handler-bearing
-// contracts under each package's plugin/) PLUS the manufacturer-maintained contracts
-// listed in backend/workers/external-workers.json, fetched live from each manufacturer's
+// contracts under each package's plugin/) PLUS the partner-maintained contracts
+// listed in backend/workers/external-workers.json, fetched live from each partner's
 // own repo at generation time (see fetchExternalEntries). Each contract is validated
 // against the schema vendored with the runtime (backend/core/mdk-worker/mdk-contract.schema.json)
 // by the runtime's own validator (backend/core/mdk-worker/lib/contract-validator.js) in
@@ -17,12 +17,12 @@
 // unconfirmedEntry and the in-repo catch block in buildEntries) rather than dropped from that
 // run's catalogue. The one exception is the external manifest file itself: if it is missing,
 // unparseable, or not a JSON array, the whole run aborts rather than being treated as "no
-// external Workers" — a broken manifest would otherwise empty the entire manufacturer-
+// external Workers" — a broken manifest would otherwise empty the entire partner-
 // maintained section on an exit-0 run (see the checks at the top of fetchExternalEntries).
 //
 // Outputs (regenerate with `npm run generate:catalogue`):
 //   backend/workers/docs/catalogue.json          machine-readable
-//   backend/workers/docs/supported-hardware.md    generated markdown, DO NOT EDIT
+//   backend/workers/docs/supported-workers.md     generated markdown, DO NOT EDIT
 //
 // This script has no "check mode" of its own — it always writes for real. Staleness detection
 // (did someone forget to regenerate after changing a contract?) lives entirely outside this
@@ -42,9 +42,9 @@ const REPO_ROOT = path.resolve(WORKERS_ROOT, '../..')
 const SCHEMA_PATH = path.join(REPO_ROOT, 'backend', 'core', 'mdk-worker', 'mdk-contract.schema.json')
 const DOCS_DIR = path.join(WORKERS_ROOT, 'docs')
 const JSON_OUT = path.join(DOCS_DIR, 'catalogue.json')
-const MD_OUT = path.join(DOCS_DIR, 'supported-hardware.md')
+const MD_OUT = path.join(DOCS_DIR, 'supported-workers.md')
 const EXTERNAL_MANIFEST_PATH = path.join(WORKERS_ROOT, 'external-workers.json')
-// A manufacturer's host hanging must not stall the whole run (or, in CI, run out the clock on the
+// A partner's host hanging must not stall the whole run (or, in CI, run out the clock on the
 // job timeout) — one small JSON file over HTTPS should resolve in well under this, so a fetch still
 // running at 10s is treated the same as any other unreachable host.
 const EXTERNAL_FETCH_TIMEOUT_MS = 10_000
@@ -82,7 +82,13 @@ const PROVIDER_LABELS = {
   satec: 'Satec',
   seneca: 'Seneca',
   abb: 'ABB', // stylized all-caps since the 1988 ASEA/Brown Boveri merger, not a generic capitalize-first-letter case
-  schneider: 'Schneider' // short form of Schneider Electric SE
+  schneider: 'Schneider', // short form of Schneider Electric SE
+  luxor: 'Luxor',
+  ocean: 'Ocean',
+  emcd: 'EMCD',
+  spiderpool: 'SpiderPool',
+  foundry: 'Foundry',
+  proto: 'Proto'
 }
 
 function displayProvider (provider) {
@@ -108,7 +114,7 @@ function linkFromDocs (repoRel) {
 }
 
 // catalogue.json is a machine-readable contract in its own right: every path-like field in it is
-// repo-root-relative (or, for a manufacturer-maintained entry, an absolute URL — there is no
+// repo-root-relative (or, for a partner-maintained entry, an absolute URL — there is no
 // repo-relative equivalent for something outside this repo). Only the Markdown renderer below
 // converts a repo-relative value to a path relative to the generated page; the JSON never does,
 // so a consumer reading catalogue.json always gets one consistent kind of path.
@@ -121,7 +127,7 @@ function toDocsLink (value) {
 // deliberately means something different depending on `source`: a repo-relative path (rel(file))
 // for an in-repo entry, but the raw.githubusercontent.com fetch URL for an external one. A
 // consumer of catalogue.json treating `contract` as "a path in this repo" would mishandle every
-// manufacturer-maintained row.
+// partner-maintained row.
 
 // Same calling convention ajv.compile() had — validate(contract) returns a boolean and
 // leaves the problems on validate.errors — so buildEntries/fetchExternalEntries read it
@@ -153,7 +159,7 @@ function buildEntries (validate, root = WORKERS_ROOT) {
     let pkgDir = path.dirname(file)
     if (path.basename(pkgDir) === 'plugin') pkgDir = path.dirname(pkgDir)
     // Sample contracts must conform too, but hypothetical devices do not
-    // belong in the supported-hardware catalogue. This is a bare directory-name convention, not
+    // belong in the Supported Workers catalogue. This is a bare directory-name convention, not
     // a schema-level flag: it works today because the one sample contract sits directly under
     // samples/, but renaming that directory, adding a second samples-like directory, or moving a
     // sample contract under a real family directory would silently misfire in either direction
@@ -240,7 +246,7 @@ function blobUrl (repoUrl, ref, filePath) {
 // error, or unparseable JSON) still gets a row — using only what the manifest itself
 // declares — rather than silently disappearing from the table. An offline maintainer
 // regenerating locally should see "not confirmed" in the output they're about to commit,
-// not a manufacturer-shaped hole they have to notice on their own.
+// not a partner-shaped hole they have to notice on their own.
 function unconfirmedEntry (manifestEntry) {
   // Still point at where the contract is supposed to live, even though the fetch that would
   // confirm it failed — a maintainer chasing the "not confirmed" flag can click straight through
@@ -264,11 +270,11 @@ function unconfirmedEntry (manifestEntry) {
   }
 }
 
-// Fetches and validates each manufacturer-maintained contract listed in
+// Fetches and validates each partner-maintained contract listed in
 // external-workers.json. Nothing here is installed or executed — only the one
-// contract file is read, over plain HTTPS, so a manufacturer's own dependency
+// contract file is read, over plain HTTPS, so a partner's own dependency
 // tree (and whatever it uses for crypto) never becomes part of this repo.
-// Each entry is isolated: one manufacturer's unreachable repo, missing file, bad
+// Each entry is isolated: one partner's unreachable repo, missing file, bad
 // JSON, or schema violation is reported as a gap and does not stop the others or
 // abort generation, matching the warn-only contract of the in-repo scan above.
 async function fetchExternalEntries (validate, manifestPath = EXTERNAL_MANIFEST_PATH) {
@@ -278,13 +284,13 @@ async function fetchExternalEntries (validate, manifestPath = EXTERNAL_MANIFEST_
 
   // A missing manifest is a broken generator input, not "there happen to be no external
   // Workers" — silently returning an empty result here would make a deleted or misnamed
-  // manifest look like a legitimate catalogue with no manufacturer-maintained Workers,
+  // manifest look like a legitimate catalogue with no partner-maintained Workers,
   // quietly dropping every external entry with nothing to flag it. This is the one case in
   // this function that is NOT warn-only: it aborts the whole run, same as any other broken
   // generator input.
   if (!fs.existsSync(manifestPath)) {
     throw new Error(`External Worker manifest not found at ${manifestLink}. If it was intentionally removed, ` +
-      'also remove the manufacturer-maintained section of the catalogue generator; a missing manifest is treated ' +
+      'also remove the partner-maintained section of the catalogue generator; a missing manifest is treated ' +
       'as broken configuration, not "no external Workers."')
   }
 
@@ -294,7 +300,7 @@ async function fetchExternalEntries (validate, manifestPath = EXTERNAL_MANIFEST_
   } catch (err) {
     // Malformed manifest JSON has the same consequence as a missing manifest — every external
     // entry disappears at once — so it gets the same fatal treatment rather than a warn-only gap
-    // that lets a single typo silently empty the manufacturer-maintained section on an exit-0 run.
+    // that lets a single typo silently empty the partner-maintained section on an exit-0 run.
     throw new Error(`External Worker manifest at ${manifestLink} is not valid JSON: ${err.message}. Fix the ` +
       'syntax; a manifest that cannot be parsed is treated as broken configuration, not "no external Workers."')
   }
@@ -307,7 +313,7 @@ async function fetchExternalEntries (validate, manifestPath = EXTERNAL_MANIFEST_
   }
 
   // Entries are fetched one at a time (this loop awaits each iteration), not in parallel. The
-  // per-fetch EXTERNAL_FETCH_TIMEOUT_MS above bounds one manufacturer's hang, not the whole
+  // per-fetch EXTERNAL_FETCH_TIMEOUT_MS above bounds one partner's hang, not the whole
   // run: with N manifest entries all hanging, total wall-clock time is N * that timeout, not a
   // fixed ceiling. Fine while the manifest is small; worth revisiting (e.g. Promise.all) if it
   // grows enough to meaningfully add to CI time or approach the job's own timeout.
@@ -349,7 +355,7 @@ async function fetchExternalEntries (validate, manifestPath = EXTERNAL_MANIFEST_
         gaps.push({
           source: 'external',
           contract: label,
-          errors: [`Fetching ${url} returned HTTP ${res.status}. Verify repoUrl/ref/contractPath in ${manifestLink} are still correct for this manufacturer`]
+          errors: [`Fetching ${url} returned HTTP ${res.status}. Verify repoUrl/ref/contractPath in ${manifestLink} are still correct for this partner`]
         })
         entries.push(unconfirmedEntry(manifestEntry))
         continue
@@ -408,7 +414,7 @@ function writeJson (entries, gaps) {
   const data = {
     note: 'GENERATED by backend/workers/scripts/generate-catalogue.js from backend/workers/**/mdk-contract.json ' +
       'and backend/workers/external-workers.json. Do not edit by hand. This is the machine-readable twin of ' +
-      rel(MD_OUT) + ". Read that instead if you're a person, not a script.",
+      rel(MD_OUT) + ". Read that instead if you're a person.",
     schema: rel(SCHEMA_PATH),
     workers: entries,
     conformanceGaps: gaps
@@ -416,12 +422,12 @@ function writeJson (entries, gaps) {
   fs.writeFileSync(JSON_OUT, JSON.stringify(data, null, 2) + '\n')
 }
 
-// headingPrefix disambiguates the two sources' family headings (e.g. "Manufacturer-maintained
+// headingPrefix disambiguates the two sources' family headings (e.g. "Partner-maintained
 // Miners" vs "MDK-maintained Miners") so GitHub's anchor auto-slugging never collides — two
 // headings with identical text get "#miners" and "#miners-1", where every inbound link that
 // names "#miners" silently lands on the first source's (possibly incomplete) table instead of
 // erroring, which is exactly the kind of drift that goes unnoticed until a reader hits it.
-// "—" reads as "explicitly zero models" — ambiguous, and outright wrong for a manufacturer's
+// "—" reads as "explicitly zero models" — ambiguous, and outright wrong for a partner's
 // contract that just doesn't enumerate any (this repo doesn't control that contract's
 // completeness, unlike an in-repo one, where an empty list is our own gap to flag as such).
 function formatModels (e) {
@@ -489,14 +495,15 @@ function sourceSection (entries, source, heading, headingPrefix, intro, note) {
 function writeMarkdown (entries, gaps) {
   let md = '<!-- GENERATED FILE — DO NOT EDIT. For machine readable version see catalogue.json. Generated by backend/workers/scripts/generate-catalogue.js: run `npm run generate:catalogue` from the repo root. '
   md += 'Source: backend/workers/**/mdk-contract.json and backend/workers/external-workers.json, validated against backend/core/mdk-worker/mdk-contract.schema.json. -->\n\n'
-  md += '# Supported hardware\n\n'
-  md += 'A Worker contract may be an official manufacturer\'s Worker, or an MDK Worker maintained in-repo.\n\n'
+  md += '# Supported Workers\n\n'
+  md += 'The Workers MDK can run today, for miners, containers, power meters, sensors and mining pools. A Worker is either ' +
+    'published by the partner whose device or pool it integrates, or maintained in this repository.\n\n'
 
   md += sourceSection(
-    entries, 'external', 'Manufacturer-maintained Workers', 'Manufacturer-maintained',
-    'Built and maintained by the device manufacturer, fetched and schema-validated from their own repository ' +
-      'at generation time. MDK does not independently test these against specific firmware or models beyond ' +
-      'the contract shape. See the linked repository for what it actually supports.',
+    entries, 'external', 'Partner-maintained Workers', 'Partner-maintained',
+    'Built and maintained by the partner, a device manufacturer or a mining pool, and fetched and schema-validated ' +
+      'from their own repository at generation time. MDK does not independently test these against specific firmware ' +
+      'or models beyond the contract shape. See the linked repository for what it actually supports.',
     'A row flagged "not confirmed this run" means the fetch itself failed (see ' +
       '[Contract conformance](#contract-conformance)); the row is kept rather than dropped.'
   )
@@ -513,7 +520,7 @@ function writeMarkdown (entries, gaps) {
     md += '[`mdk-contract.schema.json`](' + linkFromDocs(rel(SCHEMA_PATH)) + '), or could not be fetched/read at all. '
     md += 'Reported for confirmation on the PR; the catalogue is still generated from everything else that succeeded.\n\n'
     for (const g of gaps) {
-      md += `- \`${g.contract}\`${g.source === 'external' ? ' (manufacturer-maintained)' : ''}\n`
+      md += `- \`${g.contract}\`${g.source === 'external' ? ' (partner-maintained)' : ''}\n`
       for (const e of g.errors) md += `  - ${e}\n`
     }
   }
@@ -529,7 +536,7 @@ async function main () {
   // grouped by source, not a single global sort — and, worth noticing before assuming it's a
   // typo, `entries` and `gaps` concatenate in opposite source order from each other (external
   // first here, in-repo first below). `entries` leading with external matches the generated
-  // page's manufacturer-first section order; nothing currently depends on `gaps`' order, so its
+  // page's partner-first section order; nothing currently depends on `gaps`' order, so its
   // order is just whatever build order happened to produce, not a matching deliberate choice.
   // A consumer of catalogue.json assuming `workers` is one globally-sorted list will be
   // surprised; sourceSection() re-filters by source for the Markdown output regardless.
@@ -542,13 +549,13 @@ async function main () {
   if (gaps.length) {
     console.warn(`\n[generate-catalogue] ${gaps.length} contract(s) did not conform or could not be read (warn-only; confirm/fix on PR):`)
     for (const g of gaps) {
-      console.warn(`  - ${g.contract}${g.source === 'external' ? ' (manufacturer-maintained)' : ''}`)
+      console.warn(`  - ${g.contract}${g.source === 'external' ? ' (partner-maintained)' : ''}`)
       for (const e of g.errors) console.warn(`      ${e}`)
     }
   } else {
     console.log('[generate-catalogue] all contracts conform to the schema.')
   }
-  console.log(`[generate-catalogue] wrote ${rel(JSON_OUT)} and ${rel(MD_OUT)} (${entries.length} workers, ${external.entries.length} manufacturer-maintained).`)
+  console.log(`[generate-catalogue] wrote ${rel(JSON_OUT)} and ${rel(MD_OUT)} (${entries.length} workers, ${external.entries.length} partner-maintained).`)
 }
 
 if (require.main === module) {
@@ -566,6 +573,7 @@ module.exports = {
   fetchExternalEntries,
   buildEntries,
   compileValidator,
+  displayProvider,
   formatModels,
   familySection,
   otherFamiliesSection,

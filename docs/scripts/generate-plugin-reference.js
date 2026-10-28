@@ -1,6 +1,6 @@
 'use strict'
 
-// Generates the supported-plugin route tables in docs/reference/supported-plugins.md.
+// Generates the shipped-app route tables in docs/reference/supported-apps.md.
 //
 // Source of truth: each plugin's mdk-plugin.json under backend/apps/* — the optional
 // standalone plugins offered via `mdk onboard` (agent, demo).
@@ -13,8 +13,8 @@
 // Nothing here auto-registers: every plugin loads only when a stack names it.
 //
 // Output (regenerate with `npm run generate:plugin-reference`):
-//   - the region between <!-- BEGIN GENERATED: supported-plugins ... --> and
-//     <!-- END GENERATED: supported-plugins --> in docs/reference/supported-plugins.md
+//   - the region between <!-- BEGIN GENERATED: supported-apps ... --> and
+//     <!-- END GENERATED: supported-apps --> in docs/reference/supported-apps.md
 //
 // Usage: node docs/scripts/generate-plugin-reference.js
 
@@ -22,19 +22,19 @@ const fs = require('fs')
 const path = require('path')
 
 const REPO = path.resolve(__dirname, '../..')
-const MD_OUT = path.join(REPO, 'docs/reference/supported-plugins.md')
-const BEGIN = '<!-- BEGIN GENERATED: supported-plugins'
-const END = '<!-- END GENERATED: supported-plugins -->'
+const MD_OUT = path.join(REPO, 'docs/reference/supported-apps.md')
+const BEGIN = '<!-- BEGIN GENERATED: supported-apps'
+const END = '<!-- END GENERATED: supported-apps -->'
 
 // Rendered/serialized in this order.
-const BUCKET_ORDER = ['Optional plugins']
+const BUCKET_ORDER = ['Optional apps']
 
 const ROOTS = [
   { label: 'backend/apps', dir: path.join(REPO, 'backend/apps'), kind: 'standalone' }
 ]
 
 function bucketOf () {
-  return 'Optional plugins'
+  return 'Optional apps'
 }
 
 // Find every immediate subdirectory of a root that ships an mdk-plugin.json.

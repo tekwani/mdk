@@ -49,8 +49,8 @@ added later without touching the core. Dependency flow:
   Gateway over SSE. Keeps its own layering inside the package — headless `core/`,
   `hooks/`, presentational `components/` — because the deliverable is a
   single injectable unit; it borrows `Button`, `Loader` and `createIcon`
-  from the devkit and themes off `--mdk-color-*` tokens. `private: true`,
-  workspace-linked only. `core/` is importable on its own (`./core`
+  from the devkit and themes off `--mdk-color-*` tokens. Published to npm
+  like the other three packages. `core/` is importable on its own (`./core`
   subpath, also re-exported from the package root) — reach for it instead
   of reimplementing SSE/transport/conversation-store logic elsewhere in
   the workspace.

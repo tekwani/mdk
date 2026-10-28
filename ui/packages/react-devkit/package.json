@@ -1,7 +1,7 @@
 {
   "name": "@tetherto/mdk-react-devkit",
   "type": "module",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "private": false,
   "description": "MDK Devkit (React) — generic UI primitives (src/primitives) plus mining-domain components, hooks, and state bindings (src/domain)",
   "license": "Apache-2.0",
@@ -42,7 +42,7 @@
   },
   "publishConfig": {
     "access": "public"
-  },  
+  },
   "files": [
     "AGENT_READY.md",
     "dist",
@@ -77,13 +77,13 @@
     "watch:scss": "npm run dev:scss"
   },
   "peerDependencies": {
-    "@hookform/resolvers": "^5.9.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.55.0",
     "zod": "^4.6.6"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.9.2",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.4",
     "@radix-ui/react-avatar": "^1.1.2",
@@ -106,8 +106,8 @@
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.25",
-    "@tetherto/mdk-react-adapter": "^0.12.1",
-    "@tetherto/mdk-ui-foundation": "^0.12.1",
+    "@tetherto/mdk-react-adapter": "^0.12.2",
+    "@tetherto/mdk-ui-foundation": "^0.12.2",
     "chart.js": "^4.4.9",
     "chartjs-adapter-date-fns": "^3.0.0",
     "chartjs-plugin-datalabels": "^2.2.0",
@@ -122,7 +122,6 @@
     "react-zoom-pan-pinch": "^4.0.3"
   },
   "devDependencies": {
-    "@hookform/resolvers": "^5.9.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.1.0",
     "@types/lodash": "^4.17.24",

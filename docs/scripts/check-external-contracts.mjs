@@ -1,26 +1,29 @@
 #!/usr/bin/env node
-// Nightly breakage check for the manufacturer-maintained Worker contracts listed in
+// Nightly breakage check for the partner-maintained Worker contracts listed in
 // backend/workers/external-workers.json. A pinned contract can go unreachable from outside this
-// repo (the manufacturer moves/deletes the file, privates the repo, or force-pushes so GitHub
+// repo (the partner moves/deletes the file, privates the repo, or force-pushes so GitHub
 // garbage-collects the pinned SHA) and nothing else here would notice: the only code that fetches
 // it is backend/workers/scripts/generate-catalogue.js, which only runs on a PR that touches a file
-// in this repo. A manufacturer-side change touches no such file.
+// in this repo. A partner-side change touches no such file.
 //
 //   npm run check:external-contracts
 //
-// Exit codes: 0 every entry is reachable and schema-valid; 1 one or more findings, including a
-// broken run itself.
+// Exit codes: 0 every entry is reachable, its repository URL resolves, and its contract is
+// schema-valid; 1 one or more findings, including a broken run itself.
 //
 // Findings are not reimplemented here — `npm run generate:catalogue` already produces them in
 // backend/workers/docs/catalogue.json's conformanceGaps array (source: 'external'), so this script
 // runs that generator for real and reads its output back, the same way docs/scripts/regenerate-docs.mjs
-// does.
+// does. The one check added here is the repository URL itself (checkRepoUrls): the generator
+// fetches only the raw contract file, so a repository that was renamed, transferred or deleted
+// while GitHub's CDN still serves the pinned blob would otherwise go unnoticed.
 //
 // Deliberately scoped to breakage only (unreachable URL, private repo, GC'd SHA, schema
-// violation) — these are exactly what generate:catalogue's existing fetch already surfaces as a
-// 404/parse error, no new logic needed. Whether a pin is merely *stale* (the manufacturer's file
-// changed again after the pin, but the pin itself still resolves fine) is a related but separate
-// question — see the follow-up tracked for that.
+// violation, repository gone) — these are what generate:catalogue's existing fetch already surfaces
+// as a 404/parse error, plus the repository check. Whether a pin is merely *stale* (the partner's
+// file changed again after the pin, but the pin itself still resolves fine) is a separate question.
+// Whether the registry is *complete* against the Workers examples/mvp-site pins is checked on every
+// PR by test/external-workers-registry.test.mjs, because that can only break from inside this repo.
 
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
@@ -35,7 +38,7 @@ const CATALOGUE_JSON_PATH = path.join(WORKERS_DIR, 'docs/catalogue.json')
 const REPORT_PATH = path.join(REPO_ROOT, 'external-check-report.md')
 
 // Runs the generator for real (writes backend/workers/docs/catalogue.json and
-// supported-hardware.md, same as a normal `npm run generate:catalogue`) rather than importing it,
+// supported-workers.md, same as a normal `npm run generate:catalogue`) rather than importing it,
 // matching regenerate-docs.mjs's existing convention of running it from the repo root, where the
 // script is defined. A missing or malformed external-workers.json is fatal there by design (see
 // the generator's own comments), so that failure surfaces here as a finding too, not a silent skip.
@@ -75,9 +78,35 @@ export function readManifest (manifestPath = MANIFEST_PATH) {
   return raw
 }
 
+const REPO_URL_TIMEOUT_MS = 10_000
+
+const stripSlash = (url) => String(url).replace(/\/$/, '')
+
+// One HEAD per repoUrl, following redirects. A non-2xx means the repository is gone or private;
+// a redirect that lands on a different repository means it was renamed or transferred and the
+// registry should follow. `fetchImpl` is injectable so the test never touches the network.
+export async function checkRepoUrls (manifest, { fetchImpl = fetch, timeoutMs = REPO_URL_TIMEOUT_MS } = {}) {
+  const findings = []
+  for (const entry of manifest) {
+    const label = `${entry.name} (${entry.repoUrl})`
+    try {
+      const res = await fetchImpl(entry.repoUrl, { method: 'HEAD', redirect: 'follow', signal: AbortSignal.timeout(timeoutMs) })
+      if (!res.ok) {
+        findings.push({ label, messages: [`repoUrl returned HTTP ${res.status}; the repository may have been deleted or made private`] })
+      } else if (res.redirected && stripSlash(res.url) !== stripSlash(entry.repoUrl)) {
+        findings.push({ label, messages: [`repoUrl redirects to ${res.url}; update repoUrl in backend/workers/external-workers.json`] })
+      }
+    } catch (err) {
+      const reason = err?.name === 'TimeoutError' ? `timed out after ${timeoutMs / 1000}s` : err?.message
+      findings.push({ label, messages: [`repoUrl could not be reached (${reason})`] })
+    }
+  }
+  return findings
+}
+
 export function renderReport (findings) {
   if (findings.length === 0) {
-    return '# External contract check\n\nAll manufacturer-maintained contracts are reachable and schema-valid.\n'
+    return '# External contract check\n\nEvery partner-maintained entry is reachable, its repository URL resolves, and its contract is schema-valid.\n'
   }
   const lines = ['# External contract check', '', 'Findings:', '']
   for (const { label, messages } of findings) {
@@ -87,7 +116,7 @@ export function renderReport (findings) {
   return lines.join('\n') + '\n'
 }
 
-function main () {
+async function main () {
   let findings
   try {
     const manifest = readManifest()
@@ -97,7 +126,7 @@ function main () {
     }
 
     runGenerateCatalogue()
-    findings = reachabilitySchemaFindings()
+    findings = [...reachabilitySchemaFindings(), ...await checkRepoUrls(manifest)]
   } catch (err) {
     findings = [{ label: '(check-external-contracts)', messages: [err.message] }]
   }
@@ -105,7 +134,7 @@ function main () {
   writeFileSync(REPORT_PATH, renderReport(findings))
 
   if (findings.length === 0) {
-    console.log('[check-external-contracts] every entry is reachable and schema-valid.')
+    console.log('[check-external-contracts] every entry is reachable, its repository URL resolves, and its contract is schema-valid.')
     process.exit(0)
   }
 
@@ -120,4 +149,9 @@ function main () {
 
 // Only run when invoked directly, so a test file can import the pure helpers above without
 // spawning the generator as a side effect — same guard as sync-ui-registry.mjs.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error('[check-external-contracts] failed to run:', err)
+    process.exit(1)
+  })
+}

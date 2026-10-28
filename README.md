@@ -1,6 +1,6 @@
 # MDK
 
-[![Release](https://img.shields.io/github/v/release/tetherto/mdk?display_name=tag&style=flat-square)](https://github.com/tetherto/mdk/releases/tag/v0.12.1)
+[![Release](https://img.shields.io/github/v/release/tetherto/mdk?display_name=tag&style=flat-square)](https://github.com/tetherto/mdk/releases/tag/v0.12.2)
 [![CI](https://img.shields.io/github/actions/workflow/status/tetherto/mdk/ci.yml?branch=main&label=CI&style=flat-square&logo=github)](https://github.com/tetherto/mdk/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/tetherto/mdk/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/tetherto/mdk/actions/workflows/github-code-scanning/codeql)
 [![Documentation](https://img.shields.io/badge/docs-mdk.tether.io-2ea44f?style=flat-square)](https://docs.mdk.tether.io)
@@ -11,7 +11,7 @@
 
 MDK is under active development and is **not yet considered stable**.
 
-Current release [v0.12.1](https://github.com/tetherto/mdk/releases/tag/v0.12.1).
+Current release [v0.12.2](https://github.com/tetherto/mdk/releases/tag/v0.12.2).
 
 > v0.12.0 will be a 2 stage release. First to release the code and support the public release
 > of npm packages, followed by a patch release of the documentation updates and any hotfixes.
@@ -100,7 +100,7 @@ MDK ships a backend SDK and an optional dashboarding layer. Find your lane:
 [supervised services](docs/guides/deployment/run-all-workers-site.md), or [choose another deployment shape](docs/guides/deployment/index.md)
 - **I'm a site operator** how do I manage my site with a conversational agent?: start from the [operator agent guides](docs/guides/agent/index.md)
 - **I'm an app developer building a React UI**: start from the [UI toolkit](ui/README.md#getting-started), or add MDK to an existing app
-- **I'm an app developer building backend services or Gateway plugins**: run the backend stack locally or start with
+- **I'm an app developer building backend services or apps**: run the backend stack locally or start with
 the [Gateway API surfaces](docs/guides/gateway/index.md)
 - **I'm an app developer building a dashboard end to end**: follow [build a dashboard](docs/tutorials/build-a-dashboard.md), or scaffold one against
 a running stack with [`mdk create dashboard`](packages/cli/README.md) (`@tetherto/mdk-cli`)
@@ -234,8 +234,7 @@ The latest development code is available on the [`main`](https://github.com/teth
 [Semantic Versioning 2.0.0](https://semver.org/): `0.y.z` versions are initial development (public API not stable until `1.0.0`); `1.0.0` and
 above denote a stable public API.
 
-Releases have notes [`docs/reference/release-notes/`](docs/reference/release-notes/) and the full version history is
-available as a [`CHANGELOG.md`](CHANGELOG.md).
+The full version history is available as a [`CHANGELOG.md`](CHANGELOG.md).
 
 ## License
 

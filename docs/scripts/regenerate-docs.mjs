@@ -39,17 +39,17 @@ const REPO_ROOT = path.resolve(HERE, '../..')
 const TARGETS = [
   {
     key: 'hardware',
-    label: 'Supported hardware page',
+    label: 'Supported Workers page',
     cwd: '.',
     command: ['npm', ['run', 'generate:catalogue']],
-    paths: ['backend/workers/docs/supported-hardware.md', 'backend/workers/docs/catalogue.json']
+    paths: ['backend/workers/docs/supported-workers.md', 'backend/workers/docs/catalogue.json']
   },
   {
     key: 'plugins',
-    label: 'Supported plugins page',
+    label: 'Supported apps page',
     cwd: '.',
     command: ['npm', ['run', 'generate:plugin-reference']],
-    paths: ['docs/reference/supported-plugins.md']
+    paths: ['docs/reference/supported-apps.md']
   },
   {
     key: 'packages',

@@ -14,7 +14,7 @@ used by the [Gateway](../gateway/README.md) (and any other process) to talk to K
 
 ## When to use which client path
 
-Use [`createMdkClient`](#createmdkclientconfig-opts--auto-connecting-client) for a Gateway plugin or any other consumer
+Use [`createMdkClient`](#createmdkclientconfig-opts--auto-connecting-client) for an app or any other consumer
 talking to Kernel: device commands, status queries, telemetry pulls, and, through it,
 [`sendWorkerCommand`](#sendworkercommandworkerid-deviceid-command-params-opts--promiseobject) /
 [`pullWorkerTelemetry`](#pullworkertelemetryworkerid-query-opts--promiseobject) for provisioning operations
@@ -84,10 +84,10 @@ recovery is always driven by the next caller-initiated request.
 
 | Argument | Status | Type | Default | Description |
 |--------|--------|------|---------|-------------|
-| `config.kernelKey` | Required unless `opts.transport` is set | `string \| Buffer` | None | The Kernel listener's public key. Inside a Gateway plugin, pass the whole `config` from `require('@tetherto/mdk-gateway/plugin')` — this is already folded in. |
-| `config.kernelKeyPair` | Optional | `{ publicKey, secretKey } \| () => keyPair` | None | DHT keypair the client dials with, so the [Kernel allowlist](../kernel/README.md#transports) can name it. Inside a Gateway plugin it is folded in (the Gateway's persistent `status.rpcClientKey`); without it the caller key is random per process |
+| `config.kernelKey` | Required unless `opts.transport` is set | `string \| Buffer` | None | The Kernel listener's public key. Inside an app, pass the whole `config` from `require('@tetherto/mdk-gateway/plugin')`, which already folds it in. |
+| `config.kernelKeyPair` | Optional | `{ publicKey, secretKey } \| () => keyPair` | None | DHT keypair the client dials with, so the [Kernel allowlist](../kernel/README.md#transports) can name it. Inside an app it is folded in (the Gateway's persistent `status.rpcClientKey`); without it the caller key is random per process |
 | `config.kernelBootstrap` | Optional | `object` | None | HRPC bootstrap override, folded in the same way |
-| `opts.errorCode` | Optional | `string` | `'ERR_MDK_CLIENT_UNAVAILABLE'` | Overrides the rejection code every request-issuing method throws when there's no connection. Not validated against the [documented error codes](#errors): any string is accepted, since a Gateway plugin commonly passes its own code instead. |
+| `opts.errorCode` | Optional | `string` | `'ERR_MDK_CLIENT_UNAVAILABLE'` | Overrides the rejection code every request-issuing method throws when there's no connection. Not validated against the [documented error codes](#errors): any string is accepted, since an app commonly passes its own code instead. |
 | `opts.timeout` | Optional | `number` (ms) | `30000` | Default per-request timeout. Every method also takes a trailing `{ timeout }` to override it for one call (see [Request timeouts](#request-timeouts)) |
 | `opts.transport` | Required unless `config.kernelKey` is set | `object` | None | Pre-built transport (`{ connect, close, request }`). Test seam — satisfies the `kernelKey` requirement instead. |
 
@@ -413,10 +413,10 @@ Kernel's [command lifecycle](../kernel/README.md#commandstatemachine) records co
 or errors as `TIMEOUT` with `ERR_COMMAND_UNCONFIRMED`, without resending it. A caller reconciles an unconfirmed command by reading
 the device state back. These command records are separate from the transport: HRPC does not provide an offline delivery queue.
 
-## Use in Gateway
+## Use in an app
 
-Every Gateway plugin builds its own client from its per-plugin context, once per plugin, in a `lib/client.js` every
-controller in the plugin requires — this is the shipped pattern (`site-monitor`, `site-hashrate`, `telemetry`):
+Every app builds its own client from its own context, once per app, in a `lib/client.js` every
+controller in the app requires, as the shipped [`demo` app](../../apps/demo/lib/client.js) does:
 
 ```js
 // lib/client.js
@@ -454,7 +454,7 @@ client/
 ## Next steps
 
 - [Run Kernel and the Gateway](../../../docs/guides/gateway/run.md) — Kernel must be running before `client.connect()` can succeed
-- [Understand how a Gateway plugin builds its own `mdk-client` and what the Gateway adds around it](../gateway/README.md#extend-the-gateway)
+- [Understand how an app builds its own `mdk-client` and what the Gateway adds around it](../gateway/README.md#extend-the-gateway)
 - [Understand the MDK Protocol and Kernel's role as the kernel](../../../docs/concepts/architecture.md)
 - [MVP site example](../../../examples/mvp-site/README.md) — see `createMdkClient` used end-to-end with Kernel and Workers
 - [`startGateway()` option reference](../mdk/README.md) — if you are wiring `mdk-client` into a custom Gateway

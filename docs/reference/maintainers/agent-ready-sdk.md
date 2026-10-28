@@ -61,7 +61,7 @@ backend/workers/miners/avalon/
     run-<scenario>.js
 ```
 
-(Whatsminer and Antminer are manufacturer-maintained external Workers — see [`backend/workers/external-workers.json`](../../../backend/workers/external-workers.json) — so
+(Whatsminer and Antminer are partner-maintained external Workers — see [`backend/workers/external-workers.json`](../../../backend/workers/external-workers.json) — so
 `avalon` is the current in-repo miner example of this shape; it has no `examples/` directory yet, only `USAGE.md`.)
 
 `USAGE.md` and `examples/` are the only **new** conventions. The contract itself is unchanged.
@@ -105,11 +105,11 @@ This mirrors how the UI workspace already handles components: read source-of-tru
 
 Once `dist/index.json` is shipping, it would also unlock [`check:integrations-fresh`](ia.md#checkintegrations-fresh) if engineering adopts it: the gate would compare shipping Workers against the hand-maintained catalogue tables under [`integrations/`](integrations/index.md) and fail the build on drift. Until then (and indefinitely if not adopted), the catalogue is docs-maintainer-owned (see Tag rules above).
 
-## Gateway plugin reference
+## App route table reference
 
-The apps MDK ships in [`backend/apps/`](../../../backend/apps/) each carry an `mdk-plugin.json` route table — the source of truth for their HTTP routes. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js) (run via `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` there for this generator alone) reads those route tables and regenerates the tables inside the marked region of [`supported-plugins.md`](../supported-plugins.md), so the published route list never drifts from the manifests. This is the same read-source-of-truth, generate, ship pattern as the Worker catalogue.
+The apps MDK ships in [`backend/apps/`](../../../backend/apps/) each carry an `mdk-plugin.json` route table, the source of truth for their HTTP routes. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js) (run via `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` there for this generator alone) reads those route tables and regenerates the tables inside the marked region of [`supported-apps.md`](../supported-apps.md), so the published route list never drifts from the manifests. This is the same read-source-of-truth, generate, ship pattern as the Worker catalogue.
 
-Only apps that ship in the repo are generated — third-party apps a stack declares in `spec.apps` live outside the repo and document their own routes. The [`check:plugin-reference-fresh`](ia.md#checkplugin-reference-fresh) gate keeps the generated tables honest, shipping as the **blocking** `docs-freshness` workflow. A stale table fails the pull request, so when a shipped app's routes change, run `npm run regenerate-docs` and commit the result in the same pull request.
+Only apps that ship in the repo are generated — third-party apps a stack declares in `spec.apps` live outside the repo and document their own routes. The [`check:plugin-reference-fresh`](ia.md#checkplugin-reference-fresh) gate keeps the generated tables honest, shipping as the **blocking** [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow. A stale table fails the pull request, so when a shipped app's routes change, run `npm run regenerate-docs` and commit the result in the same pull request.
 
 ## Decisions deferred
 

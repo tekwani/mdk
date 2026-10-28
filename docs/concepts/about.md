@@ -27,7 +27,7 @@ MDK ships three conceptual layers, each containing one or more packages:
 
 All three communicate through the **MDK protocol**. Browsers reach the Kernel through the Gateway, the consumer-facing integration boundary your team builds with the SDK;
 [AI agents][ai-agents-section] reach it instead through the standalone MCP server. MDK ships no authentication of its own at any tier: your team
-supplies it in the Gateway plugin controllers you write (native MCP tools authenticate at the MCP endpoint instead, not through those controllers). Tying everything together is a **single contract per device type**: the same
+supplies it in the app controllers you write (native MCP tools authenticate at the MCP endpoint instead, not through those controllers). Tying everything together is a **single contract per device type**: the same
 [`mdk-contract.json`][capability-contract] is designed to serve the UI (data labels), the orchestrator (validation rules), and AI agents (reasoning
 context) — today, only the orchestrator's validation rules are actually wired to it; UI and agent tooling don't read it yet.
 One file, one intended source of truth for three audiences.
@@ -67,11 +67,10 @@ layer that sits on top of `@tetherto/mdk-kernel`. It ships in three parts:
 ([`@tetherto/mdk-react-devkit`][react-get-started]) for dashboards.
 - **Backend tools**: the Gateway itself, a Fastify-specific library handling command proxying and request-level
   caching, with hooks for custom routes and aggregations. There is no Express adapter today.
-- **Plugins**: a Gateway plugin's `mdk-plugin.json` declares its own routes; pairing one with a specific frontend
-  tools widget is application code you write, not a manifest mechanism the Toolkit provides for you today. Third parties
-can ship whole features without forking the Gateway.
+- **Apps**: [a publishable package of routes and UI][whats-an-app], whose `mdk-plugin.json` declares its own routes and whose
+  `ui/` module declares the pages and panels a dashboard mounts. Third parties can publish whole features, routes, and UI together, without forking the Gateway.
 
-The Gateway is the recommended integration path for applications — it adds HTTP routing, request caching, and a plugin system for extending routes.
+The Gateway is the recommended integration path for applications: it adds HTTP routing, request caching, and serves the apps a stack declares.
 Nothing above the Gateway is required, though: for lightweight tools, standalone scripts, or CI/CD integrations, [`@tetherto/mdk-client`][mdk-client]
 can talk to Kernel directly. Some Worker-scoped operations (device provisioning, historical log/stat aggregation) go through a direct Worker
 connection instead of the usual Kernel round-trip; [when to use which][client-paths] is covered by the client's own guide.
@@ -94,11 +93,11 @@ issues autonomously, then act on them once an operator approves the write
 `@tetherto/mdk-kernel` is [the Kernel][architecture-kernel]. [`@tetherto/mdk-client`][mdk-client] is the protocol connector every caller uses
 to reach it. Above those two layers, the supported development path builds in two levels:
 
-- **Gateway**: the [Gateway][gateway-concept] hosts plugins and adds request-level caching and an HTTP interface; each plugin
-  builds its own `@tetherto/mdk-client` and does its own fleet aggregation. Authenticating callers is left to the plugin
-  controllers you write. AI agents can drive the fleet over MCP — a standalone [`@tetherto/mdk-mcp`][mcp-readme] process that
-  derives tools from a plugin's routes.
-- **MDK App Toolkit**: sits on top of the Gateway. Adds a plugin system for declarative route extensions and frontend
+- **Gateway**: the [Gateway][gateway-concept] serves the stack's apps and adds request-level caching and an HTTP interface; each app
+  builds its own `@tetherto/mdk-client` and does its own fleet aggregation. [Authenticating callers][app-auth] is left to the app
+  controllers you write. AI agents can drive the fleet over MCP, a standalone [`@tetherto/mdk-mcp`][mcp-readme] process that
+  derives tools from an app's routes.
+- **MDK App Toolkit**: sits on top of the Gateway. Adds publishable apps for declarative route extensions and frontend
   packages ([`@tetherto/mdk-ui-foundation`][ui-foundation], React adapter, React UI kit) for teams building operator dashboards
 
 Below the Kernel, **devices are the source of truth**. The actual hardware state is reported by the Worker
@@ -121,7 +120,7 @@ In addition to the technical schemas, every device's contract file ([`mdk-contra
 
 The intent is that an AI agent connecting to MDK wouldn't need a separate knowledge base or custom prompts per device: the
 same contract that Kernel already validates commands against would also determine how AI reasons about that hardware. That
-wiring is not built yet: MCP tools today come from a hand-authored manifest or a Gateway plugin's routes, not from a Worker's contract (see
+wiring is not built yet: MCP tools today come from a hand-authored manifest or an app's routes, not from a Worker's contract (see
 [Connecting intelligent agents][ai-agents-docs]).
 
 ## What you can build
@@ -133,7 +132,7 @@ wiring is not built yet: MCP tools today come from a hand-authored manifest or a
 - AI-driven autonomous monitoring, with human-approved control actions
 - Custom analytics and reporting pipelines
 - White-labeled hosted mining platforms
-- Third-party device integrations and plugins
+- Third-party device integrations and apps
 
 ## Scaling
 
@@ -183,6 +182,12 @@ Learn more about:
 
 [kernel-modules]: ../../backend/core/kernel/README.md#architecture
 <!-- docs@tether.io: kernel-modules → https://github.com/tetherto/mdk/blob/main/backend/core/kernel/README.md#architecture -->
+
+[whats-an-app]: whats-an-app.md
+<!-- docs@tether.io: whats-an-app → concepts/whats-an-app -->
+
+[app-auth]: ../guides/gateway/apps.md#auth-and-permissions
+<!-- docs@tether.io: app-auth → guides/gateway/apps#auth-and-permissions -->
 
 [app-toolkit]: app-toolkit.md
 <!-- docs@tether.io: app-toolkit → https://github.com/tetherto/mdk/blob/main/docs/concepts/app-toolkit.md -->

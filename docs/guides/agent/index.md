@@ -33,7 +33,7 @@ the tool server is up gets no tools and answers from the model alone, with no er
 | Run the agent as a standalone CLI, for local development | [Run the agent as a standalone CLI][run-standalone] |
 | Deploy the agent behind the Gateway as a chat API for an operator UI | [Deploy the agent behind the Gateway][gateway-deployment] |
 
-Exposing a plugin's own routes to the agent as tools is a detail of [building Gateway plugins][gateway-plugins], not its own
+Exposing an app's own routes to the agent as tools is a detail of [building an app][gateway-plugins], not its own
 deployment path. See [Expose data to the agent][expose-data] there.
 
 ## Next steps
@@ -59,8 +59,8 @@ deployment path. See [Expose data to the agent][expose-data] there.
 [expose-data]: expose-data.md
 <!-- docs@tether.io: expose-data → guides/agent/expose-data -->
 
-[gateway-plugins]: ../gateway/plugins.md
-<!-- docs@tether.io: gateway-plugins → guides/gateway/plugins -->
+[gateway-plugins]: ../gateway/apps.md
+<!-- docs@tether.io: gateway-plugins → guides/gateway/apps -->
 
 [mvp-site-example]: ../../../examples/mvp-site/README.md
 <!-- docs@tether.io: mvp-site-example → https://github.com/tetherto/mdk/blob/main/examples/mvp-site/README.md -->

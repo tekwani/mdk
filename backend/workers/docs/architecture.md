@@ -10,7 +10,7 @@ Workers do not initiate RPC to Kernel. Kernel obtains each Worker's RPC public k
 backend/workers/
 ├── miners/          # ASIC miners — avalon
 ├── containers/      # Enclosure / cooling control — antspace, bitdeer
-├── minerpools/      # Pool APIs — ocean, f2pool
+├── minerpools/      # Pool APIs — f2pool
 ├── power-meter/     # Metering — abb, satec, schneider
 ├── temperature/     # Sensors — seneca
 ├── mock/            # Shared mock transport helpers
@@ -18,7 +18,7 @@ backend/workers/
 └── scripts/         # Cross-package install / mock / catalogue utilities
 ```
 
-Each family directory holds one package per vendor. Related docs: [supported-hardware.md](./supported-hardware.md), [catalogue.json](./catalogue.json), [workers-manifest.yaml](./workers-manifest.yaml).
+Each family directory holds one package per vendor. Related docs: [supported-workers.md](./supported-workers.md), [catalogue.json](./catalogue.json), [workers-manifest.yaml](./workers-manifest.yaml).
 
 ## Package shape
 

@@ -15,10 +15,10 @@ Use this page to understand which layer receives a request, which layer validate
 
 ## Responsibility boundaries
 
-**Gateway** owns the consumer-facing surface, including HTTP and plugins. It is also where authentication belongs, though it implements none:
-that logic lives in the plugin controllers you write. Browser UIs enter MDK through the Gateway (they do not talk to Kernel
-directly). Agents can also reach MDK over MCP — a standalone [`@tetherto/mdk-mcp`][mcp-readme] process that derives tools from
-a plugin's routes.
+**Gateway** owns the consumer-facing surface: it routes HTTP to the apps its stack declares, each in its own runtime process. It is also where
+authentication belongs, though it implements none: that logic lives in [the app controllers you write][app-auth]. Browser UIs enter MDK
+through the Gateway (they do not talk to Kernel directly). Agents can also reach MDK over MCP, a standalone
+[`@tetherto/mdk-mcp`][mcp-readme] process that derives tools from an app's routes.
 
 **Kernel** owns coordination: Worker registry, telemetry routing, health checks, command dispatch, command state, and the
 write-action approval modules. Kernel trusts established callers; it does not validate user identity.
@@ -70,25 +70,27 @@ The Gateway dials with one persistent key, derived from a seed kept in its store
 status file (`<root>/status/wrk-node-http-<port>.json`). That is the [value to allowlist][mcp-allowlist], and it survives restarts.
 
 Transport identity is not user identity. The HRPC allowlist controls which backend processes may connect to Kernel, and it says nothing about the
-person or agent behind a request. Establishing that is the job of the plugin controllers serving people, browser applications, and agents.
+person or agent behind a request. Establishing that is [the job of the app controllers][app-auth] serving people, browser applications, and agents.
 
 ## Request paths
 
 ### Read requests
 
-Reads usually start in a Gateway route or plugin controller, pass through the plugin's own `mdkClient`, and reach Kernel as registry,
-capability, telemetry, or state queries. Kernel routes Worker-owned reads down to the relevant Worker and returns the result to the
-Gateway. There is no separate Gateway-side store: a controller that wants a historical or aggregated series fans that same
-`mdkClient` out across every registered Worker and reads it from the Worker's own persisted tail-log.
+Reads usually start in [an app controller][write-a-controller], pass through [the app's own `mdkClient`][client-in-app], and reach
+[Kernel][kernel-readme] as queries against the registry, capabilities, telemetry, or state. Kernel routes Worker-owned reads down to the
+relevant Worker and returns the result to the Gateway. Kernel-side storage is not where a series comes from: a controller that wants a
+historical or aggregated series fans that same `mdkClient` out across every registered Worker and reads it from the Worker's own persisted
+tail-log. An app does have a writable directory of its own, the `data/` subdirectory of its runtime's `storeDir`, reaching controllers as
+`config.dataDir`.
 
 > [!NOTE]
-> For plugin controller mechanics, use the [Gateway plugins guide][plugins-how-to].
+> For app controller mechanics, use the [app authoring guide][plugins-how-to].
 
 ### Direct commands
 
-Direct commands are immediate writes that do not require approval. The plugin controller performs whatever validation you have written into it, then
-sends a `command.request` to Kernel. Kernel resolves the owning Worker, validates the command against the Worker's capabilities,
-and hands the command to the crash-recoverable command state machine.
+Direct commands are immediate writes that do not require approval. [The app controller][write-a-controller] performs whatever validation
+you have written into it, then sends a [`command.request`][command-request] to Kernel. Kernel resolves the owning Worker, validates the
+command against the Worker's capabilities, and hands the command to the crash-recoverable command state machine.
 
 > [!NOTE]
 > For command-dispatch module details, use the [Kernel README][kernel-readme].
@@ -114,10 +116,10 @@ flowchart TB
   actionCaller --> commandRequest
 ```
 
-The Gateway may expose an HTTP actions surface through plugins. Any access control on that surface is written into the controllers, since the plugin
-runtime enforces none. Kernel owns `ActionManager`, `ActionCaller`, and target permission checks at the protocol layer. Those Kernel checks use the
-target Worker's device family, such as `miner:w` or `container:w`, read from the `authPerms` array the caller sends, before resolving or approving
-writes. Workers answer
+The Gateway may expose an HTTP actions surface through an app. Any access control on that surface is written into the controllers, since the app
+runtime enforces none. Kernel owns [`ActionManager`][action-manager], [`ActionCaller`][action-caller], and target permission checks at the
+protocol layer. Those Kernel checks use the target Worker's device family, such as `miner:w` or `container:w`, read from the `authPerms`
+array the caller sends, before resolving or approving writes. Workers answer
 `write.calls.request` while Kernel resolves candidate writes, then execute the final `command.request` after the configured vote
 thresholds are met.
 
@@ -172,7 +174,7 @@ sequenceDiagram
     AI-->>User: "wm002 was overheating and has been rebooted."
 ```
 
-The Gateway hosts no MCP itself: the MCP server here is a standalone [`@tetherto/mdk-mcp`][mcp-readme] process that derives its tools from a plugin's routes, and the path below the MCP server is the same as for a direct HTTP call.
+The Gateway hosts no MCP itself: the MCP server here is a standalone [`@tetherto/mdk-mcp`][mcp-readme] process that derives its tools from an app's routes, and the path below the MCP server is the same as for a direct HTTP call.
 
 ### Human UI scenario
 
@@ -216,18 +218,18 @@ The write-action flow is reachable from two different layers depending on where 
 
 | Layer | Package | How you call it |
 |---|---|---|
-| React / UI | [`@tetherto/mdk-react-adapter`][react-adapter-readme] | `useMutation` / `useQuery` against the HTTP routes your Gateway plugin exposes for actions; MDK ships no action hooks |
+| React / UI | [`@tetherto/mdk-react-adapter`][react-adapter-readme] | `useMutation` / `useQuery` against the HTTP routes your app exposes for actions; MDK ships no action hooks |
 | Backend / Node.js | [`@tetherto/mdk-client`][client-readme] | Methods: `pushAction`, `pushActionsBatch`, `voteAction`, `cancelActionsBatch`, `getAction`, `getActionsBatch`, `queryActions` — send MDK Protocol envelopes directly to Kernel |
 
 > [!IMPORTANT]
-> The React hooks go through the Gateway, so whatever validation your plugin controllers perform applies to them. The `mdk-client` methods connect
+> The React hooks go through the Gateway, so whatever validation your app controllers perform applies to them. The `mdk-client` methods connect
 > directly to Kernel and bypass that layer entirely. Neither path gets user-level control for free: the Gateway ships no authentication, and Kernel
 > admits backend processes according to its HRPC transport policy: only allowlisted caller keys (an empty allowlist admits nobody), each limited
 > to its role.
 
 ## Next steps
 
-- Build Gateway routes with the [plugin guide][plugins-how-to]
+- Build Gateway routes with the [app authoring guide][plugins-how-to]
 - Secure a production site with the [security blueprint][security-blueprint]
 - Submit and approve write actions with the [write-actions how-to][write-actions-how-to]
 - Review the [Kernel modules][kernel-readme]
@@ -253,8 +255,26 @@ The write-action flow is reachable from two different layers depending on where 
 [workers-discovery]: ../../backend/workers/docs/architecture.md#discovery-model
 <!-- docs@tether.io: workers-discovery → https://github.com/tetherto/mdk/blob/main/backend/workers/docs/architecture.md#discovery-model -->
 
-[plugins-how-to]: ../guides/gateway/plugins.md
-<!-- docs@tether.io: plugins-how-to → guides/gateway/plugins -->
+[action-manager]: ../../backend/core/kernel/README.md#actionmanager
+<!-- docs@tether.io: action-manager → https://github.com/tetherto/mdk/blob/main/backend/core/kernel/README.md#actionmanager -->
+
+[action-caller]: ../../backend/core/kernel/README.md#actioncaller
+<!-- docs@tether.io: action-caller → https://github.com/tetherto/mdk/blob/main/backend/core/kernel/README.md#actioncaller -->
+
+[command-request]: ../reference/protocol/messages.md#envelope
+<!-- docs@tether.io: command-request → reference/protocol/messages#envelope -->
+
+[write-a-controller]: ../guides/gateway/apps.md#22-write-a-controller
+<!-- docs@tether.io: write-a-controller → guides/gateway/apps#22-write-a-controller -->
+
+[client-in-app]: ../../backend/core/client/README.md#use-in-an-app
+<!-- docs@tether.io: client-in-app → https://github.com/tetherto/mdk/blob/main/backend/core/client/README.md#use-in-an-app -->
+
+[app-auth]: ../guides/gateway/apps.md#auth-and-permissions
+<!-- docs@tether.io: app-auth → guides/gateway/apps#auth-and-permissions -->
+
+[plugins-how-to]: ../guides/gateway/apps.md
+<!-- docs@tether.io: plugins-how-to → guides/gateway/apps -->
 
 [mcp-readme]: ../../backend/core/mcp/README.md
 <!-- docs@tether.io: mcp-readme → https://github.com/tetherto/mdk/blob/main/backend/core/mcp/README.md -->

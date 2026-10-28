@@ -1,6 +1,6 @@
 'use strict'
 
-const { loadSite, snapStats, snapConfig } = require('./utils')
+const { loadSite, snapStats, snapConfig, pullPoolStats } = require('./utils')
 
 const containerId = (thg) => {
   return (thg.info && thg.info.container) || thg.id || thg.code
@@ -77,8 +77,7 @@ const mapSensor = (thg) => {
 }
 
 const mapPool = async (pool, mdkClient) => {
-  const tel = await mdkClient.pullTelemetry(pool.deviceId, { type: 'ext_data', key: 'stats' })
-  const stats = (tel && tel.extData && tel.extData.stats) || []
+  const stats = await pullPoolStats(mdkClient, pool.deviceId)
   const p = stats[0]
   if (!p) return null
   return {

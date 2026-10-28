@@ -68,21 +68,20 @@ const runSealminerMocks = async () => {
   console.log('MDK_READY mocks-sealminer devices=%d', sealminers.length)
 }
 
-// Pool workers and the meter's power reading track the whole fleet —
+// The meter's power reading tracks the whole fleet —
 // Whatsminer, Antminer and SealMiner seeds together.
 const fleetSize = ({ miners, antminers, sealminers }) => miners.length + antminers.length + sealminers.length
 
+// The Ocean, EMCD, SpiderPool and Foundry API mocks serve their packages' fixture accounts.
 const runOceanMock = async () => {
-  const minerCount = fleetSize(loadSeedDevices())
-  const { ready, close } = startOceanMock(minerCount)
+  const { ready, close } = startOceanMock()
   await ready
 
   onShutdown(async () => close())
 
-  console.log('MDK_READY mocks-ocean workers=%d', minerCount)
+  console.log('MDK_READY mocks-ocean')
 }
 
-// The EMCD, SpiderPool and Foundry API mocks serve their packages' fixture accounts.
 const runEmcdMock = async () => {
   const { ready, close } = startEmcdMock()
   await ready

@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-agent",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "MDK operator agent — headless loop over a local (QVAC) model, consuming MDK tools via MCP.",
   "private": true,
   "type": "module",

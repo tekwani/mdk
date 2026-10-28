@@ -4,5 +4,12 @@
     "composite": false,
     "emitDeclarationOnly": false,
     "noEmit": false
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/test-utils/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
 }

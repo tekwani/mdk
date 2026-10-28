@@ -431,7 +431,7 @@ You can run it two ways, with or without authentication:
 - **[Without sign-in](#run-it-without-sign-in)** — where to start. Two edits to
   the scaffolded app and the dashboard loads against your Gateway.
 - **[With Google sign-in](#add-google-sign-in)** — needs your
-  [identity app](../../docs/guides/gateway/plugins.md) you write. Do this when you
+  [identity app](../../docs/guides/gateway/apps.md) you write. Do this when you
   need real sessions.
 
 > **Audience:** community developers evaluating MDK, contributors writing
@@ -526,7 +526,7 @@ Step 2 hands these to your identity app.
 MDK ships no OAuth implementation, so this is the part you write. Scaffold it
 with `mdk create app <name>` and declare it under `spec.apps` with `mount: /`, so
 its routes sit at the Gateway root; the
-[app authoring guide](../../docs/guides/gateway/plugins.md) covers the
+[app authoring guide](../../docs/guides/gateway/apps.md) covers the
 manifests and controller contract.
 
 The frontend only requires that app to honour two ends of a redirect:

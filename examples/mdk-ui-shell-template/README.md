@@ -10,7 +10,7 @@ fresh app is wired end to end:
 
 **No example pages** ship out of the box. Add your own (see
 [Adding a new page](#adding-a-new-page)); a page reads its data from your
-Gateway plugin's routes and passes it into devkit components as props.
+Gateway app's routes and passes it into devkit components as props.
 
 Everything you add respects the same boundaries this shell does: **API/state in
 `@tetherto/mdk-ui-foundation`, hooks in `@tetherto/mdk-react-adapter`,
@@ -45,7 +45,7 @@ Then open `http://localhost:3030` and click **Sign in with Google**.
 **MDK ships no OAuth implementation.** The Gateway has no API of its own and serves
 only the apps a stack declares, so sign-in is something you supply as an app
 (`mdk create app <name>`, declared under `spec.apps` with `mount: /` so its routes sit at the Gateway root). See
-[`docs/guides/gateway/plugins.md`](../../docs/guides/gateway/plugins.md) in the MDK repo for the manifests and
+[`docs/guides/gateway/apps.md`](../../docs/guides/gateway/apps.md) in the MDK repo for the manifests and
 controller contract.
 
 This app needs that identity app to honour two ends of a redirect:

@@ -426,8 +426,8 @@ and Worker allowlists, not just files on disk, and verify that denied calls fail
 [hosted-site]: ../deployment/hosted-site.md
 <!-- docs@tether.io: hosted-site → guides/deployment/hosted-site -->
 
-[plugins-auth]: ../gateway/plugins.md#auth-and-permissions
-<!-- docs@tether.io: plugins-auth → guides/gateway/plugins#auth-and-permissions -->
+[plugins-auth]: ../gateway/apps.md#auth-and-permissions
+<!-- docs@tether.io: plugins-auth → guides/gateway/apps#auth-and-permissions -->
 
 
 [write-actions]: ../gateway/write-actions.md

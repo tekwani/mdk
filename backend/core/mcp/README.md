@@ -4,7 +4,7 @@
 
 MCP (Model Context Protocol) server for MDK. Exposes MDK data and actions to AI agents as declarative tools over a
 `StreamableHTTPServerTransport`. `createMcpServer` below runs it as a standalone server — a separate process from the
-[Gateway](../gateway/README.md), not a Gateway plugin — that talks to Kernel the same way the Gateway does, over
+[Gateway](../gateway/README.md), not an app, and it talks to Kernel the same way the Gateway does, over
 [`@tetherto/mdk-client`](../client/README.md). The Gateway itself has no MCP capability of its own: it knows nothing about
 MCP, and this package is the only place an app's routes get turned into tools (see `apps` below). Like the Gateway, it runs
 no app code: a tool call is forwarded to the app's [runtime](../app-runtime/README.md).
@@ -140,7 +140,7 @@ This is also what powers the CLI's `mdk run mcp` command: it boots this server w
 ## Plugin format
 
 A plugin is a directory with an `mcp-plugin.json` manifest and one or more handler files — the same discovery pattern as
-a Gateway plugin, but with `tools` instead of `routes`.
+an app, but with `tools` instead of `routes`.
 
 ```json
 {
@@ -155,7 +155,7 @@ a Gateway plugin, but with `tools` instead of `routes`.
 Each handler file exports a `handler` function and an optional `schema` (a Zod shape — validated by the MCP SDK before your
 handler runs). The handler takes only its tool args: build a client once from the
 plugin's context (`require('@tetherto/mdk-mcp/plugin')` resolves to that plugin's frozen `{ config, logger }`) and
-`require` it from every handler in the plugin, [the same pattern a Gateway plugin uses](../gateway/README.md#extend-the-gateway):
+`require` it from every handler in the plugin, [the same pattern an app uses](../gateway/README.md#extend-the-gateway):
 
 ```js
 const { z } = require('zod')

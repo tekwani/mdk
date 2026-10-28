@@ -273,7 +273,7 @@ alone.
 
 **Build**: `tsc` → `dist/`, `vite` → `dist/styles.css`.
 
-**Note**: `private: true` — workspace-linked only, not published. The backend
+**Note**: published to npm as `@tetherto/mdk-ui-agent`. The backend
 half is a stack concern; see
 [`packages/ui-agent/README.md`](../packages/ui-agent/README.md) for the whole
 chain from an empty machine.

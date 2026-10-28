@@ -47,7 +47,7 @@ cannot linger and keep triggering. Skills you authored yourself in the same dire
 
 ## What the suite covers
 
-The suite ships a router plus workflows for device workers, Gateway plugins, UI pages, and stack deployment. Each skill's
+The suite ships a router plus workflows for device workers, apps, UI pages, and stack deployment. Each skill's
 `description` frontmatter is its routing trigger, so you state an intent in plain language and the right skill activates;
 composite prompts route as an ordered chain through the router. See the [skill suite][skill-suite] for the current
 inventory and each skill's triggers, and the [routing prompts][routing-prompts] for worked examples.
@@ -72,7 +72,7 @@ activated. If nothing activates, confirm the skill files landed in your project 
 suite stays per developer, not committed. Ignore the suite's directories by name rather than the whole skills folder,
 which may also hold your team's own committed skills:
 
-```gitignore
+```text
 .claude/skills/mdk/
 .claude/skills/mdk-worker-plugin/
 .claude/skills/mdk-gateway-plugin/

@@ -1,15 +1,14 @@
 ---
 title: Install the CLI
-description: "[⏱️ ~3 min] Get `mdk` installed and verified from a source checkout"
+description: "[⏱️ ~3 min] Get `mdk` installed and verified from npm"
 docs@tether_slug: guides/cli/install
 ---
 
 ## TL;DR
 
 - Operate the stack from your terminal
-- Until available as an npm package, link `mdk` on your PATH with:
-  - `npm install` at mdk/packages
-  - `npm run build && npm link` at mdk/packages/cli
+- Install `mdk` on your PATH with `npm install -g @tetherto/mdk-cli`
+- Confirm it with `mdk --version`
 
 ## Overview
 
@@ -24,51 +23,62 @@ docs@tether_slug: guides/cli/install
 
 ## Install
 
-Until `@tetherto/mdk-cli` is published to npm, link `mdk` on your PATH from a source checkout.
+Install the published CLI from npm. A source checkout is only needed to work on the CLI itself.
 
-<details>
-<summary>Install the CLI steps</summary>
+<Steps>
+
+<Step>
+
+### Put `mdk` on your PATH
 
 > [!NOTE]
-> If `mdk --version` already prints a version, skip to step 6.
+> If `mdk --version` already prints a version, skip to verifying your install.
 
-1. Clone the repo and `cd` into `packages`.
+#### A Install from npm
 
-   ```bash
-   git clone https://github.com/tetherto/mdk.git && cd mdk/packages
-   ```
+```bash
+npm install -g @tetherto/mdk-cli
+```
 
-2. Stay on `main`, or pin a tagged release. Pick a tag from [mdk tags][mdk-tags] and check it out.
+> [!TIP]
+> `npx @tetherto/mdk-cli@latest <command>` runs a single command without installing anything globally, which suits CI and
+> one-off scaffolding.
 
-   ```bash
-   git checkout -b <your-branch-name>/v<version> v<version>
-   ```
+#### B Install from a source checkout
 
-   For example, `git checkout -b local/v0.7.0 v0.7.0`.
+Contributors who are changing the CLI's own source build it and link that build onto their PATH instead.
 
-3. Install dependencies.
+```bash
+git clone https://github.com/tetherto/mdk.git && cd mdk/packages
+npm install
+cd cli && npm run build && npm link
+```
 
-   ```bash
-   npm install
-   ```
+To pin a tagged release, pick a tag from [mdk tags][mdk-tags] and check it out before installing, for example
+`git checkout -b local/v0.12.1 v0.12.1`.
 
-4. Build and link the `mdk` binary.
+</Step>
 
-   ```bash
-   cd cli && npm run build && npm link
-   ```
+<Step>
 
-5. Confirm `mdk` is on your PATH.
+### Verify the install
 
-   ```bash
-   mdk --version
-   ```
+```bash
+mdk --version
+```
 
-6. Run project commands from the app or UI monorepo you are working in. Commands such as `mdk skill add` and
-   `mdk onboard` write into your current directory, so run them from your project, not from `mdk/packages/cli`. Only
-   `mdk --version` is global once linked.
+</Step>
 
-</details>
+<Step>
+
+### Run project commands from your project
+
+Commands such as `mdk skill add` and `mdk onboard` write into your current directory, so run them from the app or UI
+project you are working in. Only `mdk --version` is global.
+
+</Step>
+
+</Steps>
 
 ## Command groups
 
@@ -88,8 +98,11 @@ The [CLI's command surface][cli-reference] documents the full flag reference.
 ## Update
 
 ```bash
-git pull && npm install && npm run build
+npm install -g @tetherto/mdk-cli@latest
 ```
+
+> [!TIP]
+> Updating a source checkout (option B above) instead: `git pull && npm install && npm run build`.
 
 ## Uninstall
 

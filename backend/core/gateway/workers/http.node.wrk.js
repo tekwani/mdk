@@ -4,6 +4,7 @@ const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const async = require('async')
+const LRU = require('lru')
 const TetherWrkBase = require('@tetherto/tether-wrk-base/workers/base.wrk.tether')
 const createLogger = require('debug')
 const debug = createLogger('store:aggr')
@@ -56,12 +57,11 @@ class WrkServerHttp extends TetherWrkBase {
     this._security = resolveSecurityOptions(this.conf, this.ctx)
     resolveAppTimeout(this.conf)
 
+    for (const [label, maxAge] of [['10s', 10000], ['15s', 15000], ['30s', 30000], ['1m', 60000], ['15m', 60000 * 15]]) {
+      this[`lru_${label}`] = new LRU({ max: 10000, maxAge })
+    }
+
     this.setInitFacs([
-      ['fac', '@bitfinex/bfx-facs-lru', '10s', '10s', { max: 10000, maxAge: 10000 }],
-      ['fac', '@bitfinex/bfx-facs-lru', '15s', '15s', { max: 10000, maxAge: 15000 }],
-      ['fac', '@bitfinex/bfx-facs-lru', '30s', '30s', { max: 10000, maxAge: 30000 }],
-      ['fac', '@bitfinex/bfx-facs-lru', '1m', '1m', { max: 10000, maxAge: 60000 }],
-      ['fac', '@bitfinex/bfx-facs-lru', '15m', '15m', { max: 10000, maxAge: 60000 * 15 }],
       ['fac', '@tetherto/svc-facs-httpd', 'h0', 'h0', {
         // Static serving is opt-in: only when common.json sets staticRootPath.
         staticRootPath: this.conf.staticRootPath,

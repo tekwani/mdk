@@ -137,7 +137,7 @@ on an in-process Kernel and publishes it to the trusted-keys dir for same-machin
   or no verifier at all, answers `401 ERR_AUTH_UNAUTHORIZED`; a verifier may throw its own `4xx` `ERR_*` error (for example
   `403 ERR_AUTH_PERM_DENIED`), and any other throw is a `401`. A truthy return is the caller's identity: it is forwarded to the runtime and
   reaches the controller as `req._info`. The Gateway ships no identity layer, so checking permissions against the identity stays with the
-  verifier or the controller ([auth and permissions](../../../docs/guides/gateway/plugins.md#auth-and-permissions))
+  verifier or the controller ([auth and permissions](../../../docs/guides/gateway/apps.md#auth-and-permissions))
 - **Built-in `"loopback"` verifier** for single-machine stacks (`mdk run`, the examples): a caller whose TCP peer is
   `127.0.0.0/8` or `::1` gets `{ user: { userId: 'local' } }`; anyone else gets `401`. It reads the socket, never
   `X-Forwarded-For`, so do not use it behind a reverse proxy on the same host, where every proxied request is loopback.
@@ -225,8 +225,8 @@ Run each app with [`createAppRuntime()`](../app-runtime/README.md) and `allowedK
 `(req)`, and each builds its own `@tetherto/mdk-client` from the context config it reads via `require('@tetherto/mdk-gateway/plugin')`.
 The plugins MDK ships run the same way, only when a stack declares them; nothing auto-registers.
 
-The [plugin authoring guide](../../../docs/guides/gateway/plugins.md) and the plugin reference cover the full
-manifest schema, controller contract, and plugin context, and [what the loader throws](#errors) is documented here.
+The [Gateway apps guide](../../../docs/guides/gateway/apps.md) and the [supported apps reference](../../../docs/reference/supported-apps.md) cover the full
+manifest schema, controller contract, and app context, and [what the loader throws](#errors) is documented here.
 
 ### Raw Fastify routes
 
@@ -296,8 +296,8 @@ gateway/
 
 - [Run the Gateway](../../../docs/guides/gateway/run.md)
 - [Secure the site](../../../docs/guides/security/index.md): admit this Gateway to Kernel and lock down the fleet
-- [Add routes with the plugin system](../../../docs/guides/gateway/plugins.md)
-- Browse the [supported plugins reference](../../../docs/reference/supported-plugins.md)
+- [Add routes with apps](../../../docs/guides/gateway/apps.md)
+- Browse the [supported apps reference](../../../docs/reference/supported-apps.md)
 - See a complete [worked example](../../../examples/mvp-site/README.md)
 - Browse the [`startGateway()` options](../mdk/README.md)
 - Reach MDK over MCP — run the standalone [`@tetherto/mdk-mcp`](../mcp/README.md) process (`mdk run mcp`), which derives
