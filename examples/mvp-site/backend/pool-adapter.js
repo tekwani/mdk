@@ -10,7 +10,7 @@
 // closed, so start() would throw ERR_WORKER_ALLOWED_KEYS_REQUIRED. This
 // adapter repeats their boot (one logical device whose deviceId is the
 // workerId, ext_data served from services.pool) with the trust keys added,
-// the same shape as @tetherto/mdk-worker-ocean's startOceanPoolWorker.
+// the same shape as the retired in-repo Ocean worker's startOceanPoolWorker.
 //
 // Their `@tetherto/mdk/backend/core/...` requires resolve through
 // lib/mdk-compat.

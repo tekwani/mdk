@@ -86,8 +86,8 @@ serves only the app-derived tools above.
 
 ## Links
 
-[gateway-plugins]: ../gateway/plugins.md
-<!-- docs@tether.io: gateway-plugins → guides/gateway/plugins -->
+[gateway-plugins]: ../gateway/apps.md
+<!-- docs@tether.io: gateway-plugins → guides/gateway/apps -->
 
 [gateway-deployment]: gateway-deployment.md
 <!-- docs@tether.io: gateway-deployment → guides/agent/gateway-deployment -->

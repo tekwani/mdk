@@ -22,17 +22,14 @@ internal layout keeps the two layers clearly separated:
   `@tetherto/mdk-ui-foundation`; store hooks and `MdkProvider` live in
   `@tetherto/mdk-react-adapter`.
 
-## Installation
+## Install
 
-This is a workspace package; depend on it from another workspace:
-
-```json
-{
-  "dependencies": {
-    "@tetherto/mdk-react-devkit": "*"
-  }
-}
+```bash
+npm install @tetherto/mdk-react-devkit
 ```
+
+> [!NOTE]
+> `react` and `react-dom` 19 are peer dependencies, as are `react-hook-form` `^7.55.0` and `zod` `^4.6.6`.
 
 ## Usage
 

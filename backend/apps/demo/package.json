@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-app-demo",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "MDK app: aggregates live telemetry and history across registered miners that report hashrate_rt, such as Workers made with mdk create worker.",
   "author": "Tether",
   "license": "Apache-2.0",

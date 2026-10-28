@@ -112,8 +112,8 @@ The example files are checked in; the copied actives are gitignored, leaving roo
 | [`miners/avalon`](../miners/avalon/README.md) | [USAGE.md](../miners/avalon/USAGE.md) | [`avalon-dev.js`](../../../docs/guides/miners/run-avalon-worker.md) | [workers-manifest.yaml](workers-manifest.yaml) |
 | containers, minerpools, power-meter, temperature | _Phase 3+_ | `npm run mock` plus the per-family guide | _Phase 3+_ |
 
-The full model coverage for every Worker (all families) is generated from the contracts: see [`docs/supported-hardware.md`](supported-hardware.md).
-Manufacturer-maintained Workers (Antminer, Whatsminer) are plain contract plugins in their own repositories, hosted on
+The full model coverage for every Worker (all families) is generated from the contracts: see [`docs/supported-workers.md`](supported-workers.md).
+Partner-maintained Workers (Antminer, Whatsminer) are plain contract plugins in their own repositories, hosted on
 `WorkerRuntimeV2` rather than through a boot function — see [`run-antminer-worker.md`](../../../docs/guides/miners/run-antminer-worker.md).
 
 ## Next steps

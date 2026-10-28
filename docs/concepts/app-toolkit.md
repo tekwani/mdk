@@ -98,8 +98,8 @@ flowchart TD
 [gateway-concept]: ../../backend/core/gateway/README.md
 <!-- docs@tether.io: gateway-concept → https://github.com/tetherto/mdk/blob/main/backend/core/gateway/README.md -->
 
-[plugins-how-to]: ../guides/gateway/plugins.md
-<!-- docs@tether.io: plugins-how-to → guides/gateway/plugins -->
+[plugins-how-to]: ../guides/gateway/apps.md
+<!-- docs@tether.io: plugins-how-to → guides/gateway/apps -->
 
 [ui-architecture]: ../../ui/docs/ARCHITECTURE.md
 <!-- docs@tether.io: ui-architecture → https://github.com/tetherto/mdk/blob/main/ui/docs/ARCHITECTURE.md -->

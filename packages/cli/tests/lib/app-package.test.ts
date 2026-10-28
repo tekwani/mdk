@@ -49,10 +49,12 @@ describe('validateApp', () => {
     expect(result.routes).toBe(1);
   });
 
-  it('accepts a package without permissions or config', () => {
-    const dir = appPackage({ 'mdk-app.yaml': 'id: io.tether.demo\nversion: 0.2.0\ndisplayName: Demo\n' });
-    const result = validateApp(dir);
-    expect(result.errors).toEqual([]);
+  it('accepts a package without config, but permissions must be there, even empty', () => {
+    const base = 'id: io.tether.demo\nversion: 0.2.0\ndisplayName: Demo\n';
+    expect(validateApp(appPackage({ 'mdk-app.yaml': `${base}permissions: []\n` })).errors).toEqual([]);
+    expect(validateApp(appPackage({ 'mdk-app.yaml': base })).errors).toEqual([
+      'mdk-app.yaml: "permissions" is required: the Kernel access the app uses, as a list of rules ([] for none)',
+    ]);
   });
 
   it('reports every missing file', () => {
@@ -83,7 +85,7 @@ describe('validateApp', () => {
   });
 
   it('accepts a description and checks its type', () => {
-    const base = 'id: io.tether.demo\nversion: 0.2.0\ndisplayName: Demo\n';
+    const base = 'id: io.tether.demo\nversion: 0.2.0\ndisplayName: Demo\npermissions: []\n';
     expect(validateApp(appPackage({ 'mdk-app.yaml': `${base}description: Fleet totals\n` })).errors).toEqual([]);
     expect(validateApp(appPackage({ 'mdk-app.yaml': `${base}description: [x]\n` })).errors).toEqual([
       'mdk-app.yaml: "description" must be a string',
@@ -95,7 +97,7 @@ describe('validateApp', () => {
     ['1io.demo', 'a leading digit'],
     ['io.-demo', 'a segment starting with a dash'],
   ])('rejects the id %s (%s), which the app runtime refuses to start', (id) => {
-    const manifest = `id: ${id}\nversion: 0.2.0\ndisplayName: Demo\n`;
+    const manifest = `id: ${id}\nversion: 0.2.0\ndisplayName: Demo\npermissions: []\n`;
     expect(validateApp(appPackage({ 'mdk-app.yaml': manifest })).errors).toEqual([
       'mdk-app.yaml: "id" must be reverse-DNS, e.g. io.tether.demo',
     ]);
@@ -103,7 +105,7 @@ describe('validateApp', () => {
 
   it('rejects a version with a leading zero, which the app runtime refuses to start', () => {
     const files = { 'package.json': JSON.stringify({ name: 'x', version: '01.2.0' }) };
-    const manifest = 'id: io.tether.demo\nversion: "01.2.0"\ndisplayName: Demo\n';
+    const manifest = 'id: io.tether.demo\nversion: "01.2.0"\ndisplayName: Demo\npermissions: []\n';
     expect(validateApp(appPackage({ ...files, 'mdk-app.yaml': manifest })).errors).toEqual([
       'mdk-app.yaml: "version" must be a semver string, e.g. 0.1.0',
     ]);
@@ -119,12 +121,13 @@ describe('validateApp', () => {
     }
   });
 
-  it('rejects a bad id, a version mismatch, an unknown key and a non-mapping config', () => {
+  it('rejects a bad id, a version mismatch, an unknown key, missing permissions and a non-mapping config', () => {
     const manifest = 'id: Demo\nversion: 0.3.0\ndisplayName: Demo\nsummary: x\nconfig: []\n';
     expect(validateApp(appPackage({ 'mdk-app.yaml': manifest })).errors).toEqual([
       'mdk-app.yaml: unknown key "summary" (allowed: id, version, displayName, description, permissions, config, main)',
       'mdk-app.yaml: "id" must be reverse-DNS, e.g. io.tether.demo',
       'mdk-app.yaml: "version" 0.3.0 does not match package.json version 0.2.0',
+      'mdk-app.yaml: "permissions" is required: the Kernel access the app uses, as a list of rules ([] for none)',
       'mdk-app.yaml: "config" must be a mapping',
     ]);
   });
@@ -142,7 +145,7 @@ describe('validateApp', () => {
   });
 
   it('rejects a version YAML reads as a number', () => {
-    const manifest = 'id: io.tether.demo\nversion: 1.0\ndisplayName: Demo\n';
+    const manifest = 'id: io.tether.demo\nversion: 1.0\ndisplayName: Demo\npermissions: []\n';
     expect(validateApp(appPackage({ 'mdk-app.yaml': manifest })).errors).toEqual([
       'mdk-app.yaml: "version" must be a semver string, e.g. 0.1.0',
     ]);

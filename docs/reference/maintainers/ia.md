@@ -132,7 +132,7 @@ missing tags during integration audits and request the JSDoc be added.
 ### `check:port-signals`
 
 Lints `docs/**/*.md` and warns when a non-anchor reference-style link definition has no adjacent `<!-- docs@tether.io: … -->` (or `<!-- mdk-monorepo: … -->`)
-HTML comment per the vocabulary in [`single-source-of-truth.md`](single-source-of-truth.md). Catches missing routing hints in mdk-prv pre-commit / CI before they reach the
+HTML comment per the vocabulary in [`single-source-of-truth.md`](single-source-of-truth.md). Catches missing routing hints in this repo's pre-commit / CI before they reach the
 downstream port-sync transforms. Soft warning, not a hard gate — adding a new slug should never block on the docs pipeline being ready.
 
 **Why it matters:** every cross-reference in the user-facing pages needs a port-time disposition (rewrite to upstream, preserve URL, drop on port,
@@ -145,13 +145,13 @@ internal-only). Without this gate, a new slug added without a comment is silentl
 > Implemented. [`backend/workers/scripts/generate-catalogue.js`](../../../backend/workers/scripts/generate-catalogue.js)
 > (run `npm run regenerate-docs` from the repo root, or `npm run generate:catalogue` — also from the repo root — for this generator alone) walks
 > `backend/workers/**/mdk-contract.json`, validates each against the vendored schema
-> with ajv, and generates the catalogue at [`backend/workers/docs/supported-hardware.md`](../../../backend/workers/docs/supported-hardware.md) plus
-> [`catalogue.json`](../../../backend/workers/docs/catalogue.json). The user-facing entrypoint is [`docs/reference/supported-hardware.md`](../supported-hardware.md). The hand-maintained tables
+> with ajv, and generates the catalogue at [`backend/workers/docs/supported-workers.md`](../../../backend/workers/docs/supported-workers.md) plus
+> [`catalogue.json`](../../../backend/workers/docs/catalogue.json). The user-facing entrypoint is [`docs/reference/supported-workers.md`](../supported-workers.md). The hand-maintained tables
 > under [`integrations/hardware/`](integrations/hardware/index.md) are thin pointers to the generated catalogue. Validation is warn-only
 > (it does not block); wiring it as a blocking CI gate is still engineering's call.
 >
 > Freshness of the generated catalogue is covered by [`npm run regenerate-docs -- --check`](single-source-of-truth.md#generation-scripts) and the
-> `docs-freshness` workflow, which **blocks** when `supported-hardware.md` or `catalogue.json` no longer matches the contracts. What remains ungated is the
+> `docs-freshness` workflow, which **blocks** when `supported-workers.md` or `catalogue.json` no longer matches the contracts. What remains ungated is the
 > drift described below, between shipping Workers and the hand-maintained tables under [`integrations/`](integrations/index.md).
 
 Drift detector for the hand-maintained catalogue tables under [`integrations/`](integrations/index.md). Would walk
@@ -178,10 +178,10 @@ stay under [`maintainers/`](./README.md) and never graduate to user-facing `docs
 > Implemented, blocking. [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js)
 > (run `npm run regenerate-docs` from the repo root, or `npm run generate:plugin-reference` from the repo root for this generator alone)
 > reads each plugin's `mdk-plugin.json` across both plugin roots and regenerates the route tables in
-> [`supported-plugins.md`](../supported-plugins.md). The
-> `docs-freshness` workflow runs the regen-and-diff check on pull requests.
+> [`supported-apps.md`](../supported-apps.md). The
+> [`docs-freshness`](../../../.github/workflows/docs-freshness.yml) workflow runs the regen-and-diff check on pull requests.
 
-Freshness gate for the generated supported-plugins page. The `docs-freshness` workflow runs the [`regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) report mode and reports a non-empty diff in [`supported-plugins.md`](../supported-plugins.md). It catches one kind of drift:
+Freshness gate for the generated supported-apps page. The `docs-freshness` workflow runs the [`regenerate-docs -- --check`](single-source-of-truth.md#checking-without-changing-anything) report mode and reports a non-empty diff in [`supported-apps.md`](../supported-apps.md). It catches one kind of drift:
 
 1. **Tables stale after a manifest change** — a route added, removed, or re-described in a plugin's `mdk-plugin.json` is not reflected
 in the generated tables.
@@ -204,9 +204,9 @@ by example (the shipping manifests) and by the loader rather than as a generated
 
 A machine-readable schema would enable:
 
-1. **Generated field-table docs** — the manifest format section in the [Gateway apps guide](../../guides/gateway/plugins.md)
+1. **Generated field-table docs**: the manifest format section in the [Gateway apps guide](../../guides/gateway/apps.md)
    could be generated from the schema the same way route tables are generated from manifests
-2. **Well-formedness validation (`check:plugin-manifest`)** — a CI gate that validates every `mdk-plugin.json` in the repo against
+2. **Well-formedness validation (`check:plugin-manifest`)**: a CI gate that validates every `mdk-plugin.json` in the repo against
    the schema, catching malformed manifests before they reach the loader at startup
 
 This is a docs-maintainer recommendation, not currently on the engineering roadmap. Until the schema exists, the manifest format
@@ -223,7 +223,7 @@ hardcoding a command list again — the mechanism (diff a CI-run `--help` output
 
 ### Combined effect
 
-Wired, each gate closes one drift path, named in its section above: contracts parse against the schema (`check:contract`), UI exports carry their JSDoc and prose (`check:agent-ready`), the overlay tracks what ships (`check:facets-fresh`), cross-references carry port hints (`check:port-signals`), the integration catalogue tracks shipping Workers (`check:integrations-fresh`), the supported-plugins page tracks each manifest (`check:plugin-reference-fresh`), every `mdk-plugin.json` is well-formed (`check:plugin-manifest`), and tutorial command lists track the source (`check:tutorial-commands-fresh`).
+Wired, each gate closes one drift path, named in its section above: contracts parse against the schema (`check:contract`), UI exports carry their JSDoc and prose (`check:agent-ready`), the overlay tracks what ships (`check:facets-fresh`), cross-references carry port hints (`check:port-signals`), the integration catalogue tracks shipping Workers (`check:integrations-fresh`), the supported-apps page tracks each manifest (`check:plugin-reference-fresh`), every `mdk-plugin.json` is well-formed (`check:plugin-manifest`), and tutorial command lists track the source (`check:tutorial-commands-fresh`).
 
 Unwired, maintainers chase that drift by hand: the IA still describes the shape, only enforcement is missing. The constraint surface stays in the schema and JSDoc validator; the docs layer stays an overlay, never a gatekeeper.
 

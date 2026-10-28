@@ -198,14 +198,14 @@ For complete mdk-client method signatures and protocol details, see the [mdk-cli
 [approval-gated-writes]: ../../concepts/control-plane.md#approval-gated-writes
 <!-- docs@tether.io: approval-gated-writes → https://github.com/tetherto/mdk/blob/main/backend/core/kernel/README.md#actionmanager -->
 
-[plugins-auth]: plugins.md#auth-and-permissions
-<!-- docs@tether.io: plugins-auth → guides/gateway/plugins#auth-and-permissions -->
+[plugins-auth]: apps.md#auth-and-permissions
+<!-- docs@tether.io: plugins-auth → guides/gateway/apps#auth-and-permissions -->
 
-[plugins]: plugins.md
-<!-- docs@tether.io: plugins → guides/gateway/plugins -->
+[plugins]: apps.md
+<!-- docs@tether.io: plugins → guides/gateway/apps -->
 
-[plugins-from-code]: plugins.md#start-apps-from-code
-<!-- docs@tether.io: plugins-from-code → guides/gateway/plugins#start-apps-from-code -->
+[plugins-from-code]: apps.md#start-apps-from-code
+<!-- docs@tether.io: plugins-from-code → guides/gateway/apps#start-apps-from-code -->
 
 [run-gateway]: run.md
 <!-- docs@tether.io: run-gateway → guides/gateway/run -->

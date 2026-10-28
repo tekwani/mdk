@@ -24,7 +24,7 @@ backend/workers/mock/
 ├── transports/
 │   ├── base.transport.js   # Contract: listen(host, port) / close() / get listening()
 │   ├── tcp.transport.js    # raw net.Server (avalon plain; whatsminer external)
-│   ├── http.transport.js   # fastify + auth (antspace, ocean, f2pool)
+│   ├── http.transport.js   # fastify + auth (antspace, f2pool)
 │   ├── modbus.transport.js # modbus-stream (abb, satec, schneider, seneca)
 │   └── mqtt.transport.js   # mqtt client (bitdeer)
 ├── miner.mock.js           # Miner category mock
@@ -37,7 +37,7 @@ backend/workers/mock/
 Device leaves stay in `backend/workers/<category>/<device>/mock/` and `require` their category mock
 by relative path — the same convention the managers already use.
 
-Whatsminer is a [manufacturer-maintained external Worker](../../../docs/reference/supported-hardware.md); there is no
+Whatsminer is a [partner-maintained external Worker](../../../docs/reference/supported-workers.md); there is no
 in-repo Whatsminer mock leaf, though the generic `tcp` transport it speaks lives here.
 
 ## Coverage
@@ -51,14 +51,14 @@ pins its transport; one whose vendors disagree (miners, containers) composes per
 | `container`            | per-leaf  | Antspace (HTTP), Bitdeer (MQTT client)                       |
 | `powermeter`           | Modbus    | ABB, Satec, Schneider                                        |
 | `sensor` (extends `powermeter`) | Modbus | Seneca                                                 |
-| `minerpool`            | HTTP      | Ocean, F2Pool                                                |
+| `minerpool`            | HTTP      | F2Pool                                                       |
 
 ## Run
 
 From the repo root, via the shared runner (comma-separated `type|device [port] [k=v]…`):
 
 ```text
-npm run mock a1346 14030, b23 5071, ocean 8061
+npm run mock a1346 14030, b23 5071, f2pool 8061
 ```
 
 bitdeer is an MQTT **client**, so it needs a broker reachable at its `--port` before it serves.

@@ -1,4 +1,4 @@
-// Unit tests for the supported-plugins generator (docs/scripts/generate-plugin-reference.js).
+// Unit tests for the supported-apps generator (docs/scripts/generate-plugin-reference.js).
 // The generator is require-safe: it only runs main() as a direct entrypoint, so importing it
 // here exercises its pure helpers without writing any files.
 import { test } from 'node:test'
@@ -10,8 +10,8 @@ const { bucketOf, collect, renderMarkdown, describe, cell, BUCKET_ORDER } =
   require('../docs/scripts/generate-plugin-reference.js')
 
 test('bucketOf: every shipped plugin is optional', () => {
-  assert.equal(bucketOf('agent', 'standalone'), 'Optional plugins')
-  assert.equal(bucketOf('demo', 'standalone'), 'Optional plugins')
+  assert.equal(bucketOf('agent', 'standalone'), 'Optional apps')
+  assert.equal(bucketOf('demo', 'standalone'), 'Optional apps')
 })
 
 test('collect: scans backend/apps and buckets the shipped plugins', () => {
@@ -25,15 +25,15 @@ test('collect: scans backend/apps and buckets the shipped plugins', () => {
 
 test('renderMarkdown: omits a routeless plugin and its would-be empty table', () => {
   const md = renderMarkdown([
-    { dir: 'has-routes', bucket: 'Optional plugins', routes: [{ method: 'GET', path: '/x', description: 'Does a thing.' }] },
-    { dir: 'no-routes', bucket: 'Optional plugins', routes: [] }
+    { dir: 'has-routes', bucket: 'Optional apps', routes: [{ method: 'GET', path: '/x', description: 'Does a thing.' }] },
+    { dir: 'no-routes', bucket: 'Optional apps', routes: [] }
   ])
   assert.ok(md.includes('#### `has-routes`'), 'routed plugin gets a table')
   assert.ok(!md.includes('no-routes'), 'routeless plugin is skipped entirely')
 })
 
 test('renderMarkdown: drops a bucket left with only routeless plugins', () => {
-  assert.equal(renderMarkdown([{ dir: 'x', bucket: 'Optional plugins', routes: [] }]), '')
+  assert.equal(renderMarkdown([{ dir: 'x', bucket: 'Optional apps', routes: [] }]), '')
 })
 
 test('describe strips only the trailing full stop; internal dots survive', () => {

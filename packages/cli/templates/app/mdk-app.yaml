@@ -2,9 +2,11 @@
 id: com.example.__PLUGIN_APP__
 version: 0.1.0
 displayName: "__PLUGIN_NAME__"
-# What the app asks the operator to approve, e.g.
-#   - resources: [workers, devices]
-#     verbs: [list, read]
-permissions: []
+# The Kernel access the app uses, as rules the operator reads at install
+# (required; [] for none). The starter summary route lists workers; a route
+# that reads or commands devices adds, e.g.
+#   - resources: [devices]
+#     verbs: [read, write]
+permissions: [{ resources: [workers], verbs: [list] }]
 # Defaults for the app's settings, overridden by its `config` in mdk.yaml.
 config: {}

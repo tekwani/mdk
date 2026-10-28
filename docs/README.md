@@ -63,7 +63,7 @@ scripts, and Gateway extensions. Your starting point depends on which you're bui
 
 > [!NOTE]
 > The React adapter and the Node.js client do not mirror each other one-to-one. Some Kernel operations — such as
-> the write-action flow — are methods on the Node.js `mdk-client`, which a Gateway plugin calls and exposes as
+> the write-action flow, are methods on the Node.js `mdk-client`, which an app calls and exposes as
 > HTTP routes; a UI reads those routes with `useQuery` from the React adapter. If you are building UI, start with the [React adapter](../ui/packages/react-adapter/README.md); if you are
 > building backend, start with [`mdk-client`](../backend/core/client/README.md) — do not expect a symmetric API between the two.
 
@@ -90,13 +90,13 @@ scripts, and Gateway extensions. Your starting point depends on which you're bui
 | Pre-built UI components | [`../ui/packages/react-devkit/README.md`](../ui/packages/react-devkit/README.md) |
 | UI session and auth options | [`guides/security/`](guides/security/index.md#step-6-wire-the-ui-session) |
 
-**Backend / Node.js developer** — building Gateway plugins, backend services, or integrating new hardware
+**Backend / Node.js developer**: building apps, backend services, or integrating new hardware
 
 | Topic | Where |
 | --- | --- |
 | Gateway HTTP API surface and how to extend it | [`guides/gateway/`](guides/gateway/index.md) |
 | Site security blueprint | [`guides/security/`](guides/security/index.md) |
-| Build a Gateway plugin | [`guides/gateway/plugins.md`](guides/gateway/plugins.md) |
+| Build and publish an app | [`guides/gateway/apps.md`](guides/gateway/apps.md) |
 | Call Kernel directly from a Node.js service or script | [`../backend/core/client/README.md`](../backend/core/client/README.md) |
 | Start Kernel and Workers in your app | [`../backend/core/mdk/README.md`](../backend/core/mdk/README.md) |
 | Core SDK and bootstrap utilities | [`../backend/core/docs/README.md`](../backend/core/docs/README.md) |

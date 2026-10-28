@@ -85,12 +85,6 @@ const WORKER_BOOTS = {
     models: { 'Z-4RTD-2': 'z-4rtd-2' },
     noModelOpt: true
   },
-  'minerpool-ocean': {
-    pkg: '@tetherto/mdk-worker-ocean',
-    factory: 'startOceanPoolWorker',
-    prefix: 'ocean',
-    pool: true
-  },
   'minerpool-f2pool': {
     pkg: '@tetherto/mdk-worker-f2pool',
     factory: 'startF2poolWorker',

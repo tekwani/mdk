@@ -9,7 +9,7 @@ docs@tether_slug: reference/packages
 ## Overview
 
 This page lists every package in the MDK monorepo. Core is the Kernel, the Gateway, and the runtimes around them. Extensions are the Workers and
-Gateway plugins that connect MDK to hardware, pools, and agents. UI is the browser toolkit, and Tools are what you develop with.
+apps that connect MDK to hardware, pools, and agents. UI is the browser toolkit, and Tools are what you develop with.
 
 Availability says how you get a package:
 
@@ -63,7 +63,6 @@ Availability says how you get a package:
 | Name | Package | Purpose | Models | Availability |
 | --- | --- | --- | --- | --- |
 | F2Pool | [`@tetherto/mdk-worker-f2pool`][mdk-worker-f2pool] | Reports F2Pool mining pool account data: hashrate, workers, balances and revenue | F2POOL-BTC | `workspace` |
-| Ocean | [`@tetherto/mdk-worker-ocean`][mdk-worker-ocean] | Reports Ocean.xyz mining pool account data: hashrate, workers, balances and revenue | OCEAN-BTC | `workspace` |
 
 ### Plugins and tooling
 
@@ -76,10 +75,10 @@ Availability says how you get a package:
 
 | Package | Purpose | Availability |
 | --- | --- | --- |
-| [`@tetherto/mdk-react-adapter`][mdk-react-adapter] | React framework adapter for @tetherto/mdk-ui-foundation. Binds Zustand vanilla stores and TanStack QueryClient to React-native hooks. No Redux | `workspace` |
-| [`@tetherto/mdk-react-devkit`][mdk-react-devkit] | MDK Devkit (React) — generic UI primitives (src/primitives) plus mining-domain components, hooks, and state bindings (src/domain) | `workspace` |
-| [`@tetherto/mdk-ui-agent`][mdk-ui-agent] | Injectable operator Co-pilot chat UI for the MDK agent gateway plugin. Streams the six-event agent contract over SSE and renders it as a docked panel or a full-page route | `workspace` |
-| [`@tetherto/mdk-ui-foundation`][mdk-ui-foundation] | Framework-agnostic headless foundation for the MDK Devkit. Currently exposes Zustand vanilla stores and a TanStack QueryClient factory. No React | `workspace` |
+| [`@tetherto/mdk-react-adapter`][mdk-react-adapter] | React framework adapter for @tetherto/mdk-ui-foundation. Binds Zustand vanilla stores and TanStack QueryClient to React-native hooks. No Redux | `publishable` |
+| [`@tetherto/mdk-react-devkit`][mdk-react-devkit] | MDK Devkit (React) — generic UI primitives (src/primitives) plus mining-domain components, hooks, and state bindings (src/domain) | `publishable` |
+| [`@tetherto/mdk-ui-agent`][mdk-ui-agent] | Injectable operator Co-pilot chat UI for the MDK agent app. Streams the six-event agent contract over SSE and renders it as a docked panel or a full-page route | `publishable` |
+| [`@tetherto/mdk-ui-foundation`][mdk-ui-foundation] | Framework-agnostic headless foundation for the MDK Devkit. Currently exposes Zustand vanilla stores and a TanStack QueryClient factory. No React | `publishable` |
 
 ## Tools
 
@@ -90,13 +89,13 @@ Availability says how you get a package:
 
 ## Next steps
 
-- Check [which models each Worker supports][supported-hardware]
+- Check [which models each Worker supports][supported-workers]
 - Learn how to [connect your own hardware][build-a-worker] with a new Worker
 
 ## Links
 
-[supported-hardware]: supported-hardware.md
-<!-- docs@tether.io: supported-hardware → reference/supported-hardware -->
+[supported-workers]: supported-workers.md
+<!-- docs@tether.io: supported-workers → reference/supported-workers -->
 
 [build-a-worker]: ../guides/workers/build-a-worker.md
 <!-- docs@tether.io: build-a-worker → guides/workers/build-a-worker -->
@@ -148,9 +147,6 @@ Availability says how you get a package:
 
 [mdk-worker-f2pool]: ../../backend/workers/minerpools/f2pool/README.md
 <!-- docs@tether.io: mdk-worker-f2pool → https://github.com/tetherto/mdk/blob/main/backend/workers/minerpools/f2pool/README.md -->
-
-[mdk-worker-ocean]: ../../backend/workers/minerpools/ocean/README.md
-<!-- docs@tether.io: mdk-worker-ocean → https://github.com/tetherto/mdk/blob/main/backend/workers/minerpools/ocean/README.md -->
 
 [mdk-app-agent]: ../../backend/apps/agent/README.md
 <!-- docs@tether.io: mdk-app-agent → https://github.com/tetherto/mdk/blob/main/backend/apps/agent/README.md -->

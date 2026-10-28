@@ -17,12 +17,14 @@ This section explains the terms you need to familiarize yourself with, using an 
 | --- | --- | --- |
 | **Kernel** (Orchestration Kernel) | The pull-only kernel that owns the device registry, routes commands, and pulls telemetry on its own cadence — it performs no aggregation itself | [`backend/core/kernel/`][kernel-package] |
 | **Gateway** | The developer-owned HTTP entry point between non-Node clients (UI) and Kernel. Required for browser and HTTP consumers; AI agents reach Kernel through the standalone MCP server instead. Not used in the in-process Antminer-rack example below | [`backend/core/gateway/`][gateway-package] |
+| **App** | A publishable package serving HTTP routes and, optionally, dashboard UI: an [`mdk-app.yaml`][app-manifest] manifest, an app route table with its controllers, and a `ui/` module. Installed into a stack with `mdk add app` and declared under `spec.apps` | [`backend/apps/demo/`][demo-app] |
+| **App route table** | The declarative `mdk-plugin.json` inside an app: its routes, their handlers, and their HTTP methods and paths, read by the app runtime to mount them and by the Gateway to know where to forward | [`backend/apps/demo/mdk-plugin.json`][demo-app-manifest] |
 | **Worker** | A device-family translator. Speaks the MDK Protocol upward to Kernel and the vendor's native API downward to one device family (one miner brand, one container type, one pool API). | [`backend/workers/`][worker-readme] |
 | **Worker Plugin** | The executable device integration: [`mdk-contract.json`][contract-schema] plus its handler files, loaded from a package directory by `WorkerRuntimeV2` | [`backend/workers/miners/avalon/plugin/index.js`][avalon-plugin] |
 | **Worker contract** | The declarative [`mdk-contract.json`][contract-schema] alone, as read, validated, published, rendered, or queried | [`backend/workers/miners/avalon/plugin/mdk-contract.json`][avalon-contract] |
 | **Driver class** | The JavaScript class a Worker exports, one per device family (for example `AvalonMiner`), not one per model. Drives every device that Worker registers. | [`backend/workers/miners/avalon/lib/avalon.miner.js`][avalon-worker] |
 | **Thing** | Deprecated: one registered device instance on the legacy [store services surface][worker-runtime-store]. Created by sending a `registerThing` command to the Worker's provisioning service, not by calling a driver-class method directly. Identified by a generated `deviceId`. A `WorkerRuntimeV2` Worker has no Things: its device list is fixed at construction. | [`backend/core/mdk/lib/services/provisioning.service.js`][provisioning-service] |
-| **MCP** (Model Context Protocol) | The protocol AI agents use to discover and call tools. `@tetherto/mdk-mcp` runs as its own standalone process, deriving tools from a plugin's routes; the Gateway hosts no MCP itself | [`backend/core/mcp/`][mcp-package] |
+| **MCP** (Model Context Protocol) | The protocol AI agents use to discover and call tools. `@tetherto/mdk-mcp` runs as its own standalone process, deriving tools from an app's routes; the Gateway hosts no MCP itself | [`backend/core/mcp/`][mcp-package] |
 | **HyperDHT** | The peer-to-peer network HRPC rides on. Every Kernel, Worker, Gateway and client starts a HyperDHT node in every deployment shape, so each process needs outbound UDP to the bootstrap nodes | [`hyperdht`][hyperdht-repo] |
 | **Bootstrap nodes** | The well-known peers a HyperDHT node contacts on start to join the network. The public set is the default; a private DHT network supplies its own bootstrap list to each component | [`backend/core/mdk/README.md`][mdk-readme] |
 | **Discovery mode** | How Kernel first learns a Worker's RPC key: in-process registration, a shared directory on one machine, or a DHT topic. The transport is the same HRPC in all three | [`backend/workers/docs/architecture.md`][worker-discovery] |
@@ -105,7 +107,7 @@ contacts its bootstrap nodes, so a same-host deployment needs that outbound reac
 - You are ready to run the example in [Run a mining site end to end][run-stack]
 - Learn more about:
   - Multi-process discovery across machines: [Worker discovery][worker-discovery]
-  - Gateway implementation details, including HTTP routing and plugin registration: [`backend/core/gateway/README.md`][gateway-package]
+  - Gateway implementation details, including HTTP routing and how apps are served: [`backend/core/gateway/README.md`][gateway-package]
   - Building your own Worker for a new device family: [the build walkthrough][build-a-worker]
   - The install and run pattern every shipped Worker package follows: [`backend/workers/docs/install-pattern.md`][worker-install]
   - Per-device contract details (telemetry units, command shapes, error codes): those live in each Worker's `mdk-contract.json`, e.g. [`backend/workers/miners/avalon/plugin/mdk-contract.json`][avalon-contract]
@@ -138,6 +140,15 @@ contacts its bootstrap nodes, so a same-host deployment needs that outbound reac
 
 [avalon-worker]: ../../backend/workers/miners/avalon/lib/avalon.miner.js
 <!-- docs@tether.io: avalon-worker → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/avalon/lib/avalon.miner.js -->
+
+[app-manifest]: ../guides/gateway/apps.md#create-an-app
+<!-- docs@tether.io: app-manifest → guides/gateway/apps#create-an-app -->
+
+[demo-app]: ../../backend/apps/demo/README.md
+<!-- docs@tether.io: demo-app → https://github.com/tetherto/mdk/blob/main/backend/apps/demo/README.md -->
+
+[demo-app-manifest]: ../../backend/apps/demo/mdk-plugin.json
+<!-- docs@tether.io: demo-app-manifest → https://github.com/tetherto/mdk/blob/main/backend/apps/demo/mdk-plugin.json -->
 
 [avalon-plugin]: ../../backend/workers/miners/avalon/plugin/index.js
 <!-- docs@tether.io: avalon-plugin → https://github.com/tetherto/mdk/blob/main/backend/workers/miners/avalon/plugin/index.js -->

@@ -180,8 +180,8 @@ When Gateway is started with `startGateway({ kernel })` using a Kernel returned 
 [write-actions]: ../gateway/write-actions.md
 <!-- docs@tether.io: write-actions → guides/gateway/write-actions -->
 
-[plugins-auth]: ../gateway/plugins.md#auth-and-permissions
-<!-- docs@tether.io: plugins-auth → guides/gateway/plugins#auth-and-permissions -->
+[plugins-auth]: ../gateway/apps.md#auth-and-permissions
+<!-- docs@tether.io: plugins-auth → guides/gateway/apps#auth-and-permissions -->
 
 [environment]: ../../reference/environment.md
 <!-- docs@tether.io: environment → reference/environment -->

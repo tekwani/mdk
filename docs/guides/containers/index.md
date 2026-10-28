@@ -14,7 +14,7 @@ operate.
 
 ## Pick your hardware
 
-The authoritative model list for every Worker is the generated [supported-hardware catalogue][catalogue-containers]. Covered so far:
+The authoritative model list for every Worker is the generated [Supported Workers catalogue][catalogue-containers]. Covered so far:
 
 - [Run a Bitdeer Worker][run-bitdeer]
 - [Run an Antspace Worker][run-antspace]
@@ -46,7 +46,7 @@ For the deployment path:
 
 ## Next steps
 
-- Browse [supported hardware][supported-hardware]
+- Browse the [Supported Workers catalogue][supported-workers]
 - New to the moving parts? Read [terminology][terminology] (Kernel, Worker, manager, thing, mock)
 - If an example does not start or a mock port is busy, use [miner troubleshooting][troubleshooting], the same HRPC and DHT checks apply
 - Drive the registered device from a dashboard: [run a mining site end to end][get-started]
@@ -62,11 +62,11 @@ For the deployment path:
 [terminology]: ../../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->
 
-[catalogue-containers]: ../../../backend/workers/docs/supported-hardware.md
-<!-- docs@tether.io: catalogue-containers → reference/supported-hardware -->
+[catalogue-containers]: ../../../backend/workers/docs/supported-workers.md
+<!-- docs@tether.io: catalogue-containers → reference/supported-workers -->
 
-[supported-hardware]: ../../reference/supported-hardware.md
-<!-- docs@tether.io: supported-hardware → reference/supported-hardware -->
+[supported-workers]: ../../reference/supported-workers.md
+<!-- docs@tether.io: supported-workers → reference/supported-workers -->
 
 [run-bitdeer]: run-bitdeer-worker.md
 <!-- docs@tether.io: run-bitdeer → guides/containers/run-bitdeer-worker -->

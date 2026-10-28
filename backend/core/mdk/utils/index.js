@@ -1,6 +1,5 @@
 'use strict'
 
-const IntervalsFacility = require('@bitfinex/bfx-facs-interval')
 const StoreFacility = require('@tetherto/hp-svc-facs-store')
 const ActionApproverFacility = require('@tetherto/svc-facs-action-approver')
 
@@ -12,9 +11,6 @@ const _startFacility = (facility) => {
 
 const createFacs = async (storeDir, ctx = {}) => {
   const facs = {}
-  facs.interval_0 = new IntervalsFacility(null, {}, ctx)
-  await _startFacility(facs.interval_0)
-
   facs.store_s1 = new StoreFacility(null, { storeDir }, ctx)
   await _startFacility(facs.store_s1)
 

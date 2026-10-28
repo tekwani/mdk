@@ -10,8 +10,8 @@ MDK is built around a three tier ownership model:
 
 - **Kernel is invariant** The Kernel provides small coordination layer every deployment runs unchanged: it routes validated commands to
   whichever Worker owns a device, and pulls telemetry back.
-- **Extensions are yours** [Worker plugins][workers-concept] wrap a device family; [Gateway plugins][gateway-concept] add
-  HTTP routes, aggregation, and auth. Both are code you write and own, isolated from the Kernel and from each other. Nothing above the Gateway is
+- **Extensions are yours** [Worker Plugins][workers-concept] wrap a device family; [apps][apps-guide] add
+  HTTP routes, aggregation, and auth. Both are code you write, own, and publish, isolated from the Kernel and from each other. Nothing above the Gateway is
   required: a deployment can dispatch commands and pull telemetry with just [`@tetherto/mdk-client`][client-concept].
 - **The UI devkit is optional** The [MDK App Toolkit][app-toolkit] is the supported path for teams that want one.
 
@@ -25,7 +25,7 @@ flowchart LR
     end
 
     subgraph gw ["Gateway"]
-        GP["Gateway plugin\n(extension point)"]
+        GP["App\n(extension point)"]
     end
 
     MCP["MCP server\n(@tetherto/mdk-mcp)"]
@@ -49,20 +49,20 @@ flowchart LR
     style wk fill:#F7931A,stroke:#1A1A1A,color:#1A1A1A
 ```
 
-One request, traced end to end: an AI agent or a dashboard reaches a Gateway plugin's capability. A dashboard calls the
-plugin's HTTP route directly; an [AI agent][ai-agents-docs] arrives instead through an MCP endpoint — a standalone
-[`@tetherto/mdk-mcp`][mcp-readme] process that derives tools from that plugin's routes (the Gateway doesn't host the MCP itself).
-Either way the plugin builds its own [`@tetherto/mdk-client`][client-concept] and dispatches a command through it.
+One request, traced end to end: an AI agent or a dashboard reaches an app's capability. A dashboard calls the
+app's HTTP route directly; an [AI agent][ai-agents-docs] arrives instead through an MCP endpoint, a standalone
+[`@tetherto/mdk-mcp`][mcp-readme] process that derives tools from that app's routes (the Gateway doesn't host the MCP itself).
+Either way, the app builds its own [`@tetherto/mdk-client`][client-concept] and dispatches a command through it.
 [Kernel][kernel-concept] resolves which Worker owns the target device, forwards the command over the Worker's own
-connection, and relays the result back through the same path: Gateway plugin, then caller. Telemetry travels the same
-round trip in reverse, on demand: the Gateway plugin's client asks Kernel for a device's telemetry, Kernel forwards that
+connection, and relays the result back through the same path: app, then caller. Telemetry travels the same
+round trip in reverse, on demand: the app's client asks Kernel for a device's telemetry, Kernel forwards that
 pull to the owning Worker and relays the answer straight back. Kernel also runs its own scheduled telemetry/health pulls
 on a fixed cadence, independent of any caller: the two are separate triggers into the same path, not one waiting on the
 other.
 
 Both extension points sit at the edges of this trip, never in the middle: a **Worker contract** teaches Kernel about
-one device family (the contract declares the capability surface; the plugin's handlers implement it), and a
-**Gateway plugin** teaches the Gateway a new route. Kernel itself never changes.
+one device family (the contract declares the capability surface; the plugin's handlers implement it), and an
+**app** teaches the Gateway a new route. Kernel itself never changes.
 
 ## The three tiers
 
@@ -112,7 +112,7 @@ callers identify peers by key instead of addressing public HTTP endpoints.
 
 Kernel's own store holds only its Worker registry, device capabilities, and the write-command log: never telemetry.
 Telemetry is Worker-owned: a Worker persists its own device history, and every telemetry read anywhere above it (Gateway
-plugin, dashboard, agent) is a live pull through that chain, not a read from a Kernel-side cache.
+app, dashboard, agent) is a live pull through that chain, not a read from a Kernel-side cache.
 
 ## The stack
 
@@ -124,8 +124,8 @@ Discover each layer's canonical docs:
 | Worker Runtime  | `@tetherto/mdk-worker` | [Worker runtime][worker-runtime]                       |
 | Kernel          | `@tetherto/mdk-kernel` | [Coordination kernel][kernel-concept]                  |
 | Client SDK      | `@tetherto/mdk-client` | [Protocol connector][client-concept]                   |
-| Gateway         | `@tetherto/mdk-gateway` | [Plugin host and HTTP surface][gateway-concept]       |
-| Gateway plugins | `@tetherto/mdk-plugins` | Bundled plugins and the manifest format               |
+| Gateway         | `@tetherto/mdk-gateway` | [HTTP surface and app router][gateway-concept]        |
+| App runtime     | `@tetherto/mdk-app-runtime` | [One process per app, and the manifest format][app-runtime] |
 | MCP server      | `@tetherto/mdk-mcp`    | [Tools for AI agents][mcp-readme]                      |
 | App Toolkit     | Frontend packages      | [The supported development path][app-toolkit]          |
 
@@ -134,7 +134,7 @@ How many of each a deployment runs is covered by [scalability][scalability].
 
 ## Next steps
 
-- Understand [the integration model][integration-model]: what a Worker plugin and a Gateway plugin each get to do
+- Understand [the integration model][integration-model]: what a Worker Plugin and an app each get to do
 - Understand [the storage model][storage-model]: where state actually lives as you scale
 - Understand the [security boundaries][security-boundaries]: what each tier does and does not authenticate, and what you must build
 - Understand [what an app is][whats-an-app] in MDK terms
@@ -188,6 +188,12 @@ How many of each a deployment runs is covered by [scalability][scalability].
 
 [integration-model]: the-integration-model.md
 <!-- docs@tether.io: integration-model → concepts/the-integration-model -->
+
+[apps-guide]: ../guides/gateway/apps.md
+<!-- docs@tether.io: apps-guide → guides/gateway/apps -->
+
+[app-runtime]: ../../backend/core/app-runtime/README.md
+<!-- docs@tether.io: app-runtime → https://github.com/tetherto/mdk/blob/main/backend/core/app-runtime/README.md -->
 
 [whats-an-app]: whats-an-app.md
 <!-- docs@tether.io: whats-an-app → concepts/whats-an-app -->

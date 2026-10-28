@@ -397,7 +397,7 @@ Who dials whom, and with which key:
 | Caller | Dials | With key | Admitted by |
 | --- | --- | --- | --- |
 | Kernel | Workers | `kernel.getClientPublicKey()` (the Kernel's DHT keypair, stable across restarts) | Worker `allowedKeys` |
-| Gateway plugins | Kernel, and Workers directly | `status.rpcClientKey` (Gateway DHT keypair, persisted) | Kernel allowlist and Worker `allowedKeys` |
+| Apps | Kernel, and Workers directly | `status.rpcClientKey` (Gateway DHT keypair, persisted) | Kernel allowlist and Worker `allowedKeys` |
 | MCP / CLI clients | Kernel (and Workers) | a persistent `callerKeyPair(dir)` passed as `kernelKeyPair` | same |
 
 The SDK wires the local cases:
@@ -567,6 +567,6 @@ mdk/
 
 - [Run the Gateway](../../../docs/guides/gateway/run.md): programmatic and standalone startup, auth configuration, and HRPC key setup
 - [Add hardware devices](../../workers/README.md): understand how Workers register devices and expose them to Kernel
-- [Add custom routes with plugins](../../../docs/guides/gateway/plugins.md): extend the Gateway with `apps`
+- [Add custom routes with apps](../../../docs/guides/gateway/apps.md): extend the Gateway with its own route handlers
 - [See the MVP site example](../../../examples/mvp-site/README.md): multi-Worker, multi-device setup in a separate-process topology
 - [Understand the the full MDK layer model](../../../docs/concepts/architecture.md)

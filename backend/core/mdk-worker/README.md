@@ -75,10 +75,10 @@ troubleshooting section for the constructor-level error (`ERR_DEVICES_REQUIRED`)
 Every in-repo device Worker (Avalon, Antspace, Bitdeer, ABB, SATEC, Schneider, Seneca) wires this surface through
 [`createWorkerInfra`](../mdk/lib/worker-infra.js), which builds the `store`, `services`, and provisioning-first
 `devices` list a `WorkerRuntime` needs, then hands the constructed `services` object straight to
-`new WorkerRuntime(plugin, { ..., services, allowEmptyDevices: true })`. The Ocean and F2Pool pool Workers inject only
+`new WorkerRuntime(plugin, { ..., services, allowEmptyDevices: true })`. The F2Pool pool Worker injects only
 a `pool` service. Reading [`miners/avalon/plugin/boot.js`](../../workers/miners/avalon/plugin/boot.js) alongside this
 section is the fastest way to see the whole surface exercised end to end. Whatsminer and Antminer are
-manufacturer-maintained external Workers, listed in
+partner-maintained external Workers, listed in
 [`backend/workers/external-workers.json`](../../workers/external-workers.json), hosted on `WorkerRuntimeV2` with no
 `services`.
 

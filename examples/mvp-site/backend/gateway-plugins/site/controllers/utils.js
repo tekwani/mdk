@@ -128,6 +128,35 @@ const loadSite = async (mdkClient, opts = {}) => {
   return { workers, byFamily, pools }
 }
 
+// Pool stats come two ways with the same row shape: the WorkerRuntime pool
+// workers (EMCD, SpiderPool, Foundry) serve them as ext_data keys 'stats' /
+// 'stats-history'; contract-only pool workers (ocean-mdk-worker) declare
+// `stats` / `stats_history` telemetry channels instead. Try ext_data first and
+// fall back to the channel when the worker doesn't serve it.
+const pullExtData = (mdkClient, deviceId, query) => mdkClient.pullTelemetry(deviceId, { type: 'ext_data', ...query })
+  .then((tel) => (tel && tel.extData) || null)
+  .catch(() => null)
+
+const pullChannel = (mdkClient, deviceId, query) => mdkClient.pullTelemetry(deviceId, query)
+  .then((tel) => (tel && !tel.error && tel.value) || null)
+  .catch(() => null)
+
+// -> latest per-account stats rows
+const pullPoolStats = async (mdkClient, deviceId) => {
+  const extData = await pullExtData(mdkClient, deviceId, { key: 'stats' })
+  if (extData) return extData.stats || []
+  const value = await pullChannel(mdkClient, deviceId, { type: 'stats' })
+  return (value && value.stats) || []
+}
+
+// -> [{ ts, stats: [...] }] in [start, end]
+const pullPoolStatsHistory = async (mdkClient, deviceId, { start, end }) => {
+  const extData = await pullExtData(mdkClient, deviceId, { key: 'stats-history', start, end })
+  if (extData) return Array.isArray(extData) ? extData : []
+  const value = await pullChannel(mdkClient, deviceId, { type: 'stats_history', start, end })
+  return Array.isArray(value) ? value : []
+}
+
 const snapStats = (thg) => {
   return (thg && thg.last && thg.last.snap && thg.last.snap.stats) || {}
 }
@@ -136,4 +165,4 @@ const snapConfig = (thg) => {
   return (thg && thg.last && thg.last.snap && thg.last.snap.config) || {}
 }
 
-module.exports = { loadSite, snapStats, snapConfig, WORKER_FAMILY, resolveFamily }
+module.exports = { loadSite, snapStats, snapConfig, pullPoolStats, pullPoolStatsHistory, WORKER_FAMILY, resolveFamily }

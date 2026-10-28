@@ -13,7 +13,7 @@ MDK drives each miner brand through its own Worker. These guides are task-focuse
 
 ## Pick your hardware
 
-The authoritative model list for every Worker is the generated [supported-hardware catalogue][catalogue-miners]. For example, you may:
+The authoritative model list for every Worker is the generated [Supported Workers catalogue][catalogue-miners]. For example, you may:
 
 - [Run an Antminer Worker][run-antminer]
 - [Run a Whatsminer Worker][run-whatsminer]
@@ -47,7 +47,7 @@ For the deployment path:
 
 ## Next steps
 
-- Browse [supported hardware][supported-hardware]
+- Browse the [Supported Workers catalogue][supported-workers]
 - New to the moving parts? Read [terminology][terminology] (Kernel, Worker, manager, thing, mock)
 - If an example does not start or a mock port is busy, use [troubleshooting][troubleshooting]
 - Drive the registered device from a dashboard: [run a mining site end to end][get-started]
@@ -63,11 +63,11 @@ For the deployment path:
 [terminology]: ../../reference/glossary.md
 <!-- docs@tether.io: terminology → reference/glossary -->
 
-[catalogue-miners]: ../../../backend/workers/docs/supported-hardware.md
-<!-- docs@tether.io: catalogue-miners → reference/supported-hardware -->
+[catalogue-miners]: ../../../backend/workers/docs/supported-workers.md
+<!-- docs@tether.io: catalogue-miners → reference/supported-workers -->
 
-[supported-hardware]: ../../reference/supported-hardware.md
-<!-- docs@tether.io: supported-hardware → reference/supported-hardware -->
+[supported-workers]: ../../reference/supported-workers.md
+<!-- docs@tether.io: supported-workers → reference/supported-workers -->
 
 [run-antminer]: run-antminer-worker.md
 <!-- docs@tether.io: run-antminer → guides/miners/run-antminer-worker -->

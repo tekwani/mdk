@@ -34,16 +34,16 @@ if (missingGitDeps.length) {
 const { startWhatsminerWorker } = require('./whatsminer-adapter')
 const { startAntminerWorker } = require('./antminer-adapter')
 const { startSealminerWorker } = require('./sealminer-adapter')
+const { startOceanWorker } = require('./ocean-adapter')
 const { startPoolPluginWorker } = require('./pool-adapter')
 const emcd = require('emcd-mdk-worker')
 const spiderpool = require('spiderpool-mdk-worker')
 const foundry = require('foundry-mdk-worker')
-const { startOceanPoolWorker } = require('@tetherto/mdk-worker-ocean')
 const { startSatecWorker } = require('@tetherto/mdk-worker-satec')
 const wmMock = require('whatsminer-mdk-worker/mock/api-v3-server')
 const amMock = require('antminer-mdk-worker/mock/cgi-server')
 const smMock = require('sealminer-mdk-worker/mock/server')
-const oceanMock = require('@tetherto/mdk-worker-ocean/mock/server')
+const oceanMock = require('ocean-mdk-worker/mock/server')
 const satecMock = require('@tetherto/mdk-worker-satec/mock/server')
 const emcdMock = require('emcd-mdk-worker/mock/server')
 const emcdMockKeys = require('emcd-mdk-worker/mock/keys')
@@ -181,12 +181,16 @@ const startSatecMocks = (powermeters, minerCount) => {
   })))
 }
 
-const startOceanMock = (minerCount) => {
-  return mockHandles([oceanMock.createServer({
-    port: deploy.ocean.mock.port,
-    host: HOST,
-    workerCount: minerCount
-  })])
+// ocean-mdk-worker's mock serves any account name with fixed fixtures (no
+// fleet sizing), listens without a ready promise, and its exit() calls
+// process.exit — wait for 'listening' and close through stop() instead.
+const startOceanMock = () => {
+  const server = oceanMock.createServer({ port: deploy.ocean.mock.port, host: HOST })
+  const ready = new Promise((resolve, reject) => {
+    server.app.server.once('listening', resolve)
+    server.app.server.once('error', reject)
+  })
+  return mockHandles([{ ready, exit: () => server.stop() }])
 }
 
 // The EMCD, SpiderPool and Foundry mocks serve fixed fixture accounts (no fleet
@@ -311,7 +315,7 @@ const bootSealminerWorker = async ({ kernel, kernelTopic, root, mode = DISCOVERY
   return handle
 }
 
-// The Ocean worker's real fetch/save cron is 1m/5m — too slow for a demo, so
+// The pool workers' real fetch/save cron is 1m/5m — too slow for a demo, so
 // drive the same methods on a fast non-overlapping cadence. stop() clears the
 // interval AND awaits a tick already in flight — clearInterval alone only
 // stops *future* ticks, so a tick mid-fetchStats would otherwise keep running
@@ -346,18 +350,24 @@ const drivePool = (pool, tickMs) => {
 }
 
 // The pool is one logical device (deviceId == workerId), not a LAN device.
+// ocean-mdk-worker polls the Ocean API on its own one-minute cadence, so it
+// takes no demo pacer. DATUM credentials, when a gateway is configured, come
+// from the environment like the other pools' credentials.
 const bootOceanWorker = async ({ kernel, kernelTopic, root, mode = DISCOVERY }) => {
-  const handle = await startOceanPoolWorker({
+  const env = {}
+  if (process.env.DATUM_USER) env.DATUM_USER = process.env.DATUM_USER
+  if (process.env.DATUM_PASSWORD) env.DATUM_PASSWORD = process.env.DATUM_PASSWORD
+  const handle = await startOceanWorker({
     allowedKeys: await workerTrust({ kernel, root }),
     workerId: OCEAN_WORKER_ID,
-    rack: deploy.ocean.worker.rack,
     storeDir: workerStoreDir(root, OCEAN_WORKER_ID),
-    conf: { ocean: deploy.ocean.pool },
+    pool: deploy.ocean.pool,
+    env,
     kernelTopic: (!kernel && mode !== 'local') ? kernelTopic : null
   })
 
   await registerWorker(handle, OCEAN_WORKER_ID, { kernel, root, mode })
-  return withPoolDriver(handle, deploy.ocean.worker.tickMs)
+  return handle
 }
 
 // registerWorker's SIGINT/kernel._cleanup paths both call handle.stop() by a

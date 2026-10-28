@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk-kernel",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "MDK Kernel - Orchestration Kernel",
   "main": "index.js",
   "keywords": [
@@ -22,7 +22,6 @@
     "test:coverage": "NODE_ENV=test brittle --coverage 'tests/**/*.test.js'"
   },
   "dependencies": {
-    "@bitfinex/bfx-facs-interval": "^1.0.0",
     "@bitfinex/lib-js-util-base": "^2.1.0",
     "@hyperswarm/rpc": "^3.5.0",
     "@tetherto/hp-svc-facs-store": "^1.0.0",

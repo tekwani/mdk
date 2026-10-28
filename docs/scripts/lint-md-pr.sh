@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Markdownlint on PR-changed docs (same ruleset as `npm run lint:md`, scoped to
 # the diff). Mirrors the mdk-docs `lint-markdown` CI job, but resolves the base
-# from the PR event like .github/workflows/link-check.yml does — mdk-prv PRs
+# from the PR event like .github/workflows/link-check.yml does — PRs in this repo
 # target main/develop/staging/release/**, so there is no single fixed base ref.
 #
 # Locally: VERIFY_BASE_REF=origin/main bash docs/scripts/lint-md-pr.sh

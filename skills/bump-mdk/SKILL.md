@@ -13,6 +13,27 @@ cascades from the change, so the lockfile-sync gate stays green.
 Target version: **$ARGUMENTS** (e.g. `0.4.0`, optionally a scope). If empty, ask
 what to bump to and confirm scope.
 
+## Fast path: the release scripts
+
+The whole release line moves to one fixed version, with the root `package.json` as the source of
+truth. Two dependency-free scripts in `scripts/release/` do what the rest of this file describes by
+hand:
+
+```bash
+node scripts/release/bump.mjs <version> [--dry-run] [--skip-registry] [--offline]
+node scripts/release/check.mjs [<version>] [--offline]
+```
+
+`bump.mjs` sets every `version`, rewrites every internal `@tetherto/mdk-*` `^X` pin in all four
+dependency fields (`devDependencies` included), moves the release-line `mdk-app.yaml` files, the
+README release links and the link-check skip list, regenerates every lockfile and the UI registry,
+then runs `check.mjs`. `check.mjs` is the version, pin, app, private-flag and lock-drift checks in
+one command; it exits 1 on any problem. Neither command commits, tags or publishes.
+
+Use the manual procedure below when the scripts cannot run, or to understand what they did. A
+package that must stay off the line (the vendored `mdk-crypto-lib`) is listed, with a reason, in
+`OFF_LINE` in `scripts/release/lib.mjs`. The npm publish plan is still a separate dry run.
+
 ## The gate this satisfies
 
 CI runs, **per package**, from that package's directory:

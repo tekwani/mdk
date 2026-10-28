@@ -10,7 +10,7 @@ Core infrastructure packages for MDK. These packages form the coordination layer
 | [`mdk/`](./mdk/README.md) | `@tetherto/mdk-core` | Bootstrap utilities: `getKernel()`, `startGateway()`, `waitForDiscovery()` |
 | [`mdk-worker/`](./mdk-worker/lib/worker-runtime.js) | `@tetherto/mdk-worker` | Worker Runtime: hosts a Worker Plugin's devices behind one HRPC channel to Kernel |
 | [`gateway/`](./gateway/README.md) | `@tetherto/mdk-gateway` | HTTP server — fleet aggregation via plugins |
-| [`mcp/`](./mcp/README.md) | `@tetherto/mdk-mcp` | Standalone MCP server — exposes Gateway plugin routes and native tools to AI agents |
+| [`mcp/`](./mcp/README.md) | `@tetherto/mdk-mcp` | Standalone MCP server that exposes app routes and native tools to AI agents |
 | [`client/`](./client/README.md) | `@tetherto/mdk-client` | Client — connects Gateway to Kernel over HRPC |
 | `examples/` | _(runnable demos)_ | End-to-end examples — single Worker, full site, DHT multi-process |
 
@@ -27,14 +27,14 @@ Core infrastructure packages for MDK. These packages form the coordination layer
   └── @tetherto/mdk-worker    (module-context, to isolate an app's own require()s)
 
 @tetherto/mdk-mcp              (standalone MCP server — a separate process, not a Gateway dependency)
-  └── @tetherto/mdk-gateway   (workers/lib/plugin-loader + plugin-gateway, to load a Gateway plugin's routes as tools)
+  └── @tetherto/mdk-gateway   (workers/lib/plugin-loader + plugin-gateway, to load an app's routes as tools)
   └── @tetherto/mdk-worker    (module-context, to isolate a plugin's own require()s)
 
 @tetherto/mdk-worker          (Worker Runtime, hosts a plugin's devices behind one HRPC channel)
 ```
 
 The Gateway itself has no MCP capability or dependency of its own — `@tetherto/mdk-mcp` depends on it, not the other way
-around, so a Gateway plugin's routes can be read and converted into tools by the standalone MCP process (`mdk run mcp`)
+around, so an app's routes can be read and converted into tools by the standalone MCP process (`mdk run mcp`)
 without the Gateway knowing MCP exists.
 
 Workers are a separate dependency tree ([`backend/workers/`](../workers/README.md)). They import `@tetherto/mdk-worker` for the runtime and do not import

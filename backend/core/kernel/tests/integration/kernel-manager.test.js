@@ -27,7 +27,6 @@ test('kernel-manager - init creates facilities and modules', async (t) => {
 
   t.ok(kernel._initialized, 'marked initialized')
   t.ok(kernel.store_s0, 'store facility created')
-  t.ok(kernel.interval_0, 'interval facility created')
   t.ok(kernel.stores, 'hyperbee stores created')
   t.ok(kernel.registry, 'registry created')
   t.ok(kernel.dispatcher, 'dispatcher created')

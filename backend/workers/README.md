@@ -19,7 +19,7 @@ Workers are organized by categories, for example:
 |------------------------------------|----------------------------------------------------|
 | [`miners/`][miners-readme]         | Bitcoin ASIC miners — Avalon                       |
 | [`containers/`][containers-readme] | Mining container orchestration — Antspace, Bitdeer |
-| [`minerpools/`][minerpools-readme] | Pool API integrations — Ocean, F2Pool              |
+| [`minerpools/`][minerpools-readme] | Pool API integrations — F2Pool                     |
 | [`power-meter/`][power-meter-readme] | Power metering — ABB, SATEC, Schneider           |
 | [`temperature/`][temperature-readme] | Temperature/humidity sensors — Seneca            |
 
@@ -98,7 +98,7 @@ field — *"Outlet temperature > 85C requires intervention"*, not *"Outlet tempe
 
 Kernel fetches this contract once via `capability.request` and caches it, and validates commands against it. A plugin can query the same
 capabilities to derive available operations dynamically. (Agent MCP tools are not derived from the contract — they come from a plugin's
-`mcp-plugin.json` or the Gateway plugin's `mdk-plugin.json`.)
+`mcp-plugin.json` or an app's `mdk-plugin.json`.)
 
 ## Start a Worker
 
@@ -163,11 +163,11 @@ cd backend/workers/miners/avalon && npm test
 
 Boot one or more device mocks locally — no hardware — with the Workers-level runner. Entries are
 **comma-delimited**; the first token of each entry is the device **type** (case-insensitive) — or,
-for a type-less device such as `ocean`/`f2pool`, its name. Flags are **dash-free** so npm forwards
+for a type-less device such as `f2pool`, its name. Flags are **dash-free** so npm forwards
 them with no `--`: a bare number is the port, and `key=value` sets any other flag:
 
 ```bash
-npm run mock a1346, ocean
+npm run mock a1346, f2pool
 npm run mock b23 4009 host=127.0.0.1 mockControlPort=5009, pm180 4008
 ```
 

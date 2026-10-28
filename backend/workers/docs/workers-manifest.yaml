@@ -8,7 +8,7 @@
 # Coverage grows with docs coverage. Phase 1 shipped antminer; Phase 2 adds
 # whatsminer and avalon (USAGE + per-model examples + the entries below).
 # Phase 3+ adds containers, pools, etc. Antminer and whatsminer have since moved
-# out of this repo to the manufacturer-maintained antminer-mdk-worker and
+# out of this repo to the partner-maintained antminer-mdk-worker and
 # whatsminer-mdk-worker contract plugins (listed in ../external-workers.json),
 # so they have no entry here.
 #

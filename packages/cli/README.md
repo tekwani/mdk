@@ -405,6 +405,7 @@ npm has fetched it. A worker without a bundled mock is added without `mock: true
 route table (`plugin/mdk-plugin.json`, else `mdk-plugin.json` at the package root), by the same rules the app
 runtime and the Gateway apply at boot: a reverse-DNS `id`, a semver `version`, and handlers that resolve inside
 the plugin directory, paths that start with `/` and appear once per method, and handlers (and `main`) that compile.
+`permissions` must be there (`[]` when the app makes no Kernel call); the `mdk-app-rbac` skill derives it from the code.
 Unknown `mdk-app.yaml` keys are reported, so a typo does not pass silently. `mdk validate worker` checks `package.json`
 and the `mdk-contract.json` Worker Plugin contract: at least one telemetry entry or command, command `params` as lists,
 and handlers resolved on disk and compiling. Nothing is run, so a module that throws when loaded only shows when the

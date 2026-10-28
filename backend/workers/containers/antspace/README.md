@@ -11,9 +11,18 @@ MDK Worker for Antspace (Bitmain) mining container systems. Supports the HK3 and
 
 ## Install
 
+> [!IMPORTANT]
+> `npm install @tetherto/mdk-worker-antspace` returns `E404`. The device Workers are not published to npm yet; they are
+> workspace packages in the MDK monorepo. Clone it and install from the repository root instead.
+
 ```bash
-npm install @tetherto/mdk-worker-antspace
+git clone https://github.com/tetherto/mdk.git
+cd mdk && npm install
 ```
+
+npm workspaces links `@tetherto/mdk-worker-antspace` into `node_modules`, so the `require` in the usage example
+below resolves with no further step. See [the Worker install pattern](../../docs/install-pattern.md) for
+what every Worker package ships and how to run one.
 
 ## Usage
 

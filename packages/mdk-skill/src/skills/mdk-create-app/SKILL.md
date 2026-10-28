@@ -71,7 +71,10 @@ config:                            # 5. Operational defaults (overridable in mdk
 ### Edge Case 2: RBAC Permissions & Device Hierarchy
 * **Not enforced yet**: The Kernel does not enforce `permissions` today. They are declared for operator review, and the app
   runtime's Kernel key is admitted with full access. Declare least privilege anyway, so review is meaningful.
-* **Target Resources**: Declare apps **only on `resources: [devices]`**. Never set `resources: [workers]`, `[plugins]`, `[*]`, or `[kernel]`.
+* **Target resources**: only `devices`, `workers` and `actions`, each with its own verbs
+  ([`kernel-access.md`](../mdk-app-rbac/references/kernel-access.md)); derive them from the plugin code with the
+  [`mdk-app-rbac`](../mdk-app-rbac/SKILL.md) skill. The scaffold's summary route uses `resources: [workers]`, `verbs: [list]`.
+  Never `[*]`, `[plugins]` or `[kernel]`.
 * **Verbs**:
   * Default: `verbs: [read]` (least privilege; for monitoring, telemetry, and metrics dashboards).
   * Control / Tuning apps (reboots, parameter tuning, commands): `verbs: [read, write]`.
@@ -221,10 +224,13 @@ export default {
 ### Step 3: Self-Audit Checklist
 
 Before completing the task, the agent must verify:
-* [ ] **Manifest Keys**: `mdk-app.yaml` contains ONLY `id`, `version`, `displayName`, `permissions`, `config`, and optionally `description`.
+* [ ] **Manifest Keys**: `mdk-app.yaml` contains ONLY `id`, `version`, `displayName`, `permissions` (required, `[]` for none),
+  `config`, and optionally `description`.
 * [ ] **Version Parity**: `package.json` version equals `mdk-app.yaml` version.
-* [ ] **RBAC Resources**: `permissions[].resources` contains strictly `[devices]`.
-* [ ] **RBAC Verbs**: `permissions[].verbs` defaults to `[read]` (or `[read, write]`), containing only valid actions.
+* [ ] **RBAC Resources**: `permissions[].resources` names Kernel resources only (`devices`, `workers`, `actions`), each verb one its
+  resource takes ([`kernel-access.md`](../mdk-app-rbac/references/kernel-access.md)).
+* [ ] **RBAC matches the code**: `node <skills-dir>/mdk-app-rbac/scripts/derive-permissions.mjs <app> --check --strict` exits 0.
+* [ ] **RBAC Verbs**: device rules default to `[read]` (or `[read, write]` for controls), containing only valid actions.
 * [ ] **Device Hierarchy / Scope**: `permissions[].resourceNames` defaults to `["*"]` (allow all) or follows `family/brand/worker/device` (using `powermeter` for power meters).
 * [ ] **Route Namespacing**: No route in `plugin/mdk-plugin.json` starts with `/apps/<name>/`; the Gateway adds that prefix.
 * [ ] **Validation**: `mdk validate app <name>` passes (the app's name in `mdk.yaml`).

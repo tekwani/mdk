@@ -65,6 +65,7 @@ parts (router, sidebar, line charts, domain panels) this single-page, single-Wor
   Running `npm run setup` from the [Starter site example](../../examples/mvp-site/README.md) (`examples/mvp-site`) is also supported, but it is
   broader: it installs these backend and UI dependencies plus the Starter site example and UI dependencies and builds the UI packages.
 - Commands below assume you create a new `examples/minimal-dashboard/` directory alongside [`examples/mvp-site/`](../../examples/mvp-site/README.md)
+- [Outbound UDP to the HyperDHT bootstrap nodes][network-requirements]
 
 <Steps>
 
@@ -309,7 +310,7 @@ if (require.main === module) main().catch((err) => { console.error(err); process
 > [!WARNING]
 > This route accepts any caller, because the Gateway applies no authentication of its own and this controller adds none. Keep the Gateway off
 > untrusted networks while you work. A production deployment needs TLS termination, network policy, and
-> [authentication and authorization inside each controller](../guides/gateway/plugins.md#auth-and-permissions); write routes additionally need input
+> [authentication and authorization inside each controller](../guides/gateway/apps.md#auth-and-permissions); write routes additionally need input
 > validation, rate limits, and auditing.
 
 > [!IMPORTANT]
@@ -678,8 +679,11 @@ Open **`http://localhost:3041/`** (the Vite port), not `:3000`. Step 5's proxy f
 [workers-discovery]: ../../backend/workers/README.md
 <!-- docs@tether.io: workers-discovery → reference/worker -->
 
-[gateway-plugins]: ../guides/gateway/plugins.md
-<!-- docs@tether.io: gateway-plugins → guides/gateway/plugins -->
+[gateway-plugins]: ../guides/gateway/apps.md
+<!-- docs@tether.io: gateway-plugins → guides/gateway/apps -->
 
 [react-adapter-auth]: ../../ui/packages/react-adapter/README.md#authentication
 <!-- docs@tether.io: react-adapter-auth → https://github.com/tetherto/mdk/blob/main/ui/packages/react-adapter/README.md#authentication -->
+
+[network-requirements]: ../reference/environment.md#requirements
+<!-- docs@tether.io: network-requirements → reference/environment#requirements -->

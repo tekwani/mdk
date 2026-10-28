@@ -27,7 +27,7 @@ Everything above it is a view:
   `DISPATCHED` → `EXECUTING` → `SUCCESS`/`FAILED`/`TIMEOUT`) is written to a write-ahead log (WAL) before it takes effect,
   so a crash mid-command recovers cleanly on restart. This WAL guarantee is scoped to that one component: the
   registry and capability stores next to it are plain Hyperbee, not WAL-backed.
-- Every telemetry read anywhere above Kernel (a Gateway plugin, a dashboard, an agent) is a live pull through the
+- Every telemetry read anywhere above Kernel (an app, a dashboard, an agent) is a live pull through the
   chain back to the Worker, never a read from a Kernel-side cache. Kernel caches nothing on your behalf.
 
 ## Why this model?
@@ -49,25 +49,24 @@ The settings column names runtime defaults; the last column identifies what an o
 | Kernel `kernel-registry`, `ork-capabilities` | Worker identities, device to contract mappings | Number of Workers and devices | Rewritten only when a device list changes; `terminate()` deletes the entry | None | Nothing to tune |
 | Kernel `kernel-command-wal` | Every command's lifecycle and terminal result | Command volume | TTL pruning removes terminal keys from the current view on recovery and at most hourly while new commands arrive; it does not establish a disk bound | Manager configuration `kernel.commandResultTtlMs`, 24 h; not forwarded by the factories | Measure physical disk growth separately from the number of readable results |
 | Worker time logs, legacy surface (`thing-5m-<deviceId>`, `stat-<tf>`, `thing-alerts`, `thing-history-log`) | One snapshot per device per interval, per-timeframe stats, alerts, provisioning history | Devices multiplied by snapshot rate | Rotation requires an explicit length threshold; retention cleanup unlinks older segments | `logRotateMaxLength` unset (rotation off); `logKeepCount`, 3; `storeSnapItvMs`, 5 min | Explicitly configure rotation through the [Worker boot options][worker-retention] and measure retained disk usage |
-| Worker storage, `WorkerRuntimeV2` | Whatever the plugin persists | Plugin-defined | Plugin-defined | Plugin-defined | Read the Worker's own README |
+| Worker storage, `WorkerRuntimeV2` | Whatever the Worker Plugin persists | Plugin-defined | Plugin-defined | Plugin-defined | Read the Worker's own README |
 | Worker seeds (`storeDir`) | The DHT and RPC seeds that fix the Worker's identity | Constant | Constant | None | Back up with the same care as a private key |
 | Gateway store (`<root>/http`) | Identity seeds | Constant | Constant; response caches are in memory | None | Nothing to tune |
-| App runtime `storeDir/data/` | Whatever the app persists | App-defined | App-defined | App-defined | Read the app's README |
+| App runtime store (`storeDir`) | The app's RPC and Kernel seeds under `identity/`, and whatever its controllers write to `data/` | One directory per app, plus app-defined data | App-defined | `createAppRuntime({ storeDir })`; `data/` reaches controllers as `config.dataDir` | Without a `storeDir` both keys are random per start and `config.dataDir` is `null` |
 
-The legacy rows describe the thing and adapter surface (`createWorkerInfra`), which every in-repo Worker still uses and which 0.12
-deprecates; a `WorkerRuntimeV2` Worker, such as the external Antminer Worker and every new Worker, owns its own storage and its own
-retention. The [capacity template][capacity-template] is where measured growth per store goes.
+The legacy rows describe the thing and adapter surface (`createWorkerInfra`), which every in-repo Worker uses and which is deprecated;
+a `WorkerRuntimeV2` Worker, such as the external Antminer Worker and every new Worker, owns its own storage and its own retention. The [capacity template][capacity-template] is where measured growth per store goes.
 
 ## Can you swap the backend?
 
 Not today. Kernel's stores are Hyperbee via `@tetherto/hp-svc-facs-store` with no alternate-backend interface: a
-different storage engine is not a supported extension point the way a Worker plugin or Gateway plugin is.
+different storage engine is not a supported extension point the way a Worker Plugin or an app is.
 
 ## Getting data out
 
 There is no built-in export or streaming-to-a-warehouse path today. Anything you need outside of a live pull
-through a Gateway plugin (a scheduled export, a mirror into another system) is code you write yourself against
-`@tetherto/mdk-client`, the same way a plugin controller would.
+through an app (a scheduled export, a mirror into another system) is code you write yourself against
+`@tetherto/mdk-client`, the same way an app controller would.
 
 ## Failure
 
@@ -82,7 +81,7 @@ with no cross-site consistency to reason about.
 
 ## Next steps
 
-- Understand [the integration model][integration-model]: what a Worker plugin decides to persist, and how
+- Understand [the integration model][integration-model]: what a Worker Plugin decides to persist, and how
 - Understand [architecture][architecture]: the round trip a read or write actually takes
 - Understand [scalability][scalability]: what changes about storage as a fleet grows
 

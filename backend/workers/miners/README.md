@@ -11,7 +11,7 @@ plumbing works.
 |-----------|---------|--------|
 | [`avalon/`](./avalon/README.md) | `@tetherto/mdk-worker-avalon` | A1346 and variants |
 
-Antminer and Whatsminer are manufacturer-maintained, not shipped here — see [Run an Antminer Worker][run-antminer-worker]
+Antminer and Whatsminer are partner-maintained, not shipped here — see [Run an Antminer Worker][run-antminer-worker]
 and [Run a Whatsminer Worker][run-whatsminer-worker] for how they're hosted.
 
 ## Package shape

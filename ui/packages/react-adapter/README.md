@@ -4,6 +4,15 @@ React framework adapter for [`@tetherto/mdk-ui-foundation`](../ui-foundation/REA
 the Zustand vanilla stores and the TanStack `QueryClient` from the
 headless core into React-native hooks.
 
+## Install
+
+```bash
+npm install @tetherto/mdk-react-adapter
+```
+
+> [!NOTE]
+> `react` and `react-dom` 19 are peer dependencies.
+
 ## Surface
 
 - `<MdkProvider apiBaseUrl={...}>` — wraps `QueryClientProvider` from
@@ -37,16 +46,16 @@ the seam `useMdkAuth()` reads back. Three are available:
 > [!IMPORTANT]
 > The frontend seam is complete and tested, but `gatewayRedirectAuth()`'s `refresh()` calls `POST /auth/token`,
 > which MDK does not serve, `/auth/userinfo` included.
-> Add an [app](../../../docs/guides/gateway/plugins.md) serving `/auth/token` (mounted at `/`), or use `noAuth()` /
+> Add an [app](../../../docs/guides/gateway/apps.md) serving `/auth/token` (mounted at `/`), or use `noAuth()` /
 > `bearerTokenAuth()` until you do.
 
 Hiding a write control in the UI is not authorization: the Gateway still denies a request the token is not allowed to
-make. Gate controls for UX, but enforce identity in the [Gateway controller](../../../docs/guides/gateway/plugins.md#auth-and-permissions).
+make. Gate controls for UX, but enforce identity in the [Gateway controller](../../../docs/guides/gateway/apps.md#auth-and-permissions).
 
 ## Reading your own data
 
 The adapter ships no data hooks for specific endpoints. A page reads the routes
-your [Gateway plugin](../../../docs/guides/gateway/plugins.md) serves with
+your [app](../../../docs/guides/gateway/apps.md) serves with
 `useQuery`, shapes the response in `select`, and passes the result to a devkit
 component as props:
 

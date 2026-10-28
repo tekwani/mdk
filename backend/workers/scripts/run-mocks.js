@@ -6,13 +6,13 @@
 // (backend/workers/<category>/<device>/mock/server.js) at once, each in its own
 // process. Entries are COMMA-DELIMITED; the first token of an entry is the device
 // TYPE (case-insensitive, e.g. a1346 / M4M20) — or, for a type-less device,
-// its name (e.g. ocean, f2pool). Any further tokens set that mock's flags WITHOUT
+// its name (e.g. f2pool). Any further tokens set that mock's flags WITHOUT
 // dashes, so npm forwards them as-is (no `--` needed):
 //   - a bare number is the port      (14028          ->  --port 14028)
 //   - key=value sets any flag        (host=0.0.0.0   ->  --host 0.0.0.0)
 //
 // Usage (from the repo root):
-//   npm run mock a1346, ocean
+//   npm run mock a1346, f2pool
 //   npm run mock M4M20 4009 host=0.0.0.0 mockControlPort=5009, M1M20 4008
 //
 // Run with no arguments to list every device and its types. For raw mock CLI

@@ -84,7 +84,7 @@ the Gateway, an HTTP client that reads too slowly gets a truncated response. On 
 | `version` | Required | Semver |
 | `displayName` | Required | Human name |
 | `description` | Optional | One-line summary |
-| `permissions` | Optional | Rules `{ resources, verbs, resourceNames? }`, declared for operator review. The Kernel does not enforce them yet: the runtime's Kernel key is admitted with full access. |
+| `permissions` | Required (`[]` for none) | Rules `{ resources, verbs, resourceNames? }`, declared for operator review. The Kernel does not enforce them yet: the runtime's Kernel key is admitted with full access. |
 | `config` | Optional | Default config handed to the controllers |
 | `main` | Optional | The app's background logic, `<file>[#export]` beside the route table. The export is called as `main(config, context)` and awaited before the runtime first serves, in the same module registry as the controllers, so state it sets up is theirs too. A rejection fails `start()` |
 

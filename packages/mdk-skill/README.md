@@ -24,6 +24,7 @@ src/
 │   ├── mdk-worker-plugin/  # Worker plugin workflow + scripts/assets
 │   ├── mdk-gateway-plugin/ # App route table + controllers workflow (scaffold via `mdk create app`)
 │   ├── mdk-create-app/     # MDK App workflow (package layout, manifest, plugin, UI; `mdk create app`)
+│   ├── mdk-app-rbac/       # Derive an app's permissions from its code + scripts/derive-permissions.mjs
 │   ├── mdk-ui-component/   # Dashboard page workflow + ui-registry (generated)
 │   ├── mdk-deployment/     # mdk.yaml / mdk run workflow
 │   ├── mdk-site-sizing/    # Size a site from a description + measured envelope
@@ -40,7 +41,7 @@ dist/skills/                # Assembled suite — build output, gitignored, neve
 `dist/registry.json`, written by [`docs/scripts/sync-ui-registry.mjs`](../../docs/scripts/sync-ui-registry.mjs). Regenerate it with
 `npm run generate:ui-registry` from the repo root, which rebuilds the devkit registry and rewrites this file. Hand-edits do not survive the next run,
 and a stale copy tells coding agents to use component props that no longer exist. The
-`docs-freshness` workflow watches this file and its devkit source on PRs and
+[`docs-freshness`](../../.github/workflows/docs-freshness.yml) workflow watches this file and its devkit source on PRs and
 fails the check when it drifts. The job summary shows what differs; fix it by running `npm run generate:ui-registry` (or
 `npm run regenerate-docs`) and committing the result.
 
@@ -103,6 +104,7 @@ prompt activates the matching skills:
 | "Size this site: 80 Whatsminer M56S on a 16-core NVMe box"  | `mdk-site-sizing`                   |
 | "Security check the packages before we publish to npm"      | `mdk-publish-security`              |
 | "Create an MDK app called sentinel"                         | `mdk-create-app`                    |
+| "What permissions does the ops app need?"                   | `mdk-app-rbac`                      |
 | "What is MDK and how is it structured?"                     | `mdk` (router)                      |
 
 ## Verify the device-Worker skill

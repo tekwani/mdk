@@ -137,7 +137,12 @@ function checkManifest(manifest: unknown, pkg: unknown, errors: string[]): void 
   if (manifest.description !== undefined && typeof manifest.description !== 'string') {
     errors.push(`${APP_MANIFEST}: "description" must be a string`);
   }
-  if (permissions !== undefined) {
+  // Required, even as `[]`: the operator reads it at install, and the Kernel
+  // enforces it as the app's role from the next minor, so an app that says
+  // nothing ships without the access it needs.
+  if (permissions === undefined) {
+    errors.push(`${APP_MANIFEST}: "permissions" is required: the Kernel access the app uses, as a list of rules ([] for none)`);
+  } else {
     if (Array.isArray(permissions)) {
       permissions.forEach((rule, i) => checkRule(rule, `${APP_MANIFEST}: permissions[${i}]`, errors));
     } else {

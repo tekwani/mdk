@@ -22,7 +22,7 @@ The Gateway is a container that hosts plugins and delivers an HTTP interface for
 | Goal | Guide |
 | --- | --- |
 | Start the Gateway for the first time | [Run the Gateway][run] |
-| Declare the plugins MDK ships, or build your own | [Gateway plugins][plugins] |
+| Declare the apps MDK ships, or build and publish your own | [Gateway apps][plugins] |
 | Stop Kernel, Gateway, and Workers cleanly | [Tear down MDK services][teardown] |
 | Operator in the loop: submit and approve write actions | [Submit and approve write actions][write-actions] |
 | Secure the site you are assembling | [Site security blueprint][security-blueprint] |
@@ -52,8 +52,8 @@ The Gateway is a container that hosts plugins and delivers an HTTP interface for
 [run]: run.md
 <!-- docs@tether.io: run → guides/gateway/run -->
 
-[plugins]: plugins.md
-<!-- docs@tether.io: plugins → guides/gateway/plugins -->
+[plugins]: apps.md
+<!-- docs@tether.io: plugins → guides/gateway/apps -->
 
 [teardown]: teardown.md
 <!-- docs@tether.io: teardown → guides/gateway/teardown -->

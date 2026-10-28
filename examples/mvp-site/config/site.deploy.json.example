@@ -41,13 +41,12 @@
   },
   "ocean": {
     "worker": {
-      "id": "ocean-pool-worker",
-      "rack": "site-1",
-      "tickMs": 10000
+      "id": "ocean-pool-worker"
     },
     "pool": {
       "apiUrl": "http://127.0.0.1:8010",
-      "accounts": ["sample-ocean-account"]
+      "accounts": ["sample-ocean-account"],
+      "apiRetry": 1
     },
     "mock": {
       "port": 8010

@@ -17,7 +17,9 @@ Antminer, and SealMiner workers, Ocean, EMCD, SpiderPool, and Foundry pool worke
 - **SealMiner worker**: mock miners, seeded from `config/devices.json`, hosted from the external
   [`sealminer-mdk-worker`](https://github.com/sealminer/sealminer-mdk-worker) plugin
   ([`backend/sealminer-adapter.js`](./backend/sealminer-adapter.js))
-- **Ocean pool worker** — mock pool stats on a fast demo-paced tick
+- **Ocean pool worker**: mock pool stats from the external
+  [`ocean-mdk-worker`](https://github.com/OCEAN-xyz/mdk-wrk-minerpool-ocean) plugin, against its bundled API mock
+  ([`backend/ocean-adapter.js`](./backend/ocean-adapter.js))
 - **EMCD, SpiderPool, and Foundry pool workers** — mock pool stats from the external
   [`emcd-mdk-worker`](https://github.com/emcdio/emcd-mdk-worker),
   [`spiderpool-mdk-worker`](https://github.com/SpiderPool-New/spiderpool-mdk-worker), and
@@ -35,9 +37,8 @@ Antminer, and SealMiner workers, Ocean, EMCD, SpiderPool, and Foundry pool worke
 ## Prerequisites
 
 - Node.js >= 24
-```bash
-npm install -g pm2   # run once
-```
+- PM2 (`npm install -g pm2`, once per machine)
+- [Outbound UDP to the HyperDHT bootstrap nodes](../../docs/reference/environment.md#requirements)
 
 ## Setup
 
@@ -196,8 +197,13 @@ The Ocean pool is not a LAN device — its config lives in
   (`http://127.0.0.1:8010`). To go live, point it at the real Ocean API and
   remove the `mocks-ocean` role from `pm2.roles`.
 - `ocean.pool.accounts` — the pool account usernames to track. Replace
-  `sample-ocean-account` with your accounts to go live.
-- `ocean.worker.tickMs` — demo pacer interval; stats refresh this often.
+  `sample-ocean-account` with your accounts to go live. The mock answers for any username.
+- `ocean.pool.apiRetry`: attempts per hashrate request (default `3`).
+- `ocean.pool.datumApiUrl`: optional DATUM gateway API (e.g. `http://127.0.0.1:7152`). The authenticated DATUM
+  channels read `DATUM_USER` and `DATUM_PASSWORD` from the environment.
+
+The worker polls the Ocean API itself once a minute, so it has no demo pacer: its first stats arrive a few seconds after
+it starts, then refresh every minute.
 
 ### Pool config (EMCD, SpiderPool, and Foundry)
 
@@ -211,7 +217,7 @@ These pools work like Ocean: one logical device per worker, configured under `em
 - `foundry.pool.apiUrl` defaults to the local mock (`http://127.0.0.1:5067`); `foundry.pool.accounts` lists Foundry
   sub-account names and can't be empty. The mock serves `test`. A name entry uses `FOUNDRY_API_KEY`; to give a
   sub-account its own key, write the entry as `{ "name": "...", "apiKey": "..." }` in a local config only.
-- `<pool>.worker.tickMs`: demo pacer interval, as for Ocean. SpiderPool spaces its API requests one second apart, so
+- `<pool>.worker.tickMs`: demo pacer interval; stats refresh this often. SpiderPool spaces its API requests one second apart, so
   its first stats arrive a few seconds after the worker starts. Foundry spaces requests 250 ms apart.
 
 Credentials never go in `site.deploy.json`. Each worker reads them from the environment, and falls back to its
@@ -289,6 +295,16 @@ rm -rf .site-data
 ```
 
 The Kernel recreates `.site-data` with correct path metadata on next boot. All devices and history are re-seeded.
+
+### Kernel never prints `MDK_READY`
+
+**Symptom**: `pm2 list` shows `kernel` as `online`, but `pm2 logs kernel` never prints `MDK_READY kernel key=…`, or the process
+exits before it does.
+
+**Cause**: [Outbound UDP to the HyperDHT bootstrap nodes](../../docs/reference/environment.md#requirements) is blocked, so the
+Kernel's HyperDHT node cannot join the network.
+
+**Fix**: Work through the [network checks](../../docs/guides/miners/troubleshooting.md#example-does-not-print-a-kernel-key).
 
 ### Port conflicts
 

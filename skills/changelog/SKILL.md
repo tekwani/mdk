@@ -1,6 +1,6 @@
 ---
 name: changelog
-description: Generate the changelog for the next MDK release by carefully diffing the previous release tag against the current tree, rotating the existing CHANGELOG.md into the year archive, and drafting the matching high-level release-notes file. Use when cutting a release, preparing release docs, or when asked to "update the changelog" / "write the changelog for vX.Y.Z".
+description: Generate the changelog for the next MDK release by carefully diffing the previous release tag against the current tree and rotating the existing CHANGELOG.md into the year archive. Use when cutting a release, preparing release docs, or when asked to "update the changelog" / "write the changelog for vX.Y.Z".
 argument-hint: "[target-version e.g. 0.5.0] — optional; inferred/asked if omitted"
 allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 ---
@@ -10,8 +10,7 @@ allowed-tools: [Bash, Read, Write, Edit, Grep, Glob]
 Produce the changelog for the **next** release by investigating what actually
 changed between the previous release tag and the current working tree — one
 categorized entry per real change, anchored to concrete paths — then rotate the
-old changelog into the archive (re-nested, prose untouched) and draft the
-high-level release notes.
+old changelog into the archive (re-nested, prose untouched).
 
 Target version: **$ARGUMENTS** (e.g. `0.5.0`). If empty, infer and confirm (see
 Step 1). **Never** guess the version silently.
@@ -56,16 +55,16 @@ Step 1). **Never** guess the version silently.
 - **The archived content is never rewritten, only re-nested.** When you rotate the
   current [`CHANGELOG.md`](../../CHANGELOG.md) into the archive, the *prose is untouched* — same wording,
   bullets, tables, links, and `#PR` refs. The only permitted changes are the
-  mechanical re-nesting described in Step 3 (drop the title, reposition the
-  release-notes blockquote, add an `### Overview` header, demote every heading one
-  level). Never re-summarize or "improve" archived content.
+  mechanical re-nesting described in Step 3 (drop the title, add an `### Overview`
+  header, demote every heading one level). Never re-summarize or "improve" archived
+  content.
 - **Match the house depth.** Existing entries use file paths, module/responsibility
   tables, and dependency lists. Aim for that specificity, not one-liners.
-- **The changelog and release notes are prose — apply the docs style guide.**
-  [`CHANGELOG.md`](../../CHANGELOG.md) and `docs/reference/release-notes/*.md` are not exempt from
+- **The changelog is prose — apply the docs style guide.**
+  [`CHANGELOG.md`](../../CHANGELOG.md) is not exempt from
   [`docs/reference/maintainers/style.md`](../../docs/reference/maintainers/style.md). In particular wrap prose lines to
   **150–180 chars** (tables and fenced code are exempt), and follow its link and
-  wording conventions. Read `style.md` before writing these files.
+  wording conventions. Read `style.md` before writing this file.
 - **The changelog is a published artifact — no internal references.** Never cite
   PR/issue numbers, branch names, internal ticket ids, or contributor handles: to an
   outside reader they are dead links that mislink to unrelated items and expose internal
@@ -86,8 +85,6 @@ Step 1). **Never** guess the version silently.
 |---|---|
 | [`CHANGELOG.md`](../../CHANGELOG.md) (repo root) | Detailed changelog for the **current** release. Header `# Changelog: mdk-X.Y.Z` → `## vX.Y.Z` → sections. |
 | `docs/reference/changelog-archive/<year>-archive.md` | Past releases, appended in **ascending** order (newest at the bottom). Each entry is nested one level below the live changelog — top header `## vX.Y.Z`, sections `### …`, subsections `#### …` (see Step 3). |
-| `docs/reference/release-notes/<X.Y.Z>-release.md` | High-level per-version summary, cross-linked from the changelog. |
-| `linkinator.config.json` (repo root) | Link-check config. One `skip` entry per release-tag URL — see Step 5. |
 
 ## Step 1 — Establish the range and versions
 
@@ -176,7 +173,6 @@ The live [`CHANGELOG.md`](../../CHANGELOG.md) looks like:
 
 ```markdown
 # Changelog: mdk-X.Y.Z
-> For a high-level introduction, see the [release notes](./docs/reference/release-notes/X.Y.Z-release.md).
 ## vX.Y.Z
 - summary bullets…
 ## Breaking changes
@@ -189,7 +185,6 @@ The archived entry must become:
 
 ```markdown
 ## vX.Y.Z
-> For a high-level introduction, see the [vX.Y.Z release notes](../release-notes/X.Y.Z-release.md).
 ### Overview
 - summary bullets…
 ### Breaking changes
@@ -201,16 +196,24 @@ The exact transform (apply in order):
 
 1. **Drop** the `# Changelog: mdk-X.Y.Z` title line.
 2. **Keep** `## vX.Y.Z` as the entry's top header (h2 — do *not* demote this one).
-3. **Reposition + rewrite** the release-notes blockquote to sit right under `## vX.Y.Z`,
-   changing its text to `[vX.Y.Z release notes]` and its path from
-   `./docs/reference/release-notes/…` to the archive-relative `../release-notes/…`.
-4. **Insert** an `### Overview` header before the summary bullets.
-5. **Demote every other heading one level:** `## Section` → `### Section`,
+3. **Insert** an `### Overview` header before the summary bullets.
+4. **Demote every other heading one level:** `## Section` → `### Section`,
    `### Sub` → `#### Sub`, `#### …` → `##### …`. (Guard against `#` lines inside fenced
    code blocks — track fence state and never demote those. Verify first with
    `grep -c '```' CHANGELOG.md`.)
-6. **Drop** the trailing `> For previous releases…` archive blockquote.
-7. Leave all prose, bullets, tables, links, and `#PR` refs byte-identical otherwise.
+5. **Drop** the trailing `> For previous releases…` archive blockquote.
+6. Leave all prose, bullets, tables, links, and `#PR` refs byte-identical otherwise.
+
+**Verify heading levels before appending:**
+
+```bash
+grep -n '^#\{1,6\} ' <transformed-entry>   # every heading in the new entry, with its level
+```
+
+Diff those levels against the **immediately preceding** archive entry's
+(`grep -nE '^#{1,6} ' <archive> | tail -40`): the two must line up section-for-section
+— same depth for the version header, same depth for top-level sections, same depth for
+subsections.
 
 Then append the transformed entry at the **bottom** of the year archive
 (`docs/reference/changelog-archive/<year>-archive.md`; create it if missing), separated
@@ -224,8 +227,6 @@ Overwrite [`CHANGELOG.md`](../../CHANGELOG.md) for `NEW_VERSION`, following the 
 
 ```markdown
 # Changelog: mdk-<NEW_VERSION>
-
-> For a high-level introduction, see the [release notes](./docs/reference/release-notes/<NEW_VERSION>-release.md)
 
 ## v<NEW_VERSION>
 
@@ -249,64 +250,19 @@ Overwrite [`CHANGELOG.md`](../../CHANGELOG.md) for `NEW_VERSION`, following the 
 
 - Omit any section that has no entries (the existing files do).
 - Use concrete paths, tables, and dependency lists as the existing entries do.
-- Keep the leading release-notes blockquote and the trailing archive blockquote.
+- Keep the trailing archive blockquote.
 
-## Step 5 — Draft the release notes
-
-Create `docs/reference/release-notes/<NEW_VERSION>-release.md`, matching the existing
-files' structure (`# Release v<NEW_VERSION>` → `## Overview` → `## Breaking changes` →
-`## What's new` → `## Removed` → `## Fixed` → `## Downloads`). This is the *high-level*
-audience-facing summary — distill the changelog, don't copy it. End with:
-
-```markdown
-## Downloads
-
-- Git tag: v<NEW_VERSION>
-```
-
-Format the release/tag link exactly as the previous `docs/reference/release-notes/*.md`
-file does — copy its convention rather than hardcoding a URL here.
-
-### Allow the not-yet-published tag URL through the link check
-
-**Do this in the same changeset, or CI fails.** That Downloads link points at a release
-tag that does not exist until the release is actually cut, so the repo's link checker
-404s on it — on the very PR that adds the notes. It is one broken link out of ~50, and it
-is the *only* thing that fails, so the job's red is easy to misread as a real problem
-with the changelog.
-
-Add the new tag's URL to the `skip` array in `linkinator.config.json`, directly after the
-previous release's entry:
-
-```jsonc
-"https://github.com/tetherto/mdk/releases/tag/v<PREV_VERSION>",
-"https://github.com/tetherto/mdk/releases/tag/v<NEW_VERSION>",   // ← add this
-```
-
-This is the standing convention, not a workaround: every tag from `v0.2.0` onward already
-has an identical entry for the same reason. Match the existing style — a plain literal
-string, and no `_skip_notes` entry (the tag entries deliberately carry none).
-
-Read the file first and copy the real URL shape from the neighbouring entries; the host
-and path are the *public mirror's*, which is not the repo you are working in.
-
-## Step 6 — Verify and hand off
+## Step 5 — Verify and hand off
 
 - Confirm the archive still parses (version headers in ascending order, newest at the
   bottom, old entries unchanged): `git diff --numstat docs/reference/changelog-archive/`
   should show **`N  0`** (additions only, zero deletions), and the single hunk header
   should sit at the end of the file — never edits inside prior versions.
-- Confirm cross-links resolve (release-notes path in CHANGELOG.md points to the file
-  you created; archive link year is correct).
-- Confirm the new release-tag URL is in `linkinator.config.json`'s `skip` array and that
-  the config still parses — a trailing-comma slip there fails the link job just as loudly
-  as the 404 it exists to prevent:
-
-  ```bash
-  node -e 'const c=require("./linkinator.config.json");
-    const u="https://github.com/tetherto/mdk/releases/tag/v<NEW_VERSION>";
-    console.log(c.skip.some(s=>new RegExp(s).test(u)) ? "OK: skipped" : "MISSING")'
-  ```
+- Confirm cross-links resolve (archive link year is correct).
+- Confirm the newly appended entry's top header is `## vX.Y.Z` (never `#`) and that its
+  heading levels match the preceding entry's depth (see the heading-level check in
+  Step 3) — this is a separate check from the numstat check above, since a wrong
+  heading level is still a pure-addition diff and won't show up there.
 - Run a quick content check for confidential material before handing off (real
   customer/site/device names, partner names, internal-only features or flag names),
   using whatever pre-publish leak check your project provides.

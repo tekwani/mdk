@@ -51,14 +51,14 @@ exist, **add it to the appropriate package**, not the template.
 
 ## The pattern every page should follow
 
-Every page follows the same one-direction data flow: your Gateway plugin serves
+Every page follows the same one-direction data flow: your Gateway app serves
 a route, a small hook in the app reads it with `useQuery` and shapes the
 response in `select`, and the page hands the result straight to a
 presentational component.
 
 | Layer | Responsibility |
 | ----- | -------------- |
-| Gateway plugin route | Serves the data (e.g. the mvp-site `site` plugin's `/site/overview`). |
+| Gateway app route | Serves the data (e.g. the mvp-site `site` app's `/site/overview`). |
 | App hook (`src/hooks/`) | `useQuery` against the route; `select` returns the component's prop shape. |
 | Page (`src/pages/`) | Thin glue — reads the hook, hands its output to a component. No `fetch`, no shaping. |
 | Component (`@tetherto/mdk-react-devkit`) | Props in, markup out. |
@@ -121,10 +121,10 @@ inline.**
 
 To add a second OAuth provider (e.g. Microsoft):
 
-1. Serve the second provider from your identity plugin: an
+1. Serve the second provider from your identity app: an
    `/oauth/microsoft` start endpoint that redirects back to the UI with
    `?authToken=`, mirroring the Google route. To implement OAuth in MDK
-   [implement a plugin](../../docs/guides/gateway/plugins.md).
+   [build an app](../../docs/guides/gateway/apps.md).
 2. Add a `SignInMicrosoftButton` in the foundation package, mirroring
    `SignInGoogleButton`. Do **not** inline the OAuth redirect in the
    template — put it in `@tetherto/mdk-react-devkit` so other apps can
@@ -168,8 +168,8 @@ a panel with that `slot`.
 
 1. Pick / add a chart component in
    [`packages/react-devkit/src/domain/components/dashboard/`](../../ui/packages/react-devkit/src/domain/components/dashboard/index.ts).
-2. Expose the data from a route in your Gateway plugin (the
-   [mvp-site](../mvp-site/README.md) `site` plugin serves `/site/overview` and
+2. Expose the data from a route in your Gateway app (the
+   [mvp-site](../mvp-site/README.md) `site` app serves `/site/overview` and
    `/site/history` this way).
 3. In your page, read that route with `useQuery` from
    `@tetherto/mdk-react-adapter`, with a `select` projection that returns the

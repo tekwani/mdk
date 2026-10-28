@@ -9,12 +9,75 @@
     "contractPath": "mdk-contract.json"
   },
   {
+    "name": "emcd-mdk-worker",
+    "brand": "EMCD",
+    "provider": "emcd",
+    "family": "minerpool",
+    "repoUrl": "https://github.com/emcdio/emcd-mdk-worker",
+    "ref": "3ad188e1fef8fa080ce5096d7421e9b3a7052515",
+    "contractPath": "mdk-contract.json"
+  },
+  {
     "name": "foundry-mdk-worker",
     "brand": "Foundry USA Pool",
     "provider": "foundry",
     "family": "minerpool",
     "repoUrl": "https://github.com/foundryservices/foundry-mdk-worker",
     "ref": "310172ebe1cb4ef60cd14f39d9467f2c8e2bc534",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "luxor-mdk-worker",
+    "brand": "Luxor",
+    "provider": "luxor",
+    "family": "minerpool",
+    "repoUrl": "https://github.com/LuxorLabs/luxor-mdk-worker",
+    "ref": "41b005e05e223801bd90e4f66df05d26bdb34112",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "luxos-mdk-worker",
+    "brand": "LuxOS",
+    "provider": "luxor",
+    "family": "miner",
+    "repoUrl": "https://github.com/LuxorLabs/luxos-mdk-worker",
+    "ref": "ee667fab6c762fa00c227979ab25a0a0813bf275",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "ocean-mdk-worker",
+    "brand": "Ocean",
+    "provider": "ocean",
+    "family": "minerpool",
+    "repoUrl": "https://github.com/OCEAN-xyz/mdk-wrk-minerpool-ocean",
+    "ref": "0e7e2def62bc923c6252dc946d4f602aae8bc0b0",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "proto-tether-mdk-worker",
+    "brand": "Proto",
+    "provider": "proto",
+    "family": "miner",
+    "repoUrl": "https://github.com/block/proto-tether-mdk-worker",
+    "ref": "d71749ed2c2941e5c1af43ca699f522238392a6f",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "sealminer-mdk-worker",
+    "brand": "SealMiner",
+    "provider": "bitdeer",
+    "family": "miner",
+    "repoUrl": "https://github.com/sealminer/sealminer-mdk-worker",
+    "ref": "63211a12245482cffb2d09f8cbeaa4c6411e51a3",
+    "contractPath": "mdk-contract.json"
+  },
+  {
+    "name": "spiderpool-mdk-worker",
+    "brand": "SpiderPool",
+    "provider": "spiderpool",
+    "family": "minerpool",
+    "repoUrl": "https://github.com/SpiderPool-New/spiderpool-mdk-worker",
+    "ref": "345f4a2b46ff59135eb4dad1803f0653c3d88911",
     "contractPath": "mdk-contract.json"
   },
   {

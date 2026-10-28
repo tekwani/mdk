@@ -30,6 +30,7 @@ rather than a DHT topic, and the Gateway and MCP server find Kernel through its 
 - [Node.js][node] >=24 (LTS)
 - npm 11 [(< 12)][npm-version]
 - PM2 (`npm install -g pm2`)
+- [Outbound UDP to the HyperDHT bootstrap nodes][network-requirements]
 
 <Steps>
 
@@ -252,8 +253,8 @@ run, [reset it][mvp-site-reset] before restarting — seed devices are only regi
 [all-workers]: ../guides/deployment/run-all-workers-site.md
 <!-- docs@tether.io: all-workers → guides/deployment/run-all-workers-site -->
 
-[plugins]: ../guides/gateway/plugins.md
-<!-- docs@tether.io: plugins → guides/gateway/plugins -->
+[plugins]: ../guides/gateway/apps.md
+<!-- docs@tether.io: plugins → guides/gateway/apps -->
 
 [build-a-worker]: ../guides/workers/build-a-worker.md
 <!-- docs@tether.io: build-a-worker → guides/workers/build-a-worker -->
@@ -264,3 +265,6 @@ run, [reset it][mvp-site-reset] before restarting — seed devices are only regi
 
 [agent-guides]: ../guides/agent/index.md
 <!-- docs@tether.io: agent-guides → guides/agent -->
+
+[network-requirements]: ../reference/environment.md#requirements
+<!-- docs@tether.io: network-requirements → reference/environment#requirements -->

@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/mdk",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "private": true,
   "description": "MDK umbrella repository - root orchestrator. Every publishable backend package (backend/core/*, backend/apps/*, backend/workers/**, backend/tests/*), the standalone packages/* tools, and examples/mvp-site are members of the root npm workspace below, so a single root install hoists and links them all. The UI toolkit (ui/) stays a separate Turborepo-driven workspace with its own lockfile; root scripts forward to it by prefix.",
   "license": "Apache-2.0",
@@ -27,11 +27,10 @@
     "serialport": "npm:noop@1.0.0",
     "@tootallnate/once": "3.0.1",
     "tar": ">=7.5.4",
-    "fastify": "5.12.5",
-    "@fastify/static": "10.1.2",
+    "fastify": "5.12.7",
     "@fastify/oauth2": "8.2.0",
     "@hono/node-server": "2.0.12",
-    "fast-uri": "4.2.1",
+    "fast-uri": "4.2.3",
     "hono": ">=4.12.34",
     "js-yaml": "5.4.1",
     "ip-address": ">=10.3.1",
@@ -73,6 +72,8 @@
     "lint:md": "markdownlint \"docs/**/*.md\" README.md \"**/README.md\"",
     "lint:md:pr": "bash docs/scripts/lint-md-pr.sh",
     "test:scripts": "node --test 'test/**/*.test.mjs'",
-    "check:external-contracts": "node docs/scripts/check-external-contracts.mjs"
+    "check:external-contracts": "node docs/scripts/check-external-contracts.mjs",
+    "release:bump": "node scripts/release/bump.mjs",
+    "release:check": "node scripts/release/check.mjs"
   }
 }

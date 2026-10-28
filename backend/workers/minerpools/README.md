@@ -4,10 +4,13 @@ Mining pool API Workers. These Workers connect to mining pool REST APIs and expo
 
 ## Packages
 
-| Directory                       | Package                       | Pool      |
-| ------------------------------- | ----------------------------- | --------- |
-| [`ocean/`](./ocean/README.md)   | `@tetherto/mdk-worker-ocean`  | Ocean.xyz |
-| [`f2pool/`](./f2pool/README.md) | `@tetherto/mdk-worker-f2pool` | F2Pool    |
+| Directory                       | Package                       | Pool   |
+| ------------------------------- | ----------------------------- | ------ |
+| [`f2pool/`](./f2pool/README.md) | `@tetherto/mdk-worker-f2pool` | F2Pool |
+
+Ocean.xyz support is the manufacturer-maintained [`ocean-mdk-worker`](https://github.com/OCEAN-xyz/mdk-wrk-minerpool-ocean)
+contract plugin, listed in [`external-workers.json`](../external-workers.json) and hosted on `WorkerRuntimeV2` (see
+[`examples/mvp-site/backend/ocean-adapter.js`](../../../examples/mvp-site/backend/ocean-adapter.js)).
 
 ## Common telemetry
 
@@ -33,15 +36,15 @@ Pool Workers do not participate in command dispatch, they only respond to `telem
 
 ```js
 const { getKernel } = require('@tetherto/mdk-core')
-const { startOceanPoolWorker } = require('@tetherto/mdk-worker-ocean')
+const { startF2poolWorker } = require('@tetherto/mdk-worker-f2pool')
 
 const kernel = await getKernel()
 
-const worker = await startOceanPoolWorker({
-  workerId: 'ocean-site-1',
+const worker = await startF2poolWorker({
+  workerId: 'f2pool-site-1',
   rack: 'site-1',
-  storeDir: './store/ocean-site-1',
-  conf: { ocean: { accounts: ['my-pool-account'], apiUrl: 'https://api.ocean.xyz/v1' } }
+  storeDir: './store/f2pool-site-1',
+  conf: { f2pool: { accounts: ['my-pool-account'], apiSecret: process.env.F2POOL_API_SECRET } }
 })
 await kernel.registerWorker(worker.runtime.getPublicKey())
 ```

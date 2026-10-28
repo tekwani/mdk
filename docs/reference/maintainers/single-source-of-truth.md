@@ -91,9 +91,9 @@ In-page anchor (uncommented by design):
 
 ### GFM alert → fumadocs `<Callout>`
 
-GitHub renders `> [!TYPE]` blockquote alerts natively; Fumadocs uses `<Callout type="…">` JSX. Source files in mdk-prv use GFM so they read correctly on GitHub; the port-sync maps:
+GitHub renders `> [!TYPE]` blockquote alerts natively; Fumadocs uses `<Callout type="…">` JSX. Source files in this repo use GFM so they read correctly on GitHub; the port-sync maps:
 
-| GFM source (mdk-prv) | Fumadocs output (tether.io) |
+| GFM source (this repo) | Fumadocs output (tether.io) |
 |---|---|
 | `> [!NOTE]`      | `<Callout type="info">`    |
 | `> [!TIP]`       | `<Callout type="idea">`    |
@@ -154,7 +154,7 @@ Generated docs are a **checked projection of the facts that ship**, not a second
 
 | Canonical source | Generated projection |
 |---|---|
-| Worker contracts | Supported-hardware catalogue |
+| Worker contracts | Supported Workers catalogue |
 | Plugin manifests | Supported-plugins page and route references |
 | Package metadata | Package reference |
 | UI types and JSDoc | Component registry |
@@ -180,7 +180,7 @@ When one thing has changed, run that generator on its own. Each has its own comm
 
 | Generated target | Command | Run from |
 |---|---|---|
-| Supported hardware | `npm run generate:catalogue` | repo root |
+| Supported Workers | `npm run generate:catalogue` | repo root |
 | App route tables | `npm run generate:plugin-reference` | repo root |
 | Package reference | `npm run generate:package-catalog` | repo root |
 | Component reference in the skill | `npm run generate:ui-registry` | repo root |
@@ -201,28 +201,28 @@ Behaviors to know:
 - Report mode declines to run when a generated file already carries uncommitted edits, because it cannot tell a stale page from work in progress. Commit or stash first.
 - The component reference and the `USAGE.md` props sections need [`ui/`](../../../ui/README.md)'s dependencies installed. Without them those targets are skipped (named in the output) and the rest still run. The skip is reported, not fatal. Run [`npm run setup:ui`](../../../README.md) to cover the component reference too.
 
-### Worker hardware catalogue
+### Supported Workers catalogue
 
-Generates the supported hardware tables from Worker contract files, split by maintainer, with "Manufacturer-maintained Workers" listed first:
+Generates the Supported Workers tables from Worker contract files, split by maintainer, with "Partner-maintained Workers" listed first:
 
-- Manufacturer-maintained Workers: built by the device manufacturer in their own repository
+- Partner-maintained Workers: built by the partner, a device manufacturer or a mining pool, in their own repository
 - MDK-maintained Workers: built in this repo
 
-**Source:** `backend/workers/**/mdk-contract.json` for in-repo Workers, plus every entry in [`backend/workers/external-workers.json`](../../../backend/workers/external-workers.json) for manufacturer-maintained ones.
+**Source:** `backend/workers/**/mdk-contract.json` for in-repo Workers, plus every entry in [`backend/workers/external-workers.json`](../../../backend/workers/external-workers.json) for partner-maintained ones.
 
-**Output:** [`backend/workers/docs/supported-hardware.md`](../../../backend/workers/docs/supported-hardware.md) and its machine-readable twin [`backend/workers/docs/catalogue.json`](../../../backend/workers/docs/catalogue.json).
+**Output:** [`backend/workers/docs/supported-workers.md`](../../../backend/workers/docs/supported-workers.md) and its machine-readable twin [`backend/workers/docs/catalogue.json`](../../../backend/workers/docs/catalogue.json).
 
 **Generator:** [`backend/workers/scripts/generate-catalogue.js`](../../../backend/workers/scripts/generate-catalogue.js), owned by engineering and runnable on its own with `npm run generate:catalogue` from the repo root.
 
-Fetching a manufacturer's contract:
+Fetching a partner's contract:
 
-- The generator reads each `external-workers.json` entry's `mdk-contract.json` live over HTTPS at generation time, from its `repoUrl`, `ref` and `contractPath`. Nothing from the manufacturer's repository is installed or executed; only that one file is read.
+- The generator reads each `external-workers.json` entry's `mdk-contract.json` live over HTTPS at generation time, from its `repoUrl`, `ref` and `contractPath`. Nothing from the partner's repository is installed or executed; only that one file is read.
 - `repoUrl` must be a plain `https://github.com/<owner>/<repo>` URL: the fetch goes to `raw.githubusercontent.com` unauthenticated, so only public GitHub repositories work today. Private repos and non-GitHub hosts are unsupported.
 - Every contract, in-repo or fetched, is validated against [`backend/core/mdk-worker/mdk-contract.schema.json`](../../../backend/core/mdk-worker/mdk-contract.schema.json).
 
 Pin `ref` to an immutable commit SHA, not a tag or branch. A branch moves on every push; a tag can be repointed (`git tag -f`, or a delete-and-recreate, as happens when re-cutting a botched release), so what gets fetched and validated next time could silently stop being what was last reviewed. A SHA cannot move.
 
-**To add or update a manufacturer-maintained Worker,** edit `external-workers.json` with:
+**To add or update a partner-maintained Worker,** edit `external-workers.json` with:
 
 - `name`, `repoUrl`, `ref` (a commit SHA, per above), and `contractPath` (the path to their `mdk-contract.json` in that repository at that ref)
 - `brand`, `provider` and `family` (one of `miner`, `container`, `power-meter`, `sensor` or `minerpool`): these place and label the row even before a fetch succeeds; a successful fetch's own `metadata.brand`/`provider`/`deviceFamily` take priority once confirmed
@@ -232,10 +232,10 @@ Then regenerate and commit the result; there is no separate registration step.
 Failure handling is per-entry and warn-only: an unreachable repository, a missing file at the ref/path, malformed JSON, or a schema violation is reported (not thrown), and only that one entry is affected. Every other entry still generates normally. A genuinely broken run, an exception outside this handling, exits non-zero.
 
 > [!IMPORTANT]
-> A manufacturer contract that can't be confirmed this run (for example, no network) still gets a row in the output table,
+> A partner contract that can't be confirmed this run (for example, no network) still gets a row in the output table,
 > flagged "not confirmed this run" using only the manifest's own declared fields; it does not silently disappear.
 > `npm run generate:catalogue` needs network access to fetch external contracts, so an offline maintainer can see that a row
-> wasn't actually re-verified, rather than shipping a page that looks like the manufacturer quietly stopped being supported.
+> wasn't actually re-verified, rather than shipping a page that looks like the partner quietly stopped being supported.
 
 Reported gaps land in:
 
@@ -243,11 +243,14 @@ Reported gaps land in:
 - `catalogue.json`'s `conformanceGaps` array, each entry tagged `source: "external"` or `source: "in-repo"`
 - a "Contract conformance" section at the bottom of the generated Markdown, naming exactly what to check: network connectivity, or the `repoUrl`/`ref`/`contractPath` fields in `external-workers.json`
 
-The generator runs only from a pull request that touches a file in this repo, so a manufacturer-side change never triggers it. The nightly `External contract check` workflow (`.github/workflows/external-contract-check.yml`) closes that gap: it re-fetches every pinned contract via `npm run check:external-contracts` ([`docs/scripts/check-external-contracts.mjs`](../../scripts/check-external-contracts.mjs)) and opens or refreshes an `external-contract`-labelled issue on breakage (unreachable, private, GC'd SHA, schema violation). A reachable-but-stale pin, behind the manufacturer's latest change, is a tracked follow-up, not a failure.
+The generator runs only from a pull request that touches a file in this repo, so a partner-side change never triggers it. The nightly `External contract check` workflow ([`.github/workflows/external-contract-check.yml`](../../../.github/workflows/external-contract-check.yml)) closes that gap: it re-fetches every pinned contract via `npm run check:external-contracts` ([`docs/scripts/check-external-contracts.mjs`](../../scripts/check-external-contracts.mjs)) and opens or refreshes an `external-contract`-labelled issue on breakage (unreachable, private, GC'd SHA, schema violation). A reachable-but-stale pin, behind the partner's latest change, is a tracked follow-up, not a failure.
+The same nightly also checks that each `repoUrl` itself still resolves, since the generator reads only the raw contract file. Whether
+the registry covers every Worker `examples/mvp-site` pins, at the same commit, is checked on every pull request by
+`test/external-workers-registry.test.mjs`.
 
 The [contract validation and catalogue generation process](ia.md#checkintegrations-fresh) covers what the generator checks before it writes.
 
-#### Known issues with manufacturer contract pins
+#### Known issues with partner contract pins
 
 This pipeline is temporary: supported Workers are moving to separately published npm packages, which replaces fetch-and-pin. The note should expire before V1. Known limits until then:
 
@@ -261,7 +264,7 @@ Generates the route tables for the apps MDK ships from their route tables.
 
 **Source:** `backend/apps/*/mdk-plugin.json`
 
-**Output:** [`docs/reference/supported-plugins.md`](../supported-plugins.md), within the `BEGIN GENERATED` and `END GENERATED`
+**Output:** [`docs/reference/supported-apps.md`](../supported-apps.md), within the `BEGIN GENERATED` and `END GENERATED`
 markers. The prose around the markers is hand-maintained and the generator leaves it untouched.
 
 **Generator:** [`docs/scripts/generate-plugin-reference.js`](../../scripts/generate-plugin-reference.js), runnable on its own with `npm run generate:plugin-reference` from
@@ -289,7 +292,7 @@ Every column is inferred, so no `package.json` carries metadata for this page:
 Samples and demos (`backend/workers/samples/` and `backend/apps/demo/`) are skipped by a list in the generator. Add to that list when a new sample or demo should stay off
 the page.
 
-The generator writes nothing and exits non-zero when a listed package has no description, shares its name with another, or has a contract that cannot be parsed. Schema conformance is not checked here; the [Worker hardware catalogue](#worker-hardware-catalogue) already validates every contract.
+The generator writes nothing and exits non-zero when a listed package has no description, shares its name with another, or has a contract that cannot be parsed. Schema conformance is not checked here; the [Supported Workers catalogue](#supported-workers-catalogue) already validates every contract.
 
 ### Component reference in the mdk-ui-component skill
 
@@ -307,7 +310,7 @@ Regenerate through `npm run regenerate-docs` or `npm run generate:ui-registry` f
 
 ### Freshness in CI
 
-`.github/workflows/docs-freshness.yml` runs `regenerate-docs --check` on every pull request. The job is a required status check, and a required check that never reports leaves the pull request unmergeable, so the workflow has no path filter: a change that touches neither the sources nor the generated pages still gets a quick, passing run. It installs the UI workspace and treats a skipped target as a failure, since there a skip means the install broke rather than that someone is working light. It **blocks** the pull request whenever any generated page is stale — a stale page ships facts the sources no longer support — and lists every stale path in the job summary. When a source change requires regenerated output, run `npm run regenerate-docs` from the repo root and commit the deterministic result in the same pull request. A generator that crashes, or any target skipped in CI, also blocks, because then the run did not verify every page.
+[`.github/workflows/docs-freshness.yml`](../../../.github/workflows/docs-freshness.yml) runs `regenerate-docs --check` on every pull request. The job is a required status check, and a required check that never reports leaves the pull request unmergeable, so the workflow has no path filter: a change that touches neither the sources nor the generated pages still gets a quick, passing run. It installs the UI workspace and treats a skipped target as a failure, since there a skip means the install broke rather than that someone is working light. It **blocks** the pull request whenever any generated page is stale — a stale page ships facts the sources no longer support — and lists every stale path in the job summary. When a source change requires regenerated output, run `npm run regenerate-docs` from the repo root and commit the deterministic result in the same pull request. A generator that crashes, or any target skipped in CI, also blocks, because then the run did not verify every page.
 
 ## Next steps
 
